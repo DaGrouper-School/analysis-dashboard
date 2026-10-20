@@ -20,14 +20,15 @@ Other scripts, run here: `npm run build` (static SPA in `build/`), `npm test`, `
 
 ## Demo accounts
 
-| Sign in with | Account                              | State                                                   |
-| ------------ | ------------------------------------ | ------------------------------------------------------- |
-| Google       | Tesfaye G.                           | Institution head of Trinity Lab Classroom               |
-| Google       | Dr. Marcus L.                        | Researcher in Trinity Lab Classroom, and platform admin |
-| Google       | Sarah K.                             | Custodian, not in a classroom                           |
-| Google       | Hana Bekele, Amina Yusuf             | New, goes through onboarding                            |
-| Phone        | Ethiopia +251 911 000 001 (Abebe T.) | Community scientist in Trinity Lab Classroom            |
-| Phone        | Any other valid number               | New                                                     |
+| Sign in with | Account                              | State                                                            |
+| ------------ | ------------------------------------ | ---------------------------------------------------------------- |
+| Google       | Tesfaye G.                           | Institution head of Trinity Lab Classroom                        |
+| Google       | Dr. Marcus L.                        | Researcher in Trinity Lab Classroom (read-only)                  |
+| Google       | Leila M.                             | Platform admin, in no classroom (admin-assisted classroom setup) |
+| Google       | Sarah K.                             | Custodian, not in a classroom                                    |
+| Google       | Hana Bekele, Amina Yusuf             | New, goes through onboarding                                     |
+| Phone        | Ethiopia +251 911 000 001 (Abebe T.) | Community scientist in Trinity Lab Classroom                     |
+| Phone        | Any other valid number               | New                                                              |
 
 Hana Bekele has a pending facilitator invitation at `/invite/demo-hana-invite`.
 

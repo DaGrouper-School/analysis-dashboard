@@ -102,7 +102,10 @@
 		<details class="rounded-md border border-line bg-surface px-4 py-3 text-sm text-muted">
 			<summary class="cursor-pointer font-medium text-ink">Demo accounts</summary>
 			<ul class="mt-2 list-disc space-y-1 pl-5">
-				<li>Google: Sarah K. (custodian) and Dr. Marcus L. (researcher) already have accounts.</li>
+				<li>
+					Google: Tesfaye G. (institution head), Dr. Marcus L. (researcher), Leila M. (platform
+					admin) and Sarah K. (custodian) already have accounts.
+				</li>
 				<li>Google: Hana Bekele and Amina Yusuf are new, so they go through onboarding.</li>
 				<li>Phone: Ethiopia 911 000 001 is Abebe T. Any other number creates a new account.</li>
 			</ul>

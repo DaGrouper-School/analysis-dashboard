@@ -60,6 +60,28 @@ const users: User[] = [
 		phoneVerified: true,
 		avatarUrl: null,
 		role: 'researcher',
+		platformAdmin: false,
+		address: {
+			street: '200 Research Way',
+			city: 'San Francisco',
+			state: 'CA',
+			zip: '94107',
+			country: 'United States'
+		},
+		onboardingCompleted: true,
+		createdAt: SEEDED_AT,
+		updatedAt: SEEDED_AT
+	},
+	{
+		// Platform staff only: not a member of any classroom.
+		id: 'usr_leila',
+		authProvider: 'google',
+		fullName: 'Leila M.',
+		email: 'leila.m@planetwerx.example',
+		phone: '+14155550188',
+		phoneVerified: true,
+		avatarUrl: null,
+		role: 'community_scientist',
 		platformAdmin: true,
 		address: {
 			street: '200 Research Way',
@@ -102,7 +124,7 @@ const classrooms: MockDbState['classrooms'] = [
 		institutionName: 'Trinity School, Addis Ababa',
 		code: 'DGC-7K3Q9M',
 		setup: 'admin_assisted',
-		createdBy: 'usr_marcus',
+		createdBy: 'usr_leila',
 		createdAt: SEEDED_AT
 	},
 	{
@@ -111,7 +133,7 @@ const classrooms: MockDbState['classrooms'] = [
 		institutionName: 'Bay Street School, Nassau',
 		code: 'DGC-BS4N7R',
 		setup: 'admin_assisted',
-		createdBy: 'usr_marcus',
+		createdBy: 'usr_leila',
 		createdAt: SEEDED_AT
 	},
 	{
@@ -120,7 +142,7 @@ const classrooms: MockDbState['classrooms'] = [
 		institutionName: 'Hargeisa Secondary School',
 		code: 'DGC-HG2W5K',
 		setup: 'admin_assisted',
-		createdBy: 'usr_marcus',
+		createdBy: 'usr_leila',
 		createdAt: SEEDED_AT
 	}
 ];
@@ -163,6 +185,7 @@ const invitations: MockDbState['invitations'] = [
 const googleAccounts: MockDbState['googleAccounts'] = [
 	{ sub: 'g-sarah', name: 'Sarah K.', email: 'sarah.k@example.org', avatarUrl: null },
 	{ sub: 'g-marcus', name: 'Dr. Marcus L.', email: 'marcus.l@planetwerx.example', avatarUrl: null },
+	{ sub: 'g-leila', name: 'Leila M.', email: 'leila.m@planetwerx.example', avatarUrl: null },
 	{ sub: 'g-hana', name: 'Hana Bekele', email: 'hana.bekele@example.org', avatarUrl: null },
 	{ sub: 'g-amina', name: 'Amina Yusuf', email: 'amina.yusuf@example.org', avatarUrl: null },
 	{
@@ -517,7 +540,12 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 	return structuredClone({
 		users,
 		googleAccounts,
-		googleLinks: { 'g-sarah': 'usr_sarah', 'g-marcus': 'usr_marcus', 'g-tesfaye': 'usr_tesfaye' },
+		googleLinks: {
+			'g-sarah': 'usr_sarah',
+			'g-marcus': 'usr_marcus',
+			'g-leila': 'usr_leila',
+			'g-tesfaye': 'usr_tesfaye'
+		},
 		challenges: [],
 		session: null,
 		parameters,
