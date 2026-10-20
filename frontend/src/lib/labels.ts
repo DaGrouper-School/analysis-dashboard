@@ -3,7 +3,8 @@ import type { ClassroomRole, DeviceType, SiteSetting } from '#lib/domain/types.t
 export const CLASSROOM_ROLE_LABELS: Record<ClassroomRole, string> = {
 	institution_head: 'Institution head',
 	facilitator: 'Facilitator',
-	community_scientist: 'Community scientist'
+	community_scientist: 'Community scientist',
+	researcher: 'Researcher'
 };
 
 export const DEVICE_TYPE_LABELS: Record<DeviceType, string> = {

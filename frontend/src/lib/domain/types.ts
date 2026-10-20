@@ -68,7 +68,12 @@ export interface PlaceSuggestion {
 
 // ---- Classrooms (AP-03) -------------------------------------------------------------
 
-export type ClassroomRole = 'institution_head' | 'facilitator' | 'community_scientist';
+export type ClassroomRole =
+	| 'institution_head'
+	| 'facilitator'
+	| 'community_scientist'
+	/** Read-only: sees the classroom's devices and readings, invited by the head. */
+	| 'researcher';
 
 export interface Classroom {
 	id: string;
