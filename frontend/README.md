@@ -101,12 +101,16 @@ are flagged as not from the device. Each device's SAM source ID is the classroom
 device identifier, e.g. `DGC-7K3Q9M:TWS-2041-SH`, and every reading is tagged with its classroom.
 
 Classrooms have four roles: institution head, facilitator, community scientist and researcher.
-Researchers are read-only members invited by the head: they see the classroom's devices and
-readings but cannot register devices, upload readings or see the classroom code.
+The head and facilitators register devices. Community scientists can connect a registered device
+and record its readings, but cannot add or remove devices. Whoever records can choose to be
+credited: their name then shows on those readings for the classroom. Without it, a reading
+carries no personal credit. Researchers are read-only members
+invited by the head: they see the classroom's devices and readings but cannot record readings or
+see the classroom code.
 
 People are never assigned to devices. Current conditions come only from devices in classrooms the
 user belongs to; anyone else, platform admins included, sees an empty state. On a lab page,
-facilitators and the institution head can run the connect-a-device demo: it pairs with a
+the institution head, facilitators and community scientists can run the connect-a-device demo: it pairs with a
 registered device and records six readings, two of them without a GPS fix, which then appear under Recent readings on the dashboard. Classroom name and
 institution are editable by the head; the classroom code never changes.
 

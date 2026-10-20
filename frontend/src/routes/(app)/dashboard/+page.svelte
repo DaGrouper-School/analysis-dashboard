@@ -251,6 +251,9 @@
 									>{item.device.name}</a
 								>
 								<p class="text-xs text-muted">{item.classroomName}</p>
+								{#if item.reading.creditedTo}
+									<p class="text-xs text-muted">Recorded by {item.reading.creditedTo}</p>
+								{/if}
 							</td>
 							<td class="px-4 py-3">{summary(item.reading.values)}</td>
 							<td class="px-4 py-3 text-xs">

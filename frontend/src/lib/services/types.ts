@@ -18,6 +18,7 @@ import type {
 	LabDetail,
 	Reading,
 	ReadingInput,
+	RecordOptions,
 	RegisterDeviceInput,
 	UpdateClassroomInput,
 	User
@@ -101,7 +102,11 @@ export interface LabService {
 	 * SAM, tagged with the classroom. Readings without GPS get the lab's location, marked
 	 * `locationSource: 'lab'`.
 	 */
-	uploadReadings(deviceId: string, readings: ReadingInput[]): Promise<Reading[]>;
+	uploadReadings(
+		deviceId: string,
+		readings: ReadingInput[],
+		options?: RecordOptions
+	): Promise<Reading[]>;
 	/**
 	 * Latest reading per device, only for classrooms the user is a member of. Nobody sees
 	 * conditions from other classrooms' devices, platform admins included.
