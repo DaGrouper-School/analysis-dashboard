@@ -95,6 +95,7 @@ export function createHttpServices(baseUrl: string): Services {
 				),
 			getInvitation: (token) =>
 				request<InvitationPreview>('GET', `/invitations/by-token/${encodeURIComponent(token)}`),
+			listMyInvitations: () => request<InvitationPreview[]>('GET', '/me/invitations'),
 			acceptInvitation: (token) =>
 				request<ClassroomSummary>(
 					'POST',

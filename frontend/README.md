@@ -31,6 +31,14 @@ Other scripts, run here: `npm run build` (static SPA in `build/`), `npm test`, `
 
 Hana Bekele has a pending facilitator invitation at `/invite/demo-hana-invite`.
 
+All demo accounts share one mock database in this browser. Whatever one account records (a
+device, a reading, a classroom or lab edit) is what every other account sees, filtered by its
+classroom permissions: sign out, sign in as someone else in the same classroom, and it is there.
+Invitations work the same way: invite an account's email, sign in as that account, and the
+invitation waits on its dashboard and Classrooms page with a button to join.
+Open tabs pick up changes made in another tab without a reload. Other browsers and devices have
+their own copy until a real backend replaces the mock.
+
 No SMS is sent: the mock shows the 6-digit code on screen. "Reset demo data" on the profile page
 restores the seed.
 

@@ -216,3 +216,44 @@ describe('editing a classroom', () => {
 		).rejects.toMatchObject({ code: 'invalid_input', fields: { name: expect.any(String) } });
 	});
 });
+
+describe('invitations shared with the invited person', () => {
+	it('shows an invite to the person it was sent to when they sign in, and lets them join', async () => {
+		await signInAs('g-tesfaye');
+		await services.classrooms.invite('cls_trinity', ['sarah.k@example.org'], 'facilitator');
+
+		await signInAs('g-sarah');
+		const [invitation] = await services.classrooms.listMyInvitations();
+		expect(invitation).toMatchObject({
+			classroomName: 'Trinity Lab Classroom',
+			role: 'facilitator',
+			invitedByName: 'Tesfaye G.'
+		});
+		await services.classrooms.acceptInvitation(invitation.token);
+		expect(await services.classrooms.listMyInvitations()).toEqual([]);
+		expect((await services.classrooms.listMine()).map((c) => c.id)).toEqual(['cls_trinity']);
+
+		// The head sees the new member and the invitation as used.
+		await signInAs('g-tesfaye');
+		const detail = await services.classrooms.get('cls_trinity');
+		expect(detail.members.find((m) => m.fullName === 'Sarah K.')?.role).toBe('facilitator');
+		expect(detail.invitations.some((i) => i.email === 'sarah.k@example.org')).toBe(false);
+	});
+
+	it('does not show invites sent to someone else, or revoked ones', async () => {
+		await signInAs('g-tesfaye');
+		const [sent] = await services.classrooms.invite(
+			'cls_trinity',
+			['sarah.k@example.org'],
+			'community_scientist'
+		);
+		await signInAs('g-hana');
+		expect((await services.classrooms.listMyInvitations()).map((i) => i.email)).toEqual([
+			'hana.bekele@example.org'
+		]);
+		await signInAs('g-tesfaye');
+		await services.classrooms.revokeInvitation(sent.id);
+		await signInAs('g-sarah');
+		expect(await services.classrooms.listMyInvitations()).toEqual([]);
+	});
+});

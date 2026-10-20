@@ -131,6 +131,21 @@ export function writeDb(state: MockDbState): void {
 	}
 }
 
+/**
+ * Calls `onChange` when another tab in this browser changes the shared mock data, after
+ * dropping the cached copy so the next read sees the change. Returns an unsubscribe function.
+ */
+export function watchOtherTabs(onChange: () => void): () => void {
+	if (typeof window === 'undefined') return () => {};
+	const listener = (event: StorageEvent) => {
+		if (event.key !== STORAGE_KEY && event.key !== null) return;
+		memory = null;
+		onChange();
+	};
+	window.addEventListener('storage', listener);
+	return () => window.removeEventListener('storage', listener);
+}
+
 /** Applies a change and persists it. */
 export function updateDb<T>(fn: (state: MockDbState) => T): T {
 	const state = readDb();

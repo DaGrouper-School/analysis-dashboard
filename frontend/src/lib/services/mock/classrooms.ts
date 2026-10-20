@@ -3,6 +3,7 @@ import type {
 	ClassroomRole,
 	ClassroomSummary,
 	Invitation,
+	InvitationPreview,
 	User
 } from '#lib/domain/types.ts';
 import { isValidEmail, validateClassroomUpdate } from '#lib/domain/validation.ts';
@@ -94,6 +95,20 @@ function toInvitation(state: MockDbState, invitation: StoredInvitation): Invitat
 		invitedByName: state.users.find((u) => u.id === invitation.invitedBy)?.fullName ?? 'Someone',
 		createdAt: invitation.createdAt,
 		token: invitation.token
+	};
+}
+
+function toPreview(state: MockDbState, invitation: StoredInvitation): InvitationPreview {
+	const classroom = state.classrooms.find((c) => c.id === invitation.classroomId);
+	if (!classroom) throw new ServiceError('not_found', 'This invitation is no longer valid.');
+	return {
+		token: invitation.token,
+		classroomName: classroom.name,
+		institutionName: classroom.institutionName,
+		role: invitation.role,
+		email: invitation.email,
+		status: invitation.status,
+		invitedByName: toInvitation(state, invitation).invitedByName
 	};
 }
 
@@ -349,19 +364,21 @@ export function createMockClassrooms({
 			await delay();
 			const state = readDb();
 			const invitation = state.invitations.find((i) => i.token === token);
-			const classroom = state.classrooms.find((c) => c.id === invitation?.classroomId);
-			if (!invitation || !classroom || invitation.status === 'revoked') {
+			if (!invitation || invitation.status === 'revoked') {
 				throw new ServiceError('not_found', 'This invitation is no longer valid.');
 			}
-			return {
-				token,
-				classroomName: classroom.name,
-				institutionName: classroom.institutionName,
-				role: invitation.role,
-				email: invitation.email,
-				status: invitation.status,
-				invitedByName: toInvitation(state, invitation).invitedByName
-			};
+			return toPreview(state, invitation);
+		},
+
+		async listMyInvitations() {
+			await delay();
+			const state = readDb();
+			const email = currentUser(state).email?.toLowerCase();
+			if (!email) return [];
+			return state.invitations
+				.filter((i) => i.status === 'pending' && i.email === email)
+				.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+				.map((i) => toPreview(state, i));
 		},
 
 		async acceptInvitation(token) {

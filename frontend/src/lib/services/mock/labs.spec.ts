@@ -184,6 +184,26 @@ describe('labs (AP-05)', () => {
 		expect(await services.labs.currentConditions()).toEqual([]);
 	});
 
+	it('shares recorded data with everyone in the classroom, and no one else', async () => {
+		await signInAs('g-tesfaye');
+		const device = await services.labs.registerDevice('lab_trinity', deviceInput);
+		const [stored] = await services.labs.uploadReadings(device.id, [
+			{ ...reading({ lat: 9.01, lng: 38.75 }), observedAt: '2026-10-21T09:00:00.000Z' }
+		]);
+		await services.labs.update('lab_trinity', { ...labInput, name: 'Trinity Field Lab' });
+
+		await signInAbebe();
+		const detail = await services.labs.get('lab_trinity');
+		expect(detail.lab.name).toBe('Trinity Field Lab');
+		expect(detail.readings.map((r) => r.id)).toContain(stored.id);
+		const [latest] = await services.labs.recentReadings(1);
+		expect(latest.reading.id).toBe(stored.id);
+		expect((await services.labs.currentConditions()).map((c) => c.device.id)).toContain(device.id);
+
+		await signInAs('g-sarah');
+		expect(await services.labs.recentReadings()).toEqual([]);
+	});
+
 	it('shows the demo researcher the data of the classroom they joined', async () => {
 		await signInAs('g-marcus');
 		const conditions = await services.labs.currentConditions();
