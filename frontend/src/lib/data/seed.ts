@@ -470,7 +470,8 @@ function reading(
 }
 
 const readings: MockDbState['readings'] = [
-	reading('dev_shashamane_ws', READING_AT, sample, { lat: 7.2, lng: 38.6 }),
+	// Midday sun in Shashamane: high enough UV to raise an alert.
+	reading('dev_shashamane_ws', READING_AT, { ...sample, uv: 6.8 }, { lat: 7.2, lng: 38.6 }),
 	reading(
 		'dev_shashamane_ws',
 		YESTERDAY,

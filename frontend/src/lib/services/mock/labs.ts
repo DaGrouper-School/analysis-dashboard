@@ -1,4 +1,5 @@
 import type { CreateLabInput, CurrentConditions, Device, Lab, Reading } from '#lib/domain/types.ts';
+import { alertsFor } from '#lib/domain/alerts.ts';
 import { validateDevice, validateLab, validateReading } from '#lib/domain/validation.ts';
 import { newId, readDb, updateDb, type MockDbState, type StoredDevice } from '#lib/data/mock-db.ts';
 import { ServiceError, type LabService } from '../types';
@@ -84,7 +85,7 @@ function memberReadings(state: MockDbState): CurrentConditions[] {
 		const classroomName = classroomOf(state, lab).name;
 		for (const r of state.readings) {
 			if (r.deviceId === device.id) {
-				result.push({ device: shown, classroomName, reading: toReading(r) });
+				result.push({ device: shown, classroomName, reading: toReading(r), alerts: [] });
 			}
 		}
 	}
@@ -268,7 +269,9 @@ export function createMockLabs({
 			const latest = new Map<string, CurrentConditions>();
 			// Entries come newest first, so the first one per device is its latest reading.
 			for (const entry of memberReadings(readDb())) {
-				if (!latest.has(entry.device.id)) latest.set(entry.device.id, entry);
+				if (!latest.has(entry.device.id)) {
+					latest.set(entry.device.id, { ...entry, alerts: alertsFor(entry.reading) });
+				}
 			}
 			return [...latest.values()];
 		},
