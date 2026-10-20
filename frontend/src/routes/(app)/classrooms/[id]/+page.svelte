@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import CopyButton from '#lib/components/CopyButton.svelte';
 	import type { ClassroomRole, Invitation } from '#lib/domain/types.ts';
+	import { validateClassroomUpdate } from '#lib/domain/validation.ts';
 	import { CLASSROOM_ROLE_LABELS } from '#lib/labels.ts';
 	import { errorMessage, isMockDataSource, services, ServiceError } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
@@ -59,6 +60,40 @@
 		}
 	}
 
+	let editing = $state(false);
+	let editName = $state('');
+	let editInstitution = $state('');
+	let editErrors = $state<Record<string, string>>({});
+	let editError = $state('');
+	let savingEdit = $state(false);
+
+	function startEdit() {
+		editName = classroom.name;
+		editInstitution = classroom.institutionName;
+		editErrors = {};
+		editError = '';
+		editing = true;
+	}
+
+	async function saveEdit(event: SubmitEvent) {
+		event.preventDefault();
+		const input = { name: editName, institutionName: editInstitution };
+		editErrors = validateClassroomUpdate(input);
+		editError = '';
+		if (Object.keys(editErrors).length) return;
+		savingEdit = true;
+		try {
+			await services.classrooms.update(classroom.id, input);
+			editing = savingEdit = false;
+			await refresh();
+		} catch (e) {
+			if (e instanceof ServiceError) editErrors = e.fields;
+			editError = errorMessage(e);
+		} finally {
+			savingEdit = false;
+		}
+	}
+
 	function remove(userId: string, name: string) {
 		if (!confirm(`Remove ${name} from ${classroom.name}?`)) return;
 		run(() => services.classrooms.removeMember(classroom.id, userId));
@@ -69,15 +104,60 @@
 
 <a href={resolve('/(app)/classrooms')} class="text-sm text-muted hover:text-ink">← Classrooms</a>
 
-<div class="mt-4 flex flex-wrap items-end justify-between gap-4">
-	<div>
-		<h1 class="font-display text-5xl">{classroom.name}</h1>
-		<p class="mt-1 text-muted">
-			{classroom.institutionName}
-			{#if classroom.myRole}· you are {CLASSROOM_ROLE_LABELS[classroom.myRole].toLowerCase()}{/if}
-		</p>
+{#if editing}
+	<form class="card mt-4 max-w-2xl space-y-4" onsubmit={saveEdit} novalidate>
+		<h1 class="text-lg font-semibold">Edit classroom</h1>
+		<div>
+			<label class="label" for="edit-name">Classroom name</label>
+			<input
+				id="edit-name"
+				class={['input', editErrors.name && 'input-error']}
+				bind:value={editName}
+			/>
+			{#if editErrors.name}<p class="field-error">{editErrors.name}</p>{/if}
+		</div>
+		<div>
+			<label class="label" for="edit-institution">Institution</label>
+			<input
+				id="edit-institution"
+				class={['input', editErrors.institutionName && 'input-error']}
+				bind:value={editInstitution}
+			/>
+			{#if editErrors.institutionName}
+				<p class="field-error">{editErrors.institutionName}</p>
+			{/if}
+		</div>
+		{#if classroom.code}
+			<div>
+				<label class="label" for="edit-code">Classroom code</label>
+				<input id="edit-code" class="input font-mono" value={classroom.code} readonly disabled />
+				<p class="mt-1 text-xs text-muted">
+					The code is the classroom's permanent identifier in SAM and can't be changed.
+				</p>
+			</div>
+		{/if}
+		{#if editError}<p class="field-error" role="alert">{editError}</p>{/if}
+		<div class="flex gap-3">
+			<button class="btn btn-primary" disabled={savingEdit}>
+				{savingEdit ? 'Saving…' : 'Save changes'}
+			</button>
+			<button type="button" class="btn btn-ghost" onclick={() => (editing = false)}>Cancel</button>
+		</div>
+	</form>
+{:else}
+	<div class="mt-4 flex flex-wrap items-end justify-between gap-4">
+		<div>
+			<h1 class="font-display text-5xl">{classroom.name}</h1>
+			<p class="mt-1 text-muted">
+				{classroom.institutionName}
+				{#if classroom.myRole}· you are {CLASSROOM_ROLE_LABELS[classroom.myRole].toLowerCase()}{/if}
+			</p>
+		</div>
+		{#if permissions.edit}
+			<button class="btn btn-ghost" onclick={startEdit}>Edit details</button>
+		{/if}
 	</div>
-</div>
+{/if}
 
 <section class="card mt-8 flex flex-wrap items-center justify-between gap-4 bg-forest text-white">
 	<div>

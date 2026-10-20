@@ -119,6 +119,8 @@ export interface ClassroomDetail {
 	permissions: {
 		invite: ClassroomRole[];
 		manageMembers: boolean;
+		/** Can change the name and institution. The code never changes. */
+		edit: boolean;
 	};
 }
 
@@ -131,6 +133,12 @@ export interface InvitationPreview {
 	email: string;
 	status: InvitationStatus;
 	invitedByName: string;
+}
+
+/** Everything about a classroom except its code, which is its permanent identifier. */
+export interface UpdateClassroomInput {
+	name: string;
+	institutionName: string;
 }
 
 export interface CreateClassroomInput {
@@ -186,7 +194,11 @@ export interface Lab {
 export type DeviceType =
 	'weather_station' | 'soil_sensor' | 'rain_gauge' | 'water_probe' | 'air_quality_sensor' | 'other';
 
-/** A sensor registered to a lab. It may have its own GPS position, which can be far from the lab. */
+/**
+ * A sensor registered to a lab. A device has no fixed position: GPS travels with each reading,
+ * so the same device can report from different places over time. People are never assigned
+ * to devices; access comes from classroom membership.
+ */
 export interface Device {
 	id: string;
 	labId: string;
@@ -195,13 +207,6 @@ export interface Device {
 	type: DeviceType;
 	/** Manufacturer serial or other hardware identifier. */
 	identifier: string;
-	/** Where the device reports from: its own GPS, or the lab's location when it has none. */
-	location: GeoPoint;
-	/** False when the device has no GPS of its own and uses the lab's location. */
-	ownLocation: boolean;
-	/** Human-readable place of the device, e.g. "Shashamane". */
-	placeName: string;
-	country: string;
 	/**
 	 * SAM source identity: classroom code plus device identifier (SAM-06).
 	 * Null when the viewer may not see the classroom code.
@@ -210,11 +215,42 @@ export interface Device {
 	registeredAt: string;
 }
 
+/**
+ * Where a reading's position came from. `device`: GPS sent with the measurement.
+ * `lab`: the device sent no GPS, so the lab's location stands in. It is not the device's position.
+ */
+export type ReadingLocationSource = 'device' | 'lab';
+
+/** One measurement upload from a device, as stored by the backend and forwarded to SAM. */
+export interface Reading {
+	id: string;
+	deviceId: string;
+	labId: string;
+	/** Every reading is tagged with the classroom that owns the device. */
+	classroomId: string;
+	observedAt: string;
+	receivedAt: string;
+	/** Values keyed by parameter ID. */
+	values: Record<string, number | string>;
+	location: GeoPoint;
+	locationSource: ReadingLocationSource;
+}
+
+/** What a device sends when it connects. */
+export interface ReadingInput {
+	observedAt: string;
+	values: Record<string, number | string>;
+	/** Null when the device has no GPS fix or no GPS at all. */
+	location: GeoPoint | null;
+}
+
 export interface LabDetail {
 	lab: Lab;
 	classroomName: string;
 	devices: Device[];
-	/** Heads and facilitators can register devices. */
+	/** Recent readings from this lab's devices, newest first. */
+	readings: Reading[];
+	/** Heads and facilitators can register devices and edit the lab. */
 	canManage: boolean;
 }
 
@@ -226,19 +262,16 @@ export interface CreateLabInput {
 	siteProfile: SiteProfile;
 }
 
+/** Registration identifies the device only. Location arrives later, with its readings. */
 export interface RegisterDeviceInput {
 	name: string;
 	type: DeviceType;
 	identifier: string;
-	placeName: string;
-	country: string;
-	/** Null: the device uses the lab's location. */
-	location: GeoPoint | null;
 }
 
-/** Latest value per parameter for a device, keyed by parameter ID. */
-export interface DeviceSnapshot {
-	deviceId: string;
-	observedAt: string;
-	values: Record<string, number | string>;
+/** The latest reading of one device in a classroom the user belongs to. */
+export interface CurrentConditions {
+	device: Device;
+	classroomName: string;
+	reading: Reading;
 }

@@ -14,7 +14,7 @@ import {
 } from '#lib/data/mock-db.ts';
 import { ServiceError, type Services } from '../types';
 import { createMockClassrooms } from './classrooms';
-import { createMockLabs, toPublicDevice } from './labs';
+import { createMockLabs } from './labs';
 import { createMockPlaces } from './places';
 
 const RESEND_AFTER_MS = 30_000;
@@ -286,14 +286,6 @@ export function createMockServices({ latency = 250, now = Date.now }: MockOption
 		registry: {
 			async listParameters() {
 				return readDb().parameters;
-			},
-			async listDevices() {
-				const state = readDb();
-				return state.devices.map((d) => toPublicDevice(state, d));
-			},
-			async getLatestSnapshot(deviceId) {
-				await delay();
-				return readDb().snapshots.find((s) => s.deviceId === deviceId) ?? null;
 			}
 		}
 	};

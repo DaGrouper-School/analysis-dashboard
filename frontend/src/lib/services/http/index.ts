@@ -9,10 +9,11 @@ import type {
 	PhoneChallenge,
 	PlaceSuggestion,
 	ProfileInput,
+	CurrentConditions,
 	Device,
-	DeviceSnapshot,
 	Lab,
 	LabDetail,
+	Reading,
 	User
 } from '#lib/domain/types.ts';
 import { ServiceError, type ServiceErrorCode, type Services } from '../types';
@@ -72,6 +73,8 @@ export function createHttpServices(baseUrl: string): Services {
 			listMine: () => request<ClassroomSummary[]>('GET', '/classrooms'),
 			get: (id) => request<ClassroomDetail>('GET', `/classrooms/${encodeURIComponent(id)}`),
 			create: (input) => request<ClassroomSummary>('POST', '/classrooms', input),
+			update: (id, input) =>
+				request<ClassroomSummary>('PATCH', `/classrooms/${encodeURIComponent(id)}`, input),
 			invite: (id, emails, role) =>
 				request<Invitation[]>('POST', `/classrooms/${encodeURIComponent(id)}/invitations`, {
 					emails,
@@ -104,11 +107,17 @@ export function createHttpServices(baseUrl: string): Services {
 			get: (labId) => request<LabDetail>('GET', `/labs/${encodeURIComponent(labId)}`),
 			create: (classroomId, input) =>
 				request<Lab>('POST', `/classrooms/${encodeURIComponent(classroomId)}/labs`, input),
+			update: (labId, input) => request<Lab>('PUT', `/labs/${encodeURIComponent(labId)}`, input),
 			registerDevice: (labId, input) =>
 				request<Device>('POST', `/labs/${encodeURIComponent(labId)}/devices`, input),
 			removeDevice: (deviceId) =>
 				request<void>('DELETE', `/devices/${encodeURIComponent(deviceId)}`),
-			listMyDevices: () => request<Device[]>('GET', '/me/devices')
+			// The backend stores the readings, tags them with the classroom and forwards them to SAM.
+			uploadReadings: (deviceId, readings) =>
+				request<Reading[]>('POST', `/devices/${encodeURIComponent(deviceId)}/readings`, {
+					readings
+				}),
+			currentConditions: () => request<CurrentConditions[]>('GET', '/me/conditions')
 		},
 		places: {
 			autocomplete: (q) =>
@@ -116,10 +125,7 @@ export function createHttpServices(baseUrl: string): Services {
 			getAddress: (placeId) => request<Address>('GET', `/places/${encodeURIComponent(placeId)}`)
 		},
 		registry: {
-			listParameters: () => request<Parameter[]>('GET', '/sam/parameters'),
-			listDevices: () => request<Device[]>('GET', '/sam/devices'),
-			getLatestSnapshot: (deviceId) =>
-				request<DeviceSnapshot | null>('GET', `/sam/devices/${encodeURIComponent(deviceId)}/latest`)
+			listParameters: () => request<Parameter[]>('GET', '/sam/parameters')
 		}
 	};
 }

@@ -67,7 +67,10 @@ Services and the backend verifies the token.
 | `/verify-phone`       | AP-01 SMS code with 30 s resend                         |
 | `/onboarding/profile` | AP-02 profile and contact (Google users verify a phone) |
 | `/onboarding/address` | AP-02 address with places autocomplete                  |
-| `/dashboard`          | Station summary (placeholder for sprint 3, AP-06/AP-10) |
+| `/dashboard`          | Current conditions from the user's own classrooms only  |
+| `/classrooms/[id]`    | AP-03 classroom, members, invites; edit name and school |
+| `/labs/[labId]`       | AP-05 devices, readings, connect-a-device demo          |
+| `/labs/[labId]/edit`  | Edit the lab and its site profile                       |
 | `/profile`            | Edit profile and address, sign out                      |
 
 Route groups `(auth)` and `(app)` hold the guards: signed-in users skip sign-up, and the app
@@ -79,7 +82,16 @@ Personas come from the project vault (User Personas). The parameter registry hol
 station parameters mapped to the six environmental domains (AIR, WAVES, SUN, RAIN, WIND,
 LIGHTNING) plus the manual rain gauge, with values from the sample station payload.
 
-Classrooms run labs, and devices are registered to a lab, each with its own GPS position. Trinity
-Lab (Addis Ababa) has a soil sensor in its garden plus a weather station and rain gauge in
-Shashamane, about 200 km away. Each device's SAM source ID is the classroom code plus the device
-identifier, e.g. `DGC-7K3Q9M:TWS-2041-SH`.
+Classrooms run labs, and devices are registered to a lab. Registration names the device only:
+GPS belongs to each reading, so a device can report from different places over time. Trinity Lab
+(Addis Ababa) has a soil sensor in its garden plus a weather station and rain gauge in Shashamane,
+about 200 km away. The Shashamane station's two readings come from two slightly different spots;
+the rain gauge and the Hargeisa station send no GPS, so their readings use the lab's location and
+are flagged as not from the device. Each device's SAM source ID is the classroom code plus the
+device identifier, e.g. `DGC-7K3Q9M:TWS-2041-SH`, and every reading is tagged with its classroom.
+
+People are never assigned to devices. Current conditions come only from devices in classrooms the
+user belongs to; anyone else, platform admins included, sees an empty state. On a lab page,
+facilitators and the institution head can run the connect-a-device demo: it pairs with a
+registered device and streams six readings, two of them without a GPS fix. Classroom name and
+institution are editable by the head; the classroom code never changes.

@@ -1,4 +1,12 @@
-import type { Address, CreateLabInput, GeoPoint, ProfileInput, RegisterDeviceInput } from './types';
+import type {
+	Address,
+	CreateLabInput,
+	GeoPoint,
+	ProfileInput,
+	ReadingInput,
+	RegisterDeviceInput,
+	UpdateClassroomInput
+} from './types';
 
 /** Normalises a phone number to E.164 (`+2519…`), or returns null when it is not valid. */
 export function normalizePhone(raw: string): string | null {
@@ -63,11 +71,24 @@ export function validateDevice(input: RegisterDeviceInput): Record<string, strin
 	if (!/^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$/.test(input.identifier.trim())) {
 		errors.identifier = 'Use 3 to 64 letters, digits, dots, dashes or underscores.';
 	}
-	if (!input.placeName.trim()) errors.placeName = 'Enter where the device is.';
-	if (!input.country.trim()) errors.country = 'Enter a country.';
+	return errors;
+}
+
+export function validateReading(input: ReadingInput): Record<string, string> {
+	const errors: Record<string, string> = {};
+	if (Number.isNaN(Date.parse(input.observedAt))) errors.observedAt = 'Enter when it was measured.';
+	if (!Object.keys(input.values).length) errors.values = 'A reading needs at least one value.';
 	if (input.location && !isValidGeoPoint(input.location)) {
 		errors.location = 'Enter a valid latitude and longitude, or leave both blank.';
 	}
+	return errors;
+}
+
+export function validateClassroomUpdate(input: UpdateClassroomInput): Record<string, string> {
+	const errors: Record<string, string> = {};
+	if (input.name.trim().length < 3) errors.name = 'Enter a classroom name.';
+	if (input.institutionName.trim().length < 2)
+		errors.institutionName = 'Enter the institution name.';
 	return errors;
 }
 

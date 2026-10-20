@@ -5,7 +5,7 @@ import type {
 	Invitation,
 	User
 } from '#lib/domain/types.ts';
-import { isValidEmail } from '#lib/domain/validation.ts';
+import { isValidEmail, validateClassroomUpdate } from '#lib/domain/validation.ts';
 import {
 	newId,
 	readDb,
@@ -180,17 +180,36 @@ export function createMockClassrooms({
 				classroom: summarize(state, user, classroom),
 				members,
 				invitations,
-				permissions: { invite: can.invite, manageMembers: can.manageMembers }
+				permissions: {
+					invite: can.invite,
+					manageMembers: can.manageMembers,
+					edit: can.manageMembers
+				}
 			};
+		},
+
+		async update(classroomId, input) {
+			await delay();
+			const errors = validateClassroomUpdate(input);
+			if (Object.keys(errors).length) {
+				throw new ServiceError('invalid_input', 'Check the highlighted fields.', errors);
+			}
+			return updateDb((state) => {
+				const user = currentUser(state);
+				const { classroom, can } = visibleClassroom(state, user, classroomId);
+				if (!can.manageMembers) {
+					throw new ServiceError('forbidden', 'Only the institution head can edit the classroom.');
+				}
+				// The code is the classroom's identifier in SAM, so it is never editable.
+				classroom.name = input.name.trim();
+				classroom.institutionName = input.institutionName.trim();
+				return summarize(state, user, classroom);
+			});
 		},
 
 		async create(input) {
 			await delay();
-			const errors: Record<string, string> = {};
-			if (input.name.trim().length < 3) errors.name = 'Enter a classroom name.';
-			if (input.institutionName.trim().length < 2) {
-				errors.institutionName = 'Enter the institution name.';
-			}
+			const errors = validateClassroomUpdate(input);
 			const headEmail = input.headEmail?.trim().toLowerCase();
 			if (headEmail !== undefined && headEmail !== '' && !isValidEmail(headEmail)) {
 				errors.headEmail = 'Enter a valid email address.';

@@ -12,11 +12,14 @@ import type {
 	PlaceSuggestion,
 	ProfileInput,
 	CreateLabInput,
+	CurrentConditions,
 	Device,
-	DeviceSnapshot,
 	Lab,
 	LabDetail,
+	Reading,
+	ReadingInput,
 	RegisterDeviceInput,
+	UpdateClassroomInput,
 	User
 } from '#lib/domain/types.ts';
 
@@ -57,9 +60,6 @@ export interface PlacesService {
 
 export interface RegistryService {
 	listParameters(): Promise<Parameter[]>;
-	/** Every registered device, public view (no SAM source IDs). Feeds the station map. */
-	listDevices(): Promise<Device[]>;
-	getLatestSnapshot(deviceId: string): Promise<DeviceSnapshot | null>;
 }
 
 /**
@@ -71,6 +71,8 @@ export interface ClassroomService {
 	get(classroomId: string): Promise<ClassroomDetail>;
 	/** Institution heads create their own; platform admins can set one up for a head. */
 	create(input: CreateClassroomInput): Promise<ClassroomSummary>;
+	/** Name and institution. The classroom code is its identifier and cannot change. */
+	update(classroomId: string, input: UpdateClassroomInput): Promise<ClassroomSummary>;
 	/** Sends one invitation email per address. */
 	invite(classroomId: string, emails: string[], role: ClassroomRole): Promise<Invitation[]>;
 	revokeInvitation(invitationId: string): Promise<void>;
@@ -88,10 +90,21 @@ export interface LabService {
 	get(labId: string): Promise<LabDetail>;
 	/** Classroom onboarding step: the lab and its site profile questionnaire. */
 	create(classroomId: string, input: CreateLabInput): Promise<Lab>;
+	update(labId: string, input: CreateLabInput): Promise<Lab>;
+	/** Registers the device and its SAM source. No location: that comes with each reading. */
 	registerDevice(labId: string, input: RegisterDeviceInput): Promise<Device>;
 	removeDevice(deviceId: string): Promise<void>;
-	/** Devices registered to labs of the classrooms the user belongs to. */
-	listMyDevices(): Promise<Device[]>;
+	/**
+	 * A permitted user connects a device and its readings are sent to the backend and on to
+	 * SAM, tagged with the classroom. Readings without GPS get the lab's location, marked
+	 * `locationSource: 'lab'`.
+	 */
+	uploadReadings(deviceId: string, readings: ReadingInput[]): Promise<Reading[]>;
+	/**
+	 * Latest reading per device, only for classrooms the user is a member of. Nobody sees
+	 * conditions from other classrooms' devices, platform admins included.
+	 */
+	currentConditions(): Promise<CurrentConditions[]>;
 }
 
 export interface Services {

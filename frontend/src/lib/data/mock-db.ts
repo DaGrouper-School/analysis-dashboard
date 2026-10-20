@@ -2,10 +2,9 @@ import type {
 	ClassroomRole,
 	InvitationStatus,
 	Parameter,
-	DeviceSnapshot,
 	DeviceType,
-	GeoPoint,
 	Lab,
+	Reading,
 	User
 } from '#lib/domain/types.ts';
 import { createSeed } from './seed';
@@ -69,10 +68,6 @@ export interface StoredDevice {
 	name: string;
 	type: DeviceType;
 	identifier: string;
-	placeName: string;
-	country: string;
-	/** Null: the device uses the lab's location. */
-	location: GeoPoint | null;
 	registeredAt: string;
 }
 
@@ -87,7 +82,8 @@ export interface MockDbState {
 	/** Stand-in for the HTTP-only session cookie the real backend will issue. */
 	session: { token: string; userId: string } | null;
 	parameters: Parameter[];
-	snapshots: DeviceSnapshot[];
+	/** Readings received from devices. Each was also forwarded to SAM under `samSourceId`. */
+	readings: (Reading & { samSourceId: string })[];
 	classrooms: StoredClassroom[];
 	memberships: StoredMembership[];
 	invitations: StoredInvitation[];
@@ -98,7 +94,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 3;
+const VERSION = 4;
 
 let memory: MockDbState | null = null;
 
