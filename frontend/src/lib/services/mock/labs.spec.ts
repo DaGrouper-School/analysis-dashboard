@@ -181,7 +181,7 @@ describe('labs (AP-05)', () => {
 	});
 
 	it('hides labs from people outside the classroom', async () => {
-		await signInAs('g-sarah');
+		await signInAs('g-amina');
 		await expect(services.labs.get('lab_trinity')).rejects.toMatchObject({ code: 'not_found' });
 		expect(await services.labs.currentConditions()).toEqual([]);
 	});
@@ -202,7 +202,7 @@ describe('labs (AP-05)', () => {
 		// Community scientists never see the classroom code, even inside a SAM source ID.
 		expect(conditions.every((c) => c.device.samSourceId === null)).toBe(true);
 		// Someone outside every classroom sees nothing.
-		await signInAs('g-sarah');
+		await signInAs('g-amina');
 		expect(await services.labs.currentConditions()).toEqual([]);
 	});
 
@@ -222,19 +222,31 @@ describe('labs (AP-05)', () => {
 		expect(latest.reading.id).toBe(stored.id);
 		expect((await services.labs.currentConditions()).map((c) => c.device.id)).toContain(device.id);
 
-		await signInAs('g-sarah');
+		await signInAs('g-amina');
 		expect(await services.labs.recentReadings()).toEqual([]);
 	});
 
-	it('shows the demo researcher the data of the classroom they joined', async () => {
+	it('shows the demo researcher the data of every classroom they joined', async () => {
 		await signInAs('g-marcus');
 		const conditions = await services.labs.currentConditions();
-		expect(conditions.map((c) => c.device.id).sort()).toEqual([
-			'dev_shashamane_gauge',
-			'dev_shashamane_ws',
-			'dev_trinity_soil'
-		]);
+		expect(new Set(conditions.map((c) => c.device.labId))).toEqual(
+			new Set(['lab_trinity', 'lab_nassau', 'lab_hargeisa'])
+		);
+		expect(conditions.map((c) => c.device.id)).toContain('dev_shashamane_ws');
 		expect((await services.labs.recentReadings()).length).toBeGreaterThan(0);
+	});
+
+	it('lets the demo community scientist record in each of their classrooms, and only there', async () => {
+		await signInAs('g-sarah');
+		const labIds = new Set((await services.labs.currentConditions()).map((c) => c.device.labId));
+		expect(labIds).toEqual(new Set(['lab_nassau', 'lab_hargeisa']));
+		for (const labId of labIds) {
+			const detail = await services.labs.get(labId);
+			expect(detail).toMatchObject({ canRecord: true, canManage: false });
+			const [stored] = await services.labs.uploadReadings(detail.devices[0].id, [reading(null)]);
+			expect(stored.classroomId).toBe(detail.lab.classroomId);
+		}
+		await expect(services.labs.get('lab_trinity')).rejects.toMatchObject({ code: 'not_found' });
 	});
 
 	it('lets researchers read device data but not change it or see the classroom code', async () => {
@@ -273,7 +285,7 @@ describe('labs (AP-05)', () => {
 		expect(recent.length).toBe(3);
 		expect(recent[0].device.id).toBe(device.id);
 		expect(recent.every((r) => r.device.labId === 'lab_trinity')).toBe(true);
-		await signInAs('g-sarah');
+		await signInAs('g-amina');
 		expect(await services.labs.recentReadings()).toEqual([]);
 	});
 });

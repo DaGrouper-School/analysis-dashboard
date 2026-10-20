@@ -160,10 +160,35 @@ const memberships: MockDbState['memberships'] = [
 		role: 'community_scientist',
 		joinedAt: SEEDED_AT
 	},
+	// The demo researcher follows every site; Sarah records for two of them.
 	{
 		classroomId: 'cls_trinity',
 		userId: 'usr_marcus',
 		role: 'researcher',
+		joinedAt: SEEDED_AT
+	},
+	{
+		classroomId: 'cls_nassau',
+		userId: 'usr_marcus',
+		role: 'researcher',
+		joinedAt: SEEDED_AT
+	},
+	{
+		classroomId: 'cls_hargeisa',
+		userId: 'usr_marcus',
+		role: 'researcher',
+		joinedAt: SEEDED_AT
+	},
+	{
+		classroomId: 'cls_nassau',
+		userId: 'usr_sarah',
+		role: 'community_scientist',
+		joinedAt: SEEDED_AT
+	},
+	{
+		classroomId: 'cls_hargeisa',
+		userId: 'usr_sarah',
+		role: 'community_scientist',
 		joinedAt: SEEDED_AT
 	}
 ];

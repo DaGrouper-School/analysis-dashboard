@@ -104,7 +104,7 @@
 			<ul class="mt-2 list-disc space-y-1 pl-5">
 				<li>
 					Google: Tesfaye G. (institution head), Dr. Marcus L. (researcher), Leila M. (platform
-					admin) and Sarah K. (custodian) already have accounts.
+					admin) and Sarah K. (community scientist) already have accounts.
 				</li>
 				<li>Google: Hana Bekele and Amina Yusuf are new, so they go through onboarding.</li>
 				<li>Phone: Ethiopia 911 000 001 is Abebe T. Any other number creates a new account.</li>

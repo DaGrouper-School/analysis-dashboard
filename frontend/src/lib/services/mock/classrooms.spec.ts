@@ -80,7 +80,7 @@ describe('classroom code visibility', () => {
 	});
 
 	it('hides classrooms from non-members', async () => {
-		await signInAs('g-sarah');
+		await signInAs('g-amina');
 		expect(await services.classrooms.listMine()).toEqual([]);
 		await expect(services.classrooms.get('cls_trinity')).rejects.toMatchObject({
 			code: 'not_found'
@@ -231,7 +231,7 @@ describe('invitations shared with the invited person', () => {
 		});
 		await services.classrooms.acceptInvitation(invitation.token);
 		expect(await services.classrooms.listMyInvitations()).toEqual([]);
-		expect((await services.classrooms.listMine()).map((c) => c.id)).toEqual(['cls_trinity']);
+		expect((await services.classrooms.listMine()).map((c) => c.id)).toContain('cls_trinity');
 
 		// The head sees the new member and the invitation as used.
 		await signInAs('g-tesfaye');
@@ -261,12 +261,20 @@ describe('invitations shared with the invited person', () => {
 describe('demo accounts', () => {
 	it('keeps the researcher and the platform admin as separate people', async () => {
 		await signInAs('g-marcus');
-		expect((await services.classrooms.listMine()).map((c) => c.id)).toEqual(['cls_trinity']);
-		expect((await services.classrooms.get('cls_trinity')).classroom.myRole).toBe('researcher');
+		const followed = await services.classrooms.listMine();
+		expect(followed.map((c) => c.id).sort()).toEqual(['cls_hargeisa', 'cls_nassau', 'cls_trinity']);
+		expect(followed.every((c) => c.myRole === 'researcher')).toBe(true);
 
 		await signInAs('g-leila');
 		const all = await services.classrooms.listMine();
 		expect(all.length).toBe(3);
 		expect(all.every((c) => c.myRole === null)).toBe(true);
+	});
+
+	it('puts the demo community scientist in two classrooms', async () => {
+		await signInAs('g-sarah');
+		const mine = await services.classrooms.listMine();
+		expect(mine.map((c) => c.id).sort()).toEqual(['cls_hargeisa', 'cls_nassau']);
+		expect(mine.every((c) => c.myRole === 'community_scientist' && c.code === null)).toBe(true);
 	});
 });

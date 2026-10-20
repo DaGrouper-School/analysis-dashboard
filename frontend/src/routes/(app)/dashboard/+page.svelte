@@ -9,7 +9,11 @@
 
 	let { data }: PageProps = $props();
 
-	const firstName = $derived(data.user.fullName.split(' ')[0]);
+	// Skip a title, so "Dr. Marcus L." is greeted as Marcus.
+	const firstName = $derived(
+		data.user.fullName.split(' ').find((part) => !/^(dr|prof|mr|mrs|ms)\.?$/i.test(part)) ??
+			data.user.fullName
+	);
 
 	const DOMAINS: { id: EnvironmentalDomain; label: string; icon: string }[] = [
 		{ id: 'AIR', label: 'Air', icon: '🌳' },
