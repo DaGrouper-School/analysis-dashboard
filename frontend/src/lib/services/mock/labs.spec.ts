@@ -141,10 +141,11 @@ describe('labs (AP-05)', () => {
 		});
 	});
 
-	it('lets community scientists see devices but not register them or see SAM sources', async () => {
+	it('lets community scientists record readings but not register devices or see SAM sources', async () => {
 		await signInAbebe();
 		const detail = await services.labs.get('lab_trinity');
 		expect(detail.canManage).toBe(false);
+		expect(detail.canRecord).toBe(true);
 		expect(detail.devices.length).toBe(3);
 		expect(detail.devices.every((d) => d.samSourceId === null)).toBe(true);
 		await expect(services.labs.registerDevice('lab_trinity', deviceInput)).rejects.toMatchObject({
@@ -153,9 +154,15 @@ describe('labs (AP-05)', () => {
 		await expect(services.labs.create('cls_trinity', labInput)).rejects.toMatchObject({
 			code: 'forbidden'
 		});
-		await expect(
-			services.labs.uploadReadings('dev_trinity_soil', [reading(null)])
-		).rejects.toMatchObject({ code: 'forbidden' });
+		await expect(services.labs.removeDevice('dev_trinity_soil')).rejects.toMatchObject({
+			code: 'forbidden'
+		});
+		const [stored] = await services.labs.uploadReadings('dev_trinity_soil', [reading(null)]);
+		expect(stored).toMatchObject({ classroomId: 'cls_trinity', locationSource: 'lab' });
+		// The head sees the community scientist's reading.
+		await signInAs('g-tesfaye');
+		const { readings } = await services.labs.get('lab_trinity');
+		expect(readings.map((r) => r.id)).toContain(stored.id);
 	});
 
 	it('hides labs from people outside the classroom', async () => {
@@ -224,6 +231,7 @@ describe('labs (AP-05)', () => {
 		expect(detail.canManage).toBe(false);
 		expect(detail.readings.length).toBeGreaterThan(0);
 		expect(detail.devices.every((d) => d.samSourceId === null)).toBe(true);
+		expect(detail.canRecord).toBe(false);
 		await expect(services.labs.registerDevice('lab_trinity', deviceInput)).rejects.toMatchObject({
 			code: 'forbidden'
 		});

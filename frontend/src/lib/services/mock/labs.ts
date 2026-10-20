@@ -127,7 +127,8 @@ export function createMockLabs({
 					.sort(newestFirst)
 					.slice(0, 50)
 					.map(toReading),
-				canManage
+				canManage,
+				canRecord: can.recordReadings
 			};
 		},
 
@@ -236,11 +237,11 @@ export function createMockLabs({
 			return updateDb((state) => {
 				const device = state.devices.find((d) => d.id === deviceId);
 				if (!device) throw new ServiceError('not_found', 'Device not found.');
-				const { lab, canManage } = accessLab(state, device.labId);
-				if (!canManage) {
+				const { lab, can } = accessLab(state, device.labId);
+				if (!can.recordReadings) {
 					throw new ServiceError(
 						'forbidden',
-						'Only facilitators and the institution head can connect devices.'
+						'You can read this classroom’s data but not record readings.'
 					);
 				}
 				const samSourceId = sourceIdFor(state, device);

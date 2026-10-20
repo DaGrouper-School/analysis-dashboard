@@ -257,6 +257,8 @@ export interface LabDetail {
 	readings: Reading[];
 	/** Heads and facilitators can register devices and edit the lab. */
 	canManage: boolean;
+	/** Can connect a registered device and record its readings (also community scientists). */
+	canRecord: boolean;
 }
 
 export interface CreateLabInput {

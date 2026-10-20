@@ -195,63 +195,65 @@
 		</section>
 	</div>
 
-	{#if data.detail.canManage}
+	{#if data.detail.canManage || data.detail.canRecord}
 		<div class="space-y-6 self-start">
-			<section class="card">
-				<h2 class="text-lg font-semibold">Register a device</h2>
-				<p class="mt-1 text-sm text-muted">
-					A device can sit far from the lab, like a weather station in another town feeding this
-					lab. Its GPS position is sent with each reading, not set here.
-				</p>
-				<form class="mt-4 space-y-4" onsubmit={register} novalidate>
-					<div>
-						<label class="label" for="device-name">Device name</label>
-						<input
-							id="device-name"
-							class={['input', errors.name && 'input-error']}
-							placeholder="Shashamane Weather Station"
-							bind:value={name}
-						/>
-						{#if errors.name}<p class="field-error">{errors.name}</p>{/if}
-					</div>
-					<div class="grid grid-cols-2 gap-3">
+			{#if data.detail.canManage}
+				<section class="card">
+					<h2 class="text-lg font-semibold">Register a device</h2>
+					<p class="mt-1 text-sm text-muted">
+						A device can sit far from the lab, like a weather station in another town feeding this
+						lab. Its GPS position is sent with each reading, not set here.
+					</p>
+					<form class="mt-4 space-y-4" onsubmit={register} novalidate>
 						<div>
-							<label class="label" for="device-type">Type</label>
-							<select id="device-type" class="input" bind:value={type}>
-								{#each Object.entries(DEVICE_TYPE_LABELS) as [value, label] (value)}
-									<option {value}>{label}</option>
-								{/each}
-							</select>
-						</div>
-						<div>
-							<label class="label" for="identifier">Identifier</label>
+							<label class="label" for="device-name">Device name</label>
 							<input
-								id="identifier"
-								class={['input font-mono', errors.identifier && 'input-error']}
-								placeholder="TWS-2041-SH"
-								bind:value={identifier}
+								id="device-name"
+								class={['input', errors.name && 'input-error']}
+								placeholder="Shashamane Weather Station"
+								bind:value={name}
 							/>
+							{#if errors.name}<p class="field-error">{errors.name}</p>{/if}
 						</div>
-						{#if errors.identifier}
-							<p class="field-error col-span-2 mt-0">{errors.identifier}</p>
+						<div class="grid grid-cols-2 gap-3">
+							<div>
+								<label class="label" for="device-type">Type</label>
+								<select id="device-type" class="input" bind:value={type}>
+									{#each Object.entries(DEVICE_TYPE_LABELS) as [value, label] (value)}
+										<option {value}>{label}</option>
+									{/each}
+								</select>
+							</div>
+							<div>
+								<label class="label" for="identifier">Identifier</label>
+								<input
+									id="identifier"
+									class={['input font-mono', errors.identifier && 'input-error']}
+									placeholder="TWS-2041-SH"
+									bind:value={identifier}
+								/>
+							</div>
+							{#if errors.identifier}
+								<p class="field-error col-span-2 mt-0">{errors.identifier}</p>
+							{/if}
+						</div>
+						{#if formError}<p class="field-error" role="alert">{formError}</p>{/if}
+						<button class="btn btn-primary" disabled={saving}>
+							{saving ? 'Registering…' : 'Register device'}
+						</button>
+						{#if justAdded}
+							<p class="text-sm text-muted" role="status">
+								{justAdded} is registered. Add another, or
+								<a class="link" href={resolve('/(app)/classrooms/[id]', { id: lab.classroomId })}
+									>finish setup</a
+								>.
+							</p>
 						{/if}
-					</div>
-					{#if formError}<p class="field-error" role="alert">{formError}</p>{/if}
-					<button class="btn btn-primary" disabled={saving}>
-						{saving ? 'Registering…' : 'Register device'}
-					</button>
-					{#if justAdded}
-						<p class="text-sm text-muted" role="status">
-							{justAdded} is registered. Add another, or
-							<a class="link" href={resolve('/(app)/classrooms/[id]', { id: lab.classroomId })}
-								>finish setup</a
-							>.
-						</p>
-					{/if}
-				</form>
-			</section>
+					</form>
+				</section>
+			{/if}
 
-			{#if devices.length}
+			{#if data.detail.canRecord && devices.length}
 				<ConnectDeviceDemo
 					{devices}
 					classroomName={data.detail.classroomName}

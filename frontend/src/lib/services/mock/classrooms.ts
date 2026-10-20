@@ -56,7 +56,10 @@ export function permissionsFor(user: User, role: ClassroomRole | null) {
 				: role === 'facilitator'
 					? ['community_scientist']
 					: []) as ClassroomRole[],
-		manageMembers: user.platformAdmin || isHead
+		manageMembers: user.platformAdmin || isHead,
+		// Connecting an already registered device and recording its readings. Researchers only read.
+		recordReadings:
+			user.platformAdmin || isHead || role === 'facilitator' || role === 'community_scientist'
 	};
 }
 
