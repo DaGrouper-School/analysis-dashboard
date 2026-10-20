@@ -561,6 +561,47 @@ const readings: MockDbState['readings'] = [
 	)
 ];
 
+/** How far each parameter wanders from day to day in the seeded history. */
+const DAILY_SWING: Record<string, number> = {
+	air_temperature: 2.5,
+	relative_humidity: 8,
+	wind_avg: 1.5,
+	wind_gust: 2,
+	uv: 1.8,
+	precip_accum_local_day: 3,
+	rain_gauge_daily_accumulation: 3,
+	soil_moisture: 4,
+	soil_temperature: 1.5
+};
+const HISTORY_DAYS = 14;
+
+/**
+ * Two weeks of daily readings behind each device's latest one, so the dashboard has a history
+ * to chart. Values swing smoothly around the latest reading; no reading goes below zero.
+ */
+function history(): MockDbState['readings'] {
+	const result: MockDbState['readings'] = [];
+	devices.forEach((device, d) => {
+		const latest = readings.find((r) => r.deviceId === device.id && r.observedAt === READING_AT)!;
+		const gps = latest.locationSource === 'device' ? latest.location : null;
+		for (let day = 1; day < HISTORY_DAYS; day++) {
+			const observedAt = new Date(Date.parse(READING_AT) - day * 86_400_000).toISOString();
+			if (readings.some((r) => r.deviceId === device.id && r.observedAt === observedAt)) continue;
+			const values = { ...latest.values };
+			for (const [id, swing] of Object.entries(DAILY_SWING)) {
+				const value = values[id];
+				if (typeof value !== 'number') continue;
+				const wave = Math.sin(day * 0.9 + d) + 0.5 * Math.sin(day * 2.3 + d * 2);
+				values[id] = Math.max(0, Math.round((value + (swing * wave) / 1.5) * 10) / 10);
+			}
+			result.push(reading(device.id, observedAt, values, gps));
+		}
+	});
+	return result;
+}
+
+readings.push(...history());
+
 export function createSeed(): Omit<MockDbState, 'version'> {
 	// Deep copy so a reset never shares objects with mutated state.
 	return structuredClone({

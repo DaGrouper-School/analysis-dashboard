@@ -114,6 +114,10 @@ export interface LabService {
 	currentConditions(): Promise<CurrentConditions[]>;
 	/** Recent readings from devices in the user's classrooms, newest first. Same membership rule. */
 	recentReadings(limit?: number): Promise<CurrentConditions[]>;
+	/** Every device registered to a classroom's labs, for anyone who can view the classroom. */
+	listClassroomDevices(classroomId: string): Promise<Device[]>;
+	/** One device's readings, newest first, for anyone who can view its classroom. */
+	deviceReadings(deviceId: string, limit?: number): Promise<Reading[]>;
 }
 
 export interface Services {

@@ -290,6 +290,33 @@ export function createMockLabs({
 		async recentReadings(limit = 20) {
 			await delay();
 			return memberReadings(readDb()).slice(0, limit);
+		},
+
+		async listClassroomDevices(classroomId) {
+			await delay();
+			const state = readDb();
+			const user = currentUser(state);
+			const can = permissionsFor(user, roleIn(state, classroomId, user.id));
+			if (!can.view) throw new ServiceError('not_found', 'Classroom not found.');
+			const labIds = new Set(
+				state.labs.filter((l) => l.classroomId === classroomId).map((l) => l.id)
+			);
+			return state.devices
+				.filter((d) => labIds.has(d.labId))
+				.map((d) => toDevice(state, d, can.seeCode));
+		},
+
+		async deviceReadings(deviceId, limit = 100) {
+			await delay();
+			const state = readDb();
+			const device = state.devices.find((d) => d.id === deviceId);
+			if (!device) throw new ServiceError('not_found', 'Device not found.');
+			accessLab(state, device.labId);
+			return state.readings
+				.filter((r) => r.deviceId === deviceId)
+				.sort(newestFirst)
+				.slice(0, limit)
+				.map((r) => toReading(state, r));
 		}
 	};
 }

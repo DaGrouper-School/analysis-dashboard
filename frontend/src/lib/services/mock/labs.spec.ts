@@ -51,7 +51,8 @@ describe('labs (AP-05)', () => {
 		expect(station.samSourceId).toBe('DGC-7K3Q9M:TWS-2041-SH');
 		// The Shashamane station feeds the Trinity lab in Addis Ababa, and has moved between readings.
 		const stationReadings = readings.filter((r) => r.deviceId === station.id);
-		expect(stationReadings.length).toBe(2);
+		// Two weeks of daily history.
+		expect(stationReadings.length).toBe(14);
 		expect(stationReadings.every((r) => r.locationSource === 'device')).toBe(true);
 		expect(distanceKm(lab.location, stationReadings[0].location)).toBeGreaterThan(150);
 		expect(stationReadings[0].location).not.toEqual(stationReadings[1].location);
@@ -224,6 +225,28 @@ describe('labs (AP-05)', () => {
 
 		await signInAs('g-amina');
 		expect(await services.labs.recentReadings()).toEqual([]);
+	});
+
+	it('lists a classroom’s devices and one device’s history to its members only', async () => {
+		await signInAs('g-sarah');
+		const devices = await services.labs.listClassroomDevices('cls_nassau');
+		expect(devices.map((d) => d.id)).toEqual(['dev_nassau_ws']);
+		expect(devices[0].samSourceId).toBeNull();
+		const history = await services.labs.deviceReadings('dev_nassau_ws');
+		expect(history.length).toBe(14);
+		expect(history.map((r) => r.observedAt)).toEqual(
+			history
+				.map((r) => r.observedAt)
+				.sort()
+				.reverse()
+		);
+		expect((await services.labs.deviceReadings('dev_nassau_ws', 5)).length).toBe(5);
+		await expect(services.labs.listClassroomDevices('cls_trinity')).rejects.toMatchObject({
+			code: 'not_found'
+		});
+		await expect(services.labs.deviceReadings('dev_trinity_soil')).rejects.toMatchObject({
+			code: 'not_found'
+		});
 	});
 
 	it('shows the demo researcher the data of every classroom they joined', async () => {

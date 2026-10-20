@@ -3,6 +3,7 @@
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import type { DeviceType } from '#lib/domain/types.ts';
 	import { formatPoint } from '#lib/geo.ts';
+	import { formatValue, keyValues } from '#lib/key-values.ts';
 	import { DEVICE_TYPE_COLORS, DEVICE_TYPE_LABELS } from '#lib/labels.ts';
 	import type { PageProps } from './$types';
 
@@ -56,33 +57,9 @@
 			: [...hiddenTypes, type];
 	}
 
-	// AP-06: current temperature, wind, rain and UV.
-	const headline = [
-		{ id: 'air_temperature', label: 'Temperature' },
-		{ id: 'wind_avg', label: 'Wind' },
-		{ id: 'precip_accum_local_day', label: 'Rain today' },
-		{ id: 'uv', label: 'UV index' }
-	];
-	const HEADLINE_IDS = new Set(headline.map((h) => h.id));
-
-	function format(value: number | string | undefined, unit = '') {
-		if (value === undefined) return '—';
-		if (typeof value === 'string') return value;
-		const rounded = Math.abs(value) >= 100 ? Math.round(value) : Math.round(value * 10) / 10;
-		return `${rounded}${unit && !unit.startsWith('°') ? ' ' : ''}${unit}`;
-	}
-
-	function label(id: string) {
-		return (
-			paramsById.get(id)?.label ?? id.replaceAll('_', ' ').replace(/^./, (c) => c.toUpperCase())
-		);
-	}
-
-	/** Devices without weather parameters (soil, rain gauge) show their own values instead. */
-	const otherValues = $derived(
-		selected && !headline.some((h) => selected.reading.values[h.id] !== undefined)
-			? Object.entries(selected.reading.values).filter(([id]) => !HEADLINE_IDS.has(id))
-			: []
+	// Only the values that matter for the selected sensor's type: no rain on a soil sensor.
+	const tiles = $derived(
+		selected ? keyValues(selected.device.type, selected.reading.values, paramsById) : []
 	);
 </script>
 
@@ -238,25 +215,13 @@
 					{/if}
 				</p>
 				<dl class="mt-5 grid grid-cols-2 gap-px border border-line bg-line">
-					{#each headline as item (item.id)}
+					{#each tiles as item (item.id)}
 						<div class="bg-surface p-3">
 							<dt class="text-xs text-muted">{item.label}</dt>
-							<dd class="mt-1 text-2xl text-ink">
-								{format(selected.reading.values[item.id], paramsById.get(item.id)?.unit)}
-							</dd>
+							<dd class="mt-1 text-2xl text-ink">{formatValue(item.value, item.unit)}</dd>
 						</div>
 					{/each}
 				</dl>
-				{#if otherValues.length}
-					<dl class="mt-4 space-y-1 text-sm">
-						{#each otherValues as [id, value] (id)}
-							<div class="flex justify-between gap-3">
-								<dt class="text-muted">{label(id)}</dt>
-								<dd class="text-ink">{format(value, paramsById.get(id)?.unit)}</dd>
-							</div>
-						{/each}
-					</dl>
-				{/if}
 
 				<h3 class="mt-6 text-sm font-medium">Active alerts</h3>
 				{#if selected.alerts.length}
