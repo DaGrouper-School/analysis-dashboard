@@ -1,0 +1,7 @@
+{
+	"name": "@dagrouper/backend",
+	"private": true,
+	"version": "0.0.1",
+	"description": "Analysis Platform backend: auth API and SAM integration. Stack not chosen yet.",
+	"scripts": {}
+}

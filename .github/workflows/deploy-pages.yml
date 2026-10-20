@@ -24,16 +24,16 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run check
-      - run: npm test
-      - run: npm run build
+      - run: npm run check -w frontend
+      - run: npm test -w frontend
+      - run: npm run build -w frontend
         env:
           BASE_PATH: /${{ github.event.repository.name }}
       # The SPA fallback doubles as the entry page.
-      - run: cp build/404.html build/index.html
+      - run: cp frontend/build/404.html frontend/build/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: build
+          path: frontend/build
 
   deploy:
     needs: build

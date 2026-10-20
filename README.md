@@ -1,80 +1,20 @@
 # DaGrouper Analysis Dashboard
 
-Front end for the DaGrouper Analysis Platform, built with SvelteKit (Svelte 5) and Tailwind CSS.
+Monorepo for the DaGrouper Analysis Platform.
 
-For now it is front-end only: data comes from a mock layer that is prefilled with demo data and
-saved in the browser's localStorage. The auth API and SAM (Scientific Asset Manager) backend will
-replace it later without changes to the pages.
+| Folder                  | What it is                                                              |
+| ----------------------- | ----------------------------------------------------------------------- |
+| [`frontend/`](frontend) | SvelteKit app. Runs on mock data saved in localStorage for now.         |
+| [`backend/`](backend)   | Placeholder for the auth API and SAM integration. Stack not chosen yet. |
 
-## Getting started
+The folders are npm workspaces. From the repo root:
 
 ```sh
 npm install
-npm run dev
+npm run dev      # frontend dev server
+npm test         # tests in every workspace
+npm run build    # frontend static build
 ```
 
-Other scripts: `npm run build` (static SPA in `build/`), `npm test`, `npm run check`, `npm run lint`.
-
-## Demo accounts
-
-| Sign in with | Account                                          | State                                    |
-| ------------ | ------------------------------------------------ | ---------------------------------------- |
-| Google       | Sarah K. (custodian), Dr. Marcus L. (researcher) | Existing, goes straight to the dashboard |
-| Google       | Hana Bekele, Amina Yusuf                         | New, goes through onboarding             |
-| Phone        | Ethiopia +251 911 000 001 (Abebe T.)             | Existing                                 |
-| Phone        | Any other valid number                           | New                                      |
-
-No SMS is sent: the mock shows the 6-digit code on screen. "Reset demo data" on the profile page
-restores the seed.
-
-## How the data layer is organised
-
-```
-src/lib/
-  domain/        types and validation shared by the UI and every data source
-  services/
-    types.ts     the service interfaces (auth, profile, places, registry): the UI's only contract
-    index.ts     picks the implementation from VITE_DATA_SOURCE
-    mock/        localStorage-backed implementation that behaves like the backend
-    http/        fetch-based sketch of the real implementation (proposed endpoints)
-  data/          mock database (localStorage persistence) and seed data
-```
-
-Pages never touch localStorage or fetch directly. They call `services.*` from
-`#lib/services/index.ts`. To move to the real backend, finish `services/http`, set
-`VITE_DATA_SOURCE=http` and `VITE_API_URL`, and the same pages run against it. The mock enforces
-the same rules the backend should (OTP expiry, 30-second resend, attempt limits, unique
-email/phone, required onboarding fields) so the UI handles those errors already.
-
-Authentication: in the mock, the "session" is a record in localStorage. With the real backend it
-becomes an HTTP-only cookie set by the server (AP-02), so the front end never handles tokens;
-`services.auth.getCurrentUser()` is the only way pages learn who is signed in. Google sign-in in
-the mock is an account picker that returns a fake ID token; the real flow uses Google Identity
-Services and the backend verifies the token.
-
-## Routes
-
-| Route                 | Story                                                   |
-| --------------------- | ------------------------------------------------------- |
-| `/signup`             | AP-01 sign up with Google or phone                      |
-| `/verify-phone`       | AP-01 SMS code with 30 s resend                         |
-| `/onboarding/profile` | AP-02 profile and contact (Google users verify a phone) |
-| `/onboarding/address` | AP-02 address with places autocomplete                  |
-| `/dashboard`          | Station summary (placeholder for sprint 3, AP-06/AP-10) |
-| `/profile`            | Edit profile and address, sign out                      |
-
-Route groups `(auth)` and `(app)` hold the guards: signed-in users skip sign-up, and the app
-requires a completed onboarding.
-
-## Seed data
-
-Personas come from the project vault (User Personas). The parameter registry holds the 36 weather
-station parameters mapped to the six environmental domains (AIR, WAVES, SUN, RAIN, WIND,
-LIGHTNING) plus the manual rain gauge, with values from the sample station payload.
-
-## Deployment
-
-Pushes to `main` deploy to GitHub Pages through `.github/workflows/deploy-pages.yml`. The workflow
-builds with `BASE_PATH=/<repo-name>` so links work under the Pages subpath, and the SPA fallback
-(`404.html`) lets any route load directly. In the repo's **Settings → Pages**, the source must be
-set to **GitHub Actions**.
+Pushes to `main` deploy the front end to GitHub Pages (`.github/workflows/deploy-pages.yml`). In
+the repo's **Settings → Pages**, the source must be set to **GitHub Actions**.
