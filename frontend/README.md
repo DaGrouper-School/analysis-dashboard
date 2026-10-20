@@ -80,7 +80,7 @@ Services and the backend verifies the token.
 | `/dashboard/readings` | Raw readings of the picked sensor, every value it sent  |
 | `/map`                | AP-06 device map with current conditions and alerts     |
 | `/classrooms/[id]`    | AP-03 classroom, members, invites; edit name and school |
-| `/labs/[labId]`       | AP-05 devices, readings, connect-a-device demo          |
+| `/labs/[labId]`       | AP-05 devices, readings, record-data demo               |
 | `/labs/[labId]/edit`  | Edit the lab and its site profile                       |
 | `/profile`            | Edit profile and address, sign out                      |
 
@@ -107,17 +107,19 @@ are flagged as not from the device. Each device's SAM source ID is the classroom
 device identifier, e.g. `DGC-7K3Q9M:TWS-2041-SH`, and every reading is tagged with its classroom.
 
 Classrooms have four roles: institution head, facilitator, community scientist and researcher.
-The head and facilitators register devices. Community scientists can connect a registered device
-and record its readings, but cannot add or remove devices. Whoever records can choose to be
+The head and facilitators register devices. Community scientists can record data from a registered
+device, but cannot add or remove devices. Whoever records can choose to be
 credited: their name then shows on those readings for the classroom. Without it, a reading
 carries no personal credit. Researchers are read-only members
 invited by the head: they see the classroom's devices and readings but cannot record readings or
 see the classroom code.
 
 People are never assigned to devices. Current conditions come only from devices in classrooms the
-user belongs to; anyone else, platform admins included, sees an empty state. On a lab page,
-the institution head, facilitators and community scientists can run the connect-a-device demo: it pairs with a
-registered device and records six readings, two of them without a GPS fix, which then appear in that sensor's chart on the dashboard and on its raw readings page. Classroom name and
+user belongs to; anyone else, platform admins included, sees an empty state. The institution head,
+facilitators and community scientists can run the record-data demo, from the dashboard for the
+picked sensor or from a lab page: it pairs with a registered device and records six readings,
+two of them without a GPS fix, which then appear in that sensor's chart on the dashboard and
+on its raw readings page. Researchers don't see it. Classroom name and
 institution are editable by the head; the classroom code never changes.
 
 ## Look and feel

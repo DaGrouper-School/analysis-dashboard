@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { EnvironmentalDomain } from '#lib/domain/types.ts';
 	import { formatPoint } from '#lib/geo.ts';
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
 	import ReadingChart from '#lib/components/ReadingChart.svelte';
+	import RecordData from '#lib/components/RecordData.svelte';
 	import { formatValue, keySummary, keyValues } from '#lib/key-values.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import { CLASSROOM_ROLE_LABELS, DEVICE_TYPE_COLORS, DEVICE_TYPE_LABELS } from '#lib/labels.ts';
@@ -47,6 +48,18 @@
 			replace: true,
 			reset: false
 		});
+	}
+
+	let recording = $state(false);
+	// A new pick closes the recorder, so it never records to a sensor the user moved away from.
+	const deviceId = $derived(device?.id);
+	$effect(() => {
+		void deviceId;
+		recording = false;
+	});
+
+	function lastGps() {
+		return data.readings.find((r) => r.locationSource === 'device')?.location ?? null;
 	}
 
 	function showReadings() {
@@ -213,9 +226,22 @@
 						{/if}
 					</div>
 				</div>
-				<button type="button" class="btn btn-ghost self-start" onclick={showReadings}>
-					Show raw sensor readings
-				</button>
+				<div class="flex flex-wrap gap-2">
+					{#if data.canRecord}
+						<button
+							type="button"
+							class="btn btn-primary"
+							aria-expanded={recording}
+							aria-controls="record-panel"
+							onclick={() => (recording = !recording)}
+						>
+							{recording ? 'Close recorder' : 'Record data'}
+						</button>
+					{/if}
+					<button type="button" class="btn btn-ghost" onclick={showReadings}>
+						Show raw sensor readings
+					</button>
+				</div>
 			</div>
 		{:else}
 			<div class="card lg:col-span-2">
@@ -251,6 +277,19 @@
 			</div>
 		</a>
 	</section>
+
+	{#if recording && device && data.canRecord && data.labLocation && data.classroom}
+		<div id="record-panel" class="mt-4">
+			<RecordData
+				devices={[device]}
+				classroomName={data.classroom.name}
+				labLocation={data.labLocation}
+				{lastGps}
+				parameters={data.parameters}
+				onfinish={() => invalidateAll()}
+			/>
+		</div>
+	{/if}
 
 	{#if device && charted}
 		<section class="card mt-4">

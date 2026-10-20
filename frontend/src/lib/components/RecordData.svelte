@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
-	import type { Device, GeoPoint, Reading, ReadingInput } from '#lib/domain/types.ts';
+	import type { Device, GeoPoint, Parameter, Reading, ReadingInput } from '#lib/domain/types.ts';
 	import { formatPoint } from '#lib/geo.ts';
+	import { keySummary } from '#lib/key-values.ts';
 	import { sampleValues } from '#lib/sample-readings.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
 
 	/**
-	 * Simulated device connection. Until hardware is wired up, this plays what a real connection
-	 * does: find the device, pair, then stream its buffered readings to the backend, which tags
-	 * them with the classroom and forwards them to SAM. GPS comes with each reading; readings
-	 * without a fix fall back to the lab's location and are flagged.
+	 * Record data from a registered sensor (simulated). Until hardware is wired up, this plays
+	 * what a real recording does: find the sensor, pair, then stream its buffered readings to the
+	 * backend, which tags them with the classroom and forwards them to SAM. GPS comes with each
+	 * reading; readings without a fix fall back to the lab's location and are flagged.
 	 */
 	let {
 		devices,
@@ -17,6 +17,7 @@
 		labLocation,
 		lastGps,
 		deviceId = $bindable(''),
+		parameters = [],
 		onfinish
 	}: {
 		devices: Device[];
@@ -24,7 +25,10 @@
 		labLocation: GeoPoint;
 		/** The device's last GPS position, if it ever sent one. */
 		lastGps: (deviceId: string) => GeoPoint | null;
+		/** With one device the picker is hidden: the data goes to that sensor. */
 		deviceId?: string;
+		/** The parameter registry, for labelling values. */
+		parameters?: Parameter[];
 		onfinish: () => Promise<void>;
 	} = $props();
 
@@ -40,7 +44,11 @@
 	let error = $state('');
 	let run = 0;
 
-	const device = $derived(devices.find((d) => d.id === deviceId));
+	const device = $derived(
+		devices.length === 1 ? devices[0] : devices.find((d) => d.id === deviceId)
+	);
+	const paramsById = $derived(new Map(parameters.map((p) => [p.id, p])));
+	const target = (reading: Reading) => devices.find((d) => d.id === reading.deviceId) ?? device!;
 	const busy = $derived(phase === 'searching' || phase === 'pairing' || phase === 'streaming');
 	const time = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
 
@@ -58,7 +66,7 @@
 		return points;
 	}
 
-	async function connect() {
+	async function record() {
 		if (!device) return;
 		const target = device;
 		const id = ++run;
@@ -101,50 +109,47 @@
 		await onfinish();
 	}
 
-	async function disconnect() {
+	async function stop() {
 		const hadReadings = sent.length > 0;
 		run++;
 		phase = 'idle';
 		sent = [];
 		if (hadReadings) await onfinish();
 	}
-
-	function summary(values: Reading['values']) {
-		return Object.entries(values)
-			.slice(0, 3)
-			.map(([k, v]) => `${k.replaceAll('_', ' ')} ${v}`)
-			.join(' · ');
-	}
 </script>
 
-<section class="card" aria-labelledby="connect-heading">
-	<h2 id="connect-heading" class="text-lg font-semibold">Connect a device</h2>
+<section class="card" aria-labelledby="record-heading">
+	<h2 id="record-heading" class="text-lg font-semibold">Record data</h2>
 	<p class="mt-1 text-sm text-muted">
-		Demo: simulates pairing with a registered device and recording its readings for
-		{classroomName}.
+		Demo: pairs with {device && devices.length === 1 ? device.name : 'a registered sensor'} and records
+		its readings to {classroomName}.
 	</p>
 
 	<div class="mt-4 flex flex-wrap items-end gap-3">
-		<div class="min-w-0 flex-1">
-			<label class="label" for="connect-device">Device</label>
-			<select id="connect-device" class="input" bind:value={deviceId} disabled={busy}>
-				<option value="" disabled>Choose a device</option>
-				{#each devices as d (d.id)}
-					<option value={d.id}>{d.name}</option>
-				{/each}
-			</select>
-		</div>
+		{#if devices.length > 1}
+			<div class="min-w-0 flex-1">
+				<label class="label" for="record-device">Sensor</label>
+				<select id="record-device" class="input" bind:value={deviceId} disabled={busy}>
+					<option value="" disabled>Choose a sensor</option>
+					{#each devices as d (d.id)}
+						<option value={d.id}>{d.name}</option>
+					{/each}
+				</select>
+			</div>
+		{/if}
 		{#if busy || phase === 'done'}
-			<button type="button" class="btn btn-ghost" onclick={disconnect}>Disconnect</button>
+			<button type="button" class="btn btn-ghost" onclick={stop}>
+				{busy ? 'Stop' : 'Done'}
+			</button>
 		{:else}
-			<button type="button" class="btn btn-primary" disabled={!device} onclick={connect}>
-				Connect
+			<button type="button" class="btn btn-primary" disabled={!device} onclick={record}>
+				Record data
 			</button>
 		{/if}
 	</div>
 	<label class="mt-3 flex items-start gap-2 text-sm">
 		<input
-			id="connect-credit"
+			id="record-credit"
 			type="checkbox"
 			class="mt-0.5 rounded-sm border-line-strong bg-transparent text-teal focus:ring-teal"
 			bind:checked={credit}
@@ -191,7 +196,7 @@
 								>Recorded</span
 							>
 						</div>
-						<p class="text-muted">{summary(reading.values)}</p>
+						<p class="text-muted">{keySummary(target(reading).type, reading.values, paramsById)}</p>
 						<p class="text-muted">
 							{reading.creditedTo ? `Credited to ${reading.creditedTo}` : 'Not credited to anyone'}
 						</p>
@@ -213,7 +218,6 @@
 		{#if phase === 'done'}
 			<p class="mt-3 text-sm" role="status">
 				{COUNT} readings recorded. {NO_FIX.size} had no GPS and use the lab's location.
-				<a class="link" href={resolve('/(app)/dashboard')}>See them on the dashboard</a>.
 			</p>
 		{/if}
 		{#if error}<p class="field-error" role="alert">{error}</p>{/if}
