@@ -9,8 +9,10 @@ import type {
 	PhoneChallenge,
 	PlaceSuggestion,
 	ProfileInput,
-	Station,
-	StationSnapshot,
+	Device,
+	DeviceSnapshot,
+	Lab,
+	LabDetail,
 	User
 } from '#lib/domain/types.ts';
 import { ServiceError, type ServiceErrorCode, type Services } from '../types';
@@ -96,6 +98,18 @@ export function createHttpServices(baseUrl: string): Services {
 					`/invitations/by-token/${encodeURIComponent(token)}/accept`
 				)
 		},
+		labs: {
+			listForClassroom: (classroomId) =>
+				request<Lab[]>('GET', `/classrooms/${encodeURIComponent(classroomId)}/labs`),
+			get: (labId) => request<LabDetail>('GET', `/labs/${encodeURIComponent(labId)}`),
+			create: (classroomId, input) =>
+				request<Lab>('POST', `/classrooms/${encodeURIComponent(classroomId)}/labs`, input),
+			registerDevice: (labId, input) =>
+				request<Device>('POST', `/labs/${encodeURIComponent(labId)}/devices`, input),
+			removeDevice: (deviceId) =>
+				request<void>('DELETE', `/devices/${encodeURIComponent(deviceId)}`),
+			listMyDevices: () => request<Device[]>('GET', '/me/devices')
+		},
 		places: {
 			autocomplete: (q) =>
 				request<PlaceSuggestion[]>('GET', `/places/autocomplete?q=${encodeURIComponent(q)}`),
@@ -103,12 +117,9 @@ export function createHttpServices(baseUrl: string): Services {
 		},
 		registry: {
 			listParameters: () => request<Parameter[]>('GET', '/sam/parameters'),
-			listStations: () => request<Station[]>('GET', '/sam/stations'),
-			getLatestSnapshot: (stationId) =>
-				request<StationSnapshot | null>(
-					'GET',
-					`/sam/stations/${encodeURIComponent(stationId)}/latest`
-				)
+			listDevices: () => request<Device[]>('GET', '/sam/devices'),
+			getLatestSnapshot: (deviceId) =>
+				request<DeviceSnapshot | null>('GET', `/sam/devices/${encodeURIComponent(deviceId)}/latest`)
 		}
 	};
 }

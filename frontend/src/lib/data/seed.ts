@@ -1,10 +1,4 @@
-import type {
-	EnvironmentalDomain,
-	Parameter,
-	Station,
-	StationSnapshot,
-	User
-} from '#lib/domain/types.ts';
+import type { EnvironmentalDomain, Parameter, DeviceSnapshot, User } from '#lib/domain/types.ts';
 import type { MockDbState } from './mock-db';
 
 /**
@@ -89,9 +83,9 @@ const users: User[] = [
 		role: 'institution_head',
 		platformAdmin: false,
 		address: {
-			street: 'Kebele 04',
-			city: 'Shashamane',
-			state: 'Oromia',
+			street: 'Churchill Avenue',
+			city: 'Addis Ababa',
+			state: 'Addis Ababa',
 			zip: '',
 			country: 'Ethiopia'
 		},
@@ -105,8 +99,26 @@ const classrooms: MockDbState['classrooms'] = [
 	{
 		id: 'cls_trinity',
 		name: 'Trinity Lab Classroom',
-		institutionName: 'Trinity School, Shashamane',
+		institutionName: 'Trinity School, Addis Ababa',
 		code: 'DGC-7K3Q9M',
+		setup: 'admin_assisted',
+		createdBy: 'usr_marcus',
+		createdAt: SEEDED_AT
+	},
+	{
+		id: 'cls_nassau',
+		name: 'Bay Street Classroom',
+		institutionName: 'Bay Street School, Nassau',
+		code: 'DGC-BS4N7R',
+		setup: 'admin_assisted',
+		createdBy: 'usr_marcus',
+		createdAt: SEEDED_AT
+	},
+	{
+		id: 'cls_hargeisa',
+		name: 'Hargeisa Science Club',
+		institutionName: 'Hargeisa Secondary School',
+		code: 'DGC-HG2W5K',
 		setup: 'admin_assisted',
 		createdBy: 'usr_marcus',
 		createdAt: SEEDED_AT
@@ -294,46 +306,114 @@ const parameters: Parameter[] = [
 	}
 ];
 
-const stations: Station[] = [
+const labs: MockDbState['labs'] = [
 	{
-		id: 'stn_shashamane',
-		name: 'Shashamane Weather Station',
-		type: 'weather_station',
-		siteName: 'Trinity lab',
+		id: 'lab_trinity',
+		classroomId: 'cls_trinity',
+		name: 'Trinity Lab',
+		placeName: 'Trinity School, Addis Ababa',
 		country: 'Ethiopia',
-		lat: 7.2,
-		lng: 38.6
+		location: { lat: 9.03, lng: 38.74 },
+		siteProfile: {
+			setting: 'urban',
+			description: 'School lab in the capital, working with a partner station in Shashamane.',
+			researchQuestions: [
+				'How does rainfall in Shashamane compare with Addis Ababa through the season?',
+				'When is soil moisture high enough for planting in the school garden?'
+			]
+		},
+		createdAt: SEEDED_AT
 	},
 	{
-		id: 'stn_shashamane_gauge',
-		name: 'Shashamane Rain Gauge',
-		type: 'rain_gauge',
-		siteName: 'Trinity lab',
-		country: 'Ethiopia',
-		lat: 7.2,
-		lng: 38.6
-	},
-	{
-		id: 'stn_nassau',
-		name: 'Nassau Coastal Station',
-		type: 'weather_station',
-		siteName: 'Bay Street node',
+		id: 'lab_nassau',
+		classroomId: 'cls_nassau',
+		name: 'Bay Street Coastal Lab',
+		placeName: 'Bay Street School, Nassau',
 		country: 'Bahamas',
-		lat: 25.06,
-		lng: -77.34
+		location: { lat: 25.077, lng: -77.339 },
+		siteProfile: {
+			setting: 'coastal',
+			description: 'Shoreline lab tracking wind, heat and storm conditions on the harbour.',
+			researchQuestions: ['How do storm-season winds change heat stress on the shore?']
+		},
+		createdAt: SEEDED_AT
 	},
 	{
-		id: 'stn_hargeisa',
-		name: 'Hargeisa Station',
-		type: 'weather_station',
-		siteName: 'Hargeisa school',
+		id: 'lab_hargeisa',
+		classroomId: 'cls_hargeisa',
+		name: 'Hargeisa School Lab',
+		placeName: 'Hargeisa Secondary School',
 		country: 'Somalia',
-		lat: 9.56,
-		lng: 44.06
+		location: { lat: 9.56, lng: 44.065 },
+		siteProfile: {
+			setting: 'highland',
+			description: 'Highland school lab studying dry-season heat and dust.',
+			researchQuestions: ['How high does UV exposure get during the dry season?']
+		},
+		createdAt: SEEDED_AT
 	}
 ];
 
-const sample: StationSnapshot['values'] = {
+// The Shashamane devices feed the Trinity lab about 220 km away (AP-05).
+const devices: MockDbState['devices'] = [
+	{
+		id: 'dev_shashamane_ws',
+		labId: 'lab_trinity',
+		name: 'Shashamane Weather Station',
+		type: 'weather_station',
+		identifier: 'TWS-2041-SH',
+		placeName: 'Shashamane',
+		country: 'Ethiopia',
+		location: { lat: 7.2, lng: 38.6 },
+		registeredAt: SEEDED_AT
+	},
+	{
+		id: 'dev_shashamane_gauge',
+		labId: 'lab_trinity',
+		name: 'Shashamane Rain Gauge',
+		type: 'rain_gauge',
+		identifier: 'RG-SH-01',
+		placeName: 'Shashamane',
+		country: 'Ethiopia',
+		location: { lat: 7.201, lng: 38.602 },
+		registeredAt: SEEDED_AT
+	},
+	{
+		id: 'dev_trinity_soil',
+		labId: 'lab_trinity',
+		name: 'School Garden Soil Sensor',
+		type: 'soil_sensor',
+		identifier: 'SOIL-AA-07',
+		placeName: 'Trinity School garden, Addis Ababa',
+		country: 'Ethiopia',
+		location: { lat: 9.031, lng: 38.742 },
+		registeredAt: SEEDED_AT
+	},
+	{
+		id: 'dev_nassau_ws',
+		labId: 'lab_nassau',
+		name: 'Nassau Harbour Weather Station',
+		type: 'weather_station',
+		identifier: 'TWS-1187-NA',
+		placeName: 'Nassau Harbour',
+		country: 'Bahamas',
+		location: { lat: 25.06, lng: -77.34 },
+		registeredAt: SEEDED_AT
+	},
+	{
+		id: 'dev_hargeisa_ws',
+		labId: 'lab_hargeisa',
+		name: 'Hargeisa Weather Station',
+		type: 'weather_station',
+		identifier: 'TWS-3302-HG',
+		placeName: 'Hargeisa',
+		country: 'Somalia',
+		location: { lat: 9.56, lng: 44.06 },
+		registeredAt: SEEDED_AT
+	}
+];
+
+const sample: DeviceSnapshot['values'] = {
 	air_density: 1.17629,
 	air_temperature: 27,
 	barometric_pressure: 1013.5,
@@ -372,10 +452,10 @@ const sample: StationSnapshot['values'] = {
 	wind_lull: 2
 };
 
-const snapshots: StationSnapshot[] = [
-	{ stationId: 'stn_shashamane', observedAt: '2026-10-20T08:00:00.000Z', values: sample },
+const snapshots: DeviceSnapshot[] = [
+	{ deviceId: 'dev_shashamane_ws', observedAt: '2026-10-20T08:00:00.000Z', values: sample },
 	{
-		stationId: 'stn_nassau',
+		deviceId: 'dev_nassau_ws',
 		observedAt: '2026-10-20T08:00:00.000Z',
 		values: {
 			...sample,
@@ -387,7 +467,7 @@ const snapshots: StationSnapshot[] = [
 		}
 	},
 	{
-		stationId: 'stn_hargeisa',
+		deviceId: 'dev_hargeisa_ws',
 		observedAt: '2026-10-20T08:00:00.000Z',
 		values: { ...sample, air_temperature: 24.1, relative_humidity: 41, wind_avg: 4.4, uv: 9.1 }
 	}
@@ -402,15 +482,27 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 		challenges: [],
 		session: null,
 		parameters,
-		stations,
 		snapshots,
 		classrooms,
 		memberships,
 		invitations,
-		samSources: classrooms.map((c) => ({
-			sourceId: c.code,
-			kind: 'classroom' as const,
-			registeredAt: c.createdAt
-		}))
+		labs,
+		devices,
+		samSources: [
+			...classrooms.map((c) => ({
+				sourceId: c.code,
+				kind: 'classroom' as const,
+				registeredAt: c.createdAt
+			})),
+			...devices.map((d) => {
+				const lab = labs.find((l) => l.id === d.labId)!;
+				const code = classrooms.find((c) => c.id === lab.classroomId)!.code;
+				return {
+					sourceId: `${code}:${d.identifier}`,
+					kind: 'device' as const,
+					registeredAt: d.registeredAt
+				};
+			})
+		]
 	});
 }

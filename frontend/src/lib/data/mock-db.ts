@@ -2,8 +2,10 @@ import type {
 	ClassroomRole,
 	InvitationStatus,
 	Parameter,
-	Station,
-	StationSnapshot,
+	DeviceSnapshot,
+	DeviceType,
+	GeoPoint,
+	Lab,
 	User
 } from '#lib/domain/types.ts';
 import { createSeed } from './seed';
@@ -57,7 +59,19 @@ export interface StoredInvitation {
 /** Stand-in for SAM's source registry: classroom codes are registered as source identifiers. */
 export interface StoredSamSource {
 	sourceId: string;
-	kind: 'classroom';
+	kind: 'classroom' | 'device';
+	registeredAt: string;
+}
+
+export interface StoredDevice {
+	id: string;
+	labId: string;
+	name: string;
+	type: DeviceType;
+	identifier: string;
+	placeName: string;
+	country: string;
+	location: GeoPoint;
 	registeredAt: string;
 }
 
@@ -72,17 +86,18 @@ export interface MockDbState {
 	/** Stand-in for the HTTP-only session cookie the real backend will issue. */
 	session: { token: string; userId: string } | null;
 	parameters: Parameter[];
-	stations: Station[];
-	snapshots: StationSnapshot[];
+	snapshots: DeviceSnapshot[];
 	classrooms: StoredClassroom[];
 	memberships: StoredMembership[];
 	invitations: StoredInvitation[];
 	samSources: StoredSamSource[];
+	labs: Lab[];
+	devices: StoredDevice[];
 }
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 2;
+const VERSION = 3;
 
 let memory: MockDbState | null = null;
 

@@ -66,7 +66,15 @@
 		<div class="flex items-start justify-between gap-4">
 			<div>
 				<p class="text-sm text-white/60">Current conditions</p>
-				<h2 class="text-xl font-semibold">{data.station?.siteName}, {data.station?.country}</h2>
+				<h2 class="text-xl font-semibold">
+					{data.station?.placeName}, {data.station?.country}
+				</h2>
+				{#if data.station}
+					<p class="mt-1 text-sm text-white/60">
+						{data.isOwnStation ? 'Feeds your lab' : 'Nearest public station'} · {data.station
+							.labName}
+					</p>
+				{/if}
 			</div>
 			{#if observed}<p class="text-right text-xs text-white/50">Observed {observed}</p>{/if}
 		</div>

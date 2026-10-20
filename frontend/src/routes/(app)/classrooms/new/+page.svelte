@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import SetupSteps from '#lib/components/SetupSteps.svelte';
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
 
@@ -31,7 +32,8 @@
 				institutionName,
 				headEmail: forSomeoneElse ? headEmail : undefined
 			});
-			await goto(resolve('/(app)/classrooms/[id]', { id: classroom.id }));
+			// Classroom onboarding continues with the lab and its devices (AP-05).
+			await goto(resolve('/(app)/classrooms/[id]/labs/new?onboarding', { id: classroom.id }));
 		} catch (e) {
 			if (e instanceof ServiceError) errors = e.fields;
 			formError = errorMessage(e);
@@ -44,7 +46,8 @@
 <svelte:head><title>New classroom · DaGrouper Analysis</title></svelte:head>
 
 <a href={resolve('/(app)/classrooms')} class="text-sm text-muted hover:text-ink">← Classrooms</a>
-<h1 class="mt-4 font-display text-5xl">New classroom</h1>
+<div class="mt-4"><SetupSteps current={1} /></div>
+<h1 class="font-display text-5xl">New classroom</h1>
 <p class="mt-1 max-w-xl text-muted">
 	The classroom gets a unique global classroom code. It is registered in SAM as the source
 	identifier for the classroom's stations and observations.
