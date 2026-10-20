@@ -494,7 +494,8 @@ function reading(
 		values,
 		location: gps ?? { ...lab.location },
 		locationSource: gps ? 'device' : 'lab',
-		samSourceId: `${classroom.code}:${device.identifier}`
+		samSourceId: `${classroom.code}:${device.identifier}`,
+		creditedToUserId: null
 	};
 }
 

@@ -239,6 +239,17 @@ export interface Reading {
 	values: Record<string, number | string>;
 	location: GeoPoint;
 	locationSource: ReadingLocationSource;
+	/**
+	 * The person who recorded it, shown only if they chose to take credit. Otherwise null and the
+	 * reading is attributed to the classroom.
+	 */
+	creditedTo: string | null;
+}
+
+/** Options for recording readings. */
+export interface RecordOptions {
+	/** Show the recorder's name on these readings. Off unless they opt in. */
+	credit: boolean;
 }
 
 /** What a device sends when it connects. */

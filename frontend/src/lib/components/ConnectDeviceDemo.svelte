@@ -34,6 +34,8 @@
 	const NO_FIX = new Set([2, 4]);
 
 	let phase = $state<Phase>('idle');
+	/** Opt-in: put the recorder's name on these readings. Otherwise they carry no personal credit. */
+	let credit = $state(false);
 	let sent = $state<Reading[]>([]);
 	let error = $state('');
 	let run = 0;
@@ -85,7 +87,7 @@
 					values: sampleValues(target.type),
 					location: NO_FIX.has(i) ? null : points[i]
 				};
-				const [reading] = await services.labs.uploadReadings(target.id, [input]);
+				const [reading] = await services.labs.uploadReadings(target.id, [input], { credit });
 				if (!live()) return;
 				sent = [...sent, reading];
 				await wait(700);
@@ -140,6 +142,22 @@
 			</button>
 		{/if}
 	</div>
+	<label class="mt-3 flex items-start gap-2 text-sm">
+		<input
+			id="connect-credit"
+			type="checkbox"
+			class="mt-0.5 rounded-sm border-line-strong bg-transparent text-teal focus:ring-teal"
+			bind:checked={credit}
+			disabled={busy}
+		/>
+		<span>
+			Credit these readings to me
+			<span class="block text-xs text-muted"
+				>Your name is shown on them to people in {classroomName}. Leave it off to record them
+				without your name.</span
+			>
+		</span>
+	</label>
 
 	{#if phase !== 'idle' && device}
 		<ol class="mt-5 space-y-2 text-sm" aria-live="polite">
@@ -174,6 +192,9 @@
 							>
 						</div>
 						<p class="text-muted">{summary(reading.values)}</p>
+						<p class="text-muted">
+							{reading.creditedTo ? `Credited to ${reading.creditedTo}` : 'Not credited to anyone'}
+						</p>
 						<p>
 							{formatPoint(reading.location)}
 							{#if reading.locationSource === 'device'}

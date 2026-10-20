@@ -28,11 +28,19 @@ function toDevice(state: MockDbState, device: StoredDevice, showSource: boolean)
 	};
 }
 
-/** The stored reading minus the SAM source ID, which contains the classroom code. */
-function toReading(stored: MockDbState['readings'][number]): Reading {
+/**
+ * The stored reading without the SAM source ID (it contains the classroom code), and with the
+ * recorder's current name when they opted in to credit.
+ */
+function toReading(state: MockDbState, stored: MockDbState['readings'][number]): Reading {
 	const reading: Partial<MockDbState['readings'][number]> = structuredClone(stored);
 	delete reading.samSourceId;
-	return reading as Reading;
+	delete reading.creditedToUserId;
+	const credited = stored.creditedToUserId;
+	const creditedTo = credited
+		? (state.users.find((u) => u.id === credited)?.fullName ?? null)
+		: null;
+	return { ...(reading as Omit<Reading, 'creditedTo'>), creditedTo };
 }
 
 function newestFirst(a: { observedAt: string }, b: { observedAt: string }) {
@@ -85,7 +93,7 @@ function memberReadings(state: MockDbState): CurrentConditions[] {
 		const classroomName = classroomOf(state, lab).name;
 		for (const r of state.readings) {
 			if (r.deviceId === device.id) {
-				result.push({ device: shown, classroomName, reading: toReading(r), alerts: [] });
+				result.push({ device: shown, classroomName, reading: toReading(state, r), alerts: [] });
 			}
 		}
 	}
@@ -126,7 +134,7 @@ export function createMockLabs({
 					.filter((r) => devices.some((d) => d.id === r.deviceId))
 					.sort(newestFirst)
 					.slice(0, 50)
-					.map(toReading),
+					.map((r) => toReading(state, r)),
 				canManage,
 				canRecord: can.recordReadings
 			};
@@ -222,7 +230,7 @@ export function createMockLabs({
 			});
 		},
 
-		async uploadReadings(deviceId, inputs) {
+		async uploadReadings(deviceId, inputs, options = { credit: false }) {
 			await delay();
 			inputs.forEach((input, i) => {
 				const errors = validateReading(input);
@@ -237,7 +245,7 @@ export function createMockLabs({
 			return updateDb((state) => {
 				const device = state.devices.find((d) => d.id === deviceId);
 				if (!device) throw new ServiceError('not_found', 'Device not found.');
-				const { lab, can } = accessLab(state, device.labId);
+				const { user, lab, can } = accessLab(state, device.labId);
 				if (!can.recordReadings) {
 					throw new ServiceError(
 						'forbidden',
@@ -257,11 +265,13 @@ export function createMockLabs({
 					// No GPS from the device: stand in with the lab's location, and say so.
 					location: { ...(input.location ?? lab.location) },
 					locationSource: input.location ? ('device' as const) : ('lab' as const),
-					samSourceId
+					samSourceId,
+					// Credit goes to the person who recorded, and only if they asked for it.
+					creditedToUserId: options.credit ? user.id : null
 				}));
 				// Stand-in for forwarding to SAM: the reading is stored under the device's source.
 				state.readings.push(...stored);
-				return stored.map(toReading);
+				return stored.map((r) => toReading(state, r));
 			});
 		},
 

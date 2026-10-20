@@ -165,6 +165,9 @@
 												>Lab location, not from the device</span
 											>
 										{/if}
+										{#if reading.creditedTo}
+											<span class="text-muted">· recorded by {reading.creditedTo}</span>
+										{/if}
 									</li>
 								{/each}
 							</ul>

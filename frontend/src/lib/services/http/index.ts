@@ -114,9 +114,10 @@ export function createHttpServices(baseUrl: string): Services {
 			removeDevice: (deviceId) =>
 				request<void>('DELETE', `/devices/${encodeURIComponent(deviceId)}`),
 			// The backend stores the readings, tags them with the classroom and forwards them to SAM.
-			uploadReadings: (deviceId, readings) =>
+			uploadReadings: (deviceId, readings, options = { credit: false }) =>
 				request<Reading[]>('POST', `/devices/${encodeURIComponent(deviceId)}/readings`, {
-					readings
+					readings,
+					credit: options.credit
 				}),
 			currentConditions: () => request<CurrentConditions[]>('GET', '/me/conditions'),
 			recentReadings: (limit = 20) =>

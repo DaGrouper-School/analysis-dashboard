@@ -165,6 +165,21 @@ describe('labs (AP-05)', () => {
 		expect(readings.map((r) => r.id)).toContain(stored.id);
 	});
 
+	it('credits the recorder by name only when they opt in', async () => {
+		await signInAbebe();
+		const [anonymous] = await services.labs.uploadReadings('dev_trinity_soil', [reading(null)]);
+		expect(anonymous.creditedTo).toBeNull();
+		const [credited] = await services.labs.uploadReadings('dev_trinity_soil', [reading(null)], {
+			credit: true
+		});
+		expect(credited.creditedTo).toBe('Abebe T.');
+		// Others in the classroom see the credit; the uncredited reading carries no name.
+		await signInAs('g-tesfaye');
+		const { readings } = await services.labs.get('lab_trinity');
+		expect(readings.find((r) => r.id === credited.id)?.creditedTo).toBe('Abebe T.');
+		expect(readings.filter((r) => r.creditedTo !== null).map((r) => r.id)).toEqual([credited.id]);
+	});
+
 	it('hides labs from people outside the classroom', async () => {
 		await signInAs('g-sarah');
 		await expect(services.labs.get('lab_trinity')).rejects.toMatchObject({ code: 'not_found' });

@@ -102,7 +102,9 @@ device identifier, e.g. `DGC-7K3Q9M:TWS-2041-SH`, and every reading is tagged wi
 
 Classrooms have four roles: institution head, facilitator, community scientist and researcher.
 The head and facilitators register devices. Community scientists can connect a registered device
-and record its readings, but cannot add or remove devices. Researchers are read-only members
+and record its readings, but cannot add or remove devices. Whoever records can choose to be
+credited: their name then shows on those readings for the classroom. Without it, a reading
+carries no personal credit. Researchers are read-only members
 invited by the head: they see the classroom's devices and readings but cannot record readings or
 see the classroom code.
 

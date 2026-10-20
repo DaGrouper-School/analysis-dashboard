@@ -83,7 +83,11 @@ export interface MockDbState {
 	session: { token: string; userId: string } | null;
 	parameters: Parameter[];
 	/** Readings received from devices. Each was also forwarded to SAM under `samSourceId`. */
-	readings: (Reading & { samSourceId: string })[];
+	readings: (Omit<Reading, 'creditedTo'> & {
+		samSourceId: string;
+		/** Who recorded it, when they opted in to credit. Resolved to their current name on read. */
+		creditedToUserId: string | null;
+	})[];
 	classrooms: StoredClassroom[];
 	memberships: StoredMembership[];
 	invitations: StoredInvitation[];
@@ -94,7 +98,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 6;
+const VERSION = 7;
 
 let memory: MockDbState | null = null;
 
