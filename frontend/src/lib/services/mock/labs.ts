@@ -1,5 +1,5 @@
-import type { Device, Lab } from '#lib/domain/types.ts';
-import { validateDevice, validateLab } from '#lib/domain/validation.ts';
+import type { CreateLabInput, CurrentConditions, Device, Lab, Reading } from '#lib/domain/types.ts';
+import { validateDevice, validateLab, validateReading } from '#lib/domain/validation.ts';
 import { newId, readDb, updateDb, type MockDbState, type StoredDevice } from '#lib/data/mock-db.ts';
 import { ServiceError, type LabService } from '../types';
 import { currentUser, permissionsFor, roleIn } from './classrooms';
@@ -22,18 +22,41 @@ function toDevice(state: MockDbState, device: StoredDevice, showSource: boolean)
 		name: device.name,
 		type: device.type,
 		identifier: device.identifier,
-		location: { ...(device.location ?? lab.location) },
-		ownLocation: device.location !== null,
-		placeName: device.placeName,
-		country: device.country,
 		samSourceId: showSource ? sourceIdFor(state, device) : null,
 		registeredAt: device.registeredAt
 	};
 }
 
-/** Public view of a device: no SAM source ID, since that contains the classroom code. */
-export function toPublicDevice(state: MockDbState, device: StoredDevice): Device {
-	return toDevice(state, device, false);
+/** The stored reading minus the SAM source ID, which contains the classroom code. */
+function toReading(stored: MockDbState['readings'][number]): Reading {
+	const reading: Partial<MockDbState['readings'][number]> = structuredClone(stored);
+	delete reading.samSourceId;
+	return reading as Reading;
+}
+
+function newestFirst(a: { observedAt: string }, b: { observedAt: string }) {
+	return b.observedAt.localeCompare(a.observedAt);
+}
+
+function cleanLab(input: CreateLabInput) {
+	return {
+		name: input.name.trim(),
+		placeName: input.placeName.trim(),
+		country: input.country.trim(),
+		location: { ...input.location },
+		siteProfile: {
+			setting: input.siteProfile.setting,
+			description: input.siteProfile.description.trim(),
+			researchQuestions: input.siteProfile.researchQuestions.map((q) => q.trim()).filter(Boolean)
+		}
+	};
+}
+
+function checkLab(input: CreateLabInput) {
+	const errors = validateLab(input);
+	if (Object.keys(errors).length) {
+		throw new ServiceError('invalid_input', 'Check the highlighted fields.', errors);
+	}
 }
 
 /** The lab plus what the user may do with it. Hidden labs read as not found. */
@@ -70,22 +93,24 @@ export function createMockLabs({
 			await delay();
 			const state = readDb();
 			const { lab, can, canManage } = accessLab(state, labId);
+			const devices = state.devices.filter((d) => d.labId === lab.id);
 			return {
 				lab,
 				classroomName: classroomOf(state, lab).name,
-				devices: state.devices
-					.filter((d) => d.labId === lab.id)
-					.map((d) => toDevice(state, d, can.seeCode)),
+				devices: devices.map((d) => toDevice(state, d, can.seeCode)),
+				// Readings of removed devices stay in SAM but leave the lab page.
+				readings: state.readings
+					.filter((r) => devices.some((d) => d.id === r.deviceId))
+					.sort(newestFirst)
+					.slice(0, 50)
+					.map(toReading),
 				canManage
 			};
 		},
 
 		async create(classroomId, input) {
 			await delay();
-			const errors = validateLab(input);
-			if (Object.keys(errors).length) {
-				throw new ServiceError('invalid_input', 'Check the highlighted fields.', errors);
-			}
+			checkLab(input);
 			return updateDb((state) => {
 				const user = currentUser(state);
 				const can = permissionsFor(user, roleIn(state, classroomId, user.id));
@@ -101,20 +126,26 @@ export function createMockLabs({
 				const lab: Lab = {
 					id: newId('lab'),
 					classroomId,
-					name: input.name.trim(),
-					placeName: input.placeName.trim(),
-					country: input.country.trim(),
-					location: { ...input.location },
-					siteProfile: {
-						setting: input.siteProfile.setting,
-						description: input.siteProfile.description.trim(),
-						researchQuestions: input.siteProfile.researchQuestions
-							.map((q) => q.trim())
-							.filter(Boolean)
-					},
+					...cleanLab(input),
 					createdAt: iso()
 				};
 				state.labs.push(lab);
+				return lab;
+			});
+		},
+
+		async update(labId, input) {
+			await delay();
+			checkLab(input);
+			return updateDb((state) => {
+				const { lab, canManage } = accessLab(state, labId);
+				if (!canManage) {
+					throw new ServiceError(
+						'forbidden',
+						'Only facilitators and the institution head can edit the lab.'
+					);
+				}
+				Object.assign(lab, cleanLab(input));
 				return lab;
 			});
 		},
@@ -139,9 +170,6 @@ export function createMockLabs({
 					name: input.name.trim(),
 					type: input.type,
 					identifier: input.identifier.trim().toUpperCase(),
-					placeName: input.placeName.trim(),
-					country: input.country.trim(),
-					location: input.location && { ...input.location },
 					registeredAt: iso()
 				};
 				// SAM source identity is the classroom code plus the device identifier (SAM-06).
@@ -170,20 +198,68 @@ export function createMockLabs({
 			});
 		},
 
-		async listMyDevices() {
+		async uploadReadings(deviceId, inputs) {
+			await delay();
+			inputs.forEach((input, i) => {
+				const errors = validateReading(input);
+				if (Object.keys(errors).length) {
+					throw new ServiceError(
+						'invalid_input',
+						`Reading ${i + 1}: ${Object.values(errors)[0]}`,
+						errors
+					);
+				}
+			});
+			return updateDb((state) => {
+				const device = state.devices.find((d) => d.id === deviceId);
+				if (!device) throw new ServiceError('not_found', 'Device not found.');
+				const { lab, canManage } = accessLab(state, device.labId);
+				if (!canManage) {
+					throw new ServiceError(
+						'forbidden',
+						'Only facilitators and the institution head can connect devices.'
+					);
+				}
+				const samSourceId = sourceIdFor(state, device);
+				const receivedAt = iso();
+				const stored = inputs.map((input) => ({
+					id: newId('rdg'),
+					deviceId: device.id,
+					labId: lab.id,
+					classroomId: lab.classroomId,
+					observedAt: new Date(input.observedAt).toISOString(),
+					receivedAt,
+					values: { ...input.values },
+					// No GPS from the device: stand in with the lab's location, and say so.
+					location: { ...(input.location ?? lab.location) },
+					locationSource: input.location ? ('device' as const) : ('lab' as const),
+					samSourceId
+				}));
+				// Stand-in for forwarding to SAM: the reading is stored under the device's source.
+				state.readings.push(...stored);
+				return stored.map(toReading);
+			});
+		},
+
+		async currentConditions() {
 			await delay();
 			const state = readDb();
 			const user = currentUser(state);
-			return state.devices
-				.filter((d) => {
-					const lab = state.labs.find((l) => l.id === d.labId)!;
-					return roleIn(state, lab.classroomId, user.id) !== null;
-				})
-				.map((d) => {
-					const lab = state.labs.find((l) => l.id === d.labId)!;
-					const role = roleIn(state, lab.classroomId, user.id);
-					return toDevice(state, d, permissionsFor(user, role).seeCode);
+			const result: CurrentConditions[] = [];
+			for (const device of state.devices) {
+				const lab = state.labs.find((l) => l.id === device.labId)!;
+				// Membership only: admins and everyone else see nothing from classrooms they are not in.
+				const role = roleIn(state, lab.classroomId, user.id);
+				if (role === null) continue;
+				const latest = state.readings.filter((r) => r.deviceId === device.id).sort(newestFirst)[0];
+				if (!latest) continue;
+				result.push({
+					device: toDevice(state, device, permissionsFor(user, role).seeCode),
+					classroomName: classroomOf(state, lab).name,
+					reading: toReading(latest)
 				});
+			}
+			return result.sort((a, b) => newestFirst(a.reading, b.reading));
 		}
 	};
 }

@@ -30,23 +30,34 @@ const labInput: CreateLabInput = {
 const deviceInput: RegisterDeviceInput = {
 	name: 'Annex Soil Sensor',
 	type: 'soil_sensor',
-	identifier: 'soil-ax-01',
-	placeName: 'Annex garden',
-	country: 'Ethiopia',
-	location: { lat: 9.001, lng: 38.701 }
+	identifier: 'soil-ax-01'
 };
 
+const reading = (location: { lat: number; lng: number } | null) => ({
+	observedAt: '2026-10-20T10:00:00.000Z',
+	values: { soil_moisture: 28 },
+	location
+});
+
 describe('labs (AP-05)', () => {
-	it('seeds a lab with several device types, each with its own GPS', async () => {
+	it('seeds a lab with several device types; GPS comes with readings, not devices', async () => {
 		await signInAs('g-tesfaye');
-		const { lab, devices } = await services.labs.get('lab_trinity');
+		const { lab, devices, readings } = await services.labs.get('lab_trinity');
 		expect(new Set(devices.map((d) => d.type))).toEqual(
 			new Set(['weather_station', 'rain_gauge', 'soil_sensor'])
 		);
 		const station = devices.find((d) => d.type === 'weather_station')!;
-		// The Shashamane station feeds the Trinity lab in Addis Ababa.
-		expect(distanceKm(lab.location, station.location)).toBeGreaterThan(150);
+		expect(station).not.toHaveProperty('location');
 		expect(station.samSourceId).toBe('DGC-7K3Q9M:TWS-2041-SH');
+		// The Shashamane station feeds the Trinity lab in Addis Ababa, and has moved between readings.
+		const stationReadings = readings.filter((r) => r.deviceId === station.id);
+		expect(stationReadings.length).toBe(2);
+		expect(stationReadings.every((r) => r.locationSource === 'device')).toBe(true);
+		expect(distanceKm(lab.location, stationReadings[0].location)).toBeGreaterThan(150);
+		expect(stationReadings[0].location).not.toEqual(stationReadings[1].location);
+		// The rain gauge has no GPS: its reading stands in with the lab location, flagged.
+		const gauge = readings.find((r) => r.deviceId === 'dev_shashamane_gauge')!;
+		expect(gauge).toMatchObject({ locationSource: 'lab', location: lab.location });
 	});
 
 	it('lets a focal person add a lab with a site profile', async () => {
@@ -71,34 +82,63 @@ describe('labs (AP-05)', () => {
 		});
 	});
 
-	it('registers a device as a SAM source under the classroom code', async () => {
+	it('registers a device as a SAM source under the classroom code, with no location', async () => {
 		await signInAs('g-tesfaye');
 		const device = await services.labs.registerDevice('lab_trinity', deviceInput);
 		expect(device).toMatchObject({
 			identifier: 'SOIL-AX-01',
-			samSourceId: 'DGC-7K3Q9M:SOIL-AX-01',
-			location: { lat: 9.001, lng: 38.701 }
+			samSourceId: 'DGC-7K3Q9M:SOIL-AX-01'
 		});
+		expect(device).not.toHaveProperty('location');
 		await expect(services.labs.registerDevice('lab_trinity', deviceInput)).rejects.toMatchObject({
 			code: 'conflict'
 		});
 	});
 
-	it('lets a device without its own GPS use the lab location', async () => {
+	it('tags uploaded readings with the classroom and keeps GPS per reading', async () => {
 		await signInAs('g-tesfaye');
-		const { lab } = await services.labs.get('lab_trinity');
-		const device = await services.labs.registerDevice('lab_trinity', {
-			...deviceInput,
-			location: null
+		const device = await services.labs.registerDevice('lab_trinity', deviceInput);
+		const [first, second] = await services.labs.uploadReadings(device.id, [
+			reading({ lat: 9.001, lng: 38.701 }),
+			reading({ lat: 9.2, lng: 38.9 })
+		]);
+		expect(first).toMatchObject({
+			classroomId: 'cls_trinity',
+			labId: 'lab_trinity',
+			locationSource: 'device',
+			location: { lat: 9.001, lng: 38.701 }
 		});
-		expect(device).toMatchObject({ ownLocation: false, location: lab.location });
+		expect(second.location).toEqual({ lat: 9.2, lng: 38.9 });
+		const { readings } = await services.labs.get('lab_trinity');
+		expect(readings.filter((r) => r.deviceId === device.id).length).toBe(2);
 	});
 
-	it('rejects invalid GPS coordinates', async () => {
+	it('falls back to the lab location when a reading has no GPS, and flags it', async () => {
+		await signInAs('g-tesfaye');
+		const { lab } = await services.labs.get('lab_trinity');
+		const device = await services.labs.registerDevice('lab_trinity', deviceInput);
+		const [stored] = await services.labs.uploadReadings(device.id, [reading(null)]);
+		expect(stored).toMatchObject({ locationSource: 'lab', location: lab.location });
+	});
+
+	it('rejects readings with invalid GPS coordinates', async () => {
 		await signInAs('g-tesfaye');
 		await expect(
-			services.labs.registerDevice('lab_trinity', { ...deviceInput, location: { lat: 95, lng: 0 } })
+			services.labs.uploadReadings('dev_trinity_soil', [reading({ lat: 95, lng: 0 })])
 		).rejects.toMatchObject({ code: 'invalid_input', fields: { location: expect.any(String) } });
+	});
+
+	it('lets focal people edit the lab', async () => {
+		await signInAs('g-tesfaye');
+		const lab = await services.labs.update('lab_trinity', {
+			...labInput,
+			name: 'Trinity Field Lab'
+		});
+		expect(lab).toMatchObject({ id: 'lab_trinity', name: 'Trinity Field Lab' });
+		await signInAbebe();
+		await expect(services.labs.update('lab_trinity', labInput)).rejects.toMatchObject({
+			code: 'forbidden'
+		});
 	});
 
 	it('lets community scientists see devices but not register them or see SAM sources', async () => {
@@ -113,12 +153,15 @@ describe('labs (AP-05)', () => {
 		await expect(services.labs.create('cls_trinity', labInput)).rejects.toMatchObject({
 			code: 'forbidden'
 		});
+		await expect(
+			services.labs.uploadReadings('dev_trinity_soil', [reading(null)])
+		).rejects.toMatchObject({ code: 'forbidden' });
 	});
 
 	it('hides labs from people outside the classroom', async () => {
 		await signInAs('g-sarah');
 		await expect(services.labs.get('lab_trinity')).rejects.toMatchObject({ code: 'not_found' });
-		expect(await services.labs.listMyDevices()).toEqual([]);
+		expect(await services.labs.currentConditions()).toEqual([]);
 	});
 
 	it('removes a device and frees its identifier', async () => {
@@ -128,12 +171,16 @@ describe('labs (AP-05)', () => {
 		await expect(services.labs.registerDevice('lab_trinity', deviceInput)).resolves.toBeTruthy();
 	});
 
-	it('lists the devices of my labs, and every device publicly without SAM sources', async () => {
+	it('shows current conditions only from classrooms I belong to', async () => {
 		await signInAbebe();
-		const mine = await services.labs.listMyDevices();
-		expect(mine.map((d) => d.labId)).toEqual(['lab_trinity', 'lab_trinity', 'lab_trinity']);
-		const all = await services.registry.listDevices();
-		expect(all.length).toBe(5);
-		expect(all.every((d) => d.samSourceId === null)).toBe(true);
+		const conditions = await services.labs.currentConditions();
+		expect(new Set(conditions.map((c) => c.device.labId))).toEqual(new Set(['lab_trinity']));
+		expect(conditions.length).toBe(3);
+		expect(conditions.every((c) => c.classroomName === 'Trinity Lab Classroom')).toBe(true);
+		// Community scientists never see the classroom code, even inside a SAM source ID.
+		expect(conditions.every((c) => c.device.samSourceId === null)).toBe(true);
+		// A platform admin who is not a member sees no conditions either.
+		await signInAs('g-marcus');
+		expect(await services.labs.currentConditions()).toEqual([]);
 	});
 });

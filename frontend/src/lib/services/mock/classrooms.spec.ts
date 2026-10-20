@@ -70,7 +70,7 @@ describe('classroom code visibility', () => {
 		expect(detail.classroom.code).toBeNull();
 		expect(detail.members.every((m) => m.email === null)).toBe(true);
 		expect(detail.invitations).toEqual([]);
-		expect(detail.permissions).toEqual({ invite: [], manageMembers: false });
+		expect(detail.permissions).toEqual({ invite: [], manageMembers: false, edit: false });
 	});
 
 	it('shows it to the institution head', async () => {
@@ -164,5 +164,35 @@ describe('managing members', () => {
 		await services.classrooms.removeMember('cls_trinity', 'usr_abebe');
 		detail = await services.classrooms.get('cls_trinity');
 		expect(detail.members.map((m) => m.userId)).toEqual(['usr_tesfaye']);
+	});
+});
+
+describe('editing a classroom', () => {
+	it('lets the institution head change everything but the code', async () => {
+		await signInAs('g-tesfaye');
+		const updated = await services.classrooms.update('cls_trinity', {
+			name: '  Trinity Science Classroom ',
+			institutionName: 'Trinity International School'
+		});
+		expect(updated).toMatchObject({
+			name: 'Trinity Science Classroom',
+			institutionName: 'Trinity International School',
+			code: 'DGC-7K3Q9M'
+		});
+		expect((await services.classrooms.get('cls_trinity')).permissions.edit).toBe(true);
+	});
+
+	it('refuses members who are not the head, and blank names', async () => {
+		const challenge = await services.auth.requestPhoneCode('+251911000001');
+		await services.auth.verifyPhoneCode(challenge.requestId, challenge.devCode!);
+		expect((await services.classrooms.get('cls_trinity')).permissions.edit).toBe(false);
+		await expect(
+			services.classrooms.update('cls_trinity', { name: 'Renamed', institutionName: 'Trinity' })
+		).rejects.toMatchObject({ code: 'forbidden' });
+
+		await signInAs('g-tesfaye');
+		await expect(
+			services.classrooms.update('cls_trinity', { name: '', institutionName: 'Trinity' })
+		).rejects.toMatchObject({ code: 'invalid_input', fields: { name: expect.any(String) } });
 	});
 });

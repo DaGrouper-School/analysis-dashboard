@@ -1,4 +1,4 @@
-import type { EnvironmentalDomain, Parameter, DeviceSnapshot, User } from '#lib/domain/types.ts';
+import type { EnvironmentalDomain, GeoPoint, Parameter, Reading, User } from '#lib/domain/types.ts';
 import type { MockDbState } from './mock-db';
 
 /**
@@ -354,7 +354,8 @@ const labs: MockDbState['labs'] = [
 	}
 ];
 
-// The Shashamane devices feed the Trinity lab about 220 km away (AP-05).
+// The Shashamane devices feed the Trinity lab from about 220 km away (AP-05). Devices carry no
+// location; their readings do.
 const devices: MockDbState['devices'] = [
 	{
 		id: 'dev_shashamane_ws',
@@ -362,9 +363,6 @@ const devices: MockDbState['devices'] = [
 		name: 'Shashamane Weather Station',
 		type: 'weather_station',
 		identifier: 'TWS-2041-SH',
-		placeName: 'Shashamane',
-		country: 'Ethiopia',
-		location: { lat: 7.2, lng: 38.6 },
 		registeredAt: SEEDED_AT
 	},
 	{
@@ -373,9 +371,6 @@ const devices: MockDbState['devices'] = [
 		name: 'Shashamane Rain Gauge',
 		type: 'rain_gauge',
 		identifier: 'RG-SH-01',
-		placeName: 'Shashamane',
-		country: 'Ethiopia',
-		location: { lat: 7.201, lng: 38.602 },
 		registeredAt: SEEDED_AT
 	},
 	{
@@ -384,9 +379,6 @@ const devices: MockDbState['devices'] = [
 		name: 'School Garden Soil Sensor',
 		type: 'soil_sensor',
 		identifier: 'SOIL-AA-07',
-		placeName: 'Trinity School garden, Addis Ababa',
-		country: 'Ethiopia',
-		location: { lat: 9.031, lng: 38.742 },
 		registeredAt: SEEDED_AT
 	},
 	{
@@ -395,9 +387,6 @@ const devices: MockDbState['devices'] = [
 		name: 'Nassau Harbour Weather Station',
 		type: 'weather_station',
 		identifier: 'TWS-1187-NA',
-		placeName: 'Nassau Harbour',
-		country: 'Bahamas',
-		location: { lat: 25.06, lng: -77.34 },
 		registeredAt: SEEDED_AT
 	},
 	{
@@ -406,14 +395,11 @@ const devices: MockDbState['devices'] = [
 		name: 'Hargeisa Weather Station',
 		type: 'weather_station',
 		identifier: 'TWS-3302-HG',
-		placeName: 'Hargeisa',
-		country: 'Somalia',
-		location: { lat: 9.56, lng: 44.06 },
 		registeredAt: SEEDED_AT
 	}
 ];
 
-const sample: DeviceSnapshot['values'] = {
+const sample: Reading['values'] = {
 	air_density: 1.17629,
 	air_temperature: 27,
 	barometric_pressure: 1013.5,
@@ -452,25 +438,71 @@ const sample: DeviceSnapshot['values'] = {
 	wind_lull: 2
 };
 
-const snapshots: DeviceSnapshot[] = [
-	{ deviceId: 'dev_shashamane_ws', observedAt: '2026-10-20T08:00:00.000Z', values: sample },
-	{
-		deviceId: 'dev_nassau_ws',
-		observedAt: '2026-10-20T08:00:00.000Z',
-		values: {
+const READING_AT = '2026-10-20T08:00:00.000Z';
+const YESTERDAY = '2026-10-19T08:00:00.000Z';
+
+/**
+ * Seed readings. A device's GPS travels with each reading, so the Shashamane station shows
+ * two positions on two days. The rain gauge and the Hargeisa station send no GPS: their
+ * readings use the lab's location and are marked as such.
+ */
+function reading(
+	deviceId: string,
+	observedAt: string,
+	values: Reading['values'],
+	gps: GeoPoint | null
+): MockDbState['readings'][number] {
+	const device = devices.find((d) => d.id === deviceId)!;
+	const lab = labs.find((l) => l.id === device.labId)!;
+	const classroom = classrooms.find((c) => c.id === lab.classroomId)!;
+	return {
+		id: `rdg_${deviceId.slice(4)}_${observedAt.slice(0, 10)}`,
+		deviceId,
+		labId: lab.id,
+		classroomId: classroom.id,
+		observedAt,
+		receivedAt: observedAt,
+		values,
+		location: gps ?? { ...lab.location },
+		locationSource: gps ? 'device' : 'lab',
+		samSourceId: `${classroom.code}:${device.identifier}`
+	};
+}
+
+const readings: MockDbState['readings'] = [
+	reading('dev_shashamane_ws', READING_AT, sample, { lat: 7.2, lng: 38.6 }),
+	reading(
+		'dev_shashamane_ws',
+		YESTERDAY,
+		{ ...sample, air_temperature: 25.6, relative_humidity: 74, uv: 2.9 },
+		{ lat: 7.215, lng: 38.588 }
+	),
+	reading('dev_shashamane_gauge', READING_AT, { rain_gauge_daily_accumulation: 4.2 }, null),
+	reading(
+		'dev_trinity_soil',
+		READING_AT,
+		{ soil_moisture: 31, soil_temperature: 18.4 },
+		{ lat: 9.031, lng: 38.742 }
+	),
+	reading(
+		'dev_nassau_ws',
+		READING_AT,
+		{
 			...sample,
 			air_temperature: 29.4,
 			relative_humidity: 78,
 			wind_avg: 6.1,
 			wind_gust: 9.2,
 			uv: 7.8
-		}
-	},
-	{
-		deviceId: 'dev_hargeisa_ws',
-		observedAt: '2026-10-20T08:00:00.000Z',
-		values: { ...sample, air_temperature: 24.1, relative_humidity: 41, wind_avg: 4.4, uv: 9.1 }
-	}
+		},
+		{ lat: 25.06, lng: -77.34 }
+	),
+	reading(
+		'dev_hargeisa_ws',
+		READING_AT,
+		{ ...sample, air_temperature: 24.1, relative_humidity: 41, wind_avg: 4.4, uv: 9.1 },
+		null
+	)
 ];
 
 export function createSeed(): Omit<MockDbState, 'version'> {
@@ -482,7 +514,7 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 		challenges: [],
 		session: null,
 		parameters,
-		snapshots,
+		readings,
 		classrooms,
 		memberships,
 		invitations,
