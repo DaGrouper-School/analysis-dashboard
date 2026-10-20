@@ -2,7 +2,7 @@
 	import { invalidate } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { SvelteMap } from 'svelte/reactivity';
-	import ConnectDeviceDemo from '#lib/components/ConnectDeviceDemo.svelte';
+	import RecordData from '#lib/components/RecordData.svelte';
 	import SetupSteps from '#lib/components/SetupSteps.svelte';
 	import type { DeviceType, Reading, RegisterDeviceInput } from '#lib/domain/types.ts';
 	import { distanceKm, validateDevice } from '#lib/domain/validation.ts';
@@ -34,7 +34,7 @@
 	let justAdded = $state('');
 	let actionError = $state('');
 
-	let connectId = $state('');
+	let recordId = $state('');
 
 	function distanceLabel(km: number) {
 		if (km < 1) return 'at the lab';
@@ -52,7 +52,7 @@
 		try {
 			const device = await services.labs.registerDevice(lab.id, input);
 			justAdded = device.name;
-			connectId = device.id;
+			recordId = device.id;
 			name = identifier = '';
 			saving = false;
 			await invalidate('app:lab');
@@ -257,12 +257,12 @@
 			{/if}
 
 			{#if data.detail.canRecord && devices.length}
-				<ConnectDeviceDemo
+				<RecordData
 					{devices}
 					classroomName={data.detail.classroomName}
 					labLocation={lab.location}
 					{lastGps}
-					bind:deviceId={connectId}
+					bind:deviceId={recordId}
 					onfinish={() => invalidate('app:lab')}
 				/>
 			{/if}

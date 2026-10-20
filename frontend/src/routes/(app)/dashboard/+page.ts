@@ -11,10 +11,18 @@ export const load: PageLoad = async ({ url }) => {
 		services.classrooms.listMyInvitations()
 	]);
 	const { device } = selection;
-	const readings = device ? await services.labs.deviceReadings(device.id, 60) : [];
+	const [readings, lab] = device
+		? await Promise.all([
+				services.labs.deviceReadings(device.id, 60),
+				services.labs.get(device.labId)
+			])
+		: [[], null];
 	return {
 		...selection,
 		readings,
+		// Heads, facilitators and community scientists can record data; researchers can't.
+		canRecord: lab?.canRecord ?? false,
+		labLocation: lab?.lab.location ?? null,
 		alerts: readings[0] ? alertsFor(readings[0]) : [],
 		parameters,
 		invitations
