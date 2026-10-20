@@ -137,6 +137,12 @@ const memberships: MockDbState['memberships'] = [
 		userId: 'usr_abebe',
 		role: 'community_scientist',
 		joinedAt: SEEDED_AT
+	},
+	{
+		classroomId: 'cls_trinity',
+		userId: 'usr_marcus',
+		role: 'researcher',
+		joinedAt: SEEDED_AT
 	}
 ];
 

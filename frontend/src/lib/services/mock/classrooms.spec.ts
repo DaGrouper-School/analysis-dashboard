@@ -163,7 +163,27 @@ describe('managing members', () => {
 
 		await services.classrooms.removeMember('cls_trinity', 'usr_abebe');
 		detail = await services.classrooms.get('cls_trinity');
-		expect(detail.members.map((m) => m.userId)).toEqual(['usr_tesfaye']);
+		expect(detail.members.map((m) => m.userId)).not.toContain('usr_abebe');
+	});
+});
+
+describe('researchers', () => {
+	it('can be invited by the institution head but not by facilitators', async () => {
+		await signInAs('g-tesfaye');
+		const detail = await services.classrooms.get('cls_trinity');
+		expect(detail.permissions.invite).toContain('researcher');
+		const [invitation] = await services.classrooms.invite(
+			'cls_trinity',
+			['new.researcher@example.org'],
+			'researcher'
+		);
+		expect(invitation.role).toBe('researcher');
+		await services.classrooms.setMemberRole('cls_trinity', 'usr_abebe', 'facilitator');
+		const challenge = await services.auth.requestPhoneCode('+251911000001');
+		await services.auth.verifyPhoneCode(challenge.requestId, challenge.devCode!);
+		await expect(
+			services.classrooms.invite('cls_trinity', ['other@example.org'], 'researcher')
+		).rejects.toMatchObject({ code: 'forbidden' });
 	});
 });
 

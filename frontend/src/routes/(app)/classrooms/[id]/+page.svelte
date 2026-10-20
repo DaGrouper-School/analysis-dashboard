@@ -254,6 +254,7 @@
 						>
 							<option value="facilitator">Facilitator</option>
 							<option value="community_scientist">Community scientist</option>
+							<option value="researcher">Researcher</option>
 						</select>
 						<button
 							class="btn btn-ghost px-3 py-1.5 text-xs"
