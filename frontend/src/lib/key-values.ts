@@ -87,3 +87,13 @@ export function keySummary(
 		.map((v) => `${v.label} ${formatValue(v.value, v.unit)}`)
 		.join(' · ');
 }
+
+/** A parameter's label and unit: from the registry, else from the key values above. */
+export function describeParameter(id: string, parameters: ReadonlyMap<string, Parameter>) {
+	const registered = parameters.get(id);
+	if (registered) return { label: registered.label, unit: registered.unit };
+	const key = Object.values(KEY_PARAMETERS)
+		.flat()
+		.find((k) => k.id === id);
+	return { label: key?.label ?? fallbackLabel(id), unit: key?.unit ?? '' };
+}
