@@ -105,6 +105,8 @@ export interface LabService {
 	 * conditions from other classrooms' devices, platform admins included.
 	 */
 	currentConditions(): Promise<CurrentConditions[]>;
+	/** Recent readings from devices in the user's classrooms, newest first. Same membership rule. */
+	recentReadings(limit?: number): Promise<CurrentConditions[]>;
 }
 
 export interface Services {

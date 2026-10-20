@@ -2,8 +2,9 @@ import { services } from '#lib/services/index.ts';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async () => {
-	const [conditions, parameters] = await Promise.all([
+	const [conditions, recent, parameters] = await Promise.all([
 		services.labs.currentConditions(),
+		services.labs.recentReadings(12),
 		services.registry.listParameters()
 	]);
 	// Conditions only come from devices in the user's own classrooms, newest reading first.
@@ -12,6 +13,7 @@ export const load: PageLoad = async () => {
 	return {
 		featured,
 		others: conditions.filter((c) => c !== featured),
+		recent,
 		parameters
 	};
 };
