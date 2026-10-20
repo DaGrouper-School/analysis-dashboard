@@ -13,7 +13,10 @@ export default defineConfig({
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
 			// SPA mode: no server yet, every route falls back to the client-side app.
-			adapter: adapter({ fallback: '200.html' })
+			// GitHub Pages serves 404.html for unknown paths, which boots the app on any route.
+			adapter: adapter({ fallback: '404.html' }),
+			// Set by the Pages workflow to the repo path, e.g. /dagrouper-analysis-dashboard.
+			paths: { base: (process.env.BASE_PATH ?? '') as '' | `/${string}` }
 		})
 	],
 	test: {

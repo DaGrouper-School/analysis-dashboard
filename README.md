@@ -71,3 +71,10 @@ requires a completed onboarding.
 Personas come from the project vault (User Personas). The parameter registry holds the 36 weather
 station parameters mapped to the six environmental domains (AIR, WAVES, SUN, RAIN, WIND,
 LIGHTNING) plus the manual rain gauge, with values from the sample station payload.
+
+## Deployment
+
+Pushes to `main` deploy to GitHub Pages through `.github/workflows/deploy-pages.yml`. The workflow
+builds with `BASE_PATH=/<repo-name>` so links work under the Pages subpath, and the SPA fallback
+(`404.html`) lets any route load directly. In the repo's **Settings → Pages**, the source must be
+set to **GitHub Actions**.

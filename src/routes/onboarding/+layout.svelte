@@ -6,15 +6,15 @@
 	let { data, children } = $props();
 
 	const steps = $derived([
-		{ href: '/onboarding/profile', label: 'Profile & contact', done: isProfileStepDone(data.user) },
-		{ href: '/onboarding/address', label: 'Address', done: Boolean(data.user.address) }
+		{ id: '/onboarding/profile', label: 'Profile & contact', done: isProfileStepDone(data.user) },
+		{ id: '/onboarding/address', label: 'Address', done: Boolean(data.user.address) }
 	]);
 </script>
 
 <AuthShell>
 	<ol class="mb-8 flex gap-2" aria-label="Onboarding steps">
-		{#each steps as step, i (step.href)}
-			{@const current = page.url.pathname === step.href}
+		{#each steps as step, i (step.id)}
+			{@const current = page.route.id === step.id}
 			<li class="flex-1">
 				<div class={['h-1.5 rounded-full', current || step.done ? 'bg-ink' : 'bg-line']}></div>
 				<p
