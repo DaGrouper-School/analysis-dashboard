@@ -43,13 +43,13 @@
 
 <AuthShell>
 	{#if !data.invitation}
-		<h1 class="font-display text-4xl">Invitation not found</h1>
+		<h1 class="font-display text-3xl">Invitation not found</h1>
 		<p class="mt-2 text-muted">{data.error} Ask the person who invited you for a new link.</p>
 		<a href={resolve('/')} class="btn btn-ghost mt-8 self-start">Go to DaGrouper</a>
 	{:else}
 		{@const invitation = data.invitation}
 		<p class="text-sm text-muted">{invitation.invitedByName} invited you to join</p>
-		<h1 class="mt-1 font-display text-4xl">{invitation.classroomName}</h1>
+		<h1 class="mt-1 font-display text-3xl">{invitation.classroomName}</h1>
 		<p class="mt-1 text-muted">{invitation.institutionName}</p>
 
 		<dl class="card mt-8 grid grid-cols-2 gap-4 p-5 text-sm">

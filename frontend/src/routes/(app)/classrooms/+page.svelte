@@ -10,7 +10,7 @@
 
 <div class="flex flex-wrap items-end justify-between gap-4">
 	<div>
-		<h1 class="font-display text-5xl">Classrooms</h1>
+		<h1 class="font-display text-3xl sm:text-4xl">Classrooms</h1>
 		<p class="mt-1 text-muted">
 			{data.user.platformAdmin
 				? 'Every classroom on the platform.'
@@ -28,7 +28,7 @@
 			<li>
 				<a
 					href={resolve('/(app)/classrooms/[id]', { id: classroom.id })}
-					class="card block transition hover:border-forest/40"
+					class="card block transition hover:border-line-strong"
 				>
 					<div class="flex items-start justify-between gap-3">
 						<div>
@@ -37,7 +37,7 @@
 						</div>
 						{#if classroom.myRole}
 							<span
-								class="rounded-full bg-lime px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap"
+								class="rounded-full bg-lime/15 px-2.5 py-0.5 text-xs font-medium whitespace-nowrap text-lime ring-1 ring-lime/40"
 							>
 								{CLASSROOM_ROLE_LABELS[classroom.myRole]}
 							</span>

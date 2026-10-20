@@ -74,7 +74,7 @@
 <div class="flex items-center gap-4">
 	<Avatar name={user.fullName} src={user.avatarUrl} size="lg" />
 	<div>
-		<h1 class="font-display text-4xl">{user.fullName}</h1>
+		<h1 class="font-display text-3xl">{user.fullName}</h1>
 		<p class="text-sm text-muted">
 			{ROLE_LABELS[user.role]} · signed in with {user.authProvider === 'google'
 				? 'Google'
@@ -110,10 +110,13 @@
 			<div>
 				<span class="label">Phone number</span>
 				<p
-					class="flex items-center justify-between rounded-xl border border-line bg-canvas px-3.5 py-2.5"
+					class="flex items-center justify-between rounded-sm border border-line bg-raised px-3.5 py-2.5"
 				>
 					<span>{user.phone}</span>
-					<span class="rounded-full bg-lime px-2.5 py-0.5 text-xs font-semibold">Verified</span>
+					<span
+						class="rounded-full bg-lime/15 px-2.5 py-0.5 text-xs font-medium text-lime ring-1 ring-lime/40"
+						>Verified</span
+					>
 				</p>
 			</div>
 			<div class="flex items-center gap-3">

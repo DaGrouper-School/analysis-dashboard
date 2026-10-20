@@ -55,7 +55,7 @@
 
 <svelte:head><title>Sign up · DaGrouper Analysis</title></svelte:head>
 
-<h1 class="font-display text-4xl">Join your community station</h1>
+<h1 class="font-display text-3xl">Join your community station</h1>
 <p class="mt-2 text-muted">Sign up or sign in. No password needed.</p>
 
 <div class="mt-8 space-y-6">
@@ -99,7 +99,7 @@
 	{#if formError}<p class="field-error" role="alert">{formError}</p>{/if}
 
 	{#if isMockDataSource}
-		<details class="rounded-2xl border border-line bg-white/60 px-4 py-3 text-sm text-muted">
+		<details class="rounded-md border border-line bg-surface px-4 py-3 text-sm text-muted">
 			<summary class="cursor-pointer font-medium text-ink">Demo accounts</summary>
 			<ul class="mt-2 list-disc space-y-1 pl-5">
 				<li>Google: Sarah K. (custodian) and Dr. Marcus L. (researcher) already have accounts.</li>

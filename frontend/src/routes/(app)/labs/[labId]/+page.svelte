@@ -7,7 +7,7 @@
 	import type { DeviceType, Reading, RegisterDeviceInput } from '#lib/domain/types.ts';
 	import { distanceKm, validateDevice } from '#lib/domain/validation.ts';
 	import { formatPoint } from '#lib/geo.ts';
-	import { DEVICE_TYPE_LABELS, SITE_SETTING_LABELS } from '#lib/labels.ts';
+	import { DEVICE_TYPE_COLORS, DEVICE_TYPE_LABELS, SITE_SETTING_LABELS } from '#lib/labels.ts';
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
 
@@ -93,7 +93,7 @@
 	{#if data.onboarding}<SetupSteps current={3} />{/if}
 	<div class="flex flex-wrap items-end justify-between gap-4">
 		<div>
-			<h1 class="font-display text-5xl">{lab.name}</h1>
+			<h1 class="font-display text-3xl sm:text-4xl">{lab.name}</h1>
 			<p class="mt-1 text-muted">{lab.placeName}, {lab.country} · {formatPoint(lab.location)}</p>
 		</div>
 		{#if data.detail.canManage}
@@ -128,9 +128,13 @@
 										: 'No readings yet'}
 								</p>
 							</div>
-							<span class="rounded-full bg-lime px-2.5 py-0.5 text-xs font-semibold">
-								{DEVICE_TYPE_LABELS[device.type]}
-							</span>
+							<span class="chip shrink-0"
+								><span
+									class="size-2 rounded-full"
+									style:background={DEVICE_TYPE_COLORS[device.type]}
+								></span>
+								{DEVICE_TYPE_LABELS[device.type]}</span
+							>
 						</div>
 						<dl class="mt-3 grid gap-x-6 gap-y-1 text-xs text-muted sm:grid-cols-2">
 							<div>
@@ -156,7 +160,7 @@
 											</span>
 										{:else}
 											<span
-												class="rounded-full bg-canvas px-2 py-0.5 font-medium text-ink ring-1 ring-line"
+												class="rounded-full bg-raised px-2 py-0.5 font-medium text-ink ring-1 ring-line"
 												title="The device sent no GPS with this reading."
 												>Lab location, not from the device</span
 											>

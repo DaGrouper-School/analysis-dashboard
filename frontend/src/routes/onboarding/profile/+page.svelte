@@ -67,7 +67,7 @@
 
 <svelte:head><title>Your profile · DaGrouper Analysis</title></svelte:head>
 
-<h1 class="font-display text-4xl">Tell us about you</h1>
+<h1 class="font-display text-3xl">Tell us about you</h1>
 <p class="mt-2 mb-8 text-muted">
 	{user.authProvider === 'google'
 		? 'We filled in what Google shared. Add a phone number so your station can reach you.'
@@ -107,10 +107,13 @@
 				class="flex items-center justify-between rounded-xl border border-line bg-canvas px-3.5 py-2.5"
 			>
 				<span>{user.phone}</span>
-				<span class="rounded-full bg-lime px-2.5 py-0.5 text-xs font-semibold">Verified</span>
+				<span
+					class="rounded-full bg-lime/15 px-2.5 py-0.5 text-xs font-medium text-lime ring-1 ring-lime/40"
+					>Verified</span
+				>
 			</p>
 		{:else if challenge}
-			<div class="rounded-2xl border border-line bg-white p-4">
+			<div class="rounded-md border border-line bg-raised p-4">
 				<p class="mb-4 text-sm text-muted">
 					Enter the code sent to <strong class="text-ink">{challenge.phone}</strong>.
 					<button type="button" class="link" onclick={() => (challenge = null)}>Change</button>

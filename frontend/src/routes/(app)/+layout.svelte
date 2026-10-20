@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import Logo from '#lib/components/Logo.svelte';
+	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import { isMockDataSource } from '#lib/services/index.ts';
 
 	let { data, children } = $props();
@@ -17,29 +18,30 @@
 
 <div class="min-h-dvh">
 	<header class="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur">
-		<div class="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:gap-4 sm:px-6">
+		<div class="mx-auto flex max-w-6xl items-center gap-2 px-3 py-3 sm:gap-4 sm:px-6">
 			<a href={resolve('/(app)/dashboard')} aria-label="Dashboard"><Logo compact /></a>
 			<nav
-				class="ml-auto flex items-center gap-0.5 rounded-full border border-line bg-white p-1 sm:gap-1"
+				class="ml-auto flex items-center gap-0.5 rounded-full border border-line-strong bg-canvas/80 p-1 sm:gap-1"
 			>
 				{#each nav as item (item.href)}
 					{@const current = page.url.pathname.startsWith(item.href)}
 					<a
 						href={item.href}
 						class={[
-							'rounded-full px-2.5 py-1.5 text-[13px] font-medium sm:px-4 sm:text-sm',
-							current ? 'bg-ink text-white' : 'text-muted hover:text-ink'
+							'rounded-full px-2 py-1.5 text-[13px] font-medium sm:px-4 sm:text-sm',
+							current ? 'bg-ink text-canvas' : 'text-muted hover:text-ink'
 						]}
 						aria-current={current ? 'page' : undefined}>{item.label}</a
 					>
 				{/each}
 			</nav>
+			<ThemeToggle />
 			<a href={resolve('/(app)/profile')} class="hidden sm:block" aria-label="Your profile">
 				<Avatar name={data.user.fullName} src={data.user.avatarUrl} />
 			</a>
 		</div>
 		{#if isMockDataSource}
-			<p class="bg-ink py-1 text-center text-xs text-white/80">
+			<p class="border-b border-line bg-raised py-1 text-center text-xs text-muted">
 				Demo mode: data is mock and saved only in this browser.
 			</p>
 		{/if}

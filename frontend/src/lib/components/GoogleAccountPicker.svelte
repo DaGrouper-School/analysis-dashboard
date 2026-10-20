@@ -27,7 +27,7 @@
 <!-- Stand-in for the Google OAuth popup. The real flow returns an ID token instead of `sub`. -->
 <dialog
 	bind:this={dialog}
-	class="m-auto w-[min(26rem,calc(100vw-2rem))] rounded-3xl bg-white p-0 shadow-2xl backdrop:bg-ink/40"
+	class="m-auto w-[min(26rem,calc(100vw-2rem))] rounded-md border border-line-strong bg-raised p-0 text-text shadow-2xl backdrop:bg-black/70"
 	onclose={onClose}
 	aria-labelledby="google-title"
 >
@@ -40,7 +40,7 @@
 		{#each accounts as account (account.sub)}
 			<li>
 				<button
-					class="flex w-full items-center gap-3 px-6 py-3 text-left hover:bg-canvas"
+					class="flex w-full items-center gap-3 px-6 py-3 text-left hover:bg-raised"
 					onclick={() => onPick(account.sub)}
 				>
 					<Avatar name={account.name} />

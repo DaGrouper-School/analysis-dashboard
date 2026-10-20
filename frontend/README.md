@@ -96,3 +96,13 @@ user belongs to; anyone else, platform admins included, sees an empty state. On 
 facilitators and the institution head can run the connect-a-device demo: it pairs with a
 registered device and records six readings, two of them without a GPS fix, which then appear under Recent readings on the dashboard. Classroom name and
 institution are editable by the head; the classroom code never changes.
+
+## Look and feel
+
+There are dark and light themes. The app starts in the system's choice; the sun and moon button in
+the header switches it, and the choice is saved in localStorage. The dark theme uses a black
+canvas, thin white lines, white pills for the active choice, Barlow type, and green, teal and cyan
+for data. Tokens live in `src/routes/layout.css`, and the light theme overrides them under
+`[data-theme='light']`. The map is a dotted globe drawn on a canvas (`Globe.svelte`); its land
+dots come from `src/lib/data/land-dots.json`, built from Natural Earth by `node
+scripts/generate-land-dots.mjs`.

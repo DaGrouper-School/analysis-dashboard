@@ -163,12 +163,15 @@
 		</ol>
 
 		{#if sent.length}
-			<ul class="mt-4 divide-y divide-line rounded-2xl border border-line text-xs">
+			<ul class="mt-4 divide-y divide-line rounded-md border border-line text-xs">
 				{#each sent as reading (reading.id)}
 					<li class="space-y-1 p-3">
 						<div class="flex flex-wrap items-center justify-between gap-2">
 							<span class="font-medium">{time.format(new Date(reading.observedAt))}</span>
-							<span class="rounded-full bg-lime px-2 py-0.5 font-semibold">Recorded</span>
+							<span
+								class="rounded-full bg-lime/15 px-2 py-0.5 font-medium text-lime ring-1 ring-lime/40"
+								>Recorded</span
+							>
 						</div>
 						<p class="text-muted">{summary(reading.values)}</p>
 						<p>
@@ -176,7 +179,7 @@
 							{#if reading.locationSource === 'device'}
 								<span class="text-muted">· device GPS</span>
 							{:else}
-								<span class="rounded-full bg-canvas px-2 py-0.5 font-medium ring-1 ring-line"
+								<span class="rounded-full bg-raised px-2 py-0.5 font-medium ring-1 ring-line"
 									>No GPS fix: lab location, not from the device</span
 								>
 							{/if}
