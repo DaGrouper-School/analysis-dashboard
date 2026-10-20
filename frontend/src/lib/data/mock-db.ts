@@ -99,8 +99,14 @@ export interface MockDbState {
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
 const VERSION = 7;
+const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;
+/**
+ * Set when another tab saved the data with a newer release: this tab runs old code and must not
+ * overwrite that data with its own shape.
+ */
+let staleRelease = false;
 
 function storage(): Storage | null {
 	try {
@@ -117,6 +123,10 @@ export function readDb(): MockDbState {
 		try {
 			const parsed = JSON.parse(raw) as MockDbState;
 			if (parsed.version === VERSION) return (memory = parsed);
+			if (parsed.version > VERSION) {
+				staleRelease = true;
+				reloadOnce(parsed.version);
+			}
 		} catch {
 			// Corrupt or old data: fall through and reseed.
 		}
@@ -126,8 +136,30 @@ export function readDb(): MockDbState {
 	return memory;
 }
 
+/** Loads the newer release once. If the reload still serves old code, carry on from memory. */
+function reloadOnce(version: number) {
+	if (typeof location === 'undefined') return;
+	try {
+		if (sessionStorage.getItem(RELOAD_KEY) === String(version)) return;
+		sessionStorage.setItem(RELOAD_KEY, String(version));
+	} catch {
+		return;
+	}
+	location.reload();
+}
+
+function versionOf(raw: string | null): number | null {
+	try {
+		const version = raw && (JSON.parse(raw) as Partial<MockDbState>).version;
+		return typeof version === 'number' ? version : null;
+	} catch {
+		return null;
+	}
+}
+
 export function writeDb(state: MockDbState): void {
 	memory = state;
+	if (staleRelease) return;
 	try {
 		storage()?.setItem(STORAGE_KEY, JSON.stringify(state));
 	} catch {
@@ -143,6 +175,10 @@ export function watchOtherTabs(onChange: () => void): () => void {
 	if (typeof window === 'undefined') return () => {};
 	const listener = (event: StorageEvent) => {
 		if (event.key !== STORAGE_KEY && event.key !== null) return;
+		// A tab still running an older release reseeds the data in its own shape, without the
+		// session. Reseeding in reply would sign both tabs out on every write, so keep ours.
+		const version = versionOf(event.newValue);
+		if (version !== null && version < VERSION) return;
 		memory = null;
 		onChange();
 	};
