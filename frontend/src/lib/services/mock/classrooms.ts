@@ -23,13 +23,17 @@ const RANK: Record<ClassroomRole, number> = {
 	institution_head: 2
 };
 
-function currentUser(state: MockDbState): User {
+export function currentUser(state: MockDbState): User {
 	const user = state.session && state.users.find((u) => u.id === state.session!.userId);
 	if (!user) throw new ServiceError('unauthenticated', 'Please sign in again.');
 	return user;
 }
 
-function roleIn(state: MockDbState, classroomId: string, userId: string): ClassroomRole | null {
+export function roleIn(
+	state: MockDbState,
+	classroomId: string,
+	userId: string
+): ClassroomRole | null {
 	return (
 		state.memberships.find((m) => m.classroomId === classroomId && m.userId === userId)?.role ??
 		null
@@ -37,7 +41,7 @@ function roleIn(state: MockDbState, classroomId: string, userId: string): Classr
 }
 
 /** Who may do what in a classroom. This is the rule the backend must enforce too. */
-function permissionsFor(user: User, role: ClassroomRole | null) {
+export function permissionsFor(user: User, role: ClassroomRole | null) {
 	const isHead = role === 'institution_head';
 	return {
 		view: user.platformAdmin || role !== null,

@@ -79,7 +79,7 @@ Personas come from the project vault (User Personas). The parameter registry hol
 station parameters mapped to the six environmental domains (AIR, WAVES, SUN, RAIN, WIND,
 LIGHTNING) plus the manual rain gauge, with values from the sample station payload.
 
-## Deployment
-
-See the root README. The Pages workflow builds this folder with `BASE_PATH=/<repo-name>` so links
-work under the Pages subpath, and the SPA fallback (`404.html`) lets any route load directly.
+Classrooms run labs, and devices are registered to a lab, each with its own GPS position. Trinity
+Lab (Addis Ababa) has a soil sensor in its garden plus a weather station and rain gauge in
+Shashamane, about 200 km away. Each device's SAM source ID is the classroom code plus the device
+identifier, e.g. `DGC-7K3Q9M:TWS-2041-SH`.

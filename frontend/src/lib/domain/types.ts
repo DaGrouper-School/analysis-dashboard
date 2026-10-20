@@ -154,19 +154,91 @@ export interface Parameter {
 	source: 'weather_station' | 'manual';
 }
 
-export interface Station {
-	id: string;
-	name: string;
-	type: 'weather_station' | 'rain_gauge';
-	siteName: string;
-	country: string;
+// ---- Labs and devices (AP-05) --------------------------------------------------------
+
+export interface GeoPoint {
 	lat: number;
 	lng: number;
 }
 
-/** Latest value per parameter for a station, keyed by parameter ID. */
-export interface StationSnapshot {
-	stationId: string;
+export type SiteSetting = 'coastal' | 'urban' | 'rural' | 'highland' | 'forest' | 'other';
+
+/** Onboarding questionnaire about the lab's site. */
+export interface SiteProfile {
+	setting: SiteSetting;
+	description: string;
+	researchQuestions: string[];
+}
+
+/** A Lab in a Bag, run by a classroom. Devices are registered to it. */
+export interface Lab {
+	id: string;
+	classroomId: string;
+	name: string;
+	/** Where the lab itself is, e.g. the school. */
+	placeName: string;
+	country: string;
+	location: GeoPoint;
+	siteProfile: SiteProfile;
+	createdAt: string;
+}
+
+export type DeviceType =
+	'weather_station' | 'soil_sensor' | 'rain_gauge' | 'water_probe' | 'air_quality_sensor' | 'other';
+
+/** A sensor registered to a lab. It may have its own GPS position, which can be far from the lab. */
+export interface Device {
+	id: string;
+	labId: string;
+	labName: string;
+	name: string;
+	type: DeviceType;
+	/** Manufacturer serial or other hardware identifier. */
+	identifier: string;
+	/** Where the device reports from: its own GPS, or the lab's location when it has none. */
+	location: GeoPoint;
+	/** False when the device has no GPS of its own and uses the lab's location. */
+	ownLocation: boolean;
+	/** Human-readable place of the device, e.g. "Shashamane". */
+	placeName: string;
+	country: string;
+	/**
+	 * SAM source identity: classroom code plus device identifier (SAM-06).
+	 * Null when the viewer may not see the classroom code.
+	 */
+	samSourceId: string | null;
+	registeredAt: string;
+}
+
+export interface LabDetail {
+	lab: Lab;
+	classroomName: string;
+	devices: Device[];
+	/** Heads and facilitators can register devices. */
+	canManage: boolean;
+}
+
+export interface CreateLabInput {
+	name: string;
+	placeName: string;
+	country: string;
+	location: GeoPoint;
+	siteProfile: SiteProfile;
+}
+
+export interface RegisterDeviceInput {
+	name: string;
+	type: DeviceType;
+	identifier: string;
+	placeName: string;
+	country: string;
+	/** Null: the device uses the lab's location. */
+	location: GeoPoint | null;
+}
+
+/** Latest value per parameter for a device, keyed by parameter ID. */
+export interface DeviceSnapshot {
+	deviceId: string;
 	observedAt: string;
 	values: Record<string, number | string>;
 }

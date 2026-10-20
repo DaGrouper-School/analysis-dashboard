@@ -11,8 +11,12 @@ import type {
 	PhoneChallenge,
 	PlaceSuggestion,
 	ProfileInput,
-	Station,
-	StationSnapshot,
+	CreateLabInput,
+	Device,
+	DeviceSnapshot,
+	Lab,
+	LabDetail,
+	RegisterDeviceInput,
 	User
 } from '#lib/domain/types.ts';
 
@@ -53,8 +57,9 @@ export interface PlacesService {
 
 export interface RegistryService {
 	listParameters(): Promise<Parameter[]>;
-	listStations(): Promise<Station[]>;
-	getLatestSnapshot(stationId: string): Promise<StationSnapshot | null>;
+	/** Every registered device, public view (no SAM source IDs). Feeds the station map. */
+	listDevices(): Promise<Device[]>;
+	getLatestSnapshot(deviceId: string): Promise<DeviceSnapshot | null>;
 }
 
 /**
@@ -77,10 +82,23 @@ export interface ClassroomService {
 	acceptInvitation(token: string): Promise<ClassroomSummary>;
 }
 
+/** Labs and their devices (AP-05). Each device is registered in SAM as a source. */
+export interface LabService {
+	listForClassroom(classroomId: string): Promise<Lab[]>;
+	get(labId: string): Promise<LabDetail>;
+	/** Classroom onboarding step: the lab and its site profile questionnaire. */
+	create(classroomId: string, input: CreateLabInput): Promise<Lab>;
+	registerDevice(labId: string, input: RegisterDeviceInput): Promise<Device>;
+	removeDevice(deviceId: string): Promise<void>;
+	/** Devices registered to labs of the classrooms the user belongs to. */
+	listMyDevices(): Promise<Device[]>;
+}
+
 export interface Services {
 	auth: AuthService;
 	profile: ProfileService;
 	classrooms: ClassroomService;
+	labs: LabService;
 	places: PlacesService;
 	registry: RegistryService;
 }

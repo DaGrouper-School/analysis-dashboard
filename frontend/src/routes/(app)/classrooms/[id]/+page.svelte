@@ -97,6 +97,45 @@
 
 {#if actionError}<p class="field-error mt-4" role="alert">{actionError}</p>{/if}
 
+<section class="card mt-6">
+	<div class="flex flex-wrap items-center justify-between gap-3">
+		<h2 class="text-lg font-semibold">Labs <span class="text-muted">{data.labs.length}</span></h2>
+		{#if permissions.invite.length && data.labs.length}
+			<a
+				href={resolve('/(app)/classrooms/[id]/labs/new', { id: classroom.id })}
+				class="btn btn-ghost px-3 py-1.5 text-xs">Add a lab</a
+			>
+		{/if}
+	</div>
+	{#if data.labs.length}
+		<ul class="mt-4 grid gap-3 sm:grid-cols-2">
+			{#each data.labs as lab (lab.id)}
+				<li>
+					<a
+						href={resolve('/(app)/labs/[labId]', { labId: lab.id })}
+						class="block rounded-2xl border border-line p-4 transition hover:border-forest/40"
+					>
+						<p class="font-medium">{lab.name}</p>
+						<p class="text-sm text-muted">{lab.placeName}, {lab.country}</p>
+					</a>
+				</li>
+			{/each}
+		</ul>
+	{:else if permissions.invite.length}
+		<div class="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-lime/25 p-4">
+			<p class="text-sm">
+				<strong>Next step:</strong> register your lab, its site profile and its devices.
+			</p>
+			<a
+				href={resolve('/(app)/classrooms/[id]/labs/new?onboarding', { id: classroom.id })}
+				class="btn btn-primary">Set up your lab</a
+			>
+		</div>
+	{:else}
+		<p class="mt-2 text-sm text-muted">Your facilitator hasn't registered a lab yet.</p>
+	{/if}
+</section>
+
 <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
 	<section class="card">
 		<h2 class="text-lg font-semibold">
