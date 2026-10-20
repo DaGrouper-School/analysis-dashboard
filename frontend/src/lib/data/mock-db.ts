@@ -71,7 +71,8 @@ export interface StoredDevice {
 	identifier: string;
 	placeName: string;
 	country: string;
-	location: GeoPoint;
+	/** Null: the device uses the lab's location. */
+	location: GeoPoint | null;
 	registeredAt: string;
 }
 

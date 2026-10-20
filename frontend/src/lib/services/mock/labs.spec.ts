@@ -84,6 +84,16 @@ describe('labs (AP-05)', () => {
 		});
 	});
 
+	it('lets a device without its own GPS use the lab location', async () => {
+		await signInAs('g-tesfaye');
+		const { lab } = await services.labs.get('lab_trinity');
+		const device = await services.labs.registerDevice('lab_trinity', {
+			...deviceInput,
+			location: null
+		});
+		expect(device).toMatchObject({ ownLocation: false, location: lab.location });
+	});
+
 	it('rejects invalid GPS coordinates', async () => {
 		await signInAs('g-tesfaye');
 		await expect(

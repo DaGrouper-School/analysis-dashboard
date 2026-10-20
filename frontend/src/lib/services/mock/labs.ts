@@ -22,7 +22,8 @@ function toDevice(state: MockDbState, device: StoredDevice, showSource: boolean)
 		name: device.name,
 		type: device.type,
 		identifier: device.identifier,
-		location: { ...device.location },
+		location: { ...(device.location ?? lab.location) },
+		ownLocation: device.location !== null,
 		placeName: device.placeName,
 		country: device.country,
 		samSourceId: showSource ? sourceIdFor(state, device) : null,
@@ -140,7 +141,7 @@ export function createMockLabs({
 					identifier: input.identifier.trim().toUpperCase(),
 					placeName: input.placeName.trim(),
 					country: input.country.trim(),
-					location: { ...input.location },
+					location: input.location && { ...input.location },
 					registeredAt: iso()
 				};
 				// SAM source identity is the classroom code plus the device identifier (SAM-06).

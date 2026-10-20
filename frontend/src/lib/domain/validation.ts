@@ -65,7 +65,9 @@ export function validateDevice(input: RegisterDeviceInput): Record<string, strin
 	}
 	if (!input.placeName.trim()) errors.placeName = 'Enter where the device is.';
 	if (!input.country.trim()) errors.country = 'Enter a country.';
-	if (!isValidGeoPoint(input.location)) errors.location = 'Enter a valid latitude and longitude.';
+	if (input.location && !isValidGeoPoint(input.location)) {
+		errors.location = 'Enter a valid latitude and longitude, or leave both blank.';
+	}
 	return errors;
 }
 

@@ -5,7 +5,7 @@
 	import SetupSteps from '#lib/components/SetupSteps.svelte';
 	import type { DeviceType, RegisterDeviceInput } from '#lib/domain/types.ts';
 	import { distanceKm, validateDevice } from '#lib/domain/validation.ts';
-	import { formatPoint, toGeoPoint } from '#lib/geo.ts';
+	import { formatPoint, toOptionalGeoPoint } from '#lib/geo.ts';
 	import { DEVICE_TYPE_LABELS, SITE_SETTING_LABELS } from '#lib/labels.ts';
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
@@ -44,7 +44,7 @@
 			identifier,
 			placeName,
 			country,
-			location: toGeoPoint(lat, lng)
+			location: toOptionalGeoPoint(lat, lng)
 		};
 		errors = validateDevice(input);
 		if (Object.keys(errors).length) return;
@@ -105,9 +105,10 @@
 							<div class="min-w-0 flex-1">
 								<p class="font-medium">{device.name}</p>
 								<p class="text-sm text-muted">
-									{device.placeName}, {device.country} · {distanceLabel(
-										distanceKm(lab.location, device.location)
-									)}
+									{device.placeName}, {device.country} ·
+									{device.ownLocation
+										? distanceLabel(distanceKm(lab.location, device.location))
+										: "uses the lab's location"}
 								</p>
 							</div>
 							<span class="rounded-full bg-lime px-2.5 py-0.5 text-xs font-semibold">
@@ -121,7 +122,9 @@
 							</div>
 							<div>
 								<dt class="inline">GPS</dt>
-								<dd class="inline text-ink">{formatPoint(device.location)}</dd>
+								<dd class="inline text-ink">
+									{device.ownLocation ? formatPoint(device.location) : 'Not set'}
+								</dd>
 							</div>
 							{#if device.samSourceId}
 								<div>
@@ -218,7 +221,8 @@
 					{/if}
 				</div>
 				<div>
-					<p class="label">Device GPS location</p>
+					<p class="label">Device GPS location <span class="text-muted">(optional)</span></p>
+					<p class="-mt-1 mb-2 text-xs text-muted">Leave blank to use the lab's location.</p>
 					<LocationInput
 						id="device-location"
 						bind:lat

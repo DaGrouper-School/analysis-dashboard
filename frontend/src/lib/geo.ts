@@ -6,6 +6,11 @@ export function toGeoPoint(lat: string, lng: string): GeoPoint {
 	return { lat: parse(lat), lng: parse(lng) };
 }
 
+/** Like `toGeoPoint`, but both fields blank means "no location". */
+export function toOptionalGeoPoint(lat: string, lng: string): GeoPoint | null {
+	return lat.trim() === '' && lng.trim() === '' ? null : toGeoPoint(lat, lng);
+}
+
 export function formatPoint({ lat, lng }: GeoPoint): string {
 	return `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lng).toFixed(4)}° ${lng >= 0 ? 'E' : 'W'}`;
 }

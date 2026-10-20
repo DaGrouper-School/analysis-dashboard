@@ -186,7 +186,7 @@ export interface Lab {
 export type DeviceType =
 	'weather_station' | 'soil_sensor' | 'rain_gauge' | 'water_probe' | 'air_quality_sensor' | 'other';
 
-/** A sensor registered to a lab. It has its own GPS position, which can be far from the lab. */
+/** A sensor registered to a lab. It may have its own GPS position, which can be far from the lab. */
 export interface Device {
 	id: string;
 	labId: string;
@@ -195,7 +195,10 @@ export interface Device {
 	type: DeviceType;
 	/** Manufacturer serial or other hardware identifier. */
 	identifier: string;
+	/** Where the device reports from: its own GPS, or the lab's location when it has none. */
 	location: GeoPoint;
+	/** False when the device has no GPS of its own and uses the lab's location. */
+	ownLocation: boolean;
 	/** Human-readable place of the device, e.g. "Shashamane". */
 	placeName: string;
 	country: string;
@@ -229,7 +232,8 @@ export interface RegisterDeviceInput {
 	identifier: string;
 	placeName: string;
 	country: string;
-	location: GeoPoint;
+	/** Null: the device uses the lab's location. */
+	location: GeoPoint | null;
 }
 
 /** Latest value per parameter for a device, keyed by parameter ID. */
