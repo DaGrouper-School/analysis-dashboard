@@ -68,6 +68,7 @@ Services and the backend verifies the token.
 | `/onboarding/profile` | AP-02 profile and contact (Google users verify a phone) |
 | `/onboarding/address` | AP-02 address with places autocomplete                  |
 | `/dashboard`          | Current conditions from the user's own classrooms only  |
+| `/map`                | AP-06 device map with current conditions and alerts     |
 | `/classrooms/[id]`    | AP-03 classroom, members, invites; edit name and school |
 | `/labs/[labId]`       | AP-05 devices, readings, connect-a-device demo          |
 | `/labs/[labId]/edit`  | Edit the lab and its site profile                       |

@@ -183,4 +183,12 @@ describe('labs (AP-05)', () => {
 		await signInAs('g-marcus');
 		expect(await services.labs.currentConditions()).toEqual([]);
 	});
+
+	it('attaches active alerts to current conditions', async () => {
+		await signInAs('g-tesfaye');
+		const conditions = await services.labs.currentConditions();
+		const station = conditions.find((c) => c.device.id === 'dev_shashamane_ws')!;
+		expect(station.alerts.map((a) => a.title)).toEqual(['High UV']);
+		expect(conditions.find((c) => c.device.id === 'dev_trinity_soil')!.alerts).toEqual([]);
+	});
 });

@@ -269,9 +269,19 @@ export interface RegisterDeviceInput {
 	identifier: string;
 }
 
+/** A condition in a device's latest reading that crosses a threshold. */
+export interface DeviceAlert {
+	parameterId: string;
+	level: 'caution' | 'warning';
+	title: string;
+	message: string;
+}
+
 /** The latest reading of one device in a classroom the user belongs to. */
 export interface CurrentConditions {
 	device: Device;
 	classroomName: string;
 	reading: Reading;
+	/** Active alerts from the latest reading. Empty for older readings. */
+	alerts: DeviceAlert[];
 }

@@ -1,4 +1,5 @@
 import type { CreateLabInput, CurrentConditions, Device, Lab, Reading } from '#lib/domain/types.ts';
+import { alertsFor } from '#lib/domain/alerts.ts';
 import { validateDevice, validateLab, validateReading } from '#lib/domain/validation.ts';
 import { newId, readDb, updateDb, type MockDbState, type StoredDevice } from '#lib/data/mock-db.ts';
 import { ServiceError, type LabService } from '../types';
@@ -256,7 +257,8 @@ export function createMockLabs({
 				result.push({
 					device: toDevice(state, device, permissionsFor(user, role).seeCode),
 					classroomName: classroomOf(state, lab).name,
-					reading: toReading(latest)
+					reading: toReading(latest),
+					alerts: alertsFor(latest)
 				});
 			}
 			return result.sort((a, b) => newestFirst(a.reading, b.reading));
