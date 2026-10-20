@@ -121,7 +121,14 @@ export function createHttpServices(baseUrl: string): Services {
 				}),
 			currentConditions: () => request<CurrentConditions[]>('GET', '/me/conditions'),
 			recentReadings: (limit = 20) =>
-				request<CurrentConditions[]>('GET', `/me/readings?limit=${limit}`)
+				request<CurrentConditions[]>('GET', `/me/readings?limit=${limit}`),
+			listClassroomDevices: (classroomId) =>
+				request<Device[]>('GET', `/classrooms/${encodeURIComponent(classroomId)}/devices`),
+			deviceReadings: (deviceId, limit = 100) =>
+				request<Reading[]>(
+					'GET',
+					`/devices/${encodeURIComponent(deviceId)}/readings?limit=${limit}`
+				)
 		},
 		places: {
 			autocomplete: (q) =>

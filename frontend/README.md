@@ -76,7 +76,7 @@ Services and the backend verifies the token.
 | `/verify-phone`       | AP-01 SMS code with 30 s resend                         |
 | `/onboarding/profile` | AP-02 profile and contact (Google users verify a phone) |
 | `/onboarding/address` | AP-02 address with places autocomplete                  |
-| `/dashboard`          | Current conditions from the user's own classrooms only  |
+| `/dashboard`          | Pick a classroom and sensor: conditions, chart, history |
 | `/map`                | AP-06 device map with current conditions and alerts     |
 | `/classrooms/[id]`    | AP-03 classroom, members, invites; edit name and school |
 | `/labs/[labId]`       | AP-05 devices, readings, connect-a-device demo          |
@@ -87,6 +87,11 @@ Route groups `(auth)` and `(app)` hold the guards: signed-in users skip sign-up,
 requires a completed onboarding.
 
 ## Seed data
+
+Every seeded device has two weeks of daily readings, so the dashboard chart has a history.
+Each sensor type shows its own key values on the dashboard and map: temperature, wind, rain and
+UV for a weather station, soil moisture and temperature for a soil sensor, and so on
+(`src/lib/key-values.ts`).
 
 Personas come from the project vault (User Personas). The parameter registry holds the 36 weather
 station parameters mapped to the six environmental domains (AIR, WAVES, SUN, RAIN, WIND,
@@ -111,7 +116,7 @@ see the classroom code.
 People are never assigned to devices. Current conditions come only from devices in classrooms the
 user belongs to; anyone else, platform admins included, sees an empty state. On a lab page,
 the institution head, facilitators and community scientists can run the connect-a-device demo: it pairs with a
-registered device and records six readings, two of them without a GPS fix, which then appear under Recent readings on the dashboard. Classroom name and
+registered device and records six readings, two of them without a GPS fix, which then appear in that sensor's chart and readings on the dashboard. Classroom name and
 institution are editable by the head; the classroom code never changes.
 
 ## Look and feel
