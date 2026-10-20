@@ -9,6 +9,7 @@
 
 	const nav = [
 		{ href: resolve('/(app)/dashboard'), label: 'Dashboard' },
+		{ href: resolve('/(app)/classrooms'), label: 'Classrooms' },
 		{ href: resolve('/(app)/profile'), label: 'Profile' }
 	];
 </script>
@@ -16,14 +17,14 @@
 <div class="min-h-dvh">
 	<header class="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur">
 		<div class="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
-			<a href={resolve('/(app)/dashboard')} aria-label="Dashboard"><Logo /></a>
+			<a href={resolve('/(app)/dashboard')} aria-label="Dashboard"><Logo compact /></a>
 			<nav class="ml-auto flex items-center gap-1 rounded-full border border-line bg-white p-1">
 				{#each nav as item (item.href)}
 					{@const current = page.url.pathname.startsWith(item.href)}
 					<a
 						href={item.href}
 						class={[
-							'rounded-full px-4 py-1.5 text-sm font-medium',
+							'rounded-full px-3 py-1.5 text-sm font-medium sm:px-4',
 							current ? 'bg-ink text-white' : 'text-muted hover:text-ink'
 						]}
 						aria-current={current ? 'page' : undefined}>{item.label}</a

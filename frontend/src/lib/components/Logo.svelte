@@ -1,5 +1,5 @@
 <script lang="ts">
-	let { inverted = false }: { inverted?: boolean } = $props();
+	let { inverted = false, compact = false }: { inverted?: boolean; compact?: boolean } = $props();
 </script>
 
 <span class="inline-flex items-center gap-2.5">
@@ -9,7 +9,13 @@
 			<path d="M8 16c2-3 5-5 9-6" />
 		</svg>
 	</span>
-	<span class={['text-lg font-semibold tracking-tight', inverted ? 'text-white' : 'text-ink']}>
+	<span
+		class={[
+			'text-lg font-semibold tracking-tight',
+			inverted ? 'text-white' : 'text-ink',
+			compact && 'hidden sm:inline'
+		]}
+	>
 		DaGrouper
 		<span class={inverted ? 'text-white/60' : 'text-muted'}>Analysis</span>
 	</span>

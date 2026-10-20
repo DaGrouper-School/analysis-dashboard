@@ -24,6 +24,7 @@ const users: User[] = [
 		phoneVerified: true,
 		avatarUrl: null,
 		role: 'custodian',
+		platformAdmin: false,
 		address: {
 			street: '14 Bay Street',
 			city: 'Nassau',
@@ -44,6 +45,7 @@ const users: User[] = [
 		phoneVerified: true,
 		avatarUrl: null,
 		role: 'community_scientist',
+		platformAdmin: false,
 		address: {
 			street: 'Kebele 04',
 			city: 'Shashamane',
@@ -64,6 +66,7 @@ const users: User[] = [
 		phoneVerified: true,
 		avatarUrl: null,
 		role: 'researcher',
+		platformAdmin: true,
 		address: {
 			street: '200 Research Way',
 			city: 'San Francisco',
@@ -74,6 +77,68 @@ const users: User[] = [
 		onboardingCompleted: true,
 		createdAt: SEEDED_AT,
 		updatedAt: SEEDED_AT
+	},
+	{
+		id: 'usr_tesfaye',
+		authProvider: 'google',
+		fullName: 'Tesfaye G.',
+		email: 'tesfaye.g@trinity-school.example',
+		phone: '+251911000002',
+		phoneVerified: true,
+		avatarUrl: null,
+		role: 'institution_head',
+		platformAdmin: false,
+		address: {
+			street: 'Kebele 04',
+			city: 'Shashamane',
+			state: 'Oromia',
+			zip: '',
+			country: 'Ethiopia'
+		},
+		onboardingCompleted: true,
+		createdAt: SEEDED_AT,
+		updatedAt: SEEDED_AT
+	}
+];
+
+const classrooms: MockDbState['classrooms'] = [
+	{
+		id: 'cls_trinity',
+		name: 'Trinity Lab Classroom',
+		institutionName: 'Trinity School, Shashamane',
+		code: 'DGC-7K3Q9M',
+		setup: 'admin_assisted',
+		createdBy: 'usr_marcus',
+		createdAt: SEEDED_AT
+	}
+];
+
+const memberships: MockDbState['memberships'] = [
+	{
+		classroomId: 'cls_trinity',
+		userId: 'usr_tesfaye',
+		role: 'institution_head',
+		joinedAt: SEEDED_AT
+	},
+	{
+		classroomId: 'cls_trinity',
+		userId: 'usr_abebe',
+		role: 'community_scientist',
+		joinedAt: SEEDED_AT
+	}
+];
+
+const invitations: MockDbState['invitations'] = [
+	{
+		id: 'inv_hana',
+		token: 'demo-hana-invite',
+		classroomId: 'cls_trinity',
+		email: 'hana.bekele@example.org',
+		role: 'facilitator',
+		status: 'pending',
+		invitedBy: 'usr_tesfaye',
+		createdAt: SEEDED_AT,
+		acceptedBy: null
 	}
 ];
 
@@ -81,7 +146,13 @@ const googleAccounts: MockDbState['googleAccounts'] = [
 	{ sub: 'g-sarah', name: 'Sarah K.', email: 'sarah.k@example.org', avatarUrl: null },
 	{ sub: 'g-marcus', name: 'Dr. Marcus L.', email: 'marcus.l@planetwerx.example', avatarUrl: null },
 	{ sub: 'g-hana', name: 'Hana Bekele', email: 'hana.bekele@example.org', avatarUrl: null },
-	{ sub: 'g-amina', name: 'Amina Yusuf', email: 'amina.yusuf@example.org', avatarUrl: null }
+	{ sub: 'g-amina', name: 'Amina Yusuf', email: 'amina.yusuf@example.org', avatarUrl: null },
+	{
+		sub: 'g-tesfaye',
+		name: 'Tesfaye G.',
+		email: 'tesfaye.g@trinity-school.example',
+		avatarUrl: null
+	}
 ];
 
 type ParameterSeed = [id: string, label: string, unit: string, definition: string];
@@ -327,11 +398,19 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 	return structuredClone({
 		users,
 		googleAccounts,
-		googleLinks: { 'g-sarah': 'usr_sarah', 'g-marcus': 'usr_marcus' },
+		googleLinks: { 'g-sarah': 'usr_sarah', 'g-marcus': 'usr_marcus', 'g-tesfaye': 'usr_tesfaye' },
 		challenges: [],
 		session: null,
 		parameters,
 		stations,
-		snapshots
+		snapshots,
+		classrooms,
+		memberships,
+		invitations,
+		samSources: classrooms.map((c) => ({
+			sourceId: c.code,
+			kind: 'classroom' as const,
+			registeredAt: c.createdAt
+		}))
 	});
 }
