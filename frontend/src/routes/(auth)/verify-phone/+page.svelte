@@ -37,7 +37,7 @@
 	<a href={resolve('/(auth)/signup')} class="mb-6 text-sm text-muted hover:text-ink"
 		>← Use a different number</a
 	>
-	<h1 class="font-display text-4xl">Check your messages</h1>
+	<h1 class="font-display text-3xl">Check your messages</h1>
 	<p class="mt-2 mb-8 text-muted">
 		We sent a 6-digit code to <strong class="text-ink">{challenge.phone}</strong>.
 	</p>

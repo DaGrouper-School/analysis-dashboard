@@ -105,14 +105,14 @@
 			<ul
 				id="place-results"
 				role="listbox"
-				class="absolute z-10 mt-2 w-full overflow-hidden rounded-2xl border border-line bg-white shadow-xl"
+				class="absolute z-10 mt-2 w-full overflow-hidden rounded-md border border-line-strong bg-raised shadow-xl"
 			>
 				{#each suggestions as suggestion, i (suggestion.placeId)}
 					<li
 						id="place-{i}"
 						role="option"
 						aria-selected={i === active}
-						class={['cursor-pointer px-4 py-2.5', i === active ? 'bg-canvas' : 'hover:bg-canvas']}
+						class={['cursor-pointer px-4 py-2.5', i === active ? 'bg-white/10' : 'hover:bg-raised']}
 						onmousedown={(e) => {
 							e.preventDefault();
 							pick(suggestion);

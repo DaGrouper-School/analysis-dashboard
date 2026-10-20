@@ -1,56 +1,88 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 
+/* Dark explorer theme: black canvas, thin white lines,
+   white pills for the active choice, green and teal for data. */
 @theme {
-	--font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-	--font-display: 'Instrument Serif', ui-serif, Georgia, serif;
+	--font-sans: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
+	--font-display: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
 
-	--color-canvas: #f3f5ef;
-	--color-surface: #ffffff;
-	--color-ink: #141811;
-	--color-muted: #69705f;
-	--color-line: #e2e6db;
-	--color-lime: #c5f04a;
-	--color-lime-strong: #9fd21c;
-	--color-forest: #1f3b2a;
-	--color-danger: #c2412d;
+	--color-canvas: #000000;
+	/* Floating panels: a breath lighter than the canvas. */
+	--color-surface: #07090b;
+	--color-raised: #0e1216;
+	--color-ink: #ffffff;
+	--color-text: #c8cfd6;
+	--color-muted: #8e98a3;
+	--color-line: #ffffff1f;
+	--color-line-strong: #ffffff3d;
+	--color-lime: #3cc04b;
+	--color-lime-strong: #52d361;
+	--color-teal: #2fcca9;
+	--color-cyan: #00bdff;
+	--color-orange: #f6921e;
+	/* Feature panels: deep green-black with a teal edge. */
+	--color-forest: #04140f;
+	--color-danger: #ff5c7a;
 }
 
 @layer base {
 	body {
-		@apply bg-canvas font-sans text-ink antialiased;
+		@apply bg-canvas font-sans text-text antialiased;
+	}
+	h1,
+	h2,
+	h3 {
+		@apply text-ink;
+	}
+	::selection {
+		@apply bg-teal/40 text-ink;
+	}
+	/* Native controls (date pickers, scrollbars) in their dark variants. */
+	:root {
+		color-scheme: dark;
 	}
 }
 
 @layer components {
 	.card {
-		@apply rounded-3xl border border-line bg-surface p-6 shadow-[0_1px_2px_rgba(20,24,17,0.04)];
+		@apply rounded-md border border-line bg-surface p-6;
 	}
 	.label {
-		@apply mb-1.5 block text-sm font-medium text-ink;
+		@apply mb-1.5 block text-sm font-medium text-text;
 	}
 	.input {
-		@apply block w-full rounded-xl border-line bg-white px-3.5 py-2.5 text-ink placeholder:text-muted/70 focus:border-forest focus:ring-forest disabled:bg-canvas disabled:text-muted;
+		@apply block w-full rounded-sm border-line-strong bg-transparent px-3.5 py-2.5 text-ink placeholder:text-muted/55 focus:border-ink focus:ring-0 disabled:border-line disabled:text-muted;
+	}
+	.input option {
+		@apply bg-raised text-ink;
 	}
 	.input-error {
-		@apply border-danger focus:border-danger focus:ring-danger;
+		@apply border-danger focus:border-danger;
 	}
 	.field-error {
 		@apply mt-1.5 text-sm text-danger;
 	}
 	.btn {
-		@apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50;
+		@apply inline-flex items-center justify-center gap-2 rounded-sm px-4 py-2.5 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50;
 	}
 	.btn-primary {
-		@apply bg-ink text-white hover:bg-forest;
+		@apply bg-ink text-canvas hover:bg-[#dde3e8];
 	}
 	.btn-accent {
-		@apply bg-lime text-ink hover:bg-lime-strong;
+		@apply bg-lime text-canvas hover:bg-lime-strong;
 	}
 	.btn-ghost {
-		@apply border border-line bg-white text-ink hover:bg-canvas;
+		@apply border border-line-strong bg-transparent text-ink hover:border-ink;
 	}
 	.link {
-		@apply font-medium text-forest underline decoration-lime-strong decoration-2 underline-offset-4 hover:text-ink;
+		@apply font-medium text-ink underline decoration-teal decoration-1 underline-offset-4 hover:text-teal;
+	}
+	/* Small round chip with a colored dot, as in the map filters and legend. */
+	.chip {
+		@apply inline-flex items-center gap-1.5 rounded-full border border-line-strong px-2.5 py-0.5 text-xs text-text;
+	}
+	.eyebrow {
+		@apply text-sm font-medium text-muted;
 	}
 }

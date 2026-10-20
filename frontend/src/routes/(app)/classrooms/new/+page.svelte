@@ -47,7 +47,7 @@
 
 <a href={resolve('/(app)/classrooms')} class="text-sm text-muted hover:text-ink">← Classrooms</a>
 <div class="mt-4"><SetupSteps current={1} /></div>
-<h1 class="font-display text-5xl">New classroom</h1>
+<h1 class="font-display text-3xl sm:text-4xl">New classroom</h1>
 <p class="mt-1 max-w-xl text-muted">
 	The classroom gets a unique global classroom code. It is registered in SAM as the source
 	identifier for the classroom's stations and observations.
@@ -76,7 +76,7 @@
 	</div>
 
 	{#if data.user.platformAdmin}
-		<fieldset class="space-y-3 rounded-2xl border border-line p-4">
+		<fieldset class="space-y-3 rounded-md border border-line p-4">
 			<legend class="px-1 text-sm font-medium">Who runs this classroom?</legend>
 			<label class="flex items-center gap-2 text-sm">
 				<input type="radio" bind:group={forSomeoneElse} value={true} />

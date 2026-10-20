@@ -27,7 +27,7 @@
 >
 <div class="mt-4">
 	{#if data.onboarding}<SetupSteps current={2} />{/if}
-	<h1 class="font-display text-5xl">Register your lab</h1>
+	<h1 class="font-display text-3xl sm:text-4xl">Register your lab</h1>
 	<p class="mt-1 max-w-xl text-muted">
 		The lab is where your classroom works with the Lab in a Bag. Next you'll register its devices.
 	</p>

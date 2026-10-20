@@ -2,7 +2,8 @@
 	import { resolve } from '$app/paths';
 	import type { EnvironmentalDomain } from '#lib/domain/types.ts';
 	import { formatPoint } from '#lib/geo.ts';
-	import { DEVICE_TYPE_LABELS } from '#lib/labels.ts';
+	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
+	import { DEVICE_TYPE_COLORS, DEVICE_TYPE_LABELS } from '#lib/labels.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -66,6 +67,19 @@
 			.join(' · ');
 	}
 
+	const markers = $derived<GlobeMarker[]>(
+		[data.featured, ...data.others]
+			.filter((c) => c !== null)
+			.map((c) => ({
+				id: c.device.id,
+				lat: c.reading.location.lat,
+				lng: c.reading.location.lng,
+				color: DEVICE_TYPE_COLORS[c.device.type],
+				hollow: c.reading.locationSource === 'lab',
+				label: c.device.name
+			}))
+	);
+
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 	const reading = $derived(data.featured?.reading ?? null);
 </script>
@@ -75,10 +89,10 @@
 <div class="flex flex-wrap items-end justify-between gap-4">
 	<div>
 		<p class="text-sm text-muted">Welcome back</p>
-		<h1 class="font-display text-5xl">Hello, {firstName}</h1>
+		<h1 class="font-display text-3xl sm:text-4xl">Hello, {firstName}</h1>
 	</div>
 	{#if data.featured}
-		<p class="rounded-full border border-line bg-white px-4 py-2 text-sm">
+		<p class="rounded-full border border-line-strong px-4 py-2 text-sm">
 			<span class="text-muted">{data.featured.classroomName}</span>
 			<strong class="ml-1">{data.featured.device.labName}</strong>
 		</p>
@@ -87,7 +101,7 @@
 
 <section class="mt-8 grid gap-4 lg:grid-cols-3">
 	{#if data.featured && reading}
-		<div class="card bg-forest text-white lg:col-span-2">
+		<div class="card border-teal/25 bg-forest text-white lg:col-span-2">
 			<div class="flex flex-wrap items-start justify-between gap-4">
 				<div>
 					<p class="text-sm text-white/60">Current conditions</p>
@@ -109,16 +123,39 @@
 					Observed {dateTime.format(new Date(reading.observedAt))}
 				</p>
 			</div>
-			<dl class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+			<dl class="mt-8 grid grid-cols-2 gap-px border border-white/10 bg-white/10 sm:grid-cols-4">
 				{#each headline as item (item.id)}
-					<div class="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+					<div class="bg-forest p-4">
 						<dt class="text-xs text-white/60">{item.label}</dt>
-						<dd class="mt-2 text-3xl font-semibold text-lime">
+						<dd class="mt-2 text-3xl text-ink">
 							{format(reading.values[item.id], paramsById.get(item.id)?.unit)}
 						</dd>
 					</div>
 				{/each}
 			</dl>
+			<div class="mt-6">
+				<h3 class="text-sm font-medium">Active alerts</h3>
+				{#if data.featured.alerts.length}
+					<ul class="mt-2 space-y-2">
+						{#each data.featured.alerts as alert (alert.parameterId)}
+							<li
+								class={[
+									'border-l-2 bg-white/[0.04] py-2 pr-2 pl-3 text-sm',
+									alert.level === 'warning' ? 'border-danger' : 'border-orange'
+								]}
+							>
+								<span class="text-ink">
+									<span aria-hidden="true">{alert.level === 'warning' ? '▲▲' : '▲'}</span>
+									{alert.title}</span
+								>
+								<span class="text-white/60">· {alert.message}</span>
+							</li>
+						{/each}
+					</ul>
+				{:else}
+					<p class="mt-1 text-sm text-white/60">No active alerts for this station.</p>
+				{/if}
+			</div>
 		</div>
 	{:else}
 		<div class="card lg:col-span-2">
@@ -132,12 +169,18 @@
 		</div>
 	{/if}
 
-	<div class="card">
-		<h2 class="font-semibold">Active alerts</h2>
-		<p class="mt-2 text-sm text-muted">
-			No alerts right now. Local threshold alerts arrive in a later sprint.
-		</p>
-	</div>
+	<a
+		href={resolve('/(app)/map')}
+		class="card group relative flex min-h-80 flex-col overflow-hidden p-0 transition hover:border-line-strong"
+	>
+		<div class="flex items-baseline justify-between gap-3 p-5 pb-0">
+			<h2 class="font-medium">Your devices</h2>
+			<span class="text-sm text-muted group-hover:text-ink">Open the map →</span>
+		</div>
+		<div class="pointer-events-none relative min-h-64 flex-1">
+			<Globe {markers} ariaLabel="Globe of your classrooms' devices" />
+		</div>
+	</a>
 </section>
 
 {#if data.others.length}
@@ -152,9 +195,13 @@
 							href={resolve('/(app)/labs/[labId]', { labId: item.device.labId })}
 							>{item.device.name}</a
 						>
-						<span class="rounded-full bg-lime px-2 py-0.5 text-xs font-semibold">
-							{DEVICE_TYPE_LABELS[item.device.type]}
-						</span>
+						<span class="chip shrink-0"
+							><span
+								class="size-2 rounded-full"
+								style:background={DEVICE_TYPE_COLORS[item.device.type]}
+							></span>
+							{DEVICE_TYPE_LABELS[item.device.type]}</span
+						>
 					</div>
 					<p class="mt-1 text-xs text-muted">
 						{item.classroomName} · {dateTime.format(new Date(item.reading.observedAt))}
@@ -219,9 +266,7 @@
 
 <section class="mt-8">
 	<h2 class="text-lg font-semibold">Environmental domains</h2>
-	<p class="text-sm text-muted">
-		Weather station parameters, grouped by domain. Detailed views come in sprint 3.
-	</p>
+	<p class="text-sm text-muted">Weather station parameters, grouped by domain.</p>
 	<ul class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
 		{#each DOMAINS as domain (domain.id)}
 			<li class="card p-4">

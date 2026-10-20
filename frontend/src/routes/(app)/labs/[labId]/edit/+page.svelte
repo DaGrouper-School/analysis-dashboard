@@ -20,6 +20,6 @@
 	href={resolve('/(app)/labs/[labId]', { labId: data.lab.id })}
 	class="text-sm text-muted hover:text-ink">← {data.lab.name}</a
 >
-<h1 class="mt-4 font-display text-5xl">Edit lab</h1>
+<h1 class="mt-4 font-display text-3xl sm:text-4xl">Edit lab</h1>
 
 <LabForm initial={data.lab} submitLabel="Save changes" {save} />

@@ -20,7 +20,7 @@
 		<div class="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:gap-4 sm:px-6">
 			<a href={resolve('/(app)/dashboard')} aria-label="Dashboard"><Logo compact /></a>
 			<nav
-				class="ml-auto flex items-center gap-0.5 rounded-full border border-line bg-white p-1 sm:gap-1"
+				class="ml-auto flex items-center gap-0.5 rounded-full border border-line-strong bg-black/60 p-1 sm:gap-1"
 			>
 				{#each nav as item (item.href)}
 					{@const current = page.url.pathname.startsWith(item.href)}
@@ -28,7 +28,7 @@
 						href={item.href}
 						class={[
 							'rounded-full px-2.5 py-1.5 text-[13px] font-medium sm:px-4 sm:text-sm',
-							current ? 'bg-ink text-white' : 'text-muted hover:text-ink'
+							current ? 'bg-ink text-canvas' : 'text-muted hover:text-ink'
 						]}
 						aria-current={current ? 'page' : undefined}>{item.label}</a
 					>
@@ -39,7 +39,7 @@
 			</a>
 		</div>
 		{#if isMockDataSource}
-			<p class="bg-ink py-1 text-center text-xs text-white/80">
+			<p class="border-b border-line bg-raised py-1 text-center text-xs text-muted">
 				Demo mode: data is mock and saved only in this browser.
 			</p>
 		{/if}

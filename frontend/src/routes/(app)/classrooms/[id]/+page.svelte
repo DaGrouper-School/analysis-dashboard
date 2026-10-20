@@ -147,7 +147,7 @@
 {:else}
 	<div class="mt-4 flex flex-wrap items-end justify-between gap-4">
 		<div>
-			<h1 class="font-display text-5xl">{classroom.name}</h1>
+			<h1 class="font-display text-3xl sm:text-4xl">{classroom.name}</h1>
 			<p class="mt-1 text-muted">
 				{classroom.institutionName}
 				{#if classroom.myRole}· you are {CLASSROOM_ROLE_LABELS[classroom.myRole].toLowerCase()}{/if}
@@ -159,7 +159,9 @@
 	</div>
 {/if}
 
-<section class="card mt-8 flex flex-wrap items-center justify-between gap-4 bg-forest text-white">
+<section
+	class="card mt-8 flex flex-wrap items-center justify-between gap-4 border-teal/25 bg-forest text-white"
+>
 	<div>
 		<p class="text-sm text-white/60">Global classroom code</p>
 		{#if classroom.code}
@@ -193,7 +195,7 @@
 				<li>
 					<a
 						href={resolve('/(app)/labs/[labId]', { labId: lab.id })}
-						class="block rounded-2xl border border-line p-4 transition hover:border-forest/40"
+						class="block rounded-md border border-line p-4 transition hover:border-line-strong"
 					>
 						<p class="font-medium">{lab.name}</p>
 						<p class="text-sm text-muted">{lab.placeName}, {lab.country}</p>
@@ -202,7 +204,7 @@
 			{/each}
 		</ul>
 	{:else if permissions.invite.length}
-		<div class="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-lime/25 p-4">
+		<div class="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-md bg-lime/25 p-4">
 			<p class="text-sm">
 				<strong>Next step:</strong> register your lab, its site profile and its devices.
 			</p>
@@ -239,7 +241,7 @@
 						<label class="sr-only" for="role-{member.userId}">Role for {member.fullName}</label>
 						<select
 							id="role-{member.userId}"
-							class="input w-auto py-1.5 text-sm"
+							class="input w-auto py-1.5 pr-9 text-sm"
 							value={member.role}
 							onchange={(e) =>
 								run(() =>
@@ -258,7 +260,7 @@
 							onclick={() => remove(member.userId, member.fullName)}>Remove</button
 						>
 					{:else}
-						<span class="rounded-full bg-canvas px-2.5 py-1 text-xs font-medium">
+						<span class="rounded-full bg-raised px-2.5 py-1 text-xs font-medium">
 							{CLASSROOM_ROLE_LABELS[member.role]}
 						</span>
 					{/if}
@@ -303,7 +305,7 @@
 				</form>
 				{#if sent.length}
 					<div
-						class="mt-4 rounded-2xl border border-lime-strong/50 bg-lime/25 p-4 text-sm"
+						class="mt-4 rounded-md border border-lime-strong/50 bg-lime/25 p-4 text-sm"
 						role="status"
 					>
 						<p class="font-medium">

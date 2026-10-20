@@ -23,3 +23,13 @@ export const SITE_SETTING_LABELS: Record<SiteSetting, string> = {
 	forest: 'Forest',
 	other: 'Other'
 };
+
+/** Marker and chip colors per device type, from the dark theme's categorical set. */
+export const DEVICE_TYPE_COLORS: Record<DeviceType, string> = {
+	weather_station: '#3cc04b',
+	rain_gauge: '#00bdff',
+	soil_sensor: '#f6921e',
+	water_probe: '#2f7ff0',
+	air_quality_sensor: '#e8457a',
+	other: '#ffffff'
+};
