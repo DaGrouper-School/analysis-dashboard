@@ -76,7 +76,8 @@
 	<div>
 		<h1 class="font-display text-3xl">{user.fullName}</h1>
 		<p class="text-sm text-muted">
-			{ROLE_LABELS[user.role]} · signed in with {user.authProvider === 'google'
+			{user.platformAdmin ? 'Platform admin' : ROLE_LABELS[user.role]} · signed in with {user.authProvider ===
+			'google'
 				? 'Google'
 				: 'phone'}
 		</p>

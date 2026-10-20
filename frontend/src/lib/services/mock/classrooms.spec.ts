@@ -33,7 +33,7 @@ describe('creating a classroom (AP-03)', () => {
 	});
 
 	it('lets a platform admin set one up for an institution head (admin-assisted)', async () => {
-		await signInAs('g-marcus');
+		await signInAs('g-leila');
 		const classroom = await services.classrooms.create({
 			name: 'Nassau Coastal Classroom',
 			institutionName: 'Bay Street School',
@@ -255,5 +255,18 @@ describe('invitations shared with the invited person', () => {
 		await services.classrooms.revokeInvitation(sent.id);
 		await signInAs('g-sarah');
 		expect(await services.classrooms.listMyInvitations()).toEqual([]);
+	});
+});
+
+describe('demo accounts', () => {
+	it('keeps the researcher and the platform admin as separate people', async () => {
+		await signInAs('g-marcus');
+		expect((await services.classrooms.listMine()).map((c) => c.id)).toEqual(['cls_trinity']);
+		expect((await services.classrooms.get('cls_trinity')).classroom.myRole).toBe('researcher');
+
+		await signInAs('g-leila');
+		const all = await services.classrooms.listMine();
+		expect(all.length).toBe(3);
+		expect(all.every((c) => c.myRole === null)).toBe(true);
 	});
 });
