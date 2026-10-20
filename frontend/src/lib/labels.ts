@@ -31,5 +31,5 @@ export const DEVICE_TYPE_COLORS: Record<DeviceType, string> = {
 	soil_sensor: '#f6921e',
 	water_probe: '#2f7ff0',
 	air_quality_sensor: '#e8457a',
-	other: '#ffffff'
+	other: '#9aa5ae'
 };

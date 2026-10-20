@@ -112,7 +112,7 @@
 						id="place-{i}"
 						role="option"
 						aria-selected={i === active}
-						class={['cursor-pointer px-4 py-2.5', i === active ? 'bg-white/10' : 'hover:bg-raised']}
+						class={['cursor-pointer px-4 py-2.5', i === active ? 'bg-ink/10' : 'hover:bg-raised']}
 						onmousedown={(e) => {
 							e.preventDefault();
 							pick(suggestion);

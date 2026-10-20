@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="bg-black">
+<html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -10,6 +10,21 @@
 			href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600&display=swap"
 			rel="stylesheet"
 		/>
+		<script>
+			// Pick the theme before the first paint: a saved choice, else the system setting.
+			(function () {
+				var saved = null;
+				try {
+					saved = localStorage.getItem('dagrouper:theme');
+				} catch (e) {}
+				document.documentElement.dataset.theme =
+					saved === 'light' || saved === 'dark'
+						? saved
+						: matchMedia('(prefers-color-scheme: light)').matches
+							? 'light'
+							: 'dark';
+			})();
+		</script>
 		<title>DaGrouper Analysis Dashboard</title>
 		%sveltekit.head%
 	</head>

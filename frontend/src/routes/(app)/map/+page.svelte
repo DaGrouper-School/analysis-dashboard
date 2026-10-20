@@ -100,22 +100,22 @@
 				bind:selectedId
 				ariaLabel="Globe of your classrooms' devices"
 			/>
-			<div class="absolute right-4 bottom-4 flex flex-col border border-line-strong bg-black/70">
+			<div class="absolute right-4 bottom-4 flex flex-col border border-line-strong bg-canvas/80">
 				<button
 					type="button"
-					class="grid size-10 place-items-center text-lg text-ink hover:bg-white/10"
+					class="grid size-10 place-items-center text-lg text-ink hover:bg-ink/10"
 					aria-label="Zoom in"
 					onclick={() => globe?.zoomBy(1.5)}>+</button
 				>
 				<button
 					type="button"
-					class="grid size-10 place-items-center border-t border-line-strong text-lg text-ink hover:bg-white/10"
+					class="grid size-10 place-items-center border-t border-line-strong text-lg text-ink hover:bg-ink/10"
 					aria-label="Zoom out"
 					onclick={() => globe?.zoomBy(1 / 1.5)}>−</button
 				>
 			</div>
 			<ul
-				class="absolute bottom-4 left-1/2 hidden -translate-x-1/2 flex-wrap items-center gap-x-5 gap-y-1 border border-line bg-black/70 px-5 py-3 text-xs text-text md:flex"
+				class="absolute bottom-4 left-1/2 hidden -translate-x-1/2 flex-wrap items-center gap-x-5 gap-y-1 border border-line bg-canvas/80 px-5 py-3 text-xs text-text md:flex"
 				aria-label="Legend"
 			>
 				{#each types as type (type)}
@@ -180,7 +180,7 @@
 							type="button"
 							class={[
 								'flex w-full items-start gap-3 px-5 py-3 text-left transition',
-								item.device.id === selectedId ? 'bg-white/[0.07]' : 'hover:bg-white/[0.04]'
+								item.device.id === selectedId ? 'bg-ink/[0.07]' : 'hover:bg-ink/[0.04]'
 							]}
 							aria-pressed={item.device.id === selectedId}
 							onclick={() => (selectedId = item.device.id)}
@@ -264,7 +264,7 @@
 						{#each selected.alerts as alert (alert.parameterId)}
 							<li
 								class={[
-									'border-l-2 bg-white/[0.03] py-2 pr-2 pl-3 text-sm',
+									'border-l-2 bg-ink/[0.03] py-2 pr-2 pl-3 text-sm',
 									alert.level === 'warning' ? 'border-danger' : 'border-orange'
 								]}
 							>

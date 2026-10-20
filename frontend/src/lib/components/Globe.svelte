@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import landDots from '#lib/data/land-dots.json';
+	import { theme } from '#lib/theme.svelte.ts';
 
 	export interface GlobeMarker {
 		id: string;
@@ -29,6 +30,34 @@
 		/** False for a decorative globe: no focus, no dragging, hidden from assistive tech. */
 		interactive?: boolean;
 	} = $props();
+
+	// Canvas colors per theme: a dark sphere in space, or a pale one on paper.
+	const PALETTES = {
+		dark: {
+			stars: true,
+			glow: ['rgba(47,204,169,0.35)', 'rgba(0,189,255,0.12)', 'rgba(0,189,255,0)'],
+			sphere: ['#0d1c1c', '#030807'],
+			rim: 'rgba(47,204,169,0.35)',
+			land: '47,204,169',
+			landAlpha: [0.25, 0.65],
+			halo: '88',
+			hollowFill: '#000000',
+			markerEdge: null,
+			ring: '#ffffff'
+		},
+		light: {
+			stars: false,
+			glow: ['rgba(15,138,112,0.22)', 'rgba(0,123,179,0.07)', 'rgba(0,123,179,0)'],
+			sphere: ['#ffffff', '#dfe9e6'],
+			rim: 'rgba(15,138,112,0.45)',
+			land: '15,138,112',
+			landAlpha: [0.2, 0.6],
+			halo: '55',
+			hollowFill: '#ffffff',
+			markerEdge: 'rgba(11,18,21,0.55)',
+			ring: '#0b1215'
+		}
+	};
 
 	const RAD = Math.PI / 180;
 	const MIN_ZOOM = 0.8;
@@ -79,8 +108,9 @@
 		const { w, h, dpr } = size;
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 		ctx.clearRect(0, 0, w, h);
+		const pal = PALETTES[theme.current];
 
-		for (const s of stars) {
+		for (const s of pal.stars ? stars : []) {
 			ctx.fillStyle = `rgba(255,255,255,${s.a})`;
 			ctx.fillRect(s.x * w, s.y * h, 1, 1);
 		}
@@ -89,23 +119,23 @@
 		const cy = h / 2;
 		const r = radius();
 
-		// Atmosphere glow, then the dark sphere.
+		// Atmosphere glow, then the sphere.
 		const glow = ctx.createRadialGradient(cx, cy, r * 0.92, cx, cy, r * 1.22);
-		glow.addColorStop(0, 'rgba(47,204,169,0.35)');
-		glow.addColorStop(0.35, 'rgba(0,189,255,0.12)');
-		glow.addColorStop(1, 'rgba(0,189,255,0)');
+		glow.addColorStop(0, pal.glow[0]);
+		glow.addColorStop(0.35, pal.glow[1]);
+		glow.addColorStop(1, pal.glow[2]);
 		ctx.fillStyle = glow;
 		ctx.beginPath();
 		ctx.arc(cx, cy, r * 1.22, 0, Math.PI * 2);
 		ctx.fill();
 		const sphere = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.35, r * 0.1, cx, cy, r);
-		sphere.addColorStop(0, '#0d1c1c');
-		sphere.addColorStop(1, '#030807');
+		sphere.addColorStop(0, pal.sphere[0]);
+		sphere.addColorStop(1, pal.sphere[1]);
 		ctx.fillStyle = sphere;
 		ctx.beginPath();
 		ctx.arc(cx, cy, r, 0, Math.PI * 2);
 		ctx.fill();
-		ctx.strokeStyle = 'rgba(47,204,169,0.35)';
+		ctx.strokeStyle = pal.rim;
 		ctx.lineWidth = 1;
 		ctx.stroke();
 
@@ -114,7 +144,7 @@
 		for (let i = 0; i < landDots.length; i += 2) {
 			const p = project(landDots[i], landDots[i + 1]);
 			if (!p || p.x < -4 || p.y < -4 || p.x > w + 4 || p.y > h + 4) continue;
-			ctx.fillStyle = `rgba(47,204,169,${0.25 + p.depth * 0.65})`;
+			ctx.fillStyle = `rgba(${pal.land},${pal.landAlpha[0] + p.depth * pal.landAlpha[1]})`;
 			ctx.fillRect(p.x - dot / 2, p.y - dot / 2, dot, dot);
 		}
 
@@ -128,7 +158,7 @@
 			const selected = m.id === selectedId;
 			const dotR = selected ? 7 : 5;
 			const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, dotR * 3.2);
-			halo.addColorStop(0, `${m.color}88`);
+			halo.addColorStop(0, `${m.color}${pal.halo}`);
 			halo.addColorStop(1, `${m.color}00`);
 			ctx.fillStyle = halo;
 			ctx.beginPath();
@@ -140,18 +170,23 @@
 				ctx.setLineDash([3, 3]);
 				ctx.strokeStyle = m.color;
 				ctx.lineWidth = 2;
-				ctx.fillStyle = '#000';
+				ctx.fillStyle = pal.hollowFill;
 				ctx.fill();
 				ctx.stroke();
 				ctx.setLineDash([]);
 			} else {
 				ctx.fillStyle = m.color;
 				ctx.fill();
+				if (pal.markerEdge) {
+					ctx.strokeStyle = pal.markerEdge;
+					ctx.lineWidth = 1;
+					ctx.stroke();
+				}
 			}
 			if (selected) {
 				ctx.beginPath();
 				ctx.arc(p.x, p.y, dotR + 5, 0, Math.PI * 2);
-				ctx.strokeStyle = '#ffffff';
+				ctx.strokeStyle = pal.ring;
 				ctx.lineWidth = 1.5;
 				ctx.stroke();
 			}
@@ -296,11 +331,12 @@
 		};
 	});
 
-	// Selecting a device turns the globe to it; marker changes repaint.
+	// Selecting a device turns the globe to it; marker and theme changes repaint.
 	let lastSelected = '';
 	$effect(() => {
 		const id = selectedId;
 		void markers;
+		void theme.current;
 		if (id && id !== lastSelected && size.w) {
 			const m = markers.find((x) => x.id === id);
 			if (m) flyTo(m.lat - 8 / view.zoom, m.lng);
@@ -331,7 +367,7 @@
 	{/if}
 	{#if hovered}
 		<p
-			class="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-sm border border-line-strong bg-black/85 px-2 py-1 text-xs whitespace-nowrap text-ink"
+			class="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-sm border border-line-strong bg-canvas/90 px-2 py-1 text-xs whitespace-nowrap text-ink"
 			style:left="{hoverAt.x}px"
 			style:top="{hoverAt.y - 12}px"
 		>

@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import Globe, { type GlobeMarker } from './Globe.svelte';
 	import Logo from './Logo.svelte';
+	import ThemeToggle from './ThemeToggle.svelte';
 
 	// The seeded labs, as a hint of what the app shows.
 	const SITES: GlobeMarker[] = [
@@ -21,7 +22,7 @@
 		<div class="pointer-events-none absolute inset-x-0 top-[42%] bottom-[-38%]">
 			<Globe markers={SITES} interactive={false} />
 		</div>
-		<Logo inverted />
+		<Logo />
 		<div class="relative mt-16 mb-auto max-w-md">
 			<h1 class="font-display text-3xl leading-tight font-light sm:text-5xl">
 				Community science, read from your own station.
@@ -34,7 +35,10 @@
 		<p class="relative text-sm text-muted">DaGrouper School · PlanetWerx · Tefer</p>
 	</aside>
 	<main class="flex flex-col px-5 py-8 sm:px-10">
-		<div class="lg:hidden"><Logo /></div>
+		<div class="flex items-center justify-between">
+			<div class="lg:invisible"><Logo /></div>
+			<ThemeToggle />
+		</div>
 		<div class="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-10">
 			{@render children()}
 		</div>

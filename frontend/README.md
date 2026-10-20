@@ -99,8 +99,10 @@ institution are editable by the head; the classroom code never changes.
 
 ## Look and feel
 
-The dark theme uses a black canvas, thin white lines, white pills for
-the active choice, Barlow type, and green, teal and cyan for data. Tokens live in
-`src/routes/layout.css`. The map is a dotted globe drawn on a canvas (`Globe.svelte`); its land
-dots come from `src/lib/data/land-dots.json`, built from Natural Earth by
-`node scripts/generate-land-dots.mjs`.
+There are dark and light themes. The app starts in the system's choice; the sun and moon button in
+the header switches it, and the choice is saved in localStorage. The dark theme uses a black
+canvas, thin white lines, white pills for the active choice, Barlow type, and green, teal and cyan
+for data. Tokens live in `src/routes/layout.css`, and the light theme overrides them under
+`[data-theme='light']`. The map is a dotted globe drawn on a canvas (`Globe.svelte`); its land
+dots come from `src/lib/data/land-dots.json`, built from Natural Earth by `node
+scripts/generate-land-dots.mjs`.

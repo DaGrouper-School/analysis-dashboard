@@ -1,8 +1,8 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 
-/* Dark explorer theme: black canvas, thin white lines,
-   white pills for the active choice, green and teal for data. */
+/* Dark explorer theme (the default): black canvas, thin white lines, white pills for the
+   active choice, green and teal for data. The light theme below swaps the same tokens. */
 @theme {
 	--font-sans: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
 	--font-display: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
@@ -12,6 +12,7 @@
 	--color-surface: #07090b;
 	--color-raised: #0e1216;
 	--color-ink: #ffffff;
+	--color-ink-hover: #dde3e8;
 	--color-text: #c8cfd6;
 	--color-muted: #8e98a3;
 	--color-line: #ffffff1f;
@@ -38,9 +39,30 @@
 	::selection {
 		@apply bg-teal/40 text-ink;
 	}
-	/* Native controls (date pickers, scrollbars) in their dark variants. */
+	/* Native controls (date pickers, scrollbars) follow the theme. */
 	:root {
 		color-scheme: dark;
+		background-color: var(--color-canvas);
+	}
+	/* Light theme: near-white canvas, dark ink, and data colors deepened to read on white. */
+	:root[data-theme='light'] {
+		color-scheme: light;
+		--color-canvas: #f4f6f5;
+		--color-surface: #ffffff;
+		--color-raised: #eaefee;
+		--color-ink: #0b1215;
+		--color-ink-hover: #27333b;
+		--color-text: #36414a;
+		--color-muted: #5b6772;
+		--color-line: #0b12151f;
+		--color-line-strong: #0b121547;
+		--color-lime: #238a30;
+		--color-lime-strong: #1c7527;
+		--color-teal: #0f8a70;
+		--color-cyan: #007bb3;
+		--color-orange: #b85f00;
+		--color-forest: #e4f3ed;
+		--color-danger: #c8213f;
 	}
 }
 
@@ -67,7 +89,7 @@
 		@apply inline-flex items-center justify-center gap-2 rounded-sm px-4 py-2.5 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50;
 	}
 	.btn-primary {
-		@apply bg-ink text-canvas hover:bg-[#dde3e8];
+		@apply bg-ink text-canvas hover:bg-ink-hover;
 	}
 	.btn-accent {
 		@apply bg-lime text-canvas hover:bg-lime-strong;

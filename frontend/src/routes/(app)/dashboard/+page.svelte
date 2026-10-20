@@ -101,16 +101,16 @@
 
 <section class="mt-8 grid gap-4 lg:grid-cols-3">
 	{#if data.featured && reading}
-		<div class="card border-teal/25 bg-forest text-white lg:col-span-2">
+		<div class="card border-teal/25 bg-forest text-ink lg:col-span-2">
 			<div class="flex flex-wrap items-start justify-between gap-4">
 				<div>
-					<p class="text-sm text-white/60">Current conditions</p>
+					<p class="text-sm text-muted">Current conditions</p>
 					<h2 class="text-xl font-semibold">{data.featured.device.name}</h2>
-					<p class="mt-1 text-sm text-white/60">
+					<p class="mt-1 text-sm text-muted">
 						{formatPoint(reading.location)}
 						{#if reading.locationSource === 'lab'}
 							<span
-								class="ml-1 rounded-full bg-white/10 px-2 py-0.5 text-xs text-white ring-1 ring-white/20"
+								class="ml-1 rounded-full bg-ink/10 px-2 py-0.5 text-xs text-ink ring-1 ring-line-strong"
 								title="The device sent no GPS with this reading, so the lab's location is shown."
 								>Lab location, not from the device</span
 							>
@@ -119,14 +119,14 @@
 						{/if}
 					</p>
 				</div>
-				<p class="text-right text-xs text-white/50">
+				<p class="text-right text-xs text-muted">
 					Observed {dateTime.format(new Date(reading.observedAt))}
 				</p>
 			</div>
-			<dl class="mt-8 grid grid-cols-2 gap-px border border-white/10 bg-white/10 sm:grid-cols-4">
+			<dl class="mt-8 grid grid-cols-2 gap-px border border-line bg-line sm:grid-cols-4">
 				{#each headline as item (item.id)}
 					<div class="bg-forest p-4">
-						<dt class="text-xs text-white/60">{item.label}</dt>
+						<dt class="text-xs text-muted">{item.label}</dt>
 						<dd class="mt-2 text-3xl text-ink">
 							{format(reading.values[item.id], paramsById.get(item.id)?.unit)}
 						</dd>
@@ -140,7 +140,7 @@
 						{#each data.featured.alerts as alert (alert.parameterId)}
 							<li
 								class={[
-									'border-l-2 bg-white/[0.04] py-2 pr-2 pl-3 text-sm',
+									'border-l-2 bg-ink/[0.04] py-2 pr-2 pl-3 text-sm',
 									alert.level === 'warning' ? 'border-danger' : 'border-orange'
 								]}
 							>
@@ -148,12 +148,12 @@
 									<span aria-hidden="true">{alert.level === 'warning' ? '▲▲' : '▲'}</span>
 									{alert.title}</span
 								>
-								<span class="text-white/60">· {alert.message}</span>
+								<span class="text-muted">· {alert.message}</span>
 							</li>
 						{/each}
 					</ul>
 				{:else}
-					<p class="mt-1 text-sm text-white/60">No active alerts for this station.</p>
+					<p class="mt-1 text-sm text-muted">No active alerts for this station.</p>
 				{/if}
 			</div>
 		</div>

@@ -160,13 +160,13 @@
 {/if}
 
 <section
-	class="card mt-8 flex flex-wrap items-center justify-between gap-4 border-teal/25 bg-forest text-white"
+	class="card mt-8 flex flex-wrap items-center justify-between gap-4 border-teal/25 bg-forest text-ink"
 >
 	<div>
-		<p class="text-sm text-white/60">Global classroom code</p>
+		<p class="text-sm text-muted">Global classroom code</p>
 		{#if classroom.code}
 			<p class="mt-1 font-mono text-3xl tracking-wider text-lime">{classroom.code}</p>
-			<p class="mt-2 max-w-xl text-sm text-white/60">
+			<p class="mt-2 max-w-xl text-sm text-muted">
 				Registered in SAM as this classroom's source identifier. Only facilitators and the
 				institution head can see it.
 			</p>
