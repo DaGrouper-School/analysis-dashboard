@@ -1,4 +1,11 @@
-import type { Parameter, Station, StationSnapshot, User } from '#lib/domain/types.ts';
+import type {
+	ClassroomRole,
+	InvitationStatus,
+	Parameter,
+	Station,
+	StationSnapshot,
+	User
+} from '#lib/domain/types.ts';
 import { createSeed } from './seed';
 
 /**
@@ -17,6 +24,43 @@ export interface StoredChallenge {
 	expiresAt: string;
 }
 
+export interface StoredClassroom {
+	id: string;
+	name: string;
+	institutionName: string;
+	code: string;
+	setup: 'self_service' | 'admin_assisted';
+	createdBy: string;
+	createdAt: string;
+}
+
+export interface StoredMembership {
+	classroomId: string;
+	userId: string;
+	role: ClassroomRole;
+	joinedAt: string;
+}
+
+export interface StoredInvitation {
+	id: string;
+	/** Secret part of the invite link. */
+	token: string;
+	classroomId: string;
+	email: string;
+	role: ClassroomRole;
+	status: InvitationStatus;
+	invitedBy: string;
+	createdAt: string;
+	acceptedBy: string | null;
+}
+
+/** Stand-in for SAM's source registry: classroom codes are registered as source identifiers. */
+export interface StoredSamSource {
+	sourceId: string;
+	kind: 'classroom';
+	registeredAt: string;
+}
+
 export interface MockDbState {
 	version: number;
 	users: User[];
@@ -30,10 +74,15 @@ export interface MockDbState {
 	parameters: Parameter[];
 	stations: Station[];
 	snapshots: StationSnapshot[];
+	classrooms: StoredClassroom[];
+	memberships: StoredMembership[];
+	invitations: StoredInvitation[];
+	samSources: StoredSamSource[];
 }
 
 const STORAGE_KEY = 'dagrouper:mock-db';
-const VERSION = 1;
+// Bump when the shape changes: older saved data is dropped and reseeded.
+const VERSION = 2;
 
 let memory: MockDbState | null = null;
 

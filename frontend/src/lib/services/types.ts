@@ -1,5 +1,11 @@
 import type {
 	Address,
+	ClassroomDetail,
+	ClassroomRole,
+	ClassroomSummary,
+	CreateClassroomInput,
+	Invitation,
+	InvitationPreview,
 	AuthResult,
 	Parameter,
 	PhoneChallenge,
@@ -51,9 +57,30 @@ export interface RegistryService {
 	getLatestSnapshot(stationId: string): Promise<StationSnapshot | null>;
 }
 
+/**
+ * Classrooms (AP-03). Permission checks and code redaction happen behind this interface,
+ * never only in the UI.
+ */
+export interface ClassroomService {
+	listMine(): Promise<ClassroomSummary[]>;
+	get(classroomId: string): Promise<ClassroomDetail>;
+	/** Institution heads create their own; platform admins can set one up for a head. */
+	create(input: CreateClassroomInput): Promise<ClassroomSummary>;
+	/** Sends one invitation email per address. */
+	invite(classroomId: string, emails: string[], role: ClassroomRole): Promise<Invitation[]>;
+	revokeInvitation(invitationId: string): Promise<void>;
+	setMemberRole(classroomId: string, userId: string, role: ClassroomRole): Promise<void>;
+	removeMember(classroomId: string, userId: string): Promise<void>;
+	/** Public: what an invite link points to. */
+	getInvitation(token: string): Promise<InvitationPreview>;
+	/** Joins the signed-in user to the classroom. Their email must match the invitation. */
+	acceptInvitation(token: string): Promise<ClassroomSummary>;
+}
+
 export interface Services {
 	auth: AuthService;
 	profile: ProfileService;
+	classrooms: ClassroomService;
 	places: PlacesService;
 	registry: RegistryService;
 }
@@ -66,6 +93,7 @@ export type ServiceErrorCode =
 	| 'code_invalid'
 	| 'code_expired'
 	| 'conflict'
+	| 'forbidden'
 	| 'network';
 
 export class ServiceError extends Error {

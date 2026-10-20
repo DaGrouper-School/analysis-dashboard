@@ -13,6 +13,7 @@ import {
 	type StoredChallenge
 } from '#lib/data/mock-db.ts';
 import { ServiceError, type Services } from '../types';
+import { createMockClassrooms } from './classrooms';
 import { createMockPlaces } from './places';
 
 const RESEND_AFTER_MS = 30_000;
@@ -120,6 +121,7 @@ export function createMockServices({ latency = 250, now = Date.now }: MockOption
 			phoneVerified: false,
 			avatarUrl: null,
 			role: 'community_scientist',
+			platformAdmin: false,
 			address: null,
 			onboardingCompleted: false,
 			createdAt: t,
@@ -273,6 +275,8 @@ export function createMockServices({ latency = 250, now = Date.now }: MockOption
 				});
 			}
 		},
+
+		classrooms: createMockClassrooms({ delay, now }),
 
 		places: createMockPlaces(delay),
 

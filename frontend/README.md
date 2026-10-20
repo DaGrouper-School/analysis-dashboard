@@ -20,12 +20,16 @@ Other scripts, run here: `npm run build` (static SPA in `build/`), `npm test`, `
 
 ## Demo accounts
 
-| Sign in with | Account                                          | State                                    |
-| ------------ | ------------------------------------------------ | ---------------------------------------- |
-| Google       | Sarah K. (custodian), Dr. Marcus L. (researcher) | Existing, goes straight to the dashboard |
-| Google       | Hana Bekele, Amina Yusuf                         | New, goes through onboarding             |
-| Phone        | Ethiopia +251 911 000 001 (Abebe T.)             | Existing                                 |
-| Phone        | Any other valid number                           | New                                      |
+| Sign in with | Account                              | State                                                          |
+| ------------ | ------------------------------------ | -------------------------------------------------------------- |
+| Google       | Tesfaye G.                           | Institution head of Trinity Lab Classroom                      |
+| Google       | Dr. Marcus L.                        | Researcher and platform admin (admin-assisted classroom setup) |
+| Google       | Sarah K.                             | Custodian, not in a classroom                                  |
+| Google       | Hana Bekele, Amina Yusuf             | New, goes through onboarding                                   |
+| Phone        | Ethiopia +251 911 000 001 (Abebe T.) | Community scientist in Trinity Lab Classroom                   |
+| Phone        | Any other valid number               | New                                                            |
+
+Hana Bekele has a pending facilitator invitation at `/invite/demo-hana-invite`.
 
 No SMS is sent: the mock shows the 6-digit code on screen. "Reset demo data" on the profile page
 restores the seed.
@@ -36,7 +40,7 @@ restores the seed.
 src/lib/
   domain/        types and validation shared by the UI and every data source
   services/
-    types.ts     the service interfaces (auth, profile, places, registry): the UI's only contract
+    types.ts     the service interfaces (auth, profile, classrooms, places, registry): the UI's only contract
     index.ts     picks the implementation from VITE_DATA_SOURCE
     mock/        localStorage-backed implementation that behaves like the backend
     http/        fetch-based sketch of the real implementation (proposed endpoints)

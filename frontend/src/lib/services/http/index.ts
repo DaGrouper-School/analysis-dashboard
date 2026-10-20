@@ -1,5 +1,9 @@
 import type {
 	Address,
+	ClassroomDetail,
+	ClassroomSummary,
+	Invitation,
+	InvitationPreview,
 	AuthResult,
 	Parameter,
 	PhoneChallenge,
@@ -61,6 +65,36 @@ export function createHttpServices(baseUrl: string): Services {
 				request<User>('POST', '/me/phone/verify', { requestId, code }),
 			updateAddress: (address: Address) => request<User>('PUT', '/me/address', address),
 			completeOnboarding: () => request<User>('POST', '/me/onboarding/complete')
+		},
+		classrooms: {
+			listMine: () => request<ClassroomSummary[]>('GET', '/classrooms'),
+			get: (id) => request<ClassroomDetail>('GET', `/classrooms/${encodeURIComponent(id)}`),
+			create: (input) => request<ClassroomSummary>('POST', '/classrooms', input),
+			invite: (id, emails, role) =>
+				request<Invitation[]>('POST', `/classrooms/${encodeURIComponent(id)}/invitations`, {
+					emails,
+					role
+				}),
+			revokeInvitation: (invitationId) =>
+				request<void>('DELETE', `/invitations/${encodeURIComponent(invitationId)}`),
+			setMemberRole: (id, userId, role) =>
+				request<void>(
+					'PATCH',
+					`/classrooms/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`,
+					{ role }
+				),
+			removeMember: (id, userId) =>
+				request<void>(
+					'DELETE',
+					`/classrooms/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`
+				),
+			getInvitation: (token) =>
+				request<InvitationPreview>('GET', `/invitations/by-token/${encodeURIComponent(token)}`),
+			acceptInvitation: (token) =>
+				request<ClassroomSummary>(
+					'POST',
+					`/invitations/by-token/${encodeURIComponent(token)}/accept`
+				)
 		},
 		places: {
 			autocomplete: (q) =>
