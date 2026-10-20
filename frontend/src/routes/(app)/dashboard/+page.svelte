@@ -40,6 +40,32 @@
 		return `${rounded}${unit && !unit.startsWith('°') ? ' ' : ''}${unit}`;
 	}
 
+	const SUMMARY_FIRST = [
+		'air_temperature',
+		'relative_humidity',
+		'wind_avg',
+		'precip_accum_local_day',
+		'uv'
+	];
+
+	/** A few values with units, for compact lists. Unknown parameters show their ID as a label. */
+	function summary(values: Record<string, number | string>, count = 3) {
+		// Headline parameters lead, so a weather station shows temperature before air density.
+		const rank = (id: string) => {
+			const i = SUMMARY_FIRST.indexOf(id);
+			return i === -1 ? SUMMARY_FIRST.length : i;
+		};
+		return Object.entries(values)
+			.sort(([a], [b]) => rank(a) - rank(b))
+			.slice(0, count)
+			.map(([id, value]) => {
+				const param = paramsById.get(id);
+				const label = param?.label ?? id.replaceAll('_', ' ').replace(/^./, (c) => c.toUpperCase());
+				return `${label} ${format(value, param?.unit)}`;
+			})
+			.join(' · ');
+	}
+
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 	const reading = $derived(data.featured?.reading ?? null);
 </script>
@@ -133,7 +159,8 @@
 					<p class="mt-1 text-xs text-muted">
 						{item.classroomName} · {dateTime.format(new Date(item.reading.observedAt))}
 					</p>
-					<p class="mt-2 text-xs">
+					<p class="mt-2 text-sm">{summary(item.reading.values)}</p>
+					<p class="mt-1 text-xs">
 						{formatPoint(item.reading.location)}
 						{#if item.reading.locationSource === 'lab'}
 							<span class="text-muted">· lab location, not from the device</span>
@@ -142,6 +169,51 @@
 				</li>
 			{/each}
 		</ul>
+	</section>
+{/if}
+
+{#if data.recent.length}
+	<section class="mt-8">
+		<h2 class="text-lg font-semibold">Recent readings</h2>
+		<p class="text-sm text-muted">The latest data recorded by devices in your classrooms.</p>
+		<div class="card mt-4 overflow-x-auto p-0">
+			<table class="w-full min-w-[40rem] text-left text-sm">
+				<thead class="text-xs text-muted">
+					<tr class="border-b border-line">
+						<th class="px-4 py-3 font-medium">Observed</th>
+						<th class="px-4 py-3 font-medium">Device</th>
+						<th class="px-4 py-3 font-medium">Values</th>
+						<th class="px-4 py-3 font-medium">Location</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-line">
+					{#each data.recent as item (item.reading.id)}
+						<tr class="align-top">
+							<td class="px-4 py-3 whitespace-nowrap">
+								{dateTime.format(new Date(item.reading.observedAt))}
+							</td>
+							<td class="px-4 py-3">
+								<a
+									class="font-medium hover:underline"
+									href={resolve('/(app)/labs/[labId]', { labId: item.device.labId })}
+									>{item.device.name}</a
+								>
+								<p class="text-xs text-muted">{item.classroomName}</p>
+							</td>
+							<td class="px-4 py-3">{summary(item.reading.values)}</td>
+							<td class="px-4 py-3 text-xs">
+								{formatPoint(item.reading.location)}
+								<p class="text-muted">
+									{item.reading.locationSource === 'device'
+										? 'Device GPS'
+										: 'Lab location, not from the device'}
+								</p>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	</section>
 {/if}
 

@@ -191,4 +191,18 @@ describe('labs (AP-05)', () => {
 		expect(station.alerts.map((a) => a.title)).toEqual(['High UV']);
 		expect(conditions.find((c) => c.device.id === 'dev_trinity_soil')!.alerts).toEqual([]);
 	});
+
+	it('lists recorded readings from my classrooms, newest first', async () => {
+		await signInAs('g-tesfaye');
+		const device = await services.labs.registerDevice('lab_trinity', deviceInput);
+		await services.labs.uploadReadings(device.id, [
+			{ ...reading(null), observedAt: '2026-10-21T09:00:00.000Z' }
+		]);
+		const recent = await services.labs.recentReadings(3);
+		expect(recent.length).toBe(3);
+		expect(recent[0].device.id).toBe(device.id);
+		expect(recent.every((r) => r.device.labId === 'lab_trinity')).toBe(true);
+		await signInAs('g-marcus');
+		expect(await services.labs.recentReadings()).toEqual([]);
+	});
 });

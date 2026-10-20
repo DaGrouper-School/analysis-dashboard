@@ -70,6 +70,28 @@ function accessLab(state: MockDbState, labId: string) {
 	return { user, lab, can, canManage: can.invite.length > 0 };
 }
 
+/**
+ * Every reading from devices in classrooms the user is a member of, newest first. Membership
+ * only: admins and everyone else see nothing from classrooms they are not in.
+ */
+function memberReadings(state: MockDbState): CurrentConditions[] {
+	const user = currentUser(state);
+	const result: CurrentConditions[] = [];
+	for (const device of state.devices) {
+		const lab = state.labs.find((l) => l.id === device.labId)!;
+		const role = roleIn(state, lab.classroomId, user.id);
+		if (role === null) continue;
+		const shown = toDevice(state, device, permissionsFor(user, role).seeCode);
+		const classroomName = classroomOf(state, lab).name;
+		for (const r of state.readings) {
+			if (r.deviceId === device.id) {
+				result.push({ device: shown, classroomName, reading: toReading(r), alerts: [] });
+			}
+		}
+	}
+	return result.sort((a, b) => newestFirst(a.reading, b.reading));
+}
+
 export function createMockLabs({
 	delay,
 	now
@@ -244,24 +266,19 @@ export function createMockLabs({
 
 		async currentConditions() {
 			await delay();
-			const state = readDb();
-			const user = currentUser(state);
-			const result: CurrentConditions[] = [];
-			for (const device of state.devices) {
-				const lab = state.labs.find((l) => l.id === device.labId)!;
-				// Membership only: admins and everyone else see nothing from classrooms they are not in.
-				const role = roleIn(state, lab.classroomId, user.id);
-				if (role === null) continue;
-				const latest = state.readings.filter((r) => r.deviceId === device.id).sort(newestFirst)[0];
-				if (!latest) continue;
-				result.push({
-					device: toDevice(state, device, permissionsFor(user, role).seeCode),
-					classroomName: classroomOf(state, lab).name,
-					reading: toReading(latest),
-					alerts: alertsFor(latest)
-				});
+			const latest = new Map<string, CurrentConditions>();
+			// Entries come newest first, so the first one per device is its latest reading.
+			for (const entry of memberReadings(readDb())) {
+				if (!latest.has(entry.device.id)) {
+					latest.set(entry.device.id, { ...entry, alerts: alertsFor(entry.reading) });
+				}
 			}
-			return result.sort((a, b) => newestFirst(a.reading, b.reading));
+			return [...latest.values()];
+		},
+
+		async recentReadings(limit = 20) {
+			await delay();
+			return memberReadings(readDb()).slice(0, limit);
 		}
 	};
 }
