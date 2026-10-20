@@ -1,0 +1,56 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+
+@theme {
+	--font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+	--font-display: 'Instrument Serif', ui-serif, Georgia, serif;
+
+	--color-canvas: #f3f5ef;
+	--color-surface: #ffffff;
+	--color-ink: #141811;
+	--color-muted: #69705f;
+	--color-line: #e2e6db;
+	--color-lime: #c5f04a;
+	--color-lime-strong: #9fd21c;
+	--color-forest: #1f3b2a;
+	--color-danger: #c2412d;
+}
+
+@layer base {
+	body {
+		@apply bg-canvas font-sans text-ink antialiased;
+	}
+}
+
+@layer components {
+	.card {
+		@apply rounded-3xl border border-line bg-surface p-6 shadow-[0_1px_2px_rgba(20,24,17,0.04)];
+	}
+	.label {
+		@apply mb-1.5 block text-sm font-medium text-ink;
+	}
+	.input {
+		@apply block w-full rounded-xl border-line bg-white px-3.5 py-2.5 text-ink placeholder:text-muted/70 focus:border-forest focus:ring-forest disabled:bg-canvas disabled:text-muted;
+	}
+	.input-error {
+		@apply border-danger focus:border-danger focus:ring-danger;
+	}
+	.field-error {
+		@apply mt-1.5 text-sm text-danger;
+	}
+	.btn {
+		@apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50;
+	}
+	.btn-primary {
+		@apply bg-ink text-white hover:bg-forest;
+	}
+	.btn-accent {
+		@apply bg-lime text-ink hover:bg-lime-strong;
+	}
+	.btn-ghost {
+		@apply border border-line bg-white text-ink hover:bg-canvas;
+	}
+	.link {
+		@apply font-medium text-forest underline decoration-lime-strong decoration-2 underline-offset-4 hover:text-ink;
+	}
+}
