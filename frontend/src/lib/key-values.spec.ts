@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Parameter } from '#lib/domain/types.ts';
-import { formatValue, keySummary, keyValues } from './key-values';
+import { describeParameter, formatValue, keySummary, keyValues } from './key-values';
 
 const parameters = new Map<string, Parameter>([
 	[
@@ -50,5 +50,17 @@ describe('key values per sensor type', () => {
 	it('formats values for reading at a glance', () => {
 		expect(formatValue(1013.46, 'hPa')).toBe('1013 hPa');
 		expect(formatValue(undefined)).toBe('—');
+	});
+
+	it('describes parameters the registry lacks from the sensor types', () => {
+		expect(describeParameter('soil_moisture', parameters)).toEqual({
+			label: 'Soil moisture',
+			unit: '%'
+		});
+		expect(describeParameter('air_temperature', parameters).label).toBe('Air temperature');
+		expect(describeParameter('light_level', parameters)).toEqual({
+			label: 'Light level',
+			unit: ''
+		});
 	});
 });

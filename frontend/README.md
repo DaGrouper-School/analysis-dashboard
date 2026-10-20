@@ -77,6 +77,7 @@ Services and the backend verifies the token.
 | `/onboarding/profile` | AP-02 profile and contact (Google users verify a phone) |
 | `/onboarding/address` | AP-02 address with places autocomplete                  |
 | `/dashboard`          | Pick a classroom and sensor: conditions, chart, history |
+| `/dashboard/readings` | Raw readings of the picked sensor, every value it sent  |
 | `/map`                | AP-06 device map with current conditions and alerts     |
 | `/classrooms/[id]`    | AP-03 classroom, members, invites; edit name and school |
 | `/labs/[labId]`       | AP-05 devices, readings, connect-a-device demo          |
@@ -116,7 +117,7 @@ see the classroom code.
 People are never assigned to devices. Current conditions come only from devices in classrooms the
 user belongs to; anyone else, platform admins included, sees an empty state. On a lab page,
 the institution head, facilitators and community scientists can run the connect-a-device demo: it pairs with a
-registered device and records six readings, two of them without a GPS fix, which then appear in that sensor's chart and readings on the dashboard. Classroom name and
+registered device and records six readings, two of them without a GPS fix, which then appear in that sensor's chart on the dashboard and on its raw readings page. Classroom name and
 institution are editable by the head; the classroom code never changes.
 
 ## Look and feel

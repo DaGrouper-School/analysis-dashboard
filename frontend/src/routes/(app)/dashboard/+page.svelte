@@ -7,6 +7,7 @@
 	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
 	import ReadingChart from '#lib/components/ReadingChart.svelte';
 	import { formatValue, keySummary, keyValues } from '#lib/key-values.ts';
+	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import { CLASSROOM_ROLE_LABELS, DEVICE_TYPE_COLORS, DEVICE_TYPE_LABELS } from '#lib/labels.ts';
 	import type { PageProps } from './$types';
 
@@ -40,11 +41,17 @@
 
 	/** Shows a classroom and, optionally, one of its sensors. The pick lives in the address. */
 	function choose(classroomId: string, deviceId?: string) {
-		let query = `?classroom=${encodeURIComponent(classroomId)}`;
-		if (deviceId) query += `&device=${encodeURIComponent(deviceId)}`;
 		// The path is resolved; only the query is added to it.
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
-		goto(resolve('/(app)/dashboard') + query, { replace: true, reset: false });
+		goto(resolve('/(app)/dashboard') + sensorQuery(classroomId, deviceId), {
+			replace: true,
+			reset: false
+		});
+	}
+
+	function showReadings() {
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		goto(resolve('/(app)/dashboard/readings') + sensorQuery(data.classroom!.id, device?.id));
 	}
 
 	// Chart the sensor's key values that are numbers; the first one is shown first.
@@ -142,68 +149,73 @@
 
 	<section class="mt-6 grid gap-4 lg:grid-cols-3">
 		{#if device && latest}
-			<div class="card border-teal/25 bg-forest text-ink lg:col-span-2">
-				<div class="flex flex-wrap items-start justify-between gap-4">
-					<div>
-						<p class="text-sm text-muted">Current conditions</p>
-						<h2 class="text-xl font-semibold">{device.name}</h2>
-						<p class="mt-1 text-sm text-muted">
-							<a
-								class="hover:text-ink hover:underline"
-								href={resolve('/(app)/labs/[labId]', { labId: device.labId })}>{device.labName}</a
-							>
-							· {formatPoint(latest.location)}
-							{#if latest.locationSource === 'lab'}
-								<span
-									class="ml-1 rounded-full bg-ink/10 px-2 py-0.5 text-xs text-ink ring-1 ring-line-strong"
-									title="The device sent no GPS with this reading, so the lab's location is shown."
-									>Lab location, not from the device</span
+			<div class="flex flex-col gap-3 lg:col-span-2">
+				<div class="card flex-1 border-teal/25 bg-forest text-ink">
+					<div class="flex flex-wrap items-start justify-between gap-4">
+						<div>
+							<p class="text-sm text-muted">Current conditions</p>
+							<h2 class="text-xl font-semibold">{device.name}</h2>
+							<p class="mt-1 text-sm text-muted">
+								<a
+									class="hover:text-ink hover:underline"
+									href={resolve('/(app)/labs/[labId]', { labId: device.labId })}>{device.labName}</a
 								>
-							{:else}
-								· device GPS
-							{/if}
+								· {formatPoint(latest.location)}
+								{#if latest.locationSource === 'lab'}
+									<span
+										class="ml-1 rounded-full bg-ink/10 px-2 py-0.5 text-xs text-ink ring-1 ring-line-strong"
+										title="The device sent no GPS with this reading, so the lab's location is shown."
+										>Lab location, not from the device</span
+									>
+								{:else}
+									· device GPS
+								{/if}
+							</p>
+						</div>
+						<p class="text-right text-xs text-muted">
+							Observed {dateTime.format(new Date(latest.observedAt))}
 						</p>
 					</div>
-					<p class="text-right text-xs text-muted">
-						Observed {dateTime.format(new Date(latest.observedAt))}
-					</p>
-				</div>
-				<dl
-					class={[
-						'mt-8 grid grid-cols-2 gap-px border border-line bg-line',
-						tiles.length > 2 && 'sm:grid-cols-4'
-					]}
-				>
-					{#each tiles as item (item.id)}
-						<div class="bg-forest p-4">
-							<dt class="text-xs text-muted">{item.label}</dt>
-							<dd class="mt-2 text-3xl text-ink">{formatValue(item.value, item.unit)}</dd>
-						</div>
-					{/each}
-				</dl>
-				<div class="mt-6">
-					<h3 class="text-sm font-medium">Active alerts</h3>
-					{#if data.alerts.length}
-						<ul class="mt-2 space-y-2">
-							{#each data.alerts as alert (alert.parameterId)}
-								<li
-									class={[
-										'border-l-2 bg-ink/[0.04] py-2 pr-2 pl-3 text-sm',
-										alert.level === 'warning' ? 'border-danger' : 'border-orange'
-									]}
-								>
-									<span class="text-ink">
-										<span aria-hidden="true">{alert.level === 'warning' ? '▲▲' : '▲'}</span>
-										{alert.title}</span
+					<dl
+						class={[
+							'mt-8 grid grid-cols-2 gap-px border border-line bg-line',
+							tiles.length > 2 && 'sm:grid-cols-4'
+						]}
+					>
+						{#each tiles as item (item.id)}
+							<div class="bg-forest p-4">
+								<dt class="text-xs text-muted">{item.label}</dt>
+								<dd class="mt-2 text-3xl text-ink">{formatValue(item.value, item.unit)}</dd>
+							</div>
+						{/each}
+					</dl>
+					<div class="mt-6">
+						<h3 class="text-sm font-medium">Active alerts</h3>
+						{#if data.alerts.length}
+							<ul class="mt-2 space-y-2">
+								{#each data.alerts as alert (alert.parameterId)}
+									<li
+										class={[
+											'border-l-2 bg-ink/[0.04] py-2 pr-2 pl-3 text-sm',
+											alert.level === 'warning' ? 'border-danger' : 'border-orange'
+										]}
 									>
-									<span class="text-muted">· {alert.message}</span>
-								</li>
-							{/each}
-						</ul>
-					{:else}
-						<p class="mt-1 text-sm text-muted">No active alerts for this sensor.</p>
-					{/if}
+										<span class="text-ink">
+											<span aria-hidden="true">{alert.level === 'warning' ? '▲▲' : '▲'}</span>
+											{alert.title}</span
+										>
+										<span class="text-muted">· {alert.message}</span>
+									</li>
+								{/each}
+							</ul>
+						{:else}
+							<p class="mt-1 text-sm text-muted">No active alerts for this sensor.</p>
+						{/if}
+					</div>
 				</div>
+				<button type="button" class="btn btn-ghost self-start" onclick={showReadings}>
+					Show raw sensor readings
+				</button>
 			</div>
 		{:else}
 			<div class="card lg:col-span-2">
@@ -278,45 +290,6 @@
 					label={charted.label}
 					unit={charted.unit}
 				/>
-			</div>
-		</section>
-	{/if}
-
-	{#if device && data.readings.length}
-		<section class="mt-8">
-			<h2 class="text-lg font-semibold">Readings from {device.name}</h2>
-			<p class="text-sm text-muted">Newest first.</p>
-			<div class="card mt-4 overflow-x-auto p-0">
-				<table class="w-full min-w-[40rem] text-left text-sm">
-					<thead class="text-xs text-muted">
-						<tr class="border-b border-line">
-							<th class="px-4 py-3 font-medium">Observed</th>
-							<th class="px-4 py-3 font-medium">Values</th>
-							<th class="px-4 py-3 font-medium">Location</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y divide-line">
-						{#each data.readings.slice(0, 14) as reading (reading.id)}
-							<tr class="align-top">
-								<td class="px-4 py-3 whitespace-nowrap">
-									{dateTime.format(new Date(reading.observedAt))}
-									{#if reading.creditedTo}
-										<p class="text-xs text-muted">Recorded by {reading.creditedTo}</p>
-									{/if}
-								</td>
-								<td class="px-4 py-3">{keySummary(device.type, reading.values, paramsById, 4)}</td>
-								<td class="px-4 py-3 text-xs">
-									{formatPoint(reading.location)}
-									<p class="text-muted">
-										{reading.locationSource === 'device'
-											? 'Device GPS'
-											: 'Lab location, not from the device'}
-									</p>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
 			</div>
 		</section>
 	{/if}
