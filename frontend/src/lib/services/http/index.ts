@@ -117,7 +117,9 @@ export function createHttpServices(baseUrl: string): Services {
 				request<Reading[]>('POST', `/devices/${encodeURIComponent(deviceId)}/readings`, {
 					readings
 				}),
-			currentConditions: () => request<CurrentConditions[]>('GET', '/me/conditions')
+			currentConditions: () => request<CurrentConditions[]>('GET', '/me/conditions'),
+			recentReadings: (limit = 20) =>
+				request<CurrentConditions[]>('GET', `/me/readings?limit=${limit}`)
 		},
 		places: {
 			autocomplete: (q) =>

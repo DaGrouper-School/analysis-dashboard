@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { Device, GeoPoint, Reading, ReadingInput } from '#lib/domain/types.ts';
 	import { formatPoint } from '#lib/geo.ts';
 	import { sampleValues } from '#lib/sample-readings.ts';
@@ -117,8 +118,8 @@
 <section class="card" aria-labelledby="connect-heading">
 	<h2 id="connect-heading" class="text-lg font-semibold">Connect a device</h2>
 	<p class="mt-1 text-sm text-muted">
-		Demo: simulates pairing with a registered device and receiving its readings. Each reading is
-		sent to DaGrouper and on to SAM, tagged with {classroomName}.
+		Demo: simulates pairing with a registered device and recording its readings for
+		{classroomName}.
 	</p>
 
 	<div class="mt-4 flex flex-wrap items-end gap-3">
@@ -167,9 +168,7 @@
 					<li class="space-y-1 p-3">
 						<div class="flex flex-wrap items-center justify-between gap-2">
 							<span class="font-medium">{time.format(new Date(reading.observedAt))}</span>
-							<span class="rounded-full bg-lime px-2 py-0.5 font-semibold"
-								>Sent to backend and SAM</span
-							>
+							<span class="rounded-full bg-lime px-2 py-0.5 font-semibold">Recorded</span>
 						</div>
 						<p class="text-muted">{summary(reading.values)}</p>
 						<p>
@@ -182,11 +181,6 @@
 								>
 							{/if}
 						</p>
-						{#if device.samSourceId}
-							<p class="text-muted">
-								SAM source <span class="font-mono text-ink">{device.samSourceId}</span> · {classroomName}
-							</p>
-						{/if}
 					</li>
 				{/each}
 			</ul>
@@ -194,7 +188,8 @@
 
 		{#if phase === 'done'}
 			<p class="mt-3 text-sm" role="status">
-				{COUNT} readings sent. {NO_FIX.size} had no GPS and use the lab's location.
+				{COUNT} readings recorded. {NO_FIX.size} had no GPS and use the lab's location.
+				<a class="link" href={resolve('/(app)/dashboard')}>See them on the dashboard</a>.
 			</p>
 		{/if}
 		{#if error}<p class="field-error" role="alert">{error}</p>{/if}

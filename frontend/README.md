@@ -93,5 +93,5 @@ device identifier, e.g. `DGC-7K3Q9M:TWS-2041-SH`, and every reading is tagged wi
 People are never assigned to devices. Current conditions come only from devices in classrooms the
 user belongs to; anyone else, platform admins included, sees an empty state. On a lab page,
 facilitators and the institution head can run the connect-a-device demo: it pairs with a
-registered device and streams six readings, two of them without a GPS fix. Classroom name and
+registered device and records six readings, two of them without a GPS fix, which then appear under Recent readings on the dashboard. Classroom name and
 institution are editable by the head; the classroom code never changes.
