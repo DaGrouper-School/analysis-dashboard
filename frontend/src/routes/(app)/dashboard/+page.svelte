@@ -3,6 +3,7 @@
 	import type { EnvironmentalDomain } from '#lib/domain/types.ts';
 	import { formatPoint } from '#lib/geo.ts';
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
+	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
 	import { DEVICE_TYPE_COLORS, DEVICE_TYPE_LABELS } from '#lib/labels.ts';
 	import type { PageProps } from './$types';
 
@@ -98,6 +99,10 @@
 		</p>
 	{/if}
 </div>
+
+{#if data.invitations.length}
+	<div class="mt-8"><PendingInvitations invitations={data.invitations} /></div>
+{/if}
 
 <section class="mt-8 grid gap-4 lg:grid-cols-3">
 	{#if data.featured && reading}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
 	import { CLASSROOM_ROLE_LABELS } from '#lib/labels.ts';
 	import type { PageProps } from './$types';
 
@@ -21,6 +22,10 @@
 		<a href={resolve('/(app)/classrooms/new')} class="btn btn-primary">New classroom</a>
 	{/if}
 </div>
+
+{#if data.invitations.length}
+	<div class="mt-8"><PendingInvitations invitations={data.invitations} /></div>
+{/if}
 
 {#if data.classrooms.length}
 	<ul class="mt-8 grid gap-4 md:grid-cols-2">
@@ -58,7 +63,9 @@
 		<p class="mx-auto mt-2 max-w-md text-sm text-muted">
 			{data.canCreate
 				? 'Create one to get a global classroom code and invite your facilitators and community scientists.'
-				: 'Ask your facilitator or institution head for an invitation. It arrives by email.'}
+				: data.invitations.length
+					? 'Join from the invitation above.'
+					: 'Ask your facilitator or institution head for an invitation. It arrives by email.'}
 		</p>
 	</div>
 {/if}

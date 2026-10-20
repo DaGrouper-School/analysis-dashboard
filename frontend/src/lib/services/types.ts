@@ -80,6 +80,8 @@ export interface ClassroomService {
 	removeMember(classroomId: string, userId: string): Promise<void>;
 	/** Public: what an invite link points to. */
 	getInvitation(token: string): Promise<InvitationPreview>;
+	/** Pending invitations sent to the signed-in user's email, newest first. */
+	listMyInvitations(): Promise<InvitationPreview[]>;
 	/** Joins the signed-in user to the classroom. Their email must match the invitation. */
 	acceptInvitation(token: string): Promise<ClassroomSummary>;
 }
