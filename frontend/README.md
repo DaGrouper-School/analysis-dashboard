@@ -20,14 +20,14 @@ Other scripts, run here: `npm run build` (static SPA in `build/`), `npm test`, `
 
 ## Demo accounts
 
-| Sign in with | Account                              | State                                                          |
-| ------------ | ------------------------------------ | -------------------------------------------------------------- |
-| Google       | Tesfaye G.                           | Institution head of Trinity Lab Classroom                      |
-| Google       | Dr. Marcus L.                        | Researcher and platform admin (admin-assisted classroom setup) |
-| Google       | Sarah K.                             | Custodian, not in a classroom                                  |
-| Google       | Hana Bekele, Amina Yusuf             | New, goes through onboarding                                   |
-| Phone        | Ethiopia +251 911 000 001 (Abebe T.) | Community scientist in Trinity Lab Classroom                   |
-| Phone        | Any other valid number               | New                                                            |
+| Sign in with | Account                              | State                                                   |
+| ------------ | ------------------------------------ | ------------------------------------------------------- |
+| Google       | Tesfaye G.                           | Institution head of Trinity Lab Classroom               |
+| Google       | Dr. Marcus L.                        | Researcher in Trinity Lab Classroom, and platform admin |
+| Google       | Sarah K.                             | Custodian, not in a classroom                           |
+| Google       | Hana Bekele, Amina Yusuf             | New, goes through onboarding                            |
+| Phone        | Ethiopia +251 911 000 001 (Abebe T.) | Community scientist in Trinity Lab Classroom            |
+| Phone        | Any other valid number               | New                                                     |
 
 Hana Bekele has a pending facilitator invitation at `/invite/demo-hana-invite`.
 
@@ -98,6 +98,10 @@ about 200 km away. The Shashamane station's two readings come from two slightly 
 the rain gauge and the Hargeisa station send no GPS, so their readings use the lab's location and
 are flagged as not from the device. Each device's SAM source ID is the classroom code plus the
 device identifier, e.g. `DGC-7K3Q9M:TWS-2041-SH`, and every reading is tagged with its classroom.
+
+Classrooms have four roles: institution head, facilitator, community scientist and researcher.
+Researchers are read-only members invited by the head: they see the classroom's devices and
+readings but cannot register devices, upload readings or see the classroom code.
 
 People are never assigned to devices. Current conditions come only from devices in classrooms the
 user belongs to; anyone else, platform admins included, sees an empty state. On a lab page,

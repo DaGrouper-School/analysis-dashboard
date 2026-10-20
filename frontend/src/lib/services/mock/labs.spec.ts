@@ -179,8 +179,8 @@ describe('labs (AP-05)', () => {
 		expect(conditions.every((c) => c.classroomName === 'Trinity Lab Classroom')).toBe(true);
 		// Community scientists never see the classroom code, even inside a SAM source ID.
 		expect(conditions.every((c) => c.device.samSourceId === null)).toBe(true);
-		// A platform admin who is not a member sees no conditions either.
-		await signInAs('g-marcus');
+		// Someone outside every classroom sees nothing.
+		await signInAs('g-sarah');
 		expect(await services.labs.currentConditions()).toEqual([]);
 	});
 
@@ -204,6 +204,34 @@ describe('labs (AP-05)', () => {
 		expect(await services.labs.recentReadings()).toEqual([]);
 	});
 
+	it('shows the demo researcher the data of the classroom they joined', async () => {
+		await signInAs('g-marcus');
+		const conditions = await services.labs.currentConditions();
+		expect(conditions.map((c) => c.device.id).sort()).toEqual([
+			'dev_shashamane_gauge',
+			'dev_shashamane_ws',
+			'dev_trinity_soil'
+		]);
+		expect((await services.labs.recentReadings()).length).toBeGreaterThan(0);
+	});
+
+	it('lets researchers read device data but not change it or see the classroom code', async () => {
+		await signInAs('g-tesfaye');
+		await services.classrooms.setMemberRole('cls_trinity', 'usr_abebe', 'researcher');
+		await signInAbebe();
+		expect((await services.labs.currentConditions()).length).toBe(3);
+		const detail = await services.labs.get('lab_trinity');
+		expect(detail.canManage).toBe(false);
+		expect(detail.readings.length).toBeGreaterThan(0);
+		expect(detail.devices.every((d) => d.samSourceId === null)).toBe(true);
+		await expect(services.labs.registerDevice('lab_trinity', deviceInput)).rejects.toMatchObject({
+			code: 'forbidden'
+		});
+		await expect(
+			services.labs.uploadReadings('dev_trinity_soil', [reading(null)])
+		).rejects.toMatchObject({ code: 'forbidden' });
+	});
+
 	it('attaches active alerts to current conditions', async () => {
 		await signInAs('g-tesfaye');
 		const conditions = await services.labs.currentConditions();
@@ -222,7 +250,7 @@ describe('labs (AP-05)', () => {
 		expect(recent.length).toBe(3);
 		expect(recent[0].device.id).toBe(device.id);
 		expect(recent.every((r) => r.device.labId === 'lab_trinity')).toBe(true);
-		await signInAs('g-marcus');
+		await signInAs('g-sarah');
 		expect(await services.labs.recentReadings()).toEqual([]);
 	});
 });

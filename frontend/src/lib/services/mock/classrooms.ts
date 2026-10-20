@@ -20,8 +20,9 @@ import { ServiceError, type ClassroomService } from '../types';
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const RANK: Record<ClassroomRole, number> = {
 	community_scientist: 0,
-	facilitator: 1,
-	institution_head: 2
+	researcher: 1,
+	facilitator: 2,
+	institution_head: 3
 };
 
 export function currentUser(state: MockDbState): User {
@@ -46,12 +47,12 @@ export function permissionsFor(user: User, role: ClassroomRole | null) {
 	const isHead = role === 'institution_head';
 	return {
 		view: user.platformAdmin || role !== null,
-		seeCode: user.platformAdmin || (role !== null && role !== 'community_scientist'),
+		seeCode: user.platformAdmin || isHead || role === 'facilitator',
 		seeEmails: user.platformAdmin || isHead || role === 'facilitator',
 		invite: (user.platformAdmin
-			? ['institution_head', 'facilitator', 'community_scientist']
+			? ['institution_head', 'facilitator', 'community_scientist', 'researcher']
 			: isHead
-				? ['facilitator', 'community_scientist']
+				? ['facilitator', 'community_scientist', 'researcher']
 				: role === 'facilitator'
 					? ['community_scientist']
 					: []) as ClassroomRole[],
