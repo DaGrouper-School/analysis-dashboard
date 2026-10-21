@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import type { EnvironmentalDomain } from '#lib/domain/types.ts';
+	import { DOMAINS, OTHER_TAB, domainTabs } from '#lib/domains.ts';
 	import { formatPoint } from '#lib/geo.ts';
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
@@ -20,20 +20,23 @@
 			data.user.fullName
 	);
 
-	const DOMAINS: { id: EnvironmentalDomain; label: string; icon: string }[] = [
-		{ id: 'AIR', label: 'Air', icon: '🌳' },
-		{ id: 'RAIN', label: 'Rain', icon: '🌧️' },
-		{ id: 'WIND', label: 'Wind', icon: '💨' },
-		{ id: 'SUN', label: 'Sun', icon: '☀️' },
-		{ id: 'WAVES', label: 'Waves', icon: '🌊' },
-		{ id: 'LIGHTNING', label: 'Lightning', icon: '⚡️' }
-	];
-
 	const paramsById = $derived(new Map(data.parameters.map((p) => [p.id, p])));
-	const countByDomain = $derived(
-		Object.fromEntries(
-			DOMAINS.map((d) => [d.id, data.parameters.filter((p) => p.domain === d.id).length])
-		)
+	// The domains the picked sensor sends values for open the domain view (AP-10).
+	const sensorTabs = $derived(domainTabs(data.readings, data.parameters));
+	const domainCards = $derived(
+		[
+			...DOMAINS.map((d) => ({ ...d, tab: sensorTabs.find((t) => t.id === d.id) })),
+			...sensorTabs.filter((t) => t.id === OTHER_TAB.id).map((t) => ({ ...t, tab: t }))
+		].map((d) => ({
+			...d,
+			// The path is resolved; only the query is added to it.
+			href:
+				data.classroom && data.device
+					? resolve('/(app)/dashboard/domains') +
+						sensorQuery(data.classroom.id, data.device.id) +
+						`&domain=${d.id}`
+					: ''
+		}))
 	);
 
 	const device = $derived(data.device);
@@ -372,13 +375,32 @@
 
 <section class="mt-8">
 	<h2 class="text-lg font-semibold">Environmental domains</h2>
-	<p class="text-sm text-muted">Weather station parameters, grouped by domain.</p>
+	<p class="text-sm text-muted">
+		{device
+			? `Open a domain for each of ${device.name}'s values, with thresholds and trends.`
+			: 'Weather station parameters, grouped by domain.'}
+	</p>
 	<ul class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-		{#each DOMAINS as domain (domain.id)}
-			<li class="card p-4">
-				<span class="text-2xl" aria-hidden="true">{domain.icon}</span>
-				<p class="mt-3 font-semibold">{domain.label}</p>
-				<p class="text-xs text-muted">{countByDomain[domain.id]} parameters</p>
+		{#each domainCards as domain (domain.id)}
+			<li>
+				{#if domain.tab && data.classroom && device}
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+					<a class="card block h-full p-4 transition hover:border-line-strong" href={domain.href}>
+						<span class="text-2xl" aria-hidden="true">{domain.icon}</span>
+						<p class="mt-3 font-semibold">{domain.label}</p>
+						<p class="text-xs text-muted">
+							{domain.tab.parameterIds.length} value{domain.tab.parameterIds.length === 1
+								? ''
+								: 's'} →
+						</p>
+					</a>
+				{:else}
+					<div class="card h-full p-4 opacity-60">
+						<span class="text-2xl" aria-hidden="true">{domain.icon}</span>
+						<p class="mt-3 font-semibold">{domain.label}</p>
+						<p class="text-xs text-muted">Not on this sensor</p>
+					</div>
+				{/if}
 			</li>
 		{/each}
 	</ul>

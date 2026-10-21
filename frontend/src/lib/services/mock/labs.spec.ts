@@ -51,11 +51,12 @@ describe('labs (AP-05)', () => {
 		expect(station.samSourceId).toBe('DGC-7K3Q9M:TWS-2041-SH');
 		// The Shashamane station feeds the Trinity lab in Addis Ababa, and has moved between readings.
 		const stationReadings = readings.filter((r) => r.deviceId === station.id);
-		// Two weeks of daily history.
-		expect(stationReadings.length).toBe(14);
+		// The lab page shows the newest readings, so hourly history from more than one place.
+		expect(stationReadings.length).toBeGreaterThan(1);
 		expect(stationReadings.every((r) => r.locationSource === 'device')).toBe(true);
 		expect(distanceKm(lab.location, stationReadings[0].location)).toBeGreaterThan(150);
-		expect(stationReadings[0].location).not.toEqual(stationReadings[1].location);
+		const all = await services.labs.deviceReadings(station.id);
+		expect(new Set(all.map((r) => `${r.location.lat},${r.location.lng}`)).size).toBeGreaterThan(1);
 		// The rain gauge has no GPS: its reading stands in with the lab location, flagged.
 		const gauge = readings.find((r) => r.deviceId === 'dev_shashamane_gauge')!;
 		expect(gauge).toMatchObject({ locationSource: 'lab', location: lab.location });
@@ -233,7 +234,8 @@ describe('labs (AP-05)', () => {
 		expect(devices.map((d) => d.id)).toEqual(['dev_nassau_ws']);
 		expect(devices[0].samSourceId).toBeNull();
 		const history = await services.labs.deviceReadings('dev_nassau_ws');
-		expect(history.length).toBe(14);
+		// A month of daily readings plus hourly ones over the last day.
+		expect(history.length).toBe(30 + 23);
 		expect(history.map((r) => r.observedAt)).toEqual(
 			history
 				.map((r) => r.observedAt)
