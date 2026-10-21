@@ -1,4 +1,3 @@
-import { alertsFor } from '#lib/domain/alerts.ts';
 import { services } from '#lib/services/index.ts';
 import { selectSensor } from '#lib/sensor-selection.ts';
 import type { PageLoad } from './$types';
@@ -10,20 +9,21 @@ export const load: PageLoad = async ({ url }) => {
 		services.registry.listParameters(),
 		services.classrooms.listMyInvitations()
 	]);
-	const { device } = selection;
-	const [readings, lab] = device
-		? await Promise.all([
-				services.labs.deviceReadings(device.id, 60),
-				services.labs.get(device.labId)
-			])
-		: [[], null];
+	const { device, classroom } = selection;
+	const [readings, lab, alertRules] = await Promise.all([
+		device ? services.labs.deviceReadings(device.id, 60) : [],
+		device ? services.labs.get(device.labId) : null,
+		classroom ? services.classrooms.listAlerts(classroom.id) : null
+	]);
 	return {
 		...selection,
 		readings,
 		// Heads, facilitators and community scientists can record data; researchers can't.
 		canRecord: lab?.canRecord ?? false,
 		labLocation: lab?.lab.location ?? null,
-		alerts: readings[0] ? alertsFor(readings[0]) : [],
+		// Evaluated by the backend against the classroom's levels (AP-08).
+		alerts: selection.classroomConditions.find((c) => c.device.id === device?.id)?.alerts ?? [],
+		alertRules: alertRules?.rules ?? [],
 		parameters,
 		invitations
 	};

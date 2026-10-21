@@ -1,5 +1,7 @@
 import type {
 	Address,
+	AlertRuleInput,
+	ClassroomAlerts,
 	ClassroomDetail,
 	ClassroomRole,
 	ClassroomSummary,
@@ -120,6 +122,21 @@ export interface ClassroomService {
 	listMyInvitations(): Promise<InvitationPreview[]>;
 	/** Joins the signed-in user to the classroom. Their email must match the invitation. */
 	acceptInvitation(token: string): Promise<ClassroomSummary>;
+	/**
+	 * The classroom's alert levels (AP-08): its own rules, and the platform defaults for the
+	 * parameters it has not set. Anyone who can view the classroom can read them.
+	 */
+	listAlerts(classroomId: string): Promise<ClassroomAlerts>;
+	/**
+	 * Adds a rule, or changes one when `ruleId` is given. Heads and facilitators only. The first
+	 * change to a parameter copies its defaults into the classroom, so the others stay as they
+	 * were. A rule's parameter cannot change.
+	 */
+	saveAlert(classroomId: string, input: AlertRuleInput, ruleId?: string): Promise<ClassroomAlerts>;
+	/** Removes one of the classroom's own rules. With none left, the parameter uses the defaults. */
+	deleteAlert(classroomId: string, ruleId: string): Promise<ClassroomAlerts>;
+	/** Drops the classroom's own rules for a parameter, back to the platform defaults. */
+	resetAlerts(classroomId: string, parameterId: string): Promise<ClassroomAlerts>;
 }
 
 /** Labs and their devices (AP-05). Each device is registered in SAM as a source. */

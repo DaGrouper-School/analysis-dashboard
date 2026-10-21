@@ -10,6 +10,8 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import SyncModal from '#lib/components/SyncModal.svelte';
 	import RollingNumber from '#lib/components/RollingNumber.svelte';
+	import ThresholdSource from '#lib/components/ThresholdSource.svelte';
+	import { thresholdsFor } from '#lib/domain/alerts.ts';
 	import { formatValue, keySummary, keyValues } from '#lib/key-values.ts';
 	import { reveal } from '#lib/reveal.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
@@ -95,6 +97,7 @@
 	);
 	let chartParam = $state('');
 	const charted = $derived(chartOptions.find((o) => o.id === chartParam) ?? chartOptions[0]);
+	const chartLevels = $derived(charted ? thresholdsFor(data.alertRules, charted.id) : []);
 
 	const markers = $derived<GlobeMarker[]>(
 		data.classroomConditions.map((c) => ({
@@ -374,8 +377,12 @@
 					label={charted.label}
 					unit={charted.unit}
 					color={deviceTypeColor(data.deviceTypes, device.type)}
+					thresholds={chartLevels}
 				/>
 			</div>
+			{#if chartLevels.length}
+				<ThresholdSource classroomId={data.classroom.id} rules={chartLevels} />
+			{/if}
 		</section>
 	{/if}
 

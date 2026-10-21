@@ -1,4 +1,6 @@
 import type {
+	AlertRuleInput,
+	ClassroomAlerts,
 	ClassroomDetail,
 	ClassroomRole,
 	ClassroomSummary,
@@ -7,6 +9,7 @@ import type {
 	User
 } from '#lib/domain/types.ts';
 import { isValidEmail, validateClassroomUpdate } from '#lib/domain/validation.ts';
+import { checkAlertRule, effectiveRules } from '#lib/domain/alerts.ts';
 import {
 	newId,
 	readDb,
@@ -57,6 +60,8 @@ export function permissionsFor(user: User, role: ClassroomRole | null) {
 					? ['community_scientist']
 					: []) as ClassroomRole[],
 		manageMembers: user.platformAdmin || isHead,
+		// The classroom's own focal people. A platform admin sets the defaults, not a classroom's.
+		manageAlerts: isHead || role === 'facilitator',
 		// Connecting an already registered device and recording its readings. Researchers only read.
 		recordReadings:
 			user.platformAdmin || isHead || role === 'facilitator' || role === 'community_scientist'
@@ -115,6 +120,15 @@ function toPreview(state: MockDbState, invitation: StoredInvitation): Invitation
 	};
 }
 
+/** The alert rules in force for a classroom, with who last changed its own. */
+export function classroomRules(state: MockDbState, classroomId: string) {
+	return effectiveRules(
+		state.alertDefaults,
+		state.classroomAlerts.filter((r) => r.classroomId === classroomId),
+		(id) => state.users.find((u) => u.id === id)?.fullName ?? 'Unknown'
+	);
+}
+
 /** Loads a classroom the user may see. Hidden classrooms read as not found. */
 function visibleClassroom(state: MockDbState, user: User, classroomId: string) {
 	const classroom = state.classrooms.find((c) => c.id === classroomId);
@@ -161,6 +175,47 @@ export function createMockClassrooms({
 		return invitation;
 	}
 
+	function alertsOf(state: MockDbState, classroomId: string, canEdit: boolean): ClassroomAlerts {
+		return structuredClone({ rules: classroomRules(state, classroomId), canEdit });
+	}
+
+	/** Loads the classroom for an alert change, refusing anyone who is not a head or facilitator. */
+	function alertEditor(state: MockDbState, classroomId: string) {
+		const user = currentUser(state);
+		const { can } = visibleClassroom(state, user, classroomId);
+		if (!can.manageAlerts) {
+			throw new ServiceError(
+				'forbidden',
+				'Only the classroom’s institution head and facilitators can change its alerts.'
+			);
+		}
+		return user;
+	}
+
+	/**
+	 * The classroom's own rules for a parameter. The first change copies the defaults in, so
+	 * changing one level leaves the others as they were. Returns the copies keyed by default ID.
+	 */
+	function ownRules(state: MockDbState, classroomId: string, parameterId: string, userId: string) {
+		const copies = new Map<string, string>();
+		const own = state.classroomAlerts.filter(
+			(r) => r.classroomId === classroomId && r.parameterId === parameterId
+		);
+		if (own.length) return copies;
+		for (const rule of state.alertDefaults.filter((r) => r.parameterId === parameterId)) {
+			const id = newId('alr');
+			copies.set(rule.id, id);
+			state.classroomAlerts.push({
+				...rule,
+				id,
+				classroomId,
+				updatedBy: userId,
+				updatedAt: iso()
+			});
+		}
+		return copies;
+	}
+
 	return {
 		async listMine() {
 			await delay();
@@ -202,7 +257,8 @@ export function createMockClassrooms({
 				permissions: {
 					invite: can.invite,
 					manageMembers: can.manageMembers,
-					edit: can.manageMembers
+					edit: can.manageMembers,
+					manageAlerts: can.manageAlerts
 				}
 			};
 		},
@@ -421,6 +477,85 @@ export function createMockClassrooms({
 				invitation.status = 'accepted';
 				invitation.acceptedBy = user.id;
 				return summarize(state, user, classroom);
+			});
+		},
+		async listAlerts(classroomId) {
+			await delay();
+			const state = readDb();
+			const user = currentUser(state);
+			const { can } = visibleClassroom(state, user, classroomId);
+			return alertsOf(state, classroomId, can.manageAlerts);
+		},
+
+		async saveAlert(classroomId, input, ruleId) {
+			await delay();
+			return updateDb((state) => {
+				const user = alertEditor(state, classroomId);
+				const rule: AlertRuleInput = {
+					parameterId: input.parameterId,
+					direction: input.direction,
+					value: input.value,
+					level: input.level,
+					title: input.title?.trim() ?? '',
+					enabled: input.enabled !== false
+				};
+				const errors = checkAlertRule(rule, state.parameters);
+				if (Object.keys(errors).length) {
+					throw new ServiceError('invalid_input', 'Check the highlighted fields.', errors);
+				}
+				if (ruleId) {
+					const current = classroomRules(state, classroomId).find((r) => r.id === ruleId);
+					if (!current) throw new ServiceError('not_found', 'That alert no longer exists.');
+					if (current.parameterId !== rule.parameterId) {
+						const message = 'An alert stays on its value. Add a new one for another value.';
+						throw new ServiceError('invalid_input', message, { parameterId: message });
+					}
+					const copies = ownRules(state, classroomId, rule.parameterId, user.id);
+					const id = copies.get(ruleId) ?? ruleId;
+					const stored = state.classroomAlerts.find(
+						(r) => r.classroomId === classroomId && r.id === id
+					)!;
+					Object.assign(stored, rule, { updatedBy: user.id, updatedAt: iso() });
+				} else {
+					ownRules(state, classroomId, rule.parameterId, user.id);
+					state.classroomAlerts.push({
+						...rule,
+						id: newId('alr'),
+						classroomId,
+						updatedBy: user.id,
+						updatedAt: iso()
+					});
+				}
+				return alertsOf(state, classroomId, true);
+			});
+		},
+
+		async deleteAlert(classroomId, ruleId) {
+			await delay();
+			return updateDb((state) => {
+				alertEditor(state, classroomId);
+				const index = state.classroomAlerts.findIndex(
+					(r) => r.classroomId === classroomId && r.id === ruleId
+				);
+				if (index < 0) {
+					throw new ServiceError(
+						'not_found',
+						'Only the classroom’s own alerts can be deleted. Turn a default off instead.'
+					);
+				}
+				state.classroomAlerts.splice(index, 1);
+				return alertsOf(state, classroomId, true);
+			});
+		},
+
+		async resetAlerts(classroomId, parameterId) {
+			await delay();
+			return updateDb((state) => {
+				alertEditor(state, classroomId);
+				state.classroomAlerts = state.classroomAlerts.filter(
+					(r) => !(r.classroomId === classroomId && r.parameterId === parameterId)
+				);
+				return alertsOf(state, classroomId, true);
 			});
 		}
 	};

@@ -126,6 +126,8 @@ export interface ClassroomDetail {
 		manageMembers: boolean;
 		/** Can change the name and institution. The code never changes. */
 		edit: boolean;
+		/** Heads and facilitators of the classroom set its alert levels (AP-08). */
+		manageAlerts: boolean;
 	};
 }
 
@@ -422,6 +424,45 @@ export interface DeviceAlert {
 	level: 'caution' | 'warning';
 	title: string;
 	message: string;
+}
+
+// ---- Alert levels (AP-08) ------------------------------------------------------------
+
+export type AlertLevel = DeviceAlert['level'];
+export type AlertDirection = 'above' | 'below';
+
+/**
+ * One alert level on one parameter: a value above (or below) `value`, in the parameter's own
+ * unit, raises an alert. The same levels are the thresholds the dashboard shows.
+ */
+export interface AlertRule {
+	id: string;
+	parameterId: string;
+	direction: AlertDirection;
+	value: number;
+	level: AlertLevel;
+	/** Short name on the alert, e.g. `Very high UV`. States the reading; gives no advice. */
+	title: string;
+	/** Off keeps the rule without raising it. */
+	enabled: boolean;
+}
+
+export type AlertRuleInput = Omit<AlertRule, 'id'>;
+
+/**
+ * A rule in force for a classroom. A classroom's own rules for a parameter replace the platform
+ * defaults for that parameter; parameters it has not set keep the defaults.
+ */
+export interface EffectiveAlertRule extends AlertRule {
+	source: 'classroom' | 'default';
+	/** Who last changed a classroom's own rule, and when. */
+	updatedBy: string | null;
+	updatedAt: string | null;
+}
+
+export interface ClassroomAlerts {
+	rules: EffectiveAlertRule[];
+	canEdit: boolean;
 }
 
 /** The latest reading of one device in a classroom the user belongs to. */

@@ -3,7 +3,8 @@
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
 	import ReadingChart from '#lib/components/ReadingChart.svelte';
-	import { thresholdStatus } from '#lib/domain/alerts.ts';
+	import ThresholdSource from '#lib/components/ThresholdSource.svelte';
+	import { thresholdStatus, thresholdsFor } from '#lib/domain/alerts.ts';
 	import { TIME_RANGES, withinRange } from '#lib/domains.ts';
 	import { describeParameter, formatValue } from '#lib/key-values.ts';
 	import { deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
@@ -165,7 +166,8 @@
 		{#each data.tab.parameterIds as id (id)}
 			{@const param = describeParameter(id, paramsById)}
 			{@const value = latest?.values[id]}
-			{@const status = thresholdStatus(id, value)}
+			{@const status = thresholdStatus(data.alertRules, id, value)}
+			{@const levels = thresholdsFor(data.alertRules, id)}
 			<section class="card" aria-labelledby="param-{id}">
 				<div class="flex flex-wrap items-start justify-between gap-3">
 					<div class="min-w-0">
@@ -196,8 +198,12 @@
 						unit={param.unit}
 						height={160}
 						color={deviceTypeColor(data.deviceTypes, device.type)}
+						thresholds={levels}
 					/>
 				</div>
+				{#if data.classroom && levels.length}
+					<ThresholdSource classroomId={data.classroom.id} rules={levels} />
+				{/if}
 			</section>
 		{/each}
 	</div>

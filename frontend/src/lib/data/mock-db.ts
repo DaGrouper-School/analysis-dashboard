@@ -1,4 +1,5 @@
 import type {
+	AlertRule,
 	DeviceTypeDefinition,
 	DomainDefinition,
 	RegistryChange,
@@ -11,6 +12,7 @@ import type {
 	Reading,
 	User
 } from '#lib/domain/types.ts';
+import type { ClassroomRuleRecord } from '#lib/domain/alerts.ts';
 import { createSeed } from './seed';
 
 /**
@@ -97,6 +99,10 @@ export interface MockDbState {
 	/** Registry changes, newest first. */
 	registryChanges: RegistryChange[];
 	observationTemplates: ObservationTemplate[];
+	/** Platform default alert levels (AP-08). */
+	alertDefaults: AlertRule[];
+	/** Classrooms' own alert levels. A parameter with any of these ignores its defaults. */
+	classroomAlerts: ClassroomRuleRecord[];
 	/** Readings received from devices. Each was also forwarded to SAM under `samSourceId`. */
 	readings: (StoredRecord & {
 		/** Set when it was entered by hand through an observation template. */
@@ -114,7 +120,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 13;
+const VERSION = 14;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;

@@ -1,10 +1,12 @@
 <script lang="ts">
-	import type { Reading } from '#lib/domain/types.ts';
+	import { LEVEL_LABELS } from '#lib/domain/alerts.ts';
+	import type { AlertRule, Reading } from '#lib/domain/types.ts';
 
 	/**
 	 * One parameter of one device over time: a 2px line with a soft wash, the latest value
 	 * labelled at the end, and a crosshair that snaps to the nearest reading on hover or with
-	 * the arrow keys.
+	 * the arrow keys. Alert levels show as dashed lines in their status color; a level far
+	 * outside the readings is listed under the chart instead of squashing the line flat.
 	 */
 	let {
 		readings,
@@ -12,7 +14,8 @@
 		label,
 		unit = '',
 		height = 220,
-		color
+		color,
+		thresholds = []
 	}: {
 		/** Any order; the chart sorts by time. */
 		readings: Reading[];
@@ -22,7 +25,11 @@
 		height?: number;
 		/** The device's registry color (deviceTypeColor). Falls back to the theme's data color. */
 		color?: string;
+		/** The classroom's enabled alert levels for this parameter (AP-08). */
+		thresholds?: Pick<AlertRule, 'id' | 'value' | 'level'>[];
 	} = $props();
+
+	const LINE = { warning: 'stroke-danger', caution: 'stroke-orange' };
 
 	const PAD = { top: 16, bottom: 28, left: 44 };
 
@@ -46,8 +53,21 @@
 		return ([1, 2, 5, 10].find((m) => m * power >= raw) ?? 10) * power;
 	}
 
-	const scale = $derived.by(() => {
+	/** Levels close enough to the readings to draw without flattening the line. */
+	const levels = $derived.by(() => {
 		const values = points.map((p) => p.value);
+		const min = Math.min(...values);
+		const max = Math.max(...values);
+		const reach = Math.max(max - min, Math.abs(max) * 0.25, 1);
+		const near = (t: { value: number }) => t.value >= min - reach && t.value <= max + reach;
+		return {
+			drawn: thresholds.filter(near),
+			off: thresholds.filter((t) => !near(t)).map((t) => ({ ...t, above: t.value > max }))
+		};
+	});
+
+	const scale = $derived.by(() => {
+		const values = [...points.map((p) => p.value), ...levels.drawn.map((t) => t.value)];
 		const min = Math.min(...values);
 		const max = Math.max(...values);
 		const step = niceStep(max - min || Math.abs(max) || 1, 4);
@@ -183,6 +203,18 @@
 				>
 			{/each}
 
+			{#each levels.drawn as level (level.id)}
+				<line
+					x1={PAD.left}
+					x2={width - padRight}
+					y1={scale.y(level.value)}
+					y2={scale.y(level.value)}
+					class={LINE[level.level]}
+					stroke-width="1.5"
+					stroke-dasharray="5 4"
+				/>
+			{/each}
+
 			<path d={area} class="fill-(--series)" fill-opacity="0.1" />
 			<path
 				d={line}
@@ -192,6 +224,16 @@
 				stroke-linejoin="round"
 				stroke-linecap="round"
 			/>
+			{#each levels.drawn as level (level.id)}
+				<!-- At the start of the line, clear of the latest value; a halo keeps it legible. -->
+				<text
+					x={PAD.left + 4}
+					y={scale.y(level.value) - 5}
+					class="fill-muted stroke-surface text-[11px]"
+					stroke-width="3"
+					paint-order="stroke">{LEVEL_LABELS[level.level]} {format(level.value)}</text
+				>
+			{/each}
 
 			{#if shown}
 				<line
@@ -237,6 +279,17 @@
 					{format(shown.value)}
 				</p>
 			</div>
+		{/if}
+		{#if levels.off.length}
+			<p class="mt-1 text-xs text-muted">
+				Off this chart:
+				{levels.off
+					.map(
+						(t) =>
+							`${LEVEL_LABELS[t.level]} ${format(t.value)}, well ${t.above ? 'above' : 'below'} these readings`
+					)
+					.join('; ')}.
+			</p>
 		{/if}
 	{/if}
 </div>

@@ -15,7 +15,7 @@ export default defineConfig({
 			// SPA mode: no server yet, every route falls back to the client-side app.
 			// GitHub Pages serves 404.html for unknown paths, which boots the app on any route.
 			adapter: adapter({ fallback: '404.html' }),
-			// Set by the Pages workflow to the repo path, e.g. /dagrouper-analysis-dashboard.
+			// Set by the Pages workflow to the repo path, e.g. /analysis-dashboard.
 			paths: { base: (process.env.BASE_PATH ?? '') as '' | `/${string}` }
 		})
 	],
