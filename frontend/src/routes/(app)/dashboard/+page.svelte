@@ -272,7 +272,9 @@
 							<Icon name="sync" class="size-4" /> Sync
 						</button>
 						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-						<a class="btn btn-ghost" href={observeHref}>Enter a reading by hand</a>
+						<a class="btn btn-ghost" href={observeHref}
+							><Icon name="plus" class="size-4" /> Enter a reading by hand</a
+						>
 					{/if}
 					<button type="button" class="btn btn-ghost" onclick={showReadings}>
 						<Icon name="readings" class="size-4" /> Show raw sensor readings

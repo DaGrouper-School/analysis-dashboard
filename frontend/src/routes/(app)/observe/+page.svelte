@@ -3,7 +3,9 @@
 	import type { GeoPoint, Observation, ObservationTemplate, Parameter } from '#lib/domain/types.ts';
 	import { formatPoint } from '#lib/geo.ts';
 	import { formatValue } from '#lib/key-values.ts';
-	import { deviceTypeColor, deviceTypeLabel } from '#lib/labels.ts';
+	import Icon from '#lib/components/Icon.svelte';
+	import { FALLBACK_DOMAIN_ICON } from '#lib/icons.ts';
+	import { deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
 	import { rangeText, readEntries, unitsFor, type FieldEntry } from '#lib/observations.ts';
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
@@ -48,7 +50,7 @@
 	const groups = $derived.by(() => {
 		const byDomain = [
 			...data.domains.map((d) => ({ id: d.id, label: d.label, icon: d.icon })),
-			{ id: null, label: 'Other', icon: '📋' }
+			{ id: null, label: 'Other', icon: FALLBACK_DOMAIN_ICON }
 		].map((domain) => ({
 			...domain,
 			templates: data.templates.filter((t) =>
@@ -285,7 +287,10 @@
 				<div class="mt-3 space-y-5">
 					{#each groups as group (group.id)}
 						<div>
-							<p class="eyebrow"><span aria-hidden="true">{group.icon}</span> {group.label}</p>
+							<p class="eyebrow flex items-center gap-1.5">
+								<Icon name={group.icon} fallback={FALLBACK_DOMAIN_ICON} class="size-4" />
+								{group.label}
+							</p>
 							<div class="mt-2 grid gap-2 sm:grid-cols-2">
 								{#each group.templates as t (t.id)}
 									{@const count = devicesOfType(t)}
@@ -311,10 +316,13 @@
 											<span class="mt-1 block text-xs text-muted">
 												{#if t.deviceType}
 													<span
-														class="mr-1 inline-block size-2 rounded-full"
-														style:background={deviceTypeColor(data.deviceTypes, t.deviceType)}
-														aria-hidden="true"
-													></span>
+														class="mr-1 inline-flex align-[-2px]"
+														style:color={deviceTypeColor(data.deviceTypes, t.deviceType)}
+														><Icon
+															name={deviceTypeIcon(data.deviceTypes, t.deviceType)}
+															class="size-3.5"
+														/></span
+													>
 													{deviceTypeLabel(data.deviceTypes, t.deviceType)} reading{count === 0
 														? ' · none registered in this lab'
 														: ''}

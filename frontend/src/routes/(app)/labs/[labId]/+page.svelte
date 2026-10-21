@@ -211,7 +211,9 @@
 					checks your values before they are sent.
 				</p>
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-				<a class="btn btn-primary mt-4" href={observeHref}>Submit an observation</a>
+				<a class="btn btn-primary mt-4" href={observeHref}
+					><Icon name="plus" class="size-4" /> Submit an observation</a
+				>
 			</section>
 		{/if}
 

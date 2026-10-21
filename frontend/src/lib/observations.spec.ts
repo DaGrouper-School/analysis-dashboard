@@ -61,6 +61,7 @@ describe('observation templates (AP-16)', () => {
 					label: 'Hydrogen sulfide',
 					description: 'Gas sensor.',
 					color: '#d4b72c',
+					icon: 'flask',
 					parameterIds: ['h2s', 'pm10']
 				}
 			],
