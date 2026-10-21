@@ -1,5 +1,6 @@
 import type {
 	Address,
+	ClassroomAlerts,
 	ClassroomDetail,
 	ClassroomSummary,
 	Invitation,
@@ -106,6 +107,26 @@ export function createHttpServices(baseUrl: string): Services {
 				request<ClassroomSummary>(
 					'POST',
 					`/invitations/by-token/${encodeURIComponent(token)}/accept`
+				),
+			listAlerts: (id) =>
+				request<ClassroomAlerts>('GET', `/classrooms/${encodeURIComponent(id)}/alerts`),
+			saveAlert: (id, input, ruleId) =>
+				ruleId
+					? request<ClassroomAlerts>(
+							'PUT',
+							`/classrooms/${encodeURIComponent(id)}/alerts/${encodeURIComponent(ruleId)}`,
+							input
+						)
+					: request<ClassroomAlerts>('POST', `/classrooms/${encodeURIComponent(id)}/alerts`, input),
+			deleteAlert: (id, ruleId) =>
+				request<ClassroomAlerts>(
+					'DELETE',
+					`/classrooms/${encodeURIComponent(id)}/alerts/${encodeURIComponent(ruleId)}`
+				),
+			resetAlerts: (id, parameterId) =>
+				request<ClassroomAlerts>(
+					'DELETE',
+					`/classrooms/${encodeURIComponent(id)}/alerts?parameter=${encodeURIComponent(parameterId)}`
 				)
 		},
 		labs: {

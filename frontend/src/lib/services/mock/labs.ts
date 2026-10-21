@@ -2,6 +2,7 @@ import type {
 	CreateLabInput,
 	CurrentConditions,
 	Device,
+	EffectiveAlertRule,
 	Lab,
 	Observation,
 	Reading
@@ -16,7 +17,7 @@ import {
 import { checkObservation, withDeviceTemplates } from '#lib/observations.ts';
 import { newId, readDb, updateDb, type MockDbState, type StoredDevice } from '#lib/data/mock-db.ts';
 import { ServiceError, type LabService } from '../types';
-import { currentUser, permissionsFor, roleIn } from './classrooms';
+import { classroomRules, currentUser, permissionsFor, roleIn } from './classrooms';
 
 function classroomOf(state: MockDbState, lab: Lab) {
 	return state.classrooms.find((c) => c.id === lab.classroomId)!;
@@ -321,10 +322,22 @@ export function createMockLabs({
 		async currentConditions() {
 			await delay();
 			const latest = new Map<string, CurrentConditions>();
+			const state = readDb();
+			// Each classroom's own levels, falling back to the platform defaults.
+			const rules = new Map<string, EffectiveAlertRule[]>();
+			const rulesOf = (classroomId: string) => {
+				if (!rules.has(classroomId)) rules.set(classroomId, classroomRules(state, classroomId));
+				return rules.get(classroomId)!;
+			};
 			// Entries come newest first, so the first one per device is its latest reading.
-			for (const entry of memberReadings(readDb())) {
+			for (const entry of memberReadings(state)) {
 				if (!latest.has(entry.device.id)) {
-					latest.set(entry.device.id, { ...entry, alerts: alertsFor(entry.reading) });
+					const alerts = alertsFor(
+						entry.reading,
+						rulesOf(entry.reading.classroomId),
+						state.parameters
+					);
+					latest.set(entry.device.id, { ...entry, alerts });
 				}
 			}
 			return [...latest.values()];

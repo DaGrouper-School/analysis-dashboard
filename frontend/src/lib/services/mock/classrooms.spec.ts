@@ -70,7 +70,12 @@ describe('classroom code visibility', () => {
 		expect(detail.classroom.code).toBeNull();
 		expect(detail.members.every((m) => m.email === null)).toBe(true);
 		expect(detail.invitations).toEqual([]);
-		expect(detail.permissions).toEqual({ invite: [], manageMembers: false, edit: false });
+		expect(detail.permissions).toEqual({
+			invite: [],
+			manageMembers: false,
+			edit: false,
+			manageAlerts: false
+		});
 	});
 
 	it('shows it to the institution head', async () => {
@@ -276,5 +281,100 @@ describe('demo accounts', () => {
 		const mine = await services.classrooms.listMine();
 		expect(mine.map((c) => c.id).sort()).toEqual(['cls_hargeisa', 'cls_nassau']);
 		expect(mine.every((c) => c.myRole === 'community_scientist' && c.code === null)).toBe(true);
+	});
+});
+
+describe('classroom alert levels (AP-08)', () => {
+	const uvWarning = {
+		parameterId: 'uv',
+		direction: 'above' as const,
+		value: 5,
+		level: 'warning' as const,
+		title: 'Very high UV',
+		enabled: true
+	};
+
+	it('starts on the platform defaults, readable by every member', async () => {
+		await signInAs('g-marcus');
+		const alerts = await services.classrooms.listAlerts('cls_trinity');
+		expect(alerts.canEdit).toBe(false);
+		expect(alerts.rules.every((r) => r.source === 'default')).toBe(true);
+		expect((await services.classrooms.get('cls_trinity')).permissions.manageAlerts).toBe(false);
+	});
+
+	it('lets the head change a default: the other levels of that value are kept', async () => {
+		await signInAs('g-tesfaye');
+		const before = await services.classrooms.listAlerts('cls_trinity');
+		const warning = before.rules.find((r) => r.parameterId === 'uv' && r.level === 'warning')!;
+		const after = await services.classrooms.saveAlert('cls_trinity', uvWarning, warning.id);
+		const uv = after.rules.filter((r) => r.parameterId === 'uv');
+		expect(uv.map((r) => [r.level, r.value, r.source, r.updatedBy])).toEqual([
+			['warning', 5, 'classroom', 'Tesfaye G.'],
+			['caution', 6, 'classroom', 'Tesfaye G.']
+		]);
+		// Other classrooms keep the defaults.
+		await signInAs('g-marcus');
+		const nassau = await services.classrooms.listAlerts('cls_nassau');
+		expect(nassau.rules.find((r) => r.parameterId === 'uv')!.source).toBe('default');
+	});
+
+	it('uses the new level for current conditions', async () => {
+		await signInAs('g-tesfaye');
+		await services.classrooms.saveAlert('cls_trinity', { ...uvWarning, title: 'UV over 5' });
+		const conditions = await services.labs.currentConditions();
+		const station = conditions.find((c) => c.device.id === 'dev_shashamane_ws')!;
+		expect(station.alerts[0]).toMatchObject({
+			title: 'UV over 5',
+			message: "UV index 6.8 is at or above this classroom's warning level of 5."
+		});
+	});
+
+	it('lets a facilitator edit, and turns off, deletes and resets', async () => {
+		await signInAs('g-tesfaye');
+		await services.classrooms.setMemberRole('cls_trinity', 'usr_abebe', 'facilitator');
+		const challenge = await services.auth.requestPhoneCode('+251911000001');
+		await services.auth.verifyPhoneCode(challenge.requestId, challenge.devCode!);
+		const added = await services.classrooms.saveAlert('cls_trinity', uvWarning);
+		const mine = added.rules.find((r) => r.parameterId === 'uv' && r.value === 5)!;
+		const off = await services.classrooms.saveAlert(
+			'cls_trinity',
+			{ ...uvWarning, enabled: false },
+			mine.id
+		);
+		expect(off.rules.find((r) => r.id === mine.id)!.enabled).toBe(false);
+		const deleted = await services.classrooms.deleteAlert('cls_trinity', mine.id);
+		expect(deleted.rules.filter((r) => r.parameterId === 'uv')).toHaveLength(2);
+		const reset = await services.classrooms.resetAlerts('cls_trinity', 'uv');
+		expect(
+			reset.rules.filter((r) => r.parameterId === 'uv').every((r) => r.source === 'default')
+		).toBe(true);
+	});
+
+	it('refuses community scientists, researchers and admins outside the classroom', async () => {
+		for (const sub of ['g-marcus', 'g-leila']) {
+			await signInAs(sub);
+			await expect(services.classrooms.saveAlert('cls_trinity', uvWarning)).rejects.toMatchObject({
+				code: 'forbidden'
+			});
+		}
+		const challenge = await services.auth.requestPhoneCode('+251911000001');
+		await services.auth.verifyPhoneCode(challenge.requestId, challenge.devCode!);
+		await expect(services.classrooms.resetAlerts('cls_trinity', 'uv')).rejects.toMatchObject({
+			code: 'forbidden'
+		});
+	});
+
+	it('checks the level against the registry', async () => {
+		await signInAs('g-tesfaye');
+		await expect(
+			services.classrooms.saveAlert('cls_trinity', {
+				...uvWarning,
+				parameterId: 'air_temperature',
+				value: 90
+			})
+		).rejects.toMatchObject({
+			code: 'invalid_input',
+			fields: { value: 'Air temperature should be -60 to 60 °C.' }
+		});
 	});
 });

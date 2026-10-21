@@ -1,4 +1,5 @@
 import type {
+	AlertRule,
 	AltUnit,
 	DeviceTypeDefinition,
 	DomainDefinition,
@@ -784,6 +785,31 @@ const deviceTypes: DeviceTypeDefinition[] = [
 	}
 ];
 
+/**
+ * Platform default alert levels (AP-08). A classroom that sets its own levels for a parameter
+ * replaces these for that parameter. Titles state the reading; they give no advice.
+ */
+const alertDefaults: AlertRule[] = (
+	[
+		['uv', 'above', 8, 'warning', 'Very high UV'],
+		['uv', 'above', 6, 'caution', 'High UV'],
+		['heat_index', 'above', 39, 'warning', 'Dangerous heat'],
+		['air_temperature', 'above', 32, 'caution', 'Hot'],
+		['wind_gust', 'above', 17, 'warning', 'Strong gusts'],
+		['precip_accum_local_day', 'above', 50, 'warning', 'Heavy rain'],
+		['rain_gauge_daily_accumulation', 'above', 50, 'warning', 'Heavy rain'],
+		['soil_moisture', 'below', 15, 'caution', 'Dry soil']
+	] as const
+).map(([parameterId, direction, value, level, title]) => ({
+	id: `alr_default_${parameterId}_${level}`,
+	parameterId,
+	direction,
+	value,
+	level,
+	title,
+	enabled: true
+}));
+
 /** Guided forms for manual observations (AP-16). Device types without one get a plain form. */
 const observationTemplates: ObservationTemplate[] = [
 	{
@@ -883,6 +909,8 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 		deviceTypes,
 		registryChanges: [],
 		observationTemplates,
+		alertDefaults,
+		classroomAlerts: [],
 		readings,
 		observations: [],
 		classrooms,
