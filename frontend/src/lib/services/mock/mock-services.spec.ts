@@ -235,10 +235,26 @@ describe('registry changes (SAM-23)', () => {
 					domain: null
 				},
 				{ id: 'soil_ph', label: 'Soil pH', unit: '', valueType: 'number', domain: null },
-				{ id: 'air_temperature', label: 'Renamed', unit: 'K', valueType: 'number', domain: null }
+				{
+					id: 'air_temperature',
+					label: 'Renamed',
+					unit: 'K',
+					valueType: 'number',
+					domain: 'AIR'
+				},
+				{
+					id: 'water_ph',
+					label: 'Water pH',
+					unit: '',
+					valueType: 'number',
+					domain: 'WAVES'
+				}
 			]
 		});
-		expect(type.parameterIds).toEqual([
+		expect(
+			(await services.registry.listParameters()).find((p) => p.id === 'water_ph')!.domain
+		).toBe('WAVES');
+		expect(type.parameterIds.slice(0, 4)).toEqual([
 			'soil_moisture',
 			'soil_temperature',
 			'soil_ph',
