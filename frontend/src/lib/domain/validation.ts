@@ -9,6 +9,7 @@ import type {
 	RegisterDeviceInput,
 	UpdateClassroomInput
 } from './types';
+import { isRegistryIcon } from '#lib/icons.ts';
 
 /** Normalises a phone number to E.164 (`+2519…`), or returns null when it is not valid. */
 export function normalizePhone(raw: string): string | null {
@@ -111,7 +112,7 @@ export function validateDomain(input: DomainInput): Record<string, string> {
 		errors.id = 'Use 2 to 16 letters, digits or underscores, starting with a letter.';
 	}
 	if (input.label.trim().length < 2) errors.label = 'Enter a name.';
-	if ([...input.icon.trim()].length > 4) errors.icon = 'Use a single emoji.';
+	if (input.icon.trim() && !isRegistryIcon(input.icon.trim())) errors.icon = 'Pick an icon.';
 	return errors;
 }
 
@@ -121,6 +122,7 @@ export const PARAMETER_ID = /^[a-z][a-z0-9_]{1,47}$/;
 export function validateDeviceType(input: DeviceTypeInput): Record<string, string> {
 	const errors: Record<string, string> = {};
 	if (input.label.trim().length < 3) errors.label = 'Enter a name for the device type.';
+	if (input.icon?.trim() && !isRegistryIcon(input.icon.trim())) errors.icon = 'Pick an icon.';
 	if (!input.values.length) errors.values = 'Add at least one value the device sends.';
 	const ids = input.values.map((v) => v.id.trim());
 	input.values.forEach((value, i) => {

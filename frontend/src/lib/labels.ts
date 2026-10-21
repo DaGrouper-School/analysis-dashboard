@@ -4,6 +4,7 @@ import type {
 	DeviceTypeDefinition,
 	SiteSetting
 } from '#lib/domain/types.ts';
+import { FALLBACK_TYPE_ICON } from '#lib/icons.ts';
 
 export const CLASSROOM_ROLE_LABELS: Record<ClassroomRole, string> = {
 	institution_head: 'Institution head',
@@ -50,4 +51,9 @@ const UNKNOWN_TYPE_COLOR = DEVICE_TYPE_PALETTE.at(-1)!;
  */
 export function deviceTypeColor(types: DeviceTypeDefinition[], id: DeviceType) {
 	return types.find((t) => t.id === id)?.color ?? UNKNOWN_TYPE_COLOR;
+}
+
+/** A device type's icon name, read from the registry like its color. */
+export function deviceTypeIcon(types: DeviceTypeDefinition[], id: DeviceType) {
+	return types.find((t) => t.id === id)?.icon ?? FALLBACK_TYPE_ICON;
 }

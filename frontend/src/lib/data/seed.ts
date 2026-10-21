@@ -657,12 +657,12 @@ function history(): MockDbState['readings'] {
 readings.push(...history());
 
 const domains: DomainDefinition[] = [
-	{ id: 'AIR', label: 'Air', icon: '🌳', description: 'Temperature, humidity and air quality.' },
-	{ id: 'RAIN', label: 'Rain', icon: '🌧️', description: 'Rainfall rates and totals.' },
-	{ id: 'WIND', label: 'Wind', icon: '💨', description: 'Wind speed and direction.' },
-	{ id: 'SUN', label: 'Sun', icon: '☀️', description: 'Sunlight, UV and brightness.' },
-	{ id: 'WAVES', label: 'Waves', icon: '🌊', description: 'Air pressure and its trend.' },
-	{ id: 'LIGHTNING', label: 'Lightning', icon: '⚡️', description: 'Strikes and their distance.' }
+	{ id: 'AIR', label: 'Air', icon: 'tree', description: 'Temperature, humidity and air quality.' },
+	{ id: 'RAIN', label: 'Rain', icon: 'rain', description: 'Rainfall rates and totals.' },
+	{ id: 'WIND', label: 'Wind', icon: 'wind', description: 'Wind speed and direction.' },
+	{ id: 'SUN', label: 'Sun', icon: 'sun', description: 'Sunlight, UV and brightness.' },
+	{ id: 'WAVES', label: 'Waves', icon: 'waves', description: 'Air pressure and its trend.' },
+	{ id: 'LIGHTNING', label: 'Lightning', icon: 'bolt', description: 'Strikes and their distance.' }
 ];
 
 const deviceTypes: DeviceTypeDefinition[] = [
@@ -671,6 +671,7 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		label: 'Weather station',
 		description: 'Tempest-style station: air, rain, wind, sun, pressure and lightning.',
 		color: '#3cc04b',
+		icon: 'station',
 		parameterIds: parameters.filter((p) => p.source === 'weather_station').map((p) => p.id)
 	},
 	{
@@ -678,6 +679,7 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		label: 'Rain gauge',
 		description: 'Manual gauge read once a day.',
 		color: '#00bdff',
+		icon: 'gauge',
 		parameterIds: ['rain_gauge_daily_accumulation']
 	},
 	{
@@ -685,6 +687,7 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		label: 'Soil sensor',
 		description: 'Probe in the ground: moisture and temperature.',
 		color: '#f6921e',
+		icon: 'soil',
 		parameterIds: ['soil_moisture', 'soil_temperature']
 	},
 	{
@@ -692,6 +695,7 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		label: 'Water probe',
 		description: 'Probe in a stream, pond or tank.',
 		color: '#2f7ff0',
+		icon: 'water',
 		parameterIds: ['water_temperature', 'water_ph']
 	},
 	{
@@ -699,6 +703,7 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		label: 'Air quality sensor',
 		description: 'Particulate matter counter.',
 		color: '#e8457a',
+		icon: 'particles',
 		parameterIds: ['pm2_5', 'pm10']
 	},
 	{
@@ -706,6 +711,7 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		label: 'Other',
 		description: 'Anything else; shows whatever it sends.',
 		color: '#9aa5ae',
+		icon: 'sensor',
 		parameterIds: []
 	}
 ];

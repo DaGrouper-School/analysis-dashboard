@@ -9,6 +9,9 @@
 		Parameter
 	} from '#lib/domain/types.ts';
 	import { validateDeviceType, validateDomain } from '#lib/domain/validation.ts';
+	import Icon from '#lib/components/Icon.svelte';
+	import IconPicker from '#lib/components/IconPicker.svelte';
+	import { FALLBACK_TYPE_ICON } from '#lib/icons.ts';
 	import { DEVICE_TYPE_PALETTE } from '#lib/labels.ts';
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
@@ -105,7 +108,7 @@
 
 	// ---- Domains ---------------------------------------------------------------------------
 
-	const blankDomain = (): DomainInput => ({ id: '', label: '', icon: '', description: '' });
+	const blankDomain = (): DomainInput => ({ id: '', label: '', icon: 'tag', description: '' });
 	let domainForm = $state(blankDomain());
 	let domainErrors = $state<Record<string, string>>({});
 	let savingDomain = $state(false);
@@ -198,6 +201,7 @@
 	let typeLabel = $state('');
 	let typeDescription = $state('');
 	let typeColor = $state(DEVICE_TYPE_PALETTE[5]);
+	let typeIcon = $state<string>(FALLBACK_TYPE_ICON);
 	let rows = $state<ValueRow[]>([blankRow()]);
 	let typeErrors = $state<Record<string, string>>({});
 	let savingType = $state(false);
@@ -207,6 +211,7 @@
 		editingType = null;
 		typeLabel = typeDescription = '';
 		typeColor = DEVICE_TYPE_PALETTE[5];
+		typeIcon = FALLBACK_TYPE_ICON;
 		rows = [blankRow()];
 		typeErrors = {};
 	}
@@ -216,6 +221,7 @@
 		typeLabel = type.label;
 		typeDescription = type.description;
 		typeColor = type.color;
+		typeIcon = type.icon;
 		rows = type.parameterIds.map((id) => {
 			const p = paramsById.get(id);
 			return {
@@ -260,6 +266,7 @@
 			label: typeLabel,
 			description: typeDescription,
 			color: typeColor,
+			icon: typeIcon,
 			values: rows.map((r) => ({
 				id: r.id,
 				label: r.label,
@@ -307,14 +314,13 @@
 {#snippet domainOptions(selected: string | null)}
 	<option value="" selected={!selected}>Not in a domain</option>
 	{#each data.domains as domain (domain.id)}
-		<option value={domain.id} selected={domain.id === selected}>{domain.icon} {domain.label}</option
-		>
+		<option value={domain.id} selected={domain.id === selected}>{domain.label}</option>
 	{/each}
 	<option value={NEW_DOMAIN}>+ New domain…</option>
 {/snippet}
 
 {#snippet domainFields(form: DomainInput, codeLocked: boolean, prefix: string)}
-	<div class="grid gap-3 sm:grid-cols-[8rem_1fr_5rem]">
+	<div class="grid gap-3 sm:grid-cols-[8rem_1fr]">
 		<div>
 			<label class="label" for="{prefix}-code">Code</label>
 			<input
@@ -334,17 +340,8 @@
 				bind:value={form.label}
 			/>
 		</div>
-		<div>
-			<label class="label" for="{prefix}-icon">Icon</label>
-			<input
-				id="{prefix}-icon"
-				class={['input text-center', domainErrors.icon && 'input-error']}
-				placeholder="🌱"
-				bind:value={form.icon}
-			/>
-		</div>
 	</div>
-	{#each ['id', 'label', 'icon'] as field (field)}
+	{#each ['id', 'label'] as field (field)}
 		{#if domainErrors[field]}<p class="field-error">{domainErrors[field]}</p>{/if}
 	{/each}
 	<div class="mt-3">
@@ -355,6 +352,9 @@
 			placeholder="Moisture, temperature and chemistry of the ground."
 			bind:value={form.description}
 		/>
+	</div>
+	<div class="mt-3">
+		<IconPicker name="{prefix}-icon" bind:value={form.icon} error={domainErrors.icon} />
 	</div>
 {/snippet}
 
@@ -463,7 +463,11 @@
 									</form>
 								{:else}
 									<div class="flex items-start justify-between gap-3">
-										<p class="text-2xl" aria-hidden="true">{domain.icon}</p>
+										<span
+											class="grid size-10 place-items-center rounded-md border border-line-strong text-ink"
+										>
+											<Icon name={domain.icon} fallback="tag" class="size-6" />
+										</span>
 										<span class="font-mono text-xs text-muted">{domain.id}</span>
 									</div>
 									<p class="mt-2 font-semibold text-ink">{domain.label}</p>
@@ -514,7 +518,13 @@
 								<div class="flex items-start justify-between gap-3">
 									<div>
 										<p class="flex items-center gap-2 font-semibold text-ink">
-											<span class="size-2.5 rounded-full" style:background={type.color}></span>
+											<span
+												class="grid size-8 place-items-center rounded-md"
+												style:color={type.color}
+												style:background="color-mix(in oklab, {type.color} 15%, transparent)"
+											>
+												<Icon name={type.icon} />
+											</span>
 											{type.label}
 										</p>
 										<p class="text-sm text-muted">{type.description}</p>
@@ -532,7 +542,8 @@
 								<p class="mt-2 flex flex-wrap gap-1.5">
 									{#each summary.domains as domain (domain.id)}
 										<span class="chip"
-											><span aria-hidden="true">{domain.icon}</span> {domain.label}</span
+											><Icon name={domain.icon} fallback="tag" class="size-3.5" />
+											{domain.label}</span
 										>
 									{/each}
 									{#if summary.loose}
@@ -597,6 +608,15 @@
 								{/each}
 							</div>
 						</fieldset>
+						<div class="mt-3">
+							<IconPicker
+								name="type-icon"
+								legend="Icon"
+								color={typeColor}
+								bind:value={typeIcon}
+								error={typeErrors.icon}
+							/>
+						</div>
 
 						<h4 class="mt-5 text-sm font-semibold text-ink">Expected values</h4>
 						<p class="text-xs text-muted">

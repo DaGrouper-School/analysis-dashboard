@@ -136,7 +136,7 @@ describe('registry (SAM-01, SAM-05)', () => {
 
 describe('registry changes (SAM-23)', () => {
 	const signInAs = (sub: string) => services.auth.signInWithGoogle(sub);
-	const soil = { id: 'soil', label: 'Soil', icon: '🌱', description: 'Ground conditions.' };
+	const soil = { id: 'soil', label: 'Soil', icon: 'sprout', description: 'Ground conditions.' };
 
 	it('only lets platform admins change it', async () => {
 		await signInAs('g-tesfaye');
@@ -145,6 +145,16 @@ describe('registry changes (SAM-23)', () => {
 			code: 'forbidden'
 		});
 		await expect(services.registry.listChanges()).rejects.toMatchObject({ code: 'forbidden' });
+	});
+
+	it('only takes icons from the icon set', async () => {
+		await signInAs('g-leila');
+		await expect(services.registry.createDomain({ ...soil, icon: '🌱' })).rejects.toMatchObject({
+			code: 'invalid_input',
+			fields: { icon: 'Pick an icon.' }
+		});
+		const domain = await services.registry.createDomain({ ...soil, icon: '' });
+		expect(domain.icon).toBe('tag');
 	});
 
 	it('adds a domain, maps values to it and logs each change', async () => {
