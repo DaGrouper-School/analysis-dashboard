@@ -37,6 +37,10 @@
 		goto(address(change), { replace: true, reset: false });
 	}
 
+	const rawReadings = $derived(
+		resolve('/(app)/dashboard/readings') +
+			(data.classroom ? sensorQuery(data.classroom.id, device?.id) : '')
+	);
 	const back = $derived(
 		resolve('/(app)/dashboard') + (data.classroom ? sensorQuery(data.classroom.id, device?.id) : '')
 	);
@@ -58,21 +62,27 @@
 			</p>
 		{/if}
 	</div>
-	{#if data.classroom && data.devices.length > 1}
-		<div class="w-full sm:w-72">
-			<label class="label" for="domain-device">Sensor</label>
-			<select
-				id="domain-device"
-				class="input"
-				value={device?.id ?? ''}
-				onchange={(e) => go({ device: e.currentTarget.value })}
-			>
-				{#each data.devices as option (option.id)}
-					<option value={option.id}>{option.name}</option>
-				{/each}
-			</select>
-		</div>
-	{/if}
+	<div class="flex w-full flex-wrap items-end gap-3 sm:w-auto">
+		{#if device}
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+			<a href={rawReadings} class="btn btn-ghost">Show raw sensor readings</a>
+		{/if}
+		{#if data.classroom && data.devices.length > 1}
+			<div class="w-full sm:w-72">
+				<label class="label" for="domain-device">Sensor</label>
+				<select
+					id="domain-device"
+					class="input"
+					value={device?.id ?? ''}
+					onchange={(e) => go({ device: e.currentTarget.value })}
+				>
+					{#each data.devices as option (option.id)}
+						<option value={option.id}>{option.name}</option>
+					{/each}
+				</select>
+			</div>
+		{/if}
+	</div>
 </div>
 
 {#if !device || !data.tab}

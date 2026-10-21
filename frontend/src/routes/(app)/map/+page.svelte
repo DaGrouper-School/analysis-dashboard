@@ -9,9 +9,15 @@
 
 	let { data }: PageProps = $props();
 
+	// Opened from the dashboard: show that classroom's devices, with its picked sensor selected.
+	// svelte-ignore state_referenced_locally
+	let classroomId = $state(
+		data.conditions.some((c) => c.reading.classroomId === data.classroom) ? data.classroom : null
+	);
 	// svelte-ignore state_referenced_locally
 	let selectedId = $state(
 		data.conditions.find((c) => c.device.id === data.selected)?.device.id ??
+			data.conditions.find((c) => c.reading.classroomId === classroomId)?.device.id ??
 			data.conditions.find((c) => c.device.type === 'weather_station')?.device.id ??
 			data.conditions[0]?.device.id ??
 			''
@@ -23,11 +29,15 @@
 	const selected = $derived(data.conditions.find((c) => c.device.id === selectedId) ?? null);
 	const paramsById = $derived(new Map(data.parameters.map((p) => [p.id, p])));
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+	const classroomName = $derived(
+		data.conditions.find((c) => c.reading.classroomId === classroomId)?.classroomName ?? null
+	);
 	const classroomCount = $derived(new Set(data.conditions.map((c) => c.classroomName)).size);
 	const types = $derived([...new Set(data.conditions.map((c) => c.device.type))]);
 
 	const visible = $derived(
 		data.conditions.filter((c) => {
+			if (classroomId && c.reading.classroomId !== classroomId) return false;
 			if (hiddenTypes.includes(c.device.type)) return false;
 			const q = query.trim().toLowerCase();
 			return (
@@ -122,6 +132,17 @@
 					{data.conditions.length} device{data.conditions.length === 1 ? '' : 's'} · {classroomCount}
 					classroom{classroomCount === 1 ? '' : 's'}
 				</p>
+				{#if classroomName}
+					<button
+						type="button"
+						class="chip mt-3 border-line-strong text-ink"
+						aria-label="Show every classroom"
+						onclick={() => (classroomId = null)}
+					>
+						{classroomName}
+						<span aria-hidden="true" class="text-muted">×</span>
+					</button>
+				{/if}
 				<label class="sr-only" for="device-search">Search devices</label>
 				<input
 					id="device-search"

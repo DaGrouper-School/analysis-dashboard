@@ -6,5 +6,10 @@ export const load: PageLoad = async ({ url }) => {
 		services.labs.currentConditions(),
 		services.registry.listParameters()
 	]);
-	return { conditions, parameters, selected: url.searchParams.get('device') };
+	return {
+		conditions,
+		parameters,
+		selected: url.searchParams.get('device'),
+		classroom: url.searchParams.get('classroom')
+	};
 };
