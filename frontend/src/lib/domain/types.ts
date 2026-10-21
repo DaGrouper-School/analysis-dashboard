@@ -179,9 +179,43 @@ export interface Parameter {
 	source: 'weather_station' | 'manual' | 'device';
 	/** Numbers chart as trends; text values (e.g. a trend word) only show as they are. */
 	valueType?: ValueType;
+	/** Plausible range in `unit`, checked before a manual observation is sent. */
+	min?: number;
+	max?: number;
+	/** Other units people may measure in, converted to `unit` before sending. */
+	altUnits?: AltUnit[];
+	/** For text values: the answers to pick from. */
+	options?: string[];
 }
 
 export type ValueType = 'number' | 'text';
+
+/** Another unit for a value: `value * factor + offset` gives it in the parameter's own unit. */
+export interface AltUnit {
+	unit: string;
+	factor: number;
+	offset?: number;
+}
+
+/** One field of an observation template: a registry value, and whether it must be filled in. */
+export interface TemplateField {
+	parameterId: string;
+	required: boolean;
+}
+
+/**
+ * What a manual observation asks for, per domain (AP-16): a rain gauge reading, a coral spawning
+ * check, a species sighting. A template with a device type is read off a registered device of
+ * that type; one without is a field observation with no device.
+ */
+export interface ObservationTemplate {
+	id: string;
+	label: string;
+	description: string;
+	domain: EnvironmentalDomain | null;
+	deviceType: DeviceType | null;
+	fields: TemplateField[];
+}
 
 /** A kind of device and the values it is expected to send (SAM-23). Shared by every classroom. */
 export interface DeviceTypeDefinition {
@@ -325,12 +359,42 @@ export interface ReadingInput {
 	location: GeoPoint | null;
 }
 
+/** A manual observation, as sent from the guided form. Values are in each parameter's own unit. */
+export interface ObservationInput {
+	templateId: string;
+	labId: string;
+	/** The registered device it was read from. Null for a field observation. */
+	deviceId: string | null;
+	observedAt: string;
+	values: Record<string, number | string>;
+	/** From the phone's GPS. Null when there is no fix: the lab's location stands in. */
+	location: GeoPoint | null;
+}
+
+/**
+ * A stored manual observation. One read off a device is also one of that device's readings;
+ * a field observation is sent to SAM under the classroom.
+ */
+export interface Observation extends Omit<Reading, 'deviceId'> {
+	templateId: string;
+	deviceId: string | null;
+}
+
+/** A lab the user may record in, with its registered devices. */
+export interface ObservationTarget {
+	lab: Lab;
+	classroomName: string;
+	devices: Device[];
+}
+
 export interface LabDetail {
 	lab: Lab;
 	classroomName: string;
 	devices: Device[];
 	/** Recent readings from this lab's devices, newest first. */
 	readings: Reading[];
+	/** Field observations (no device) recorded in this lab, newest first. */
+	observations: Observation[];
 	/** Heads and facilitators can register devices and edit the lab. */
 	canManage: boolean;
 	/** Can connect a registered device and record its readings (also community scientists). */

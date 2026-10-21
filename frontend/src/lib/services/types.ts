@@ -21,6 +21,10 @@ import type {
 	Device,
 	Lab,
 	LabDetail,
+	Observation,
+	ObservationInput,
+	ObservationTarget,
+	ObservationTemplate,
 	Reading,
 	ReadingInput,
 	RecordOptions,
@@ -72,6 +76,11 @@ export interface RegistryService {
 	listParameters(): Promise<Parameter[]>;
 	listDomains(): Promise<DomainDefinition[]>;
 	listDeviceTypes(): Promise<DeviceTypeDefinition[]>;
+	/**
+	 * Guided forms for manual observations (AP-16), plus a plain one for each device type that
+	 * has none.
+	 */
+	listObservationTemplates(): Promise<ObservationTemplate[]>;
 	/** Platform admins only. */
 	listChanges(): Promise<RegistryChange[]>;
 	createDomain(input: DomainInput): Promise<DomainDefinition>;
@@ -144,6 +153,14 @@ export interface LabService {
 	listClassroomDevices(classroomId: string): Promise<Device[]>;
 	/** One device's readings, newest first, for anyone who can view its classroom. */
 	deviceReadings(deviceId: string, limit?: number): Promise<Reading[]>;
+	/** Labs the user may record observations in, with their registered devices. */
+	observationTargets(): Promise<ObservationTarget[]>;
+	/**
+	 * A manual observation from the guided form (AP-16). The backend runs the template's checks
+	 * again, tags it with the classroom and sends it to SAM: under the device for a device
+	 * reading, under the classroom for a field observation. No GPS: the lab's location, flagged.
+	 */
+	submitObservation(input: ObservationInput, options?: RecordOptions): Promise<Observation>;
 }
 
 export interface Services {

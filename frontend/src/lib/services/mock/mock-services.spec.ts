@@ -118,11 +118,11 @@ describe('onboarding (AP-02)', () => {
 });
 
 describe('registry (SAM-01, SAM-05)', () => {
-	it('registers the 36 station parameters, the manual rain gauge and six device values', async () => {
+	it('registers the 36 station parameters, the manual rain gauge, six device values and four field values', async () => {
 		const parameters = await services.registry.listParameters();
 		expect(parameters.filter((p) => p.source === 'weather_station')).toHaveLength(36);
-		expect(parameters).toHaveLength(43);
-		expect(new Set(parameters.map((p) => p.domain).filter(Boolean)).size).toBe(6);
+		expect(parameters).toHaveLength(47);
+		expect(new Set(parameters.map((p) => p.domain).filter(Boolean)).size).toBe(8);
 		expect(new Set(parameters.map((p) => p.id)).size).toBe(parameters.length);
 	});
 

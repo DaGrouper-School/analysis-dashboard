@@ -15,6 +15,7 @@
 		deviceTypeLabel,
 		SITE_SETTING_LABELS
 	} from '#lib/labels.ts';
+	import { formatValue } from '#lib/key-values.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
 
@@ -23,6 +24,9 @@
 	const lab = $derived(data.detail.lab);
 	const devices = $derived(data.detail.devices);
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+	const paramsById = $derived(new Map(data.parameters.map((p) => [p.id, p])));
+	const templateLabel = (id: string) => data.templates.find((t) => t.id === id)?.label ?? id;
+	const observeHref = $derived(resolve('/(app)/observe') + `?lab=${data.detail.lab.id}`);
 
 	/** Each device's readings, newest first. Position belongs to the reading, not the device. */
 	const readingsByDevice = $derived.by(() => {
@@ -198,6 +202,53 @@
 				{/each}
 			</ul>
 		</section>
+
+		{#if data.detail.canRecord}
+			<section class="card" aria-labelledby="observe-heading">
+				<h2 id="observe-heading" class="text-lg font-semibold">Manual observations</h2>
+				<p class="mt-1 text-sm text-muted">
+					A rain gauge reading, a coral spawning check or a species sighting, on a guided form that
+					checks your values before they are sent.
+				</p>
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+				<a class="btn btn-primary mt-4" href={observeHref}
+					><Icon name="plus" class="size-4" /> Submit an observation</a
+				>
+			</section>
+		{/if}
+
+		{#if data.detail.observations.length}
+			<section class="card" aria-labelledby="field-heading">
+				<h2 id="field-heading" class="text-lg font-semibold">
+					Field observations <span class="text-muted">{data.detail.observations.length}</span>
+				</h2>
+				<ul class="mt-3 divide-y divide-line text-sm">
+					{#each data.detail.observations as observation (observation.id)}
+						<li class="py-3">
+							<p class="font-medium">
+								{templateLabel(observation.templateId)}
+								<span class="font-normal text-muted"
+									>· {dateTime.format(new Date(observation.observedAt))}</span
+								>
+							</p>
+							<p class="text-muted">
+								{Object.entries(observation.values)
+									.map(
+										([id, value]) =>
+											`${paramsById.get(id)?.label ?? id} ${formatValue(value, paramsById.get(id)?.unit)}`
+									)
+									.join(' · ')}
+							</p>
+							<p class="text-xs text-muted">
+								{formatPoint(observation.location)}
+								{observation.locationSource === 'device' ? '· GPS' : '· lab location, no GPS'}
+								{observation.creditedTo ? `· recorded by ${observation.creditedTo}` : ''}
+							</p>
+						</li>
+					{/each}
+				</ul>
+			</section>
+		{/if}
 	</div>
 
 	{#if data.detail.canManage}
