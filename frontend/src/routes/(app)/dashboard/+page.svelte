@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { DOMAINS, OTHER_TAB, domainTabs } from '#lib/domains.ts';
+	import { domainTabs } from '#lib/domains.ts';
 	import { formatPoint } from '#lib/geo.ts';
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
@@ -23,20 +23,22 @@
 	const paramsById = $derived(new Map(data.parameters.map((p) => [p.id, p])));
 	// The domains the picked sensor sends values for open the domain view (AP-10).
 	const sensorTabs = $derived(domainTabs(data.readings, data.parameters));
+	// Only the domains this sensor has values for, in the registry's order.
 	const domainCards = $derived(
-		[
-			...DOMAINS.map((d) => ({ ...d, tab: sensorTabs.find((t) => t.id === d.id) })),
-			...sensorTabs.filter((t) => t.id === OTHER_TAB.id).map((t) => ({ ...t, tab: t }))
-		].map((d) => ({
-			...d,
-			// The path is resolved; only the query is added to it.
-			href:
-				data.classroom && data.device
-					? resolve('/(app)/dashboard/domains') +
-						sensorQuery(data.classroom.id, data.device.id) +
-						`&domain=${d.id}`
-					: ''
-		}))
+		data.classroom && data.device
+			? sensorTabs.map((tab) => ({
+					...tab,
+					// The path is resolved; only the query is added to it.
+					href:
+						resolve('/(app)/dashboard/domains') +
+						sensorQuery(data.classroom!.id, data.device!.id) +
+						`&domain=${tab.id}`
+				}))
+			: []
+	);
+	// The map opens on the same classroom and sensor.
+	const mapHref = $derived(
+		resolve('/(app)/map') + (data.classroom ? sensorQuery(data.classroom.id, data.device?.id) : '')
 	);
 
 	const device = $derived(data.device);
@@ -260,8 +262,10 @@
 			</div>
 		{/if}
 
+		<!-- The path is resolved; only the query is added to it. -->
+		<!-- eslint-disable svelte/no-navigation-without-resolve -->
 		<a
-			href={resolve('/(app)/map')}
+			href={mapHref}
 			class="card group relative flex min-h-80 flex-col overflow-hidden p-0 transition hover:border-line-strong"
 		>
 			<div class="flex items-baseline justify-between gap-3 p-5 pb-0">
@@ -279,6 +283,7 @@
 				{/key}
 			</div>
 		</a>
+		<!-- eslint-enable svelte/no-navigation-without-resolve -->
 	</section>
 
 	{#if recording && device && data.canRecord && data.labLocation && data.classroom}
@@ -373,35 +378,25 @@
 	{/if}
 {/if}
 
-<section class="mt-8">
-	<h2 class="text-lg font-semibold">Environmental domains</h2>
-	<p class="text-sm text-muted">
-		{device
-			? `Open a domain for each of ${device.name}'s values, with thresholds and trends.`
-			: 'Weather station parameters, grouped by domain.'}
-	</p>
-	<ul class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-		{#each domainCards as domain (domain.id)}
-			<li>
-				{#if domain.tab && data.classroom && device}
+{#if device && domainCards.length}
+	<section class="mt-8">
+		<h2 class="text-lg font-semibold">Environmental domains</h2>
+		<p class="text-sm text-muted">
+			Open a domain for each of {device.name}'s values, with thresholds and trends.
+		</p>
+		<ul class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+			{#each domainCards as domain (domain.id)}
+				<li>
 					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 					<a class="card block h-full p-4 transition hover:border-line-strong" href={domain.href}>
 						<span class="text-2xl" aria-hidden="true">{domain.icon}</span>
 						<p class="mt-3 font-semibold">{domain.label}</p>
 						<p class="text-xs text-muted">
-							{domain.tab.parameterIds.length} value{domain.tab.parameterIds.length === 1
-								? ''
-								: 's'} →
+							{domain.parameterIds.length} value{domain.parameterIds.length === 1 ? '' : 's'} →
 						</p>
 					</a>
-				{:else}
-					<div class="card h-full p-4 opacity-60">
-						<span class="text-2xl" aria-hidden="true">{domain.icon}</span>
-						<p class="mt-3 font-semibold">{domain.label}</p>
-						<p class="text-xs text-muted">Not on this sensor</p>
-					</div>
-				{/if}
-			</li>
-		{/each}
-	</ul>
-</section>
+				</li>
+			{/each}
+		</ul>
+	</section>
+{/if}
