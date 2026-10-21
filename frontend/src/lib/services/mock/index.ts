@@ -16,6 +16,7 @@ import { ServiceError, type Services } from '../types';
 import { createMockClassrooms } from './classrooms';
 import { createMockLabs } from './labs';
 import { createMockPlaces } from './places';
+import { createMockRegistry } from './registry';
 
 const RESEND_AFTER_MS = 30_000;
 const CODE_TTL_MS = 5 * 60_000;
@@ -283,10 +284,6 @@ export function createMockServices({ latency = 250, now = Date.now }: MockOption
 
 		places: createMockPlaces(delay),
 
-		registry: {
-			async listParameters() {
-				return readDb().parameters;
-			}
-		}
+		registry: createMockRegistry({ delay, now })
 	};
 }

@@ -8,12 +8,14 @@
 
 	let { data, children } = $props();
 
-	const nav = [
+	// Platform admins also manage the shared registry of device types and domains.
+	const nav = $derived([
 		{ href: resolve('/(app)/dashboard'), label: 'Dashboard' },
 		{ href: resolve('/(app)/map'), label: 'Map' },
 		{ href: resolve('/(app)/classrooms'), label: 'Classrooms' },
+		...(data.user.platformAdmin ? [{ href: resolve('/(app)/registry'), label: 'Registry' }] : []),
 		{ href: resolve('/(app)/profile'), label: 'Profile' }
-	];
+	]);
 </script>
 
 <div class="min-h-dvh">

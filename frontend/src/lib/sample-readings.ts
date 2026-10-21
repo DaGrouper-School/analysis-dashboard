@@ -4,7 +4,7 @@ import type { DeviceType, Reading } from '#lib/domain/types.ts';
  * Plausible values for a simulated device upload. Real readings come from the device itself;
  * this only exists so the mock can demonstrate connecting one.
  */
-export function sampleValues(type: DeviceType): Reading['values'] {
+export function sampleValues(type: DeviceType, parameterIds: string[] = []): Reading['values'] {
 	const jitter = (base: number, spread: number) =>
 		Math.round((base + (Math.random() - 0.5) * spread) * 10) / 10;
 	switch (type) {
@@ -25,6 +25,9 @@ export function sampleValues(type: DeviceType): Reading['values'] {
 		case 'air_quality_sensor':
 			return { pm2_5: Math.round(jitter(18, 20)), pm10: Math.round(jitter(30, 30)) };
 		default:
-			return { value: jitter(1, 1) };
+			// A type a platform admin registered: something for each value it is expected to send.
+			return parameterIds.length
+				? Object.fromEntries(parameterIds.map((id, i) => [id, jitter(10 + i * 5, 6)]))
+				: { value: jitter(1, 1) };
 	}
 }

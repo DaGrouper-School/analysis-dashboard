@@ -5,7 +5,7 @@
 	import { thresholdStatus } from '#lib/domain/alerts.ts';
 	import { TIME_RANGES, withinRange } from '#lib/domains.ts';
 	import { describeParameter, formatValue } from '#lib/key-values.ts';
-	import { DEVICE_TYPE_LABELS } from '#lib/labels.ts';
+	import { deviceTypeLabel } from '#lib/labels.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import type { PageProps } from './$types';
 
@@ -58,7 +58,7 @@
 		<h1 class="font-display text-3xl sm:text-4xl">Environmental domains</h1>
 		{#if device && data.classroom}
 			<p class="mt-1 text-muted">
-				{device.name} · {DEVICE_TYPE_LABELS[device.type]} · {data.classroom.name}
+				{device.name} · {deviceTypeLabel(data.deviceTypes, device.type)} · {data.classroom.name}
 			</p>
 		{/if}
 	</div>

@@ -1,22 +1,13 @@
-import type { EnvironmentalDomain, Parameter, Reading } from '#lib/domain/types.ts';
+import type { DomainDefinition, Parameter, Reading } from '#lib/domain/types.ts';
 
-/** The registry's environmental domains, in the order the dashboard shows them. */
-export const DOMAINS: { id: EnvironmentalDomain; label: string; icon: string }[] = [
-	{ id: 'AIR', label: 'Air', icon: '🌳' },
-	{ id: 'RAIN', label: 'Rain', icon: '🌧️' },
-	{ id: 'WIND', label: 'Wind', icon: '💨' },
-	{ id: 'SUN', label: 'Sun', icon: '☀️' },
-	{ id: 'WAVES', label: 'Waves', icon: '🌊' },
-	{ id: 'LIGHTNING', label: 'Lightning', icon: '⚡️' }
-];
-
-/** Values outside the registry, such as soil moisture, sit under their own tab. */
-export const OTHER_TAB = { id: 'OTHER', label: 'Sensor values', icon: '📟' } as const;
-
-export type DomainTabId = EnvironmentalDomain | typeof OTHER_TAB.id;
+/**
+ * Values with no domain yet: registered without one, or not in the registry at all. They still
+ * show, under their own tab, until a platform admin maps them (SAM-23).
+ */
+export const OTHER_TAB = { id: 'OTHER', label: 'Not in a domain', icon: '📟' } as const;
 
 export interface DomainTab {
-	id: DomainTabId;
+	id: string;
 	label: string;
 	icon: string;
 	/** Numeric parameters the device sends in this domain, in registry order. */
@@ -24,19 +15,27 @@ export interface DomainTab {
 }
 
 /**
- * The domains a device's readings cover, as tabs. Only numeric values count: a trend needs
- * numbers. Domains the device sends nothing for are left out.
+ * The domains a device's readings cover, as tabs in the registry's domain order. Only numeric
+ * values count: a trend needs numbers. Domains the device sends nothing for are left out.
  */
-export function domainTabs(readings: Reading[], parameters: Parameter[]): DomainTab[] {
+export function domainTabs(
+	readings: Reading[],
+	parameters: Parameter[],
+	domains: DomainDefinition[]
+): DomainTab[] {
 	const sent = new Set<string>();
 	for (const r of readings)
 		for (const [id, value] of Object.entries(r.values)) if (typeof value === 'number') sent.add(id);
-	const registered = new Set(parameters.map((p) => p.id));
-	const tabs: DomainTab[] = DOMAINS.map((d) => ({
-		...d,
+	const tabs: DomainTab[] = domains.map((d) => ({
+		id: d.id,
+		label: d.label,
+		icon: d.icon,
 		parameterIds: parameters.filter((p) => p.domain === d.id && sent.has(p.id)).map((p) => p.id)
 	}));
-	const other = [...sent].filter((id) => !registered.has(id));
+	const mapped = new Set(
+		parameters.filter((p) => domains.some((d) => d.id === p.domain)).map((p) => p.id)
+	);
+	const other = [...sent].filter((id) => !mapped.has(id));
 	if (other.length) tabs.push({ ...OTHER_TAB, parameterIds: other });
 	return tabs.filter((t) => t.parameterIds.length);
 }

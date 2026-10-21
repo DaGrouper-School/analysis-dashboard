@@ -7,7 +7,12 @@ import type {
 	Invitation,
 	InvitationPreview,
 	AuthResult,
+	DeviceTypeDefinition,
+	DeviceTypeInput,
+	DomainDefinition,
+	DomainInput,
 	Parameter,
+	RegistryChange,
 	PhoneChallenge,
 	PlaceSuggestion,
 	ProfileInput,
@@ -59,8 +64,29 @@ export interface PlacesService {
 	getAddress(placeId: string): Promise<Address>;
 }
 
+/**
+ * The shared registry (SAM-05, SAM-23): parameters, environmental domains and device types.
+ * Everyone signed in can read it; only platform admins change it, and every change is logged.
+ */
 export interface RegistryService {
 	listParameters(): Promise<Parameter[]>;
+	listDomains(): Promise<DomainDefinition[]>;
+	listDeviceTypes(): Promise<DeviceTypeDefinition[]>;
+	/** Platform admins only. */
+	listChanges(): Promise<RegistryChange[]>;
+	createDomain(input: DomainInput): Promise<DomainDefinition>;
+	/** The code never changes. */
+	updateDomain(id: string, input: Omit<DomainInput, 'id'>): Promise<DomainDefinition>;
+	/** Refused while any parameter is mapped to the domain. */
+	deleteDomain(id: string): Promise<void>;
+	createDeviceType(input: DeviceTypeInput): Promise<DeviceTypeDefinition>;
+	/**
+	 * Renames a type or changes its values. New values join the registry; the label, unit and
+	 * type of values added by device types can be edited. Station values stay as registered.
+	 */
+	updateDeviceType(id: string, input: DeviceTypeInput): Promise<DeviceTypeDefinition>;
+	/** Puts a parameter under a domain, or takes it out with null. */
+	mapParameter(parameterId: string, domain: string | null): Promise<Parameter>;
 }
 
 /**

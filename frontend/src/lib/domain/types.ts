@@ -155,7 +155,18 @@ export interface CreateClassroomInput {
 
 // ---- Parameter registry (SAM-01, SAM-05) -------------------------------------------
 
-export type EnvironmentalDomain = 'AIR' | 'WAVES' | 'SUN' | 'RAIN' | 'WIND' | 'LIGHTNING';
+/** An environmental domain's short code, e.g. `AIR` or `SOIL`. Platform admins add domains. */
+export type EnvironmentalDomain = string;
+
+/** An environmental domain in the registry (SAM-23). Shared by every classroom. */
+export interface DomainDefinition {
+	/** Short code, upper case, e.g. `SOIL`. Never changes once created. */
+	id: EnvironmentalDomain;
+	label: string;
+	/** An emoji shown on tabs and cards. */
+	icon: string;
+	description: string;
+}
 
 export interface Parameter {
 	/** Stable registry ID, e.g. `air_temperature`. */
@@ -163,8 +174,57 @@ export interface Parameter {
 	label: string;
 	definition: string;
 	unit: string;
-	domain: EnvironmentalDomain;
-	source: 'weather_station' | 'manual';
+	/** The domain this value shows under. Null until a platform admin maps it. */
+	domain: EnvironmentalDomain | null;
+	source: 'weather_station' | 'manual' | 'device';
+	/** Numbers chart as trends; text values (e.g. a trend word) only show as they are. */
+	valueType?: ValueType;
+}
+
+export type ValueType = 'number' | 'text';
+
+/** A kind of device and the values it is expected to send (SAM-23). Shared by every classroom. */
+export interface DeviceTypeDefinition {
+	/** Stable ID, e.g. `soil_sensor`. */
+	id: DeviceType;
+	label: string;
+	description: string;
+	/** Marker and chip color. */
+	color: string;
+	/** Registry parameters the device sends, in display order. */
+	parameterIds: string[];
+}
+
+/** One change to the registry, kept so stewards can see who changed what. */
+export interface RegistryChange {
+	id: string;
+	at: string;
+	byName: string;
+	summary: string;
+}
+
+export interface DomainInput {
+	id: string;
+	label: string;
+	icon: string;
+	description: string;
+}
+
+/** A value a new device type sends. An ID already in the registry reuses that parameter. */
+export interface ExpectedValueInput {
+	id: string;
+	label: string;
+	unit: string;
+	valueType: ValueType;
+	/** Used when the value is new to the registry; existing values keep their mapping. */
+	domain: EnvironmentalDomain | null;
+}
+
+export interface DeviceTypeInput {
+	label: string;
+	description: string;
+	color: string;
+	values: ExpectedValueInput[];
 }
 
 // ---- Labs and devices (AP-05) --------------------------------------------------------
@@ -196,8 +256,9 @@ export interface Lab {
 	createdAt: string;
 }
 
-export type DeviceType =
-	'weather_station' | 'soil_sensor' | 'rain_gauge' | 'water_probe' | 'air_quality_sensor' | 'other';
+/** A device type's ID. Built in: weather_station, soil_sensor, rain_gauge, water_probe,
+ * air_quality_sensor, other. Platform admins register more. */
+export type DeviceType = string;
 
 /**
  * A sensor registered to a lab. A device has no fixed position: GPS travels with each reading,

@@ -1,19 +1,15 @@
-import type { ClassroomRole, DeviceType, SiteSetting } from '#lib/domain/types.ts';
+import type {
+	ClassroomRole,
+	DeviceType,
+	DeviceTypeDefinition,
+	SiteSetting
+} from '#lib/domain/types.ts';
 
 export const CLASSROOM_ROLE_LABELS: Record<ClassroomRole, string> = {
 	institution_head: 'Institution head',
 	facilitator: 'Facilitator',
 	community_scientist: 'Community scientist',
 	researcher: 'Researcher'
-};
-
-export const DEVICE_TYPE_LABELS: Record<DeviceType, string> = {
-	weather_station: 'Weather station',
-	soil_sensor: 'Soil sensor',
-	rain_gauge: 'Rain gauge',
-	water_probe: 'Water probe',
-	air_quality_sensor: 'Air quality sensor',
-	other: 'Other'
 };
 
 export const SITE_SETTING_LABELS: Record<SiteSetting, string> = {
@@ -25,12 +21,27 @@ export const SITE_SETTING_LABELS: Record<SiteSetting, string> = {
 	other: 'Other'
 };
 
-/** Marker and chip colors per device type, from the dark theme's categorical set. */
-export const DEVICE_TYPE_COLORS: Record<DeviceType, string> = {
-	weather_station: '#3cc04b',
-	rain_gauge: '#00bdff',
-	soil_sensor: '#f6921e',
-	water_probe: '#2f7ff0',
-	air_quality_sensor: '#e8457a',
-	other: '#9aa5ae'
-};
+/** A device type's name, from the registry's device types. */
+export function deviceTypeLabel(types: DeviceTypeDefinition[], id: DeviceType) {
+	return (
+		types.find((t) => t.id === id)?.label ??
+		id.replaceAll('_', ' ').replace(/^./, (c) => c.toUpperCase())
+	);
+}
+
+/** A device type's marker and chip color, from the registry's device types. */
+export function deviceTypeColor(types: DeviceTypeDefinition[], id: DeviceType) {
+	return types.find((t) => t.id === id)?.color ?? '#9aa5ae';
+}
+
+/** Colors offered for a new device type, the built-in types' own first. */
+export const DEVICE_TYPE_PALETTE = [
+	'#3cc04b',
+	'#00bdff',
+	'#f6921e',
+	'#2f7ff0',
+	'#e8457a',
+	'#a77bf3',
+	'#d4b72c',
+	'#9aa5ae'
+];

@@ -1,5 +1,13 @@
 <script lang="ts">
-	import type { Device, GeoPoint, Parameter, Reading, ReadingInput } from '#lib/domain/types.ts';
+	import { page } from '$app/state';
+	import type {
+		Device,
+		DeviceTypeDefinition,
+		GeoPoint,
+		Parameter,
+		Reading,
+		ReadingInput
+	} from '#lib/domain/types.ts';
 	import { formatPoint } from '#lib/geo.ts';
 	import { keySummary } from '#lib/key-values.ts';
 	import { sampleValues } from '#lib/sample-readings.ts';
@@ -92,7 +100,12 @@
 				const input: ReadingInput = {
 					// Buffered readings, ten minutes apart, oldest first.
 					observedAt: new Date(now - (COUNT - 1 - i) * 10 * 60_000).toISOString(),
-					values: sampleValues(target.type),
+					values: sampleValues(
+						target.type,
+						(page.data.deviceTypes as DeviceTypeDefinition[] | undefined)?.find(
+							(t) => t.id === target.type
+						)?.parameterIds
+					),
 					location: NO_FIX.has(i) ? null : points[i]
 				};
 				const [reading] = await services.labs.uploadReadings(target.id, [input], { credit });

@@ -7,15 +7,16 @@ import type { PageLoad } from './$types';
  * AP-10: one sensor's readings by environmental domain. Only sensors in the user's own
  * classrooms can be opened; the pick falls back to one of theirs otherwise.
  */
-export const load: PageLoad = async ({ url }) => {
-	const [selection, parameters] = await Promise.all([
+export const load: PageLoad = async ({ url, parent }) => {
+	const [selection, parameters, { domains }] = await Promise.all([
 		selectSensor(url),
-		services.registry.listParameters()
+		services.registry.listParameters(),
+		parent()
 	]);
 	const { device } = selection;
 	// A month of readings covers every time range.
 	const readings = device ? await services.labs.deviceReadings(device.id, 1000) : [];
-	const tabs = domainTabs(readings, parameters);
+	const tabs = domainTabs(readings, parameters, domains);
 	const asked = url.searchParams.get('range');
 	return {
 		...selection,

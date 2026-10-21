@@ -5,7 +5,10 @@ import type {
 	Invitation,
 	InvitationPreview,
 	AuthResult,
+	DeviceTypeDefinition,
+	DomainDefinition,
 	Parameter,
+	RegistryChange,
 	PhoneChallenge,
 	PlaceSuggestion,
 	ProfileInput,
@@ -136,7 +139,26 @@ export function createHttpServices(baseUrl: string): Services {
 			getAddress: (placeId) => request<Address>('GET', `/places/${encodeURIComponent(placeId)}`)
 		},
 		registry: {
-			listParameters: () => request<Parameter[]>('GET', '/sam/parameters')
+			listParameters: () => request<Parameter[]>('GET', '/sam/parameters'),
+			listDomains: () => request<DomainDefinition[]>('GET', '/sam/domains'),
+			listDeviceTypes: () => request<DeviceTypeDefinition[]>('GET', '/sam/device-types'),
+			listChanges: () => request<RegistryChange[]>('GET', '/sam/changes'),
+			createDomain: (input) => request<DomainDefinition>('POST', '/sam/domains', input),
+			updateDomain: (id, input) =>
+				request<DomainDefinition>('PATCH', `/sam/domains/${encodeURIComponent(id)}`, input),
+			deleteDomain: (id) => request<void>('DELETE', `/sam/domains/${encodeURIComponent(id)}`),
+			createDeviceType: (input) =>
+				request<DeviceTypeDefinition>('POST', '/sam/device-types', input),
+			updateDeviceType: (id, input) =>
+				request<DeviceTypeDefinition>(
+					'PATCH',
+					`/sam/device-types/${encodeURIComponent(id)}`,
+					input
+				),
+			mapParameter: (parameterId, domain) =>
+				request<Parameter>('PATCH', `/sam/parameters/${encodeURIComponent(parameterId)}`, {
+					domain
+				})
 		}
 	};
 }

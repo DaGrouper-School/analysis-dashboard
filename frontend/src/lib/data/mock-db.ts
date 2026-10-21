@@ -1,4 +1,7 @@
 import type {
+	DeviceTypeDefinition,
+	DomainDefinition,
+	RegistryChange,
 	ClassroomRole,
 	InvitationStatus,
 	Parameter,
@@ -82,6 +85,10 @@ export interface MockDbState {
 	/** Stand-in for the HTTP-only session cookie the real backend will issue. */
 	session: { token: string; userId: string } | null;
 	parameters: Parameter[];
+	domains: DomainDefinition[];
+	deviceTypes: DeviceTypeDefinition[];
+	/** Registry changes, newest first. */
+	registryChanges: RegistryChange[];
 	/** Readings received from devices. Each was also forwarded to SAM under `samSourceId`. */
 	readings: (Omit<Reading, 'creditedTo'> & {
 		samSourceId: string;
@@ -98,7 +105,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 10;
+const VERSION = 11;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;
