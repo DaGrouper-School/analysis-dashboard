@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
+	import { navigating, page } from '$app/state';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import Logo from '#lib/components/Logo.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
@@ -17,7 +17,9 @@
 </script>
 
 <div class="min-h-dvh">
-	<header class="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur">
+	<header
+		class="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur [view-transition-name:app-header]"
+	>
 		<div class="mx-auto flex max-w-6xl items-center gap-2 px-3 py-3 sm:gap-4 sm:px-6">
 			<a href={resolve('/(app)/dashboard')} aria-label="Dashboard"><Logo compact /></a>
 			<nav
@@ -46,7 +48,22 @@
 			</p>
 		{/if}
 	</header>
-	<main class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+	<!-- While the next page or sensor loads: a thin bar under the header, and the current
+	     content dims after a beat, so a quick switch doesn't flicker. -->
+	{#if navigating.to}
+		<div
+			class="nav-progress fixed inset-x-0 top-0 z-30 h-0.5 overflow-hidden"
+			role="progressbar"
+			aria-label="Loading"
+		></div>
+	{/if}
+	<main
+		class={[
+			'mx-auto max-w-6xl px-4 py-8 transition-opacity duration-200 sm:px-6',
+			navigating.to && 'opacity-60 delay-150'
+		]}
+		aria-busy={navigating.to ? 'true' : undefined}
+	>
 		{@render children()}
 	</main>
 </div>
