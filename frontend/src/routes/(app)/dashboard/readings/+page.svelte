@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import Icon from '#lib/components/Icon.svelte';
 	import { formatPoint } from '#lib/geo.ts';
 	import { describeParameter, keySummary } from '#lib/key-values.ts';
-	import { deviceTypeLabel } from '#lib/labels.ts';
+	import { deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import type { PageProps } from './$types';
 
@@ -36,7 +37,10 @@
 	<div>
 		<h1 class="font-display text-3xl sm:text-4xl">Raw sensor readings</h1>
 		{#if device && data.classroom}
-			<p class="mt-1 text-muted">
+			<p class="mt-1 flex flex-wrap items-center gap-x-1.5 text-muted">
+				<span class="inline-flex" style:color={deviceTypeColor(data.deviceTypes, device.type)}
+					><Icon name={deviceTypeIcon(data.deviceTypes, device.type)} class="size-5" /></span
+				>
 				{device.name} · {deviceTypeLabel(data.deviceTypes, device.type)} · {data.classroom.name}
 			</p>
 		{/if}
