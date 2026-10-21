@@ -108,3 +108,48 @@
 		@apply text-sm font-medium text-muted;
 	}
 }
+
+/* Page and sensor changes crossfade (see onNavigate in the root layout). The app header has its
+   own name, so it stays put while the content under it fades and settles 4px. */
+::view-transition-old(root) {
+	animation: 120ms ease-out both view-fade-out;
+}
+::view-transition-new(root) {
+	animation: 180ms ease-out both view-fade-in;
+}
+@keyframes view-fade-out {
+	to {
+		opacity: 0;
+	}
+}
+@keyframes view-fade-in {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+}
+/* Loading bar for navigations: a teal sweep along the top of the window. */
+.nav-progress::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	width: 40%;
+	background: var(--color-teal);
+	animation: 1s ease-in-out infinite nav-sweep;
+}
+@keyframes nav-sweep {
+	from {
+		transform: translateX(-100%);
+	}
+	to {
+		transform: translateX(250%);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	::view-transition-group(*),
+	.nav-progress::before,
+	::view-transition-old(*),
+	::view-transition-new(*) {
+		animation: none !important;
+	}
+}

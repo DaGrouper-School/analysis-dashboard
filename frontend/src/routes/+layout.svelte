@@ -1,6 +1,6 @@
 <script lang="ts">
 	import './layout.css';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidateAll, onNavigate } from '$app/navigation';
 	import appleTouchIcon from '#lib/assets/apple-touch-icon.png';
 	import favicon from '#lib/assets/favicon.svg';
 	import faviconPng from '#lib/assets/favicon-32.png';
@@ -13,6 +13,20 @@
 	// Every account in this browser shares the mock data: when another tab records a reading or
 	// changes a classroom, reload this page's data so it shows up here too.
 	$effect(() => (isMockDataSource ? watchOtherTabs(() => invalidateAll()) : undefined));
+
+	// Crossfade between pages, and between sensors on the same page, instead of swapping the
+	// content in one frame. Browsers without view transitions, and people who ask for reduced
+	// motion, get the plain swap.
+	onNavigate((navigation) => {
+		if (!document.startViewTransition) return;
+		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+		return new Promise((done) => {
+			document.startViewTransition(async () => {
+				done();
+				await navigation.complete;
+			});
+		});
+	});
 </script>
 
 <svelte:head>

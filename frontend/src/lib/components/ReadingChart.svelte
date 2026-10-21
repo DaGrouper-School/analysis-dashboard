@@ -123,9 +123,13 @@
 	);
 </script>
 
-<div class="relative" bind:clientWidth={width}>
+<!-- Holds its height while it measures its width or swaps data, so nothing below it jumps. -->
+<div class="relative" style:min-height="{height}px" bind:clientWidth={width}>
 	{#if points.length < 2}
-		<p class="py-10 text-center text-sm text-muted">
+		<p
+			class="flex items-center justify-center text-center text-sm text-muted"
+			style:height="{height}px"
+		>
 			{points.length
 				? 'Only one reading so far: the chart needs at least two.'
 				: `No ${label.toLowerCase()} readings yet.`}
