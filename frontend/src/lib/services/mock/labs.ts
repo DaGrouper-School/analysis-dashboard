@@ -1,6 +1,19 @@
-import type { CreateLabInput, CurrentConditions, Device, Lab, Reading } from '#lib/domain/types.ts';
+import type {
+	CreateLabInput,
+	CurrentConditions,
+	Device,
+	Lab,
+	Observation,
+	Reading
+} from '#lib/domain/types.ts';
 import { alertsFor } from '#lib/domain/alerts.ts';
-import { validateDevice, validateLab, validateReading } from '#lib/domain/validation.ts';
+import {
+	isValidGeoPoint,
+	validateDevice,
+	validateLab,
+	validateReading
+} from '#lib/domain/validation.ts';
+import { checkObservation, withDeviceTemplates } from '#lib/observations.ts';
 import { newId, readDb, updateDb, type MockDbState, type StoredDevice } from '#lib/data/mock-db.ts';
 import { ServiceError, type LabService } from '../types';
 import { currentUser, permissionsFor, roleIn } from './classrooms';
@@ -41,6 +54,27 @@ function toReading(state: MockDbState, stored: MockDbState['readings'][number]):
 		? (state.users.find((u) => u.id === credited)?.fullName ?? null)
 		: null;
 	return { ...(reading as Omit<Reading, 'creditedTo'>), creditedTo };
+}
+
+/** A stored field observation, shown the same way as a reading. */
+function toObservation(
+	state: MockDbState,
+	stored: MockDbState['observations'][number]
+): Observation {
+	const credited = stored.creditedToUserId;
+	return {
+		id: stored.id,
+		templateId: stored.templateId,
+		deviceId: null,
+		labId: stored.labId,
+		classroomId: stored.classroomId,
+		observedAt: stored.observedAt,
+		receivedAt: stored.receivedAt,
+		values: { ...stored.values },
+		location: { ...stored.location },
+		locationSource: stored.locationSource,
+		creditedTo: credited ? (state.users.find((u) => u.id === credited)?.fullName ?? null) : null
+	};
 }
 
 function newestFirst(a: { observedAt: string }, b: { observedAt: string }) {
@@ -135,6 +169,11 @@ export function createMockLabs({
 					.sort(newestFirst)
 					.slice(0, 50)
 					.map((r) => toReading(state, r)),
+				observations: state.observations
+					.filter((o) => o.labId === lab.id)
+					.sort(newestFirst)
+					.slice(0, 50)
+					.map((o) => toObservation(state, o)),
 				canManage,
 				canRecord: can.recordReadings
 			};
@@ -321,6 +360,98 @@ export function createMockLabs({
 				.sort(newestFirst)
 				.slice(0, limit)
 				.map((r) => toReading(state, r));
+		},
+
+		async observationTargets() {
+			await delay();
+			const state = readDb();
+			const user = currentUser(state);
+			return state.labs
+				.filter((lab) => {
+					const role = roleIn(state, lab.classroomId, user.id);
+					// Membership only: admins record in classrooms they belong to, like everyone.
+					return role !== null && permissionsFor(user, role).recordReadings;
+				})
+				.map((lab) => {
+					const role = roleIn(state, lab.classroomId, user.id);
+					return {
+						lab,
+						classroomName: classroomOf(state, lab).name,
+						devices: state.devices
+							.filter((d) => d.labId === lab.id)
+							.map((d) => toDevice(state, d, permissionsFor(user, role).seeCode))
+					};
+				});
+		},
+
+		async submitObservation(input, options = { credit: false }) {
+			await delay();
+			const errors: Record<string, string> = {};
+			const at = Date.parse(input.observedAt);
+			if (Number.isNaN(at)) errors.observedAt = 'Enter when you observed it.';
+			else if (at > now() + 5 * 60_000) errors.observedAt = 'That time is in the future.';
+			if (input.location && !isValidGeoPoint(input.location)) {
+				errors.location = 'That GPS position is not valid.';
+			}
+			return updateDb((state) => {
+				const { user, lab, can } = accessLab(state, input.labId);
+				if (!can.recordReadings) {
+					throw new ServiceError(
+						'forbidden',
+						'You can read this classroom’s data but not record observations.'
+					);
+				}
+				const templates = withDeviceTemplates(
+					state.observationTemplates,
+					state.deviceTypes,
+					state.parameters
+				);
+				const template = templates.find((t) => t.id === input.templateId);
+				if (!template)
+					throw new ServiceError('not_found', 'That observation form no longer exists.');
+				Object.assign(errors, checkObservation(template, state.parameters, input.values));
+				// A device reading needs one of the lab's registered devices of that type. Devices are
+				// never added from here: registering one is for facilitators, on the lab page.
+				const device = template.deviceType
+					? state.devices.find((d) => d.id === input.deviceId && d.labId === lab.id)
+					: null;
+				if (template.deviceType && device?.type !== template.deviceType) {
+					errors.deviceId = 'Choose one of this lab’s registered devices of that type.';
+				}
+				if (!template.deviceType && input.deviceId) {
+					errors.deviceId = 'A field observation is not read off a device.';
+				}
+				if (Object.keys(errors).length) {
+					throw new ServiceError('invalid_input', 'Check the highlighted fields.', errors);
+				}
+				const base = {
+					id: newId('obs'),
+					labId: lab.id,
+					classroomId: lab.classroomId,
+					observedAt: new Date(at).toISOString(),
+					receivedAt: iso(),
+					values: { ...input.values },
+					// No GPS: stand in with the lab's location, and say so.
+					location: { ...(input.location ?? lab.location) },
+					locationSource: input.location ? ('device' as const) : ('lab' as const),
+					creditedToUserId: options.credit ? user.id : null,
+					templateId: template.id
+				};
+				if (device) {
+					// A device reading joins the device's readings and its SAM source.
+					const stored = { ...base, deviceId: device.id, samSourceId: sourceIdFor(state, device) };
+					state.readings.push(stored);
+					return { ...toReading(state, stored), templateId: template.id };
+				}
+				// A field observation goes to SAM under the classroom's own source.
+				const stored = {
+					...base,
+					deviceId: null,
+					samSourceId: classroomOf(state, lab).code
+				};
+				state.observations.push(stored);
+				return toObservation(state, stored);
+			});
 		}
 	};
 }

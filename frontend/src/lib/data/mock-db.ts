@@ -7,6 +7,7 @@ import type {
 	Parameter,
 	DeviceType,
 	Lab,
+	ObservationTemplate,
 	Reading,
 	User
 } from '#lib/domain/types.ts';
@@ -74,6 +75,12 @@ export interface StoredDevice {
 	registeredAt: string;
 }
 
+type StoredRecord = Omit<Reading, 'creditedTo'> & {
+	samSourceId: string;
+	/** Who recorded it, when they opted in to credit. Resolved to their current name on read. */
+	creditedToUserId: string | null;
+};
+
 export interface MockDbState {
 	version: number;
 	users: User[];
@@ -89,12 +96,14 @@ export interface MockDbState {
 	deviceTypes: DeviceTypeDefinition[];
 	/** Registry changes, newest first. */
 	registryChanges: RegistryChange[];
+	observationTemplates: ObservationTemplate[];
 	/** Readings received from devices. Each was also forwarded to SAM under `samSourceId`. */
-	readings: (Omit<Reading, 'creditedTo'> & {
-		samSourceId: string;
-		/** Who recorded it, when they opted in to credit. Resolved to their current name on read. */
-		creditedToUserId: string | null;
+	readings: (StoredRecord & {
+		/** Set when it was entered by hand through an observation template. */
+		templateId?: string;
 	})[];
+	/** Field observations: no device, sent to SAM under the classroom's source. */
+	observations: (Omit<StoredRecord, 'deviceId'> & { deviceId: null; templateId: string })[];
 	classrooms: StoredClassroom[];
 	memberships: StoredMembership[];
 	invitations: StoredInvitation[];
@@ -105,7 +114,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 12;
+const VERSION = 13;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;

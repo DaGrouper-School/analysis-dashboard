@@ -1,8 +1,10 @@
 import type {
+	AltUnit,
 	DeviceTypeDefinition,
 	DomainDefinition,
 	EnvironmentalDomain,
 	GeoPoint,
+	ObservationTemplate,
 	Parameter,
 	Reading,
 	User
@@ -391,8 +393,72 @@ const parameters: Parameter[] = [
 		definition,
 		domain,
 		source: 'device'
-	}))
+	})),
+	// Values only people record, from the field observation templates below.
+	{
+		id: 'coral_spawning_observed',
+		label: 'Spawning seen',
+		unit: '',
+		definition: 'Whether corals were releasing eggs and sperm during the check.',
+		domain: 'REEF',
+		source: 'manual',
+		valueType: 'text',
+		options: ['Yes', 'No', 'Not sure']
+	},
+	{
+		id: 'coral_colonies_spawning',
+		label: 'Colonies spawning',
+		unit: 'colonies',
+		definition: 'How many coral colonies were seen spawning.',
+		domain: 'REEF',
+		source: 'manual'
+	},
+	{
+		id: 'species_name',
+		label: 'Species',
+		unit: '',
+		definition: 'Common or scientific name of what was seen.',
+		domain: 'LIFE',
+		source: 'manual',
+		valueType: 'text'
+	},
+	{
+		id: 'species_count',
+		label: 'How many',
+		unit: 'individuals',
+		definition: 'Number of individuals seen.',
+		domain: 'LIFE',
+		source: 'manual'
+	}
 ];
+
+const CELSIUS_FROM_F: AltUnit = { unit: '°F', factor: 5 / 9, offset: -160 / 9 };
+const HPA_FROM_INHG: AltUnit = { unit: 'inHg', factor: 33.8639 };
+const MS_FROM: AltUnit[] = [
+	{ unit: 'km/h', factor: 1 / 3.6 },
+	{ unit: 'mph', factor: 0.44704 }
+];
+
+/**
+ * Pre-submission checks for values people enter by hand (AP-16): the plausible range in the
+ * value's own unit, and other units it may be measured in.
+ */
+const checks: Record<string, Pick<Parameter, 'min' | 'max' | 'altUnits'>> = {
+	air_temperature: { min: -60, max: 60, altUnits: [CELSIUS_FROM_F] },
+	relative_humidity: { min: 0, max: 100 },
+	wind_avg: { min: 0, max: 80, altUnits: MS_FROM },
+	station_pressure: { min: 500, max: 1100, altUnits: [HPA_FROM_INHG] },
+	rain_gauge_daily_accumulation: { min: 0, max: 500, altUnits: [{ unit: 'in', factor: 25.4 }] },
+	soil_moisture: { min: 0, max: 100 },
+	soil_temperature: { min: -20, max: 70, altUnits: [CELSIUS_FROM_F] },
+	water_temperature: { min: -2, max: 45, altUnits: [CELSIUS_FROM_F] },
+	water_ph: { min: 0, max: 14 },
+	pm2_5: { min: 0, max: 1000 },
+	pm10: { min: 0, max: 2000 },
+	coral_colonies_spawning: { min: 0, max: 1000 },
+	species_count: { min: 1, max: 100000 }
+};
+for (const parameter of parameters) Object.assign(parameter, checks[parameter.id]);
 
 const labs: MockDbState['labs'] = [
 	{
@@ -662,7 +728,9 @@ const domains: DomainDefinition[] = [
 	{ id: 'WIND', label: 'Wind', icon: 'wind', description: 'Wind speed and direction.' },
 	{ id: 'SUN', label: 'Sun', icon: 'sun', description: 'Sunlight, UV and brightness.' },
 	{ id: 'WAVES', label: 'Waves', icon: 'waves', description: 'Air pressure and its trend.' },
-	{ id: 'LIGHTNING', label: 'Lightning', icon: 'bolt', description: 'Strikes and their distance.' }
+	{ id: 'LIGHTNING', label: 'Lightning', icon: 'bolt', description: 'Strikes and their distance.' },
+	{ id: 'REEF', label: 'Reefs', icon: 'droplet', description: 'Coral health and spawning.' },
+	{ id: 'LIFE', label: 'Wildlife', icon: 'sprout', description: 'Species seen and how many.' }
 ];
 
 const deviceTypes: DeviceTypeDefinition[] = [
@@ -716,6 +784,87 @@ const deviceTypes: DeviceTypeDefinition[] = [
 	}
 ];
 
+/** Guided forms for manual observations (AP-16). Device types without one get a plain form. */
+const observationTemplates: ObservationTemplate[] = [
+	{
+		id: 'tpl_rain_gauge',
+		label: 'Rain gauge reading',
+		description: 'Read the gauge once a day, at the same time, then empty it.',
+		domain: 'RAIN',
+		deviceType: 'rain_gauge',
+		fields: [{ parameterId: 'rain_gauge_daily_accumulation', required: true }]
+	},
+	{
+		id: 'tpl_station_spot_check',
+		label: 'Weather station spot check',
+		description: 'Copy what the station display shows, to check it against what it sends.',
+		domain: 'AIR',
+		deviceType: 'weather_station',
+		fields: [
+			{ parameterId: 'air_temperature', required: true },
+			{ parameterId: 'relative_humidity', required: false },
+			{ parameterId: 'wind_avg', required: false },
+			{ parameterId: 'station_pressure', required: false }
+		]
+	},
+	{
+		id: 'tpl_soil_check',
+		label: 'Soil check',
+		description: 'Read the soil sensor, or a handheld probe pushed in next to it.',
+		domain: null,
+		deviceType: 'soil_sensor',
+		fields: [
+			{ parameterId: 'soil_moisture', required: true },
+			{ parameterId: 'soil_temperature', required: false }
+		]
+	},
+	{
+		id: 'tpl_water_check',
+		label: 'Water check',
+		description: 'Take the probe reading at the usual spot, away from the edge.',
+		domain: null,
+		deviceType: 'water_probe',
+		fields: [
+			{ parameterId: 'water_temperature', required: true },
+			{ parameterId: 'water_ph', required: true }
+		]
+	},
+	{
+		id: 'tpl_air_quality',
+		label: 'Air quality reading',
+		description: 'Read the counter after it has run for a minute.',
+		domain: 'AIR',
+		deviceType: 'air_quality_sensor',
+		fields: [
+			{ parameterId: 'pm2_5', required: true },
+			{ parameterId: 'pm10', required: false }
+		]
+	},
+	{
+		id: 'tpl_coral_spawning',
+		label: 'Coral spawning',
+		description: 'A night dive or snorkel check on the reef after the full moon.',
+		domain: 'REEF',
+		deviceType: null,
+		fields: [
+			{ parameterId: 'coral_spawning_observed', required: true },
+			{ parameterId: 'coral_colonies_spawning', required: false },
+			{ parameterId: 'water_temperature', required: false }
+		]
+	},
+	{
+		id: 'tpl_species_sighting',
+		label: 'Species sighting',
+		description: 'A plant or animal you identified, and how many you saw.',
+		domain: 'LIFE',
+		deviceType: null,
+		fields: [
+			{ parameterId: 'species_name', required: true },
+			{ parameterId: 'species_count', required: true }
+		]
+	}
+];
+
 export function createSeed(): Omit<MockDbState, 'version'> {
 	// Deep copy so a reset never shares objects with mutated state.
 	return structuredClone({
@@ -733,7 +882,9 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 		domains,
 		deviceTypes,
 		registryChanges: [],
+		observationTemplates,
 		readings,
+		observations: [],
 		classrooms,
 		memberships,
 		invitations,

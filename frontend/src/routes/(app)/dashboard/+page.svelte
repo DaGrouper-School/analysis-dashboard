@@ -51,6 +51,11 @@
 	);
 
 	const device = $derived(data.device);
+	// AP-16: a manual reading for this sensor, on the guided form.
+	const observeHref = $derived(
+		resolve('/(app)/observe') +
+			(data.device ? `?lab=${data.device.labId}&device=${data.device.id}` : '')
+	);
 	const latest = $derived(data.readings[0] ?? null);
 	const tiles = $derived(device && latest ? keyValues(device.type, latest.values, paramsById) : []);
 
@@ -266,6 +271,8 @@
 						>
 							<Icon name="sync" class="size-4" /> Sync
 						</button>
+						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+						<a class="btn btn-ghost" href={observeHref}>Enter a reading by hand</a>
 					{/if}
 					<button type="button" class="btn btn-ghost" onclick={showReadings}>
 						<Icon name="readings" class="size-4" /> Show raw sensor readings

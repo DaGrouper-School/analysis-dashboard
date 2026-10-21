@@ -16,6 +16,9 @@ import type {
 	Device,
 	Lab,
 	LabDetail,
+	Observation,
+	ObservationTarget,
+	ObservationTemplate,
 	Reading,
 	User
 } from '#lib/domain/types.ts';
@@ -131,7 +134,13 @@ export function createHttpServices(baseUrl: string): Services {
 				request<Reading[]>(
 					'GET',
 					`/devices/${encodeURIComponent(deviceId)}/readings?limit=${limit}`
-				)
+				),
+			observationTargets: () => request<ObservationTarget[]>('GET', '/me/observation-targets'),
+			submitObservation: (input, options = { credit: false }) =>
+				request<Observation>('POST', `/labs/${encodeURIComponent(input.labId)}/observations`, {
+					...input,
+					credit: options.credit
+				})
 		},
 		places: {
 			autocomplete: (q) =>
@@ -142,6 +151,8 @@ export function createHttpServices(baseUrl: string): Services {
 			listParameters: () => request<Parameter[]>('GET', '/sam/parameters'),
 			listDomains: () => request<DomainDefinition[]>('GET', '/sam/domains'),
 			listDeviceTypes: () => request<DeviceTypeDefinition[]>('GET', '/sam/device-types'),
+			listObservationTemplates: () =>
+				request<ObservationTemplate[]>('GET', '/sam/observation-templates'),
 			listChanges: () => request<RegistryChange[]>('GET', '/sam/changes'),
 			createDomain: (input) => request<DomainDefinition>('POST', '/sam/domains', input),
 			updateDomain: (id, input) =>

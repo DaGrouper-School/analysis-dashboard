@@ -10,6 +10,7 @@ import { ServiceError, type RegistryService } from '../types';
 import { currentUser } from './classrooms';
 import { DEVICE_TYPE_PALETTE } from '#lib/labels.ts';
 import { FALLBACK_DOMAIN_ICON, FALLBACK_TYPE_ICON } from '#lib/icons.ts';
+import { withDeviceTemplates } from '#lib/observations.ts';
 
 /**
  * The shared registry. Reading it needs a signed-in user; changing it needs a platform admin,
@@ -131,6 +132,13 @@ export function createMockRegistry({
 
 		async listDeviceTypes() {
 			return structuredClone(readDb().deviceTypes);
+		},
+
+		async listObservationTemplates() {
+			const state = readDb();
+			return structuredClone(
+				withDeviceTemplates(state.observationTemplates, state.deviceTypes, state.parameters)
+			);
 		},
 
 		async listChanges() {
