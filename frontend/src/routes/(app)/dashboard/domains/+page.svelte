@@ -6,7 +6,7 @@
 	import { thresholdStatus } from '#lib/domain/alerts.ts';
 	import { TIME_RANGES, withinRange } from '#lib/domains.ts';
 	import { describeParameter, formatValue } from '#lib/key-values.ts';
-	import { deviceTypeColor, deviceTypeLabel } from '#lib/labels.ts';
+	import { deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import type { PageProps } from './$types';
 
@@ -58,7 +58,10 @@
 	<div>
 		<h1 class="font-display text-3xl sm:text-4xl">Environmental domains</h1>
 		{#if device && data.classroom}
-			<p class="mt-1 text-muted">
+			<p class="mt-1 flex flex-wrap items-center gap-x-1.5 text-muted">
+				<span class="inline-flex" style:color={deviceTypeColor(data.deviceTypes, device.type)}
+					><Icon name={deviceTypeIcon(data.deviceTypes, device.type)} class="size-5" /></span
+				>
 				{device.name} · {deviceTypeLabel(data.deviceTypes, device.type)} · {data.classroom.name}
 			</p>
 		{/if}
@@ -66,7 +69,9 @@
 	<div class="flex w-full flex-wrap items-end gap-3 sm:w-auto">
 		{#if device}
 			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-			<a href={rawReadings} class="btn btn-ghost">Show raw sensor readings</a>
+			<a href={rawReadings} class="btn btn-ghost"
+				><Icon name="readings" class="size-4" /> Show raw sensor readings</a
+			>
 		{/if}
 		{#if data.classroom && data.devices.length > 1}
 			<div class="w-full sm:w-72">

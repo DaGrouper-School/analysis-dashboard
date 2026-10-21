@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import Icon from '#lib/components/Icon.svelte';
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import RollingNumber from '#lib/components/RollingNumber.svelte';
 	import type { DeviceType } from '#lib/domain/types.ts';
 	import { formatPoint } from '#lib/geo.ts';
 	import { formatValue, keyValues } from '#lib/key-values.ts';
-	import { deviceTypeColor, deviceTypeLabel } from '#lib/labels.ts';
+	import { deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
 	import { reveal } from '#lib/reveal.ts';
 	import type { PageProps } from './$types';
 
@@ -121,11 +122,12 @@
 				aria-label="Legend"
 			>
 				{#each types as type (type)}
-					<li class="flex items-center gap-2">
-						<span
-							class="size-2 rounded-full"
-							style:background={deviceTypeColor(data.deviceTypes, type)}
-						></span>
+					<li
+						class="flex items-center gap-2"
+						style:--type={deviceTypeColor(data.deviceTypes, type)}
+					>
+						<span class="size-2 rounded-full bg-(--type)"></span>
+						<Icon name={deviceTypeIcon(data.deviceTypes, type)} class="size-4 text-(--type)" />
 						{deviceTypeLabel(data.deviceTypes, type)}
 					</li>
 				{/each}
@@ -179,11 +181,9 @@
 							aria-pressed={on}
 							onclick={() => toggleType(type)}
 						>
-							<span
-								class="size-2 rounded-full"
-								style:background={on ? deviceTypeColor(data.deviceTypes, type) : 'transparent'}
-								style:box-shadow="inset 0 0 0 1.5px {deviceTypeColor(data.deviceTypes, type)}"
-							></span>
+							<span style:color={on ? deviceTypeColor(data.deviceTypes, type) : undefined}
+								><Icon name={deviceTypeIcon(data.deviceTypes, type)} class="size-3.5" /></span
+							>
 							{deviceTypeLabel(data.deviceTypes, type)}
 						</button>
 					{/each}
@@ -202,9 +202,15 @@
 							onclick={() => (selectedId = item.device.id)}
 						>
 							<span
-								class="mt-1.5 size-2 shrink-0 rounded-full"
-								style:background={deviceTypeColor(data.deviceTypes, item.device.type)}
-							></span>
+								class="grid size-8 shrink-0 place-items-center rounded-md"
+								style:color={deviceTypeColor(data.deviceTypes, item.device.type)}
+								style:background="color-mix(in oklab, {deviceTypeColor(
+									data.deviceTypes,
+									item.device.type
+								)} 15%, transparent)"
+							>
+								<Icon name={deviceTypeIcon(data.deviceTypes, item.device.type)} class="size-4" />
+							</span>
 							<span class="min-w-0 flex-1">
 								<span class="block truncate text-ink">{item.device.name}</span>
 								<span class="block text-xs text-muted">
@@ -235,7 +241,13 @@
 				aria-label="Current conditions"
 			>
 				<p class="text-xs text-muted">Current conditions</p>
-				<h2 class="mt-1 text-xl">{selected.device.name}</h2>
+				<h2 class="mt-1 flex items-center gap-2 text-xl">
+					<Icon
+						name={deviceTypeIcon(data.deviceTypes, selected.device.type)}
+						class="size-6 text-(--accent)"
+					/>
+					{selected.device.name}
+				</h2>
 				<p class="mt-1 text-sm text-muted">
 					{selected.classroomName} ·
 					<a
