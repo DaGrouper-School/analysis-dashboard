@@ -5,7 +5,7 @@
 	import { thresholdStatus } from '#lib/domain/alerts.ts';
 	import { TIME_RANGES, withinRange } from '#lib/domains.ts';
 	import { describeParameter, formatValue } from '#lib/key-values.ts';
-	import { deviceTypeLabel } from '#lib/labels.ts';
+	import { deviceTypeColor, deviceTypeLabel } from '#lib/labels.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import type { PageProps } from './$types';
 
@@ -189,6 +189,7 @@
 						label={param.label}
 						unit={param.unit}
 						height={160}
+						color={deviceTypeColor(data.deviceTypes, device.type)}
 					/>
 				</div>
 			</section>

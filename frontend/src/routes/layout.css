@@ -107,6 +107,23 @@
 	.eyebrow {
 		@apply text-sm font-medium text-muted;
 	}
+	/* A device's panel, tinted with its registry color (set --accent from deviceTypeColor):
+	   a tinted face, a stronger edge, and value tiles split by accent lines. */
+	.accent-panel {
+		border-color: color-mix(in oklab, var(--accent, var(--color-teal)) 55%, transparent);
+		background: color-mix(in oklab, var(--accent, var(--color-teal)) 12%, var(--color-canvas));
+		transition:
+			border-color 300ms ease,
+			background-color 300ms ease;
+	}
+	.accent-tiles {
+		border-color: color-mix(in oklab, var(--accent, var(--color-teal)) 30%, transparent);
+		background: color-mix(in oklab, var(--accent, var(--color-teal)) 30%, transparent);
+	}
+	.accent-tile {
+		background: color-mix(in oklab, var(--accent, var(--color-teal)) 12%, var(--color-canvas));
+		transition: background-color 300ms ease;
+	}
 }
 
 /* Page and sensor changes crossfade (see onNavigate in the root layout). The app header has its

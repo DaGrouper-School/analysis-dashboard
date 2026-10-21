@@ -11,7 +11,8 @@
 		parameterId,
 		label,
 		unit = '',
-		height = 220
+		height = 220,
+		color
 	}: {
 		/** Any order; the chart sorts by time. */
 		readings: Reading[];
@@ -19,6 +20,8 @@
 		label: string;
 		unit?: string;
 		height?: number;
+		/** The device's registry color (deviceTypeColor). Falls back to the theme's data color. */
+		color?: string;
 	} = $props();
 
 	const PAD = { top: 16, bottom: 28, left: 44 };
@@ -124,7 +127,12 @@
 </script>
 
 <!-- Holds its height while it measures its width or swaps data, so nothing below it jumps. -->
-<div class="relative" style:min-height="{height}px" bind:clientWidth={width}>
+<div
+	class="relative"
+	style:min-height="{height}px"
+	style:--series={color ?? 'var(--color-teal)'}
+	bind:clientWidth={width}
+>
 	{#if points.length < 2}
 		<p
 			class="flex items-center justify-center text-center text-sm text-muted"
@@ -175,11 +183,11 @@
 				>
 			{/each}
 
-			<path d={area} class="fill-teal" fill-opacity="0.1" />
+			<path d={area} class="fill-(--series)" fill-opacity="0.1" />
 			<path
 				d={line}
 				fill="none"
-				class="stroke-teal"
+				class="stroke-(--series)"
 				stroke-width="2"
 				stroke-linejoin="round"
 				stroke-linecap="round"
@@ -198,7 +206,7 @@
 					cx={scale.x(shown.at)}
 					cy={scale.y(shown.value)}
 					r="5"
-					class="fill-teal stroke-surface"
+					class="fill-(--series) stroke-surface"
 					stroke-width="2"
 				/>
 			{/if}
@@ -206,7 +214,7 @@
 				cx={scale.x(last.at)}
 				cy={scale.y(last.value)}
 				r="4"
-				class="fill-teal stroke-surface"
+				class="fill-(--series) stroke-surface"
 				stroke-width="2"
 			/>
 			<text
@@ -224,7 +232,7 @@
 			>
 				<p class="text-muted">{dateTime.format(shown.at)}</p>
 				<p class="mt-0.5 flex items-center gap-2 font-medium text-ink">
-					<span class="h-0.5 w-3 rounded-full bg-teal" aria-hidden="true"></span>
+					<span class="h-0.5 w-3 rounded-full bg-(--series)" aria-hidden="true"></span>
 					{label}
 					{format(shown.value)}
 				</p>

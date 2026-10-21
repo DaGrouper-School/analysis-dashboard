@@ -6,6 +6,7 @@
 	import { formatPoint } from '#lib/geo.ts';
 	import { formatValue, keyValues } from '#lib/key-values.ts';
 	import { deviceTypeColor, deviceTypeLabel } from '#lib/labels.ts';
+	import { reveal } from '#lib/reveal.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -28,6 +29,19 @@
 	let globe = $state<ReturnType<typeof Globe>>();
 
 	const selected = $derived(data.conditions.find((c) => c.device.id === selectedId) ?? null);
+
+	// Picking a sensor, in the list or on the globe, brings its values into view: below the
+	// globe on small screens, and back to the top of the floating panel on wide ones.
+	let panel = $state<HTMLElement>();
+	// svelte-ignore state_referenced_locally
+	let shownId = selectedId;
+	$effect(() => {
+		if (!panel || selectedId === shownId) return;
+		shownId = selectedId;
+		const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+		panel.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+		reveal(panel);
+	});
 	const paramsById = $derived(new Map(data.parameters.map((p) => [p.id, p])));
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 	const classroomName = $derived(
@@ -214,7 +228,9 @@
 		<!-- Selected device -->
 		{#if selected}
 			<section
-				class="mx-4 mt-4 mb-8 border border-line bg-surface/95 p-5 lg:absolute lg:top-6 lg:right-6 lg:m-0 lg:max-h-[calc(100%-6rem)] lg:w-[20rem] lg:overflow-y-auto"
+				bind:this={panel}
+				class="accent-panel mx-4 mt-4 mb-8 scroll-mt-24 border p-5 lg:absolute lg:top-6 lg:right-6 lg:m-0 lg:max-h-[calc(100%-6rem)] lg:w-[20rem] lg:overflow-y-auto"
+				style:--accent={deviceTypeColor(data.deviceTypes, selected.device.type)}
 				aria-live="polite"
 				aria-label="Current conditions"
 			>
@@ -242,12 +258,12 @@
 				<!-- One value fills the row; an odd last value spans both columns. No empty cells. -->
 				<dl
 					class={[
-						'mt-5 grid gap-px border border-line bg-line',
+						'accent-tiles mt-5 grid gap-px border',
 						tiles.length > 1 && 'grid-cols-2 [&>:last-child:nth-child(odd)]:col-span-2'
 					]}
 				>
 					{#each tiles as item, i (i)}
-						<div class="bg-surface p-3">
+						<div class="accent-tile p-3">
 							<dt class="text-xs text-muted">{item.label}</dt>
 							<dd class="mt-1 text-2xl text-ink">
 								<RollingNumber value={formatValue(item.value, item.unit)} />
