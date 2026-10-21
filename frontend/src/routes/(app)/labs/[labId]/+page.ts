@@ -5,8 +5,13 @@ import type { PageLoad } from './$types';
 export const load: PageLoad = async ({ params, url, depends }) => {
 	depends('app:lab');
 	try {
+		const [detail, parameters] = await Promise.all([
+			services.labs.get(params.labId),
+			services.registry.listParameters()
+		]);
 		return {
-			detail: await services.labs.get(params.labId),
+			detail,
+			parameters,
 			onboarding: url.searchParams.has('onboarding')
 		};
 	} catch (e) {

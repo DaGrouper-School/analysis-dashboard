@@ -24,7 +24,7 @@ Other scripts, run here: `npm run build` (static SPA in `build/`), `npm test`, `
 | ------------ | ------------------------------------ | --------------------------------------------------------------------- |
 | Google       | Tesfaye G.                           | Institution head of Trinity Lab Classroom                             |
 | Google       | Dr. Marcus L.                        | Researcher (read-only) in Trinity, Bay Street and Hargeisa classrooms |
-| Google       | Leila M.                             | Platform admin, in no classroom (admin-assisted classroom setup)      |
+| Google       | Leila M.                             | Platform admin, in no classroom; manages the registry                 |
 | Google       | Sarah K.                             | Community scientist in Bay Street Classroom and Hargeisa Science Club |
 | Google       | Hana Bekele, Amina Yusuf             | New, goes through onboarding                                          |
 | Phone        | Ethiopia +251 911 000 001 (Abebe T.) | Community scientist in Trinity Lab Classroom                          |
@@ -79,6 +79,7 @@ Services and the backend verifies the token.
 | `/dashboard`          | Pick a classroom and sensor: conditions, chart, history  |
 | `/dashboard/readings` | Raw readings of the picked sensor, every value it sent   |
 | `/dashboard/domains`  | AP-10 domain tabs: thresholds, trends, 24 h / 7 d / 30 d |
+| `/registry`           | Platform admin: device types, domains and value mapping  |
 | `/map`                | AP-06 device map with current conditions and alerts      |
 | `/classrooms/[id]`    | AP-03 classroom, members, invites; edit name and school  |
 | `/labs/[labId]`       | AP-05 devices, readings, record-data demo                |
@@ -96,6 +97,14 @@ brightness follow the sun through the day.
 Each sensor type shows its own key values on the dashboard and map: temperature, wind, rain and
 UV for a weather station, soil moisture and temperature for a soil sensor, and so on
 (`src/lib/key-values.ts`).
+
+Device types, environmental domains and which domain each value shows under live in a shared
+registry. Only the platform admin (Leila M.) changes it, on the Registry page: add or edit a
+domain (it can't be removed while values are in it), register a device type with the values it
+sends, and map each value to a domain or create a new one on the spot. Every change is logged.
+Classrooms then register devices of any type, and the register form shows which domains that
+type's values land in. Soil and water values start with no domain, so they show under "Not in a
+domain" until they are mapped; try adding a SOIL domain.
 
 Personas come from the project vault (User Personas). The parameter registry holds the 36 weather
 station parameters mapped to the six environmental domains (AIR, WAVES, SUN, RAIN, WIND,

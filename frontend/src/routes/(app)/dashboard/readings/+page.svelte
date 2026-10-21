@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { formatPoint } from '#lib/geo.ts';
 	import { describeParameter, keySummary } from '#lib/key-values.ts';
-	import { DEVICE_TYPE_LABELS } from '#lib/labels.ts';
+	import { deviceTypeLabel } from '#lib/labels.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import type { PageProps } from './$types';
 
@@ -37,7 +37,7 @@
 		<h1 class="font-display text-3xl sm:text-4xl">Raw sensor readings</h1>
 		{#if device && data.classroom}
 			<p class="mt-1 text-muted">
-				{device.name} · {DEVICE_TYPE_LABELS[device.type]} · {data.classroom.name}
+				{device.name} · {deviceTypeLabel(data.deviceTypes, device.type)} · {data.classroom.name}
 			</p>
 		{/if}
 	</div>

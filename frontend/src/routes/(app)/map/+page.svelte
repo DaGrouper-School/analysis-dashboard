@@ -4,7 +4,7 @@
 	import type { DeviceType } from '#lib/domain/types.ts';
 	import { formatPoint } from '#lib/geo.ts';
 	import { formatValue, keyValues } from '#lib/key-values.ts';
-	import { DEVICE_TYPE_COLORS, DEVICE_TYPE_LABELS } from '#lib/labels.ts';
+	import { deviceTypeColor, deviceTypeLabel } from '#lib/labels.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -52,7 +52,7 @@
 			id: c.device.id,
 			lat: c.reading.location.lat,
 			lng: c.reading.location.lng,
-			color: DEVICE_TYPE_COLORS[c.device.type],
+			color: deviceTypeColor(data.deviceTypes, c.device.type),
 			hollow: c.reading.locationSource === 'lab',
 			label:
 				c.reading.locationSource === 'lab'
@@ -107,8 +107,11 @@
 			>
 				{#each types as type (type)}
 					<li class="flex items-center gap-2">
-						<span class="size-2 rounded-full" style:background={DEVICE_TYPE_COLORS[type]}></span>
-						{DEVICE_TYPE_LABELS[type]}
+						<span
+							class="size-2 rounded-full"
+							style:background={deviceTypeColor(data.deviceTypes, type)}
+						></span>
+						{deviceTypeLabel(data.deviceTypes, type)}
 					</li>
 				{/each}
 				<li class="flex items-center gap-2">
@@ -163,10 +166,10 @@
 						>
 							<span
 								class="size-2 rounded-full"
-								style:background={on ? DEVICE_TYPE_COLORS[type] : 'transparent'}
-								style:box-shadow="inset 0 0 0 1.5px {DEVICE_TYPE_COLORS[type]}"
+								style:background={on ? deviceTypeColor(data.deviceTypes, type) : 'transparent'}
+								style:box-shadow="inset 0 0 0 1.5px {deviceTypeColor(data.deviceTypes, type)}"
 							></span>
-							{DEVICE_TYPE_LABELS[type]}
+							{deviceTypeLabel(data.deviceTypes, type)}
 						</button>
 					{/each}
 				</div>
@@ -185,12 +188,12 @@
 						>
 							<span
 								class="mt-1.5 size-2 shrink-0 rounded-full"
-								style:background={DEVICE_TYPE_COLORS[item.device.type]}
+								style:background={deviceTypeColor(data.deviceTypes, item.device.type)}
 							></span>
 							<span class="min-w-0 flex-1">
 								<span class="block truncate text-ink">{item.device.name}</span>
 								<span class="block text-xs text-muted">
-									{item.device.labName} · {DEVICE_TYPE_LABELS[item.device.type]}
+									{item.device.labName} · {deviceTypeLabel(data.deviceTypes, item.device.type)}
 									{#if item.reading.locationSource === 'lab'}· lab location{/if}
 								</span>
 							</span>

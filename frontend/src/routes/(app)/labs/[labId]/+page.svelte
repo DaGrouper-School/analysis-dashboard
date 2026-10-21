@@ -7,7 +7,7 @@
 	import type { DeviceType, Reading, RegisterDeviceInput } from '#lib/domain/types.ts';
 	import { distanceKm, validateDevice } from '#lib/domain/validation.ts';
 	import { formatPoint } from '#lib/geo.ts';
-	import { DEVICE_TYPE_COLORS, DEVICE_TYPE_LABELS, SITE_SETTING_LABELS } from '#lib/labels.ts';
+	import { deviceTypeColor, deviceTypeLabel, SITE_SETTING_LABELS } from '#lib/labels.ts';
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
 
@@ -27,6 +27,19 @@
 
 	let name = $state('');
 	let type = $state<DeviceType>('weather_station');
+	// What the picked type sends, and the domains those values show under (SAM-23).
+	const typeValues = $derived.by(() => {
+		const ids = data.deviceTypes.find((t) => t.id === type)?.parameterIds ?? [];
+		return ids.map(
+			(id) => data.parameters.find((p) => p.id === id) ?? { id, label: id, domain: null }
+		);
+	});
+	const typeDomains = $derived(
+		data.domains.filter((d) => typeValues.some((v) => v.domain === d.id))
+	);
+	const typeUnmapped = $derived(
+		typeValues.filter((v) => !data.domains.some((d) => d.id === v.domain)).length
+	);
 	let identifier = $state('');
 	let errors = $state<Record<string, string>>({});
 	let formError = $state('');
@@ -131,9 +144,9 @@
 							<span class="chip shrink-0"
 								><span
 									class="size-2 rounded-full"
-									style:background={DEVICE_TYPE_COLORS[device.type]}
+									style:background={deviceTypeColor(data.deviceTypes, device.type)}
 								></span>
-								{DEVICE_TYPE_LABELS[device.type]}</span
+								{deviceTypeLabel(data.deviceTypes, device.type)}</span
 							>
 						</div>
 						<dl class="mt-3 grid gap-x-6 gap-y-1 text-xs text-muted sm:grid-cols-2">
@@ -222,8 +235,8 @@
 							<div>
 								<label class="label" for="device-type">Type</label>
 								<select id="device-type" class="input" bind:value={type}>
-									{#each Object.entries(DEVICE_TYPE_LABELS) as [value, label] (value)}
-										<option {value}>{label}</option>
+									{#each data.deviceTypes as option (option.id)}
+										<option value={option.id}>{option.label}</option>
 									{/each}
 								</select>
 							</div>
@@ -238,6 +251,34 @@
 							</div>
 							{#if errors.identifier}
 								<p class="field-error col-span-2 mt-0">{errors.identifier}</p>
+							{/if}
+						</div>
+						<div class="rounded-md border border-line p-3 text-sm" id="device-type-summary">
+							{#if typeValues.length}
+								<p class="text-muted">
+									Sends {typeValues.length} value{typeValues.length === 1 ? '' : 's'}:
+									{typeValues
+										.slice(0, 6)
+										.map((v) => v.label)
+										.join(', ')}{typeValues.length > 6 ? ', …' : ''}
+								</p>
+								<p class="mt-2 flex flex-wrap items-center gap-2">
+									<span class="text-muted">Shows under</span>
+									{#each typeDomains as domain (domain.id)}
+										<span class="chip"
+											><span aria-hidden="true">{domain.icon}</span> {domain.label}</span
+										>
+									{/each}
+									{#if typeUnmapped}
+										<span class="chip text-muted"
+											>{typeUnmapped} value{typeUnmapped === 1 ? '' : 's'} not in a domain yet</span
+										>
+									{/if}
+								</p>
+							{:else}
+								<p class="text-muted">
+									This type has no expected values; it shows whatever it sends.
+								</p>
 							{/if}
 						</div>
 						{#if formError}<p class="field-error" role="alert">{formError}</p>{/if}

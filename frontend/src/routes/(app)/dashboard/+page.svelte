@@ -9,7 +9,7 @@
 	import RecordData from '#lib/components/RecordData.svelte';
 	import { formatValue, keySummary, keyValues } from '#lib/key-values.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
-	import { CLASSROOM_ROLE_LABELS, DEVICE_TYPE_COLORS, DEVICE_TYPE_LABELS } from '#lib/labels.ts';
+	import { CLASSROOM_ROLE_LABELS, deviceTypeColor, deviceTypeLabel } from '#lib/labels.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -22,7 +22,7 @@
 
 	const paramsById = $derived(new Map(data.parameters.map((p) => [p.id, p])));
 	// The domains the picked sensor sends values for open the domain view (AP-10).
-	const sensorTabs = $derived(domainTabs(data.readings, data.parameters));
+	const sensorTabs = $derived(domainTabs(data.readings, data.parameters, data.domains));
 	// Only the domains this sensor has values for, in the registry's order.
 	const domainCards = $derived(
 		data.classroom && data.device
@@ -88,7 +88,7 @@
 			id: c.device.id,
 			lat: c.reading.location.lat,
 			lng: c.reading.location.lng,
-			color: DEVICE_TYPE_COLORS[c.device.type],
+			color: deviceTypeColor(data.deviceTypes, c.device.type),
 			hollow: c.reading.locationSource === 'lab',
 			label: c.device.name
 		}))
@@ -358,9 +358,9 @@
 								<span class="chip shrink-0"
 									><span
 										class="size-2 rounded-full"
-										style:background={DEVICE_TYPE_COLORS[other.type]}
+										style:background={deviceTypeColor(data.deviceTypes, other.type)}
 									></span>
-									{DEVICE_TYPE_LABELS[other.type]}</span
+									{deviceTypeLabel(data.deviceTypes, other.type)}</span
 								>
 							</div>
 							<p class="mt-1 text-xs text-muted">

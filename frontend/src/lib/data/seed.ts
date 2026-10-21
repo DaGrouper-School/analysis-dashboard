@@ -1,4 +1,12 @@
-import type { EnvironmentalDomain, GeoPoint, Parameter, Reading, User } from '#lib/domain/types.ts';
+import type {
+	DeviceTypeDefinition,
+	DomainDefinition,
+	EnvironmentalDomain,
+	GeoPoint,
+	Parameter,
+	Reading,
+	User
+} from '#lib/domain/types.ts';
 import type { MockDbState } from './mock-db';
 
 /**
@@ -347,7 +355,8 @@ const parameters: Parameter[] = [
 			unit,
 			definition,
 			domain: domain as EnvironmentalDomain,
-			source: 'weather_station'
+			source: 'weather_station',
+			valueType: id === 'pressure_trend' ? 'text' : 'number'
 		}))
 	),
 	{
@@ -357,7 +366,32 @@ const parameters: Parameter[] = [
 		definition: 'Daily accumulation read from a manual rain gauge.',
 		domain: 'RAIN',
 		source: 'manual'
-	}
+	},
+	// Values from the other built-in device types. Air quality sits under AIR; soil and water
+	// have no domain yet, so they show as unmapped until a platform admin adds one (SAM-23).
+	...(
+		[
+			['soil_moisture', 'Soil moisture', '%', 'Volumetric water content of the soil.', null],
+			[
+				'soil_temperature',
+				'Soil temperature',
+				'°C',
+				'Temperature a few cm below the surface.',
+				null
+			],
+			['water_temperature', 'Water temperature', '°C', 'Temperature of the water body.', null],
+			['water_ph', 'Water pH', '', 'Acidity of the water, 0 to 14.', null],
+			['pm2_5', 'PM2.5', 'µg/m³', 'Fine particles up to 2.5 µm across.', 'AIR'],
+			['pm10', 'PM10', 'µg/m³', 'Particles up to 10 µm across.', 'AIR']
+		] as const
+	).map(([id, label, unit, definition, domain]): Parameter => ({
+		id,
+		label,
+		unit,
+		definition,
+		domain,
+		source: 'device'
+	}))
 ];
 
 const labs: MockDbState['labs'] = [
@@ -622,6 +656,60 @@ function history(): MockDbState['readings'] {
 
 readings.push(...history());
 
+const domains: DomainDefinition[] = [
+	{ id: 'AIR', label: 'Air', icon: '🌳', description: 'Temperature, humidity and air quality.' },
+	{ id: 'RAIN', label: 'Rain', icon: '🌧️', description: 'Rainfall rates and totals.' },
+	{ id: 'WIND', label: 'Wind', icon: '💨', description: 'Wind speed and direction.' },
+	{ id: 'SUN', label: 'Sun', icon: '☀️', description: 'Sunlight, UV and brightness.' },
+	{ id: 'WAVES', label: 'Waves', icon: '🌊', description: 'Air pressure and its trend.' },
+	{ id: 'LIGHTNING', label: 'Lightning', icon: '⚡️', description: 'Strikes and their distance.' }
+];
+
+const deviceTypes: DeviceTypeDefinition[] = [
+	{
+		id: 'weather_station',
+		label: 'Weather station',
+		description: 'Tempest-style station: air, rain, wind, sun, pressure and lightning.',
+		color: '#3cc04b',
+		parameterIds: parameters.filter((p) => p.source === 'weather_station').map((p) => p.id)
+	},
+	{
+		id: 'rain_gauge',
+		label: 'Rain gauge',
+		description: 'Manual gauge read once a day.',
+		color: '#00bdff',
+		parameterIds: ['rain_gauge_daily_accumulation']
+	},
+	{
+		id: 'soil_sensor',
+		label: 'Soil sensor',
+		description: 'Probe in the ground: moisture and temperature.',
+		color: '#f6921e',
+		parameterIds: ['soil_moisture', 'soil_temperature']
+	},
+	{
+		id: 'water_probe',
+		label: 'Water probe',
+		description: 'Probe in a stream, pond or tank.',
+		color: '#2f7ff0',
+		parameterIds: ['water_temperature', 'water_ph']
+	},
+	{
+		id: 'air_quality_sensor',
+		label: 'Air quality sensor',
+		description: 'Particulate matter counter.',
+		color: '#e8457a',
+		parameterIds: ['pm2_5', 'pm10']
+	},
+	{
+		id: 'other',
+		label: 'Other',
+		description: 'Anything else; shows whatever it sends.',
+		color: '#9aa5ae',
+		parameterIds: []
+	}
+];
+
 export function createSeed(): Omit<MockDbState, 'version'> {
 	// Deep copy so a reset never shares objects with mutated state.
 	return structuredClone({
@@ -636,6 +724,9 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 		challenges: [],
 		session: null,
 		parameters,
+		domains,
+		deviceTypes,
+		registryChanges: [],
 		readings,
 		classrooms,
 		memberships,

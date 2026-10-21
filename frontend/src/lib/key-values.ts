@@ -10,9 +10,9 @@ interface KeyParameter {
 /**
  * The values that matter for each kind of sensor, in display order. A weather station leads
  * with temperature, wind, rain and UV (AP-06); a soil sensor shows soil values and nothing about
- * rain. A device that sends none of its type's values falls back to what it did send.
+ * rain. Other types, and a device that sends none of its type's values, show what it sent.
  */
-export const KEY_PARAMETERS: Record<DeviceType, KeyParameter[]> = {
+export const KEY_PARAMETERS: Partial<Record<DeviceType, KeyParameter[]>> = {
 	weather_station: [
 		{ id: 'air_temperature', label: 'Temperature' },
 		{ id: 'wind_avg', label: 'Wind' },
@@ -61,7 +61,7 @@ export function keyValues(
 	parameters: ReadonlyMap<string, Parameter>,
 	max = 4
 ): KeyValue[] {
-	const keys = KEY_PARAMETERS[type].filter((k) => values[k.id] !== undefined);
+	const keys = (KEY_PARAMETERS[type] ?? []).filter((k) => values[k.id] !== undefined);
 	const chosen: KeyParameter[] = keys.length
 		? keys
 		: Object.keys(values).map((id) => ({
@@ -93,7 +93,7 @@ export function describeParameter(id: string, parameters: ReadonlyMap<string, Pa
 	const registered = parameters.get(id);
 	if (registered) return { label: registered.label, unit: registered.unit };
 	const key = Object.values(KEY_PARAMETERS)
-		.flat()
+		.flatMap((keys) => keys ?? [])
 		.find((k) => k.id === id);
 	return { label: key?.label ?? fallbackLabel(id), unit: key?.unit ?? '' };
 }

@@ -196,6 +196,10 @@ export function createMockLabs({
 						'Only facilitators and the institution head can register devices.'
 					);
 				}
+				if (!state.deviceTypes.some((t) => t.id === input.type)) {
+					const message = 'Pick a device type from the registry.';
+					throw new ServiceError('invalid_input', message, { type: message });
+				}
 				const device: StoredDevice = {
 					id: newId('dev'),
 					labId: lab.id,
