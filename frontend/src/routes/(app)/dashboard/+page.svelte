@@ -7,6 +7,7 @@
 	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
 	import ReadingChart from '#lib/components/ReadingChart.svelte';
 	import RecordData from '#lib/components/RecordData.svelte';
+	import RollingNumber from '#lib/components/RollingNumber.svelte';
 	import { formatValue, keySummary, keyValues } from '#lib/key-values.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import { CLASSROOM_ROLE_LABELS, deviceTypeColor, deviceTypeLabel } from '#lib/labels.ts';
@@ -168,7 +169,11 @@
 	<section class="mt-6 grid gap-4 lg:grid-cols-3">
 		{#if device && latest}
 			<div class="flex flex-col gap-3 lg:col-span-2">
-				<div class="card flex-1 border-teal/25 bg-forest text-ink">
+				<!-- Tinted with the sensor's own color, the same as its dot on the globe. -->
+				<div
+					class="conditions card flex-1 text-ink"
+					style:--accent={deviceTypeColor(data.deviceTypes, device.type)}
+				>
 					<div class="flex flex-wrap items-start justify-between gap-4">
 						<div>
 							<p class="text-sm text-muted">Current conditions</p>
@@ -194,16 +199,22 @@
 							Observed {dateTime.format(new Date(latest.observedAt))}
 						</p>
 					</div>
+					<!-- As many columns as values, up to four: a lone value fills the row, no empty cells. -->
 					<dl
 						class={[
-							'mt-8 grid grid-cols-2 gap-px border border-line bg-line',
-							tiles.length > 2 && 'sm:grid-cols-4'
+							'tiles mt-8 grid gap-px border',
+							tiles.length > 1 && 'grid-cols-2 [&>:last-child:nth-child(odd)]:col-span-2',
+							tiles.length === 3 && 'sm:grid-cols-3 sm:[&>:last-child:nth-child(odd)]:col-span-1',
+							tiles.length > 3 && 'sm:grid-cols-4'
 						]}
 					>
-						{#each tiles as item (item.id)}
-							<div class="bg-forest p-4">
+						<!-- Keyed by position, so switching sensors rolls the numbers in place. -->
+						{#each tiles as item, i (i)}
+							<div class="tile p-4">
 								<dt class="text-xs text-muted">{item.label}</dt>
-								<dd class="mt-2 text-3xl text-ink">{formatValue(item.value, item.unit)}</dd>
+								<dd class="mt-2 text-3xl text-ink">
+									<RollingNumber value={formatValue(item.value, item.unit)} />
+								</dd>
 							</div>
 						{/each}
 					</dl>
@@ -400,3 +411,23 @@
 		</ul>
 	</section>
 {/if}
+
+<style>
+	/* The sensor's color, mixed into the panel: a tinted face, a stronger edge. */
+	.conditions {
+		--accent: var(--color-teal);
+		border-color: color-mix(in oklab, var(--accent) 55%, transparent);
+		background: color-mix(in oklab, var(--accent) 12%, var(--color-canvas));
+		transition:
+			border-color 300ms ease,
+			background-color 300ms ease;
+	}
+	.tiles {
+		border-color: color-mix(in oklab, var(--accent) 30%, transparent);
+		background: color-mix(in oklab, var(--accent) 30%, transparent);
+	}
+	.tile {
+		background: color-mix(in oklab, var(--accent) 12%, var(--color-canvas));
+		transition: background-color 300ms ease;
+	}
+</style>

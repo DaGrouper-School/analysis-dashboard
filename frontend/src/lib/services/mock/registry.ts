@@ -1,7 +1,8 @@
 import type {
 	DeviceTypeDefinition,
 	DomainDefinition,
-	ExpectedValueInput
+	ExpectedValueInput,
+	Parameter
 } from '#lib/domain/types.ts';
 import { PARAMETER_ID, validateDeviceType, validateDomain } from '#lib/domain/validation.ts';
 import { newId, readDb, updateDb, type MockDbState } from '#lib/data/mock-db.ts';
@@ -76,6 +77,31 @@ export function createMockRegistry({
 			added.push(id);
 		}
 		return added;
+	}
+
+	/** Moves values that were already in the registry to the domain picked for them, and logs it. */
+	function moveValues(
+		state: MockDbState,
+		values: ExpectedValueInput[],
+		added: string[],
+		by: string
+	) {
+		for (const value of values) {
+			const parameter = state.parameters.find((p) => p.id === value.id.trim());
+			if (!parameter || added.includes(parameter.id) || parameter.domain === value.domain) continue;
+			move(state, parameter, value.domain, by);
+		}
+	}
+
+	function move(state: MockDbState, parameter: Parameter, domainId: string | null, by: string) {
+		const domain = domainOrThrow(state, domainId);
+		const from = state.domains.find((d) => d.id === parameter.domain)?.label ?? 'no domain';
+		parameter.domain = domainId;
+		log(
+			state,
+			by,
+			`Moved ${parameter.label} (${parameter.id}) from ${from} to ${domain?.label ?? 'no domain'}.`
+		);
 	}
 
 	/** `Soil probe v2` becomes `soil_probe_v2`, numbered if it is taken. */
@@ -174,6 +200,7 @@ export function createMockRegistry({
 				const label = input.label.trim();
 				labelFree(state, label, null);
 				const added = addValues(state, input.values);
+				moveValues(state, input.values, added, user.fullName);
 				const type: DeviceTypeDefinition = {
 					id: typeId(state, label),
 					label,
@@ -203,6 +230,7 @@ export function createMockRegistry({
 				const label = input.label.trim();
 				labelFree(state, label, id);
 				const added = addValues(state, input.values);
+				moveValues(state, input.values, added, user.fullName);
 				// Values device types brought in can be corrected; station values stay as registered.
 				const edited: string[] = [];
 				for (const value of input.values) {
@@ -251,15 +279,8 @@ export function createMockRegistry({
 				const user = asAdmin(state);
 				const parameter = state.parameters.find((p) => p.id === parameterId);
 				if (!parameter) throw new ServiceError('not_found', 'That value is not in the registry.');
-				const domain = domainOrThrow(state, domainId);
 				if (parameter.domain === domainId) return parameter;
-				const from = state.domains.find((d) => d.id === parameter.domain)?.label ?? 'no domain';
-				parameter.domain = domainId;
-				log(
-					state,
-					user.fullName,
-					`Moved ${parameter.label} (${parameter.id}) from ${from} to ${domain?.label ?? 'no domain'}.`
-				);
+				move(state, parameter, domainId, user.fullName);
 				return parameter;
 			});
 		}

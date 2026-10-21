@@ -29,11 +29,6 @@ export function deviceTypeLabel(types: DeviceTypeDefinition[], id: DeviceType) {
 	);
 }
 
-/** A device type's marker and chip color, from the registry's device types. */
-export function deviceTypeColor(types: DeviceTypeDefinition[], id: DeviceType) {
-	return types.find((t) => t.id === id)?.color ?? '#9aa5ae';
-}
-
 /** Colors offered for a new device type, the built-in types' own first. */
 export const DEVICE_TYPE_PALETTE = [
 	'#3cc04b',
@@ -45,3 +40,14 @@ export const DEVICE_TYPE_PALETTE = [
 	'#d4b72c',
 	'#9aa5ae'
 ];
+
+/** Color a device whose type is no longer in the registry falls back to: the palette's gray. */
+const UNKNOWN_TYPE_COLOR = DEVICE_TYPE_PALETTE.at(-1)!;
+
+/**
+ * A device type's marker, chip and card color, read from the registry's device types, so a
+ * color the admin picks shows everywhere. Never hard-code a type's color in a page.
+ */
+export function deviceTypeColor(types: DeviceTypeDefinition[], id: DeviceType) {
+	return types.find((t) => t.id === id)?.color ?? UNKNOWN_TYPE_COLOR;
+}

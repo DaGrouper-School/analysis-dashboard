@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
+	import RollingNumber from '#lib/components/RollingNumber.svelte';
 	import type { DeviceType } from '#lib/domain/types.ts';
 	import { formatPoint } from '#lib/geo.ts';
 	import { formatValue, keyValues } from '#lib/key-values.ts';
@@ -238,11 +239,19 @@
 						<span class="text-muted">· device GPS</span>
 					{/if}
 				</p>
-				<dl class="mt-5 grid grid-cols-2 gap-px border border-line bg-line">
-					{#each tiles as item (item.id)}
+				<!-- One value fills the row; an odd last value spans both columns. No empty cells. -->
+				<dl
+					class={[
+						'mt-5 grid gap-px border border-line bg-line',
+						tiles.length > 1 && 'grid-cols-2 [&>:last-child:nth-child(odd)]:col-span-2'
+					]}
+				>
+					{#each tiles as item, i (i)}
 						<div class="bg-surface p-3">
 							<dt class="text-xs text-muted">{item.label}</dt>
-							<dd class="mt-1 text-2xl text-ink">{formatValue(item.value, item.unit)}</dd>
+							<dd class="mt-1 text-2xl text-ink">
+								<RollingNumber value={formatValue(item.value, item.unit)} />
+							</dd>
 						</div>
 					{/each}
 				</dl>
