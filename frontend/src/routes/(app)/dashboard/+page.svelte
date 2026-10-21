@@ -7,12 +7,18 @@
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
 	import ReadingChart from '#lib/components/ReadingChart.svelte';
-	import RecordData from '#lib/components/RecordData.svelte';
+	import Icon from '#lib/components/Icon.svelte';
+	import SyncModal from '#lib/components/SyncModal.svelte';
 	import RollingNumber from '#lib/components/RollingNumber.svelte';
 	import { formatValue, keySummary, keyValues } from '#lib/key-values.ts';
 	import { reveal } from '#lib/reveal.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
-	import { CLASSROOM_ROLE_LABELS, deviceTypeColor, deviceTypeLabel } from '#lib/labels.ts';
+	import {
+		CLASSROOM_ROLE_LABELS,
+		deviceTypeColor,
+		deviceTypeIcon,
+		deviceTypeLabel
+	} from '#lib/labels.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -63,13 +69,7 @@
 
 	let conditions = $state<HTMLElement>();
 
-	let recording = $state(false);
-	// A new pick closes the recorder, so it never records to a sensor the user moved away from.
-	const deviceId = $derived(device?.id);
-	$effect(() => {
-		void deviceId;
-		recording = false;
-	});
+	let syncing = $state(false);
 
 	function lastGps() {
 		return data.readings.find((r) => r.locationSource === 'device')?.location ?? null;
@@ -185,7 +185,13 @@
 					<div class="flex flex-wrap items-start justify-between gap-4">
 						<div>
 							<p class="text-sm text-muted">Current conditions</p>
-							<h2 class="text-xl font-semibold">{device.name}</h2>
+							<h2 class="flex items-center gap-2 text-xl font-semibold">
+								<Icon
+									name={deviceTypeIcon(data.deviceTypes, device.type)}
+									class="size-6 text-(--accent)"
+								/>
+								{device.name}
+							</h2>
 							<p class="mt-1 text-sm text-muted">
 								<a
 									class="hover:text-ink hover:underline"
@@ -255,15 +261,14 @@
 						<button
 							type="button"
 							class="btn btn-primary"
-							aria-expanded={recording}
-							aria-controls="record-panel"
-							onclick={() => (recording = !recording)}
+							aria-haspopup="dialog"
+							onclick={() => (syncing = true)}
 						>
-							{recording ? 'Close recorder' : 'Record data'}
+							<Icon name="sync" class="size-4" /> Sync
 						</button>
 					{/if}
 					<button type="button" class="btn btn-ghost" onclick={showReadings}>
-						Show raw sensor readings
+						<Icon name="readings" class="size-4" /> Show raw sensor readings
 					</button>
 				</div>
 			</div>
@@ -306,17 +311,20 @@
 		<!-- eslint-enable svelte/no-navigation-without-resolve -->
 	</section>
 
-	{#if recording && device && data.canRecord && data.labLocation && data.classroom}
-		<div id="record-panel" class="mt-4">
-			<RecordData
+	{#if device && data.canRecord && data.labLocation}
+		<!-- Keyed by sensor, so a new pick never syncs to the sensor the user moved away from. -->
+		{#key device.id}
+			<SyncModal
+				bind:open={syncing}
 				devices={[device]}
+				deviceTypes={data.deviceTypes}
 				classroomName={data.classroom.name}
 				labLocation={data.labLocation}
 				{lastGps}
 				parameters={data.parameters}
-				onfinish={() => invalidateAll()}
+				onclose={() => invalidateAll()}
 			/>
-		</div>
+		{/key}
 	{/if}
 
 	{#if device && charted}
@@ -377,10 +385,12 @@
 							<div class="flex items-start justify-between gap-2">
 								<span class="font-medium">{other.name}</span>
 								<span class="chip shrink-0"
-									><span
-										class="size-2 rounded-full"
-										style:background={deviceTypeColor(data.deviceTypes, other.type)}
-									></span>
+									><span style:color={deviceTypeColor(data.deviceTypes, other.type)}
+										><Icon
+											name={deviceTypeIcon(data.deviceTypes, other.type)}
+											class="size-3.5"
+										/></span
+									>
 									{deviceTypeLabel(data.deviceTypes, other.type)}</span
 								>
 							</div>
@@ -410,7 +420,7 @@
 				<li>
 					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 					<a class="card block h-full p-4 transition hover:border-line-strong" href={domain.href}>
-						<span class="text-2xl" aria-hidden="true">{domain.icon}</span>
+						<Icon name={domain.icon} fallback="tag" class="size-7 text-ink" />
 						<p class="mt-3 font-semibold">{domain.label}</p>
 						<p class="text-xs text-muted">
 							{domain.parameterIds.length} value{domain.parameterIds.length === 1 ? '' : 's'} →

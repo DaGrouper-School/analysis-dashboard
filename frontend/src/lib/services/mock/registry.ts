@@ -9,6 +9,7 @@ import { newId, readDb, updateDb, type MockDbState } from '#lib/data/mock-db.ts'
 import { ServiceError, type RegistryService } from '../types';
 import { currentUser } from './classrooms';
 import { DEVICE_TYPE_PALETTE } from '#lib/labels.ts';
+import { FALLBACK_DOMAIN_ICON, FALLBACK_TYPE_ICON } from '#lib/icons.ts';
 
 /**
  * The shared registry. Reading it needs a signed-in user; changing it needs a platform admin,
@@ -152,7 +153,7 @@ export function createMockRegistry({
 				const domain: DomainDefinition = {
 					id,
 					label: input.label.trim(),
-					icon: input.icon.trim() || '🏷️',
+					icon: input.icon.trim() || FALLBACK_DOMAIN_ICON,
 					description: input.description.trim()
 				};
 				state.domains.push(domain);
@@ -206,6 +207,7 @@ export function createMockRegistry({
 					label,
 					description: input.description.trim(),
 					color: input.color || DEVICE_TYPE_PALETTE.at(-1)!,
+					icon: input.icon?.trim() || FALLBACK_TYPE_ICON,
 					parameterIds: input.values.map((v) => v.id.trim())
 				};
 				state.deviceTypes.push(type);
@@ -254,6 +256,7 @@ export function createMockRegistry({
 				type.label = label;
 				type.description = input.description.trim();
 				type.color = input.color || type.color;
+				type.icon = input.icon?.trim() || type.icon;
 				type.parameterIds = input.values.map((v) => v.id.trim());
 				const removed = before.filter((p) => !type.parameterIds.includes(p));
 				const parts = [

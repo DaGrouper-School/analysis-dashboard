@@ -2,13 +2,20 @@
 	import { invalidate } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { SvelteMap } from 'svelte/reactivity';
-	import RecordData from '#lib/components/RecordData.svelte';
+	import Icon from '#lib/components/Icon.svelte';
+	import RegisterSensorModal from '#lib/components/RegisterSensorModal.svelte';
 	import SetupSteps from '#lib/components/SetupSteps.svelte';
-	import type { DeviceType, Reading, RegisterDeviceInput } from '#lib/domain/types.ts';
-	import { distanceKm, validateDevice } from '#lib/domain/validation.ts';
+	import SyncModal from '#lib/components/SyncModal.svelte';
+	import type { Reading } from '#lib/domain/types.ts';
+	import { distanceKm } from '#lib/domain/validation.ts';
 	import { formatPoint } from '#lib/geo.ts';
-	import { deviceTypeColor, deviceTypeLabel, SITE_SETTING_LABELS } from '#lib/labels.ts';
-	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
+	import {
+		deviceTypeColor,
+		deviceTypeIcon,
+		deviceTypeLabel,
+		SITE_SETTING_LABELS
+	} from '#lib/labels.ts';
+	import { errorMessage, services } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -25,56 +32,21 @@
 		return byDevice;
 	});
 
-	let name = $state('');
-	let type = $state<DeviceType>('weather_station');
-	// What the picked type sends, and the domains those values show under (SAM-23).
-	const typeValues = $derived.by(() => {
-		const ids = data.deviceTypes.find((t) => t.id === type)?.parameterIds ?? [];
-		return ids.map(
-			(id) => data.parameters.find((p) => p.id === id) ?? { id, label: id, domain: null }
-		);
-	});
-	const typeDomains = $derived(
-		data.domains.filter((d) => typeValues.some((v) => v.domain === d.id))
-	);
-	const typeUnmapped = $derived(
-		typeValues.filter((v) => !data.domains.some((d) => d.id === v.domain)).length
-	);
-	let identifier = $state('');
-	let errors = $state<Record<string, string>>({});
-	let formError = $state('');
-	let saving = $state(false);
+	let registering = $state(false);
 	let justAdded = $state('');
 	let actionError = $state('');
 
-	let recordId = $state('');
+	let syncing = $state(false);
+	let syncId = $state('');
+
+	function sync(deviceId: string) {
+		syncId = deviceId;
+		syncing = true;
+	}
 
 	function distanceLabel(km: number) {
 		if (km < 1) return 'at the lab';
 		return `${km < 10 ? km.toFixed(1) : Math.round(km)} km from the lab`;
-	}
-
-	async function register(event: SubmitEvent) {
-		event.preventDefault();
-		formError = '';
-		justAdded = '';
-		const input: RegisterDeviceInput = { name, type, identifier };
-		errors = validateDevice(input);
-		if (Object.keys(errors).length) return;
-		saving = true;
-		try {
-			const device = await services.labs.registerDevice(lab.id, input);
-			justAdded = device.name;
-			recordId = device.id;
-			name = identifier = '';
-			saving = false;
-			await invalidate('app:lab');
-		} catch (e) {
-			if (e instanceof ServiceError) errors = e.fields;
-			formError = errorMessage(e);
-		} finally {
-			saving = false;
-		}
 	}
 
 	function lastGps(deviceId: string) {
@@ -142,10 +114,12 @@
 								</p>
 							</div>
 							<span class="chip shrink-0"
-								><span
-									class="size-2 rounded-full"
-									style:background={deviceTypeColor(data.deviceTypes, device.type)}
-								></span>
+								><span style:color={deviceTypeColor(data.deviceTypes, device.type)}
+									><Icon
+										name={deviceTypeIcon(data.deviceTypes, device.type)}
+										class="size-3.5"
+									/></span
+								>
 								{deviceTypeLabel(data.deviceTypes, device.type)}</span
 							>
 						</div>
@@ -185,11 +159,26 @@
 								{/each}
 							</ul>
 						{/if}
-						{#if data.detail.canManage}
-							<button
-								class="mt-3 text-xs font-medium text-muted hover:text-danger"
-								onclick={() => remove(device.id, device.name)}>Remove device</button
-							>
+						{#if data.detail.canRecord || data.detail.canManage}
+							<div class="mt-3 flex flex-wrap items-center gap-3">
+								{#if data.detail.canRecord}
+									<button
+										type="button"
+										class="btn btn-ghost px-3 py-1.5"
+										aria-haspopup="dialog"
+										onclick={() => sync(device.id)}
+									>
+										<Icon name="sync" class="size-4" /> Sync
+									</button>
+								{/if}
+								{#if data.detail.canManage}
+									<button
+										type="button"
+										class="text-xs font-medium text-muted hover:text-danger"
+										onclick={() => remove(device.id, device.name)}>Remove device</button
+									>
+								{/if}
+							</div>
 						{/if}
 					</li>
 				{:else}
@@ -211,102 +200,55 @@
 		</section>
 	</div>
 
-	{#if data.detail.canManage || data.detail.canRecord}
+	{#if data.detail.canManage}
 		<div class="space-y-6 self-start">
-			{#if data.detail.canManage}
-				<section class="card">
-					<h2 class="text-lg font-semibold">Register a device</h2>
-					<p class="mt-1 text-sm text-muted">
-						A device can sit far from the lab, like a weather station in another town feeding this
-						lab. Its GPS position is sent with each reading, not set here.
+			<section class="card">
+				<h2 class="text-lg font-semibold">Register a sensor</h2>
+				<p class="mt-1 text-sm text-muted">
+					Pick its type, enter the serial on the sensor and pair it. It becomes a SAM source for
+					this lab; its GPS position comes with each reading.
+				</p>
+				<button
+					type="button"
+					class="btn btn-primary mt-4"
+					aria-haspopup="dialog"
+					onclick={() => (registering = true)}
+				>
+					<Icon name="plus" class="size-4" /> Register a sensor
+				</button>
+				{#if justAdded}
+					<p class="mt-3 text-sm text-muted" role="status">
+						{justAdded} is registered. Add another, or
+						<a class="link" href={resolve('/(app)/classrooms/[id]', { id: lab.classroomId })}
+							>finish setup</a
+						>.
 					</p>
-					<form class="mt-4 space-y-4" onsubmit={register} novalidate>
-						<div>
-							<label class="label" for="device-name">Device name</label>
-							<input
-								id="device-name"
-								class={['input', errors.name && 'input-error']}
-								placeholder="Shashamane Weather Station"
-								bind:value={name}
-							/>
-							{#if errors.name}<p class="field-error">{errors.name}</p>{/if}
-						</div>
-						<div class="grid grid-cols-2 gap-3">
-							<div>
-								<label class="label" for="device-type">Type</label>
-								<select id="device-type" class="input" bind:value={type}>
-									{#each data.deviceTypes as option (option.id)}
-										<option value={option.id}>{option.label}</option>
-									{/each}
-								</select>
-							</div>
-							<div>
-								<label class="label" for="identifier">Identifier</label>
-								<input
-									id="identifier"
-									class={['input font-mono', errors.identifier && 'input-error']}
-									placeholder="TWS-2041-SH"
-									bind:value={identifier}
-								/>
-							</div>
-							{#if errors.identifier}
-								<p class="field-error col-span-2 mt-0">{errors.identifier}</p>
-							{/if}
-						</div>
-						<div class="rounded-md border border-line p-3 text-sm" id="device-type-summary">
-							{#if typeValues.length}
-								<p class="text-muted">
-									Sends {typeValues.length} value{typeValues.length === 1 ? '' : 's'}:
-									{typeValues
-										.slice(0, 6)
-										.map((v) => v.label)
-										.join(', ')}{typeValues.length > 6 ? ', …' : ''}
-								</p>
-								<p class="mt-2 flex flex-wrap items-center gap-2">
-									<span class="text-muted">Shows under</span>
-									{#each typeDomains as domain (domain.id)}
-										<span class="chip"
-											><span aria-hidden="true">{domain.icon}</span> {domain.label}</span
-										>
-									{/each}
-									{#if typeUnmapped}
-										<span class="chip text-muted"
-											>{typeUnmapped} value{typeUnmapped === 1 ? '' : 's'} not in a domain yet</span
-										>
-									{/if}
-								</p>
-							{:else}
-								<p class="text-muted">
-									This type has no expected values; it shows whatever it sends.
-								</p>
-							{/if}
-						</div>
-						{#if formError}<p class="field-error" role="alert">{formError}</p>{/if}
-						<button class="btn btn-primary" disabled={saving}>
-							{saving ? 'Registering…' : 'Register device'}
-						</button>
-						{#if justAdded}
-							<p class="text-sm text-muted" role="status">
-								{justAdded} is registered. Add another, or
-								<a class="link" href={resolve('/(app)/classrooms/[id]', { id: lab.classroomId })}
-									>finish setup</a
-								>.
-							</p>
-						{/if}
-					</form>
-				</section>
-			{/if}
-
-			{#if data.detail.canRecord && devices.length}
-				<RecordData
-					{devices}
-					classroomName={data.detail.classroomName}
-					labLocation={lab.location}
-					{lastGps}
-					bind:deviceId={recordId}
-					onfinish={() => invalidate('app:lab')}
-				/>
-			{/if}
+				{/if}
+			</section>
 		</div>
+		<RegisterSensorModal
+			bind:open={registering}
+			labId={lab.id}
+			labName={lab.name}
+			deviceTypes={data.deviceTypes}
+			domains={data.domains}
+			parameters={data.parameters}
+			onregistered={(device) => (justAdded = device.name)}
+			onclose={() => invalidate('app:lab')}
+		/>
 	{/if}
 </div>
+
+{#if data.detail.canRecord && devices.length}
+	<SyncModal
+		bind:open={syncing}
+		{devices}
+		bind:deviceId={syncId}
+		deviceTypes={data.deviceTypes}
+		classroomName={data.detail.classroomName}
+		labLocation={lab.location}
+		{lastGps}
+		parameters={data.parameters}
+		onclose={() => invalidate('app:lab')}
+	/>
+{/if}

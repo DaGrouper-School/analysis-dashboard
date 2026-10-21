@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import Icon from '#lib/components/Icon.svelte';
 	import ReadingChart from '#lib/components/ReadingChart.svelte';
 	import { thresholdStatus } from '#lib/domain/alerts.ts';
 	import { TIME_RANGES, withinRange } from '#lib/domains.ts';
@@ -119,7 +120,7 @@
 					]}
 					onclick={() => go({ domain: tab.id })}
 				>
-					<span aria-hidden="true">{tab.icon}</span>
+					<Icon name={tab.icon} fallback="tag" class="inline size-4 align-[-3px]" />
 					{tab.label}
 					<span class="text-xs text-muted">{tab.parameterIds.length}</span>
 				</button>

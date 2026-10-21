@@ -163,7 +163,7 @@ export interface DomainDefinition {
 	/** Short code, upper case, e.g. `SOIL`. Never changes once created. */
 	id: EnvironmentalDomain;
 	label: string;
-	/** An emoji shown on tabs and cards. */
+	/** A registry icon name (see `#lib/icons.ts`), shown on tabs and cards. */
 	icon: string;
 	description: string;
 }
@@ -191,6 +191,8 @@ export interface DeviceTypeDefinition {
 	description: string;
 	/** Marker and chip color. */
 	color: string;
+	/** A registry icon name (see `#lib/icons.ts`), picked by a platform admin. */
+	icon: string;
 	/** Registry parameters the device sends, in display order. */
 	parameterIds: string[];
 }
@@ -224,6 +226,8 @@ export interface DeviceTypeInput {
 	label: string;
 	description: string;
 	color: string;
+	/** A registry icon name. Blank keeps the current icon, or the generic sensor for a new type. */
+	icon?: string;
 	values: ExpectedValueInput[];
 }
 

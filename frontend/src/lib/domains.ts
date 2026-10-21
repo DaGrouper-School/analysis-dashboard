@@ -4,7 +4,7 @@ import type { DomainDefinition, Parameter, Reading } from '#lib/domain/types.ts'
  * Values with no domain yet: registered without one, or not in the registry at all. They still
  * show, under their own tab, until a platform admin maps them (SAM-23).
  */
-export const OTHER_TAB = { id: 'OTHER', label: 'Not in a domain', icon: '📟' } as const;
+export const OTHER_TAB = { id: 'OTHER', label: 'Not in a domain', icon: 'sensor' } as const;
 
 export interface DomainTab {
 	id: string;
