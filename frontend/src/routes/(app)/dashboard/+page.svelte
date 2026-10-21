@@ -298,6 +298,7 @@
 						selectedId={device?.id ?? ''}
 						ariaLabel="Globe of this classroom's sensors"
 						interactive={false}
+						tint={device ? deviceTypeColor(data.deviceTypes, device.type) : undefined}
 					/>
 				{/key}
 			</div>

@@ -22,13 +22,16 @@
 		markers,
 		selectedId = $bindable(''),
 		ariaLabel = 'Globe',
-		interactive = true
+		interactive = true,
+		tint
 	}: {
 		markers: GlobeMarker[];
 		selectedId?: string;
 		ariaLabel?: string;
 		/** False for a decorative globe: no focus, no dragging, hidden from assistive tech. */
 		interactive?: boolean;
+		/** A hex color (e.g. a device type's registry color) for the land, rim and glow. */
+		tint?: string;
 	} = $props();
 
 	// Canvas colors per theme: a dark sphere in space, or a pale one on paper.
@@ -58,6 +61,31 @@
 			ring: '#0b1215'
 		}
 	};
+
+	/** `#3cc04b` as `60,192,75`, or null for anything that is not a 6-digit hex color. */
+	function rgb(hex: string | undefined) {
+		const m = hex?.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+		return m
+			? m
+					.slice(1)
+					.map((c) => parseInt(c, 16))
+					.join(',')
+			: null;
+	}
+
+	/** The theme's palette, with land, rim and glow in the tint when there is one. */
+	function palette() {
+		const base = PALETTES[theme.current];
+		const c = rgb(tint);
+		if (!c) return base;
+		const strong = theme.current === 'dark' ? 0.35 : 0.22;
+		return {
+			...base,
+			glow: [`rgba(${c},${strong})`, `rgba(${c},${strong / 3})`, `rgba(${c},0)`],
+			rim: `rgba(${c},${theme.current === 'dark' ? 0.35 : 0.45})`,
+			land: c
+		};
+	}
 
 	const RAD = Math.PI / 180;
 	const MIN_ZOOM = 0.8;
@@ -108,7 +136,7 @@
 		const { w, h, dpr } = size;
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 		ctx.clearRect(0, 0, w, h);
-		const pal = PALETTES[theme.current];
+		const pal = palette();
 
 		for (const s of pal.stars ? stars : []) {
 			ctx.fillStyle = `rgba(255,255,255,${s.a})`;
@@ -337,6 +365,7 @@
 		const id = selectedId;
 		void markers;
 		void theme.current;
+		void tint;
 		if (id && id !== lastSelected && size.w) {
 			const m = markers.find((x) => x.id === id);
 			if (m) flyTo(m.lat - 8 / view.zoom, m.lng);
