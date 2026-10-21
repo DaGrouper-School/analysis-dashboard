@@ -72,6 +72,22 @@ const RULES: Rule[] = [
 	}
 ];
 
+export type ThresholdLevel = 'normal' | DeviceAlert['level'];
+
+/**
+ * Where a value sits against the default thresholds, for a badge beside it. Null when the
+ * parameter has no threshold.
+ */
+export function thresholdStatus(
+	parameterId: string,
+	value: number | string | undefined
+): { level: ThresholdLevel; title: string } | null {
+	const rules = RULES.filter((r) => r.parameterId === parameterId);
+	if (!rules.length || typeof value !== 'number') return null;
+	const hit = rules.find((r) => r.test(value));
+	return hit ? { level: hit.level, title: hit.title } : { level: 'normal', title: 'Normal' };
+}
+
 export function alertsFor(reading: Pick<Reading, 'values'>): DeviceAlert[] {
 	const alerts: DeviceAlert[] = [];
 	for (const rule of RULES) {

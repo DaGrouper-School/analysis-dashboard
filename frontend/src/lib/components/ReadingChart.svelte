@@ -10,17 +10,18 @@
 		readings,
 		parameterId,
 		label,
-		unit = ''
+		unit = '',
+		height = 220
 	}: {
 		/** Any order; the chart sorts by time. */
 		readings: Reading[];
 		parameterId: string;
 		label: string;
 		unit?: string;
+		height?: number;
 	} = $props();
 
-	const HEIGHT = 220;
-	const PAD = { top: 16, right: 56, bottom: 28, left: 44 };
+	const PAD = { top: 16, bottom: 28, left: 44 };
 
 	let width = $state(0);
 	let active = $state<number | null>(null);
@@ -31,6 +32,9 @@
 			.filter((p): p is { at: number; value: number } => typeof p.value === 'number')
 			.sort((a, b) => a.at - b.at)
 	);
+
+	// Room for the latest value's label at the end of the line, at about 7px a character.
+	const padRight = $derived(Math.max(56, format(points.at(-1)?.value ?? 0).length * 7 + 16));
 
 	/** Clean tick step (1, 2 or 5 times a power of ten) for about `count` ticks. */
 	function niceStep(span: number, count: number) {
@@ -51,8 +55,8 @@
 		for (let t = low; t <= high + step / 2; t += step) ticks.push(Math.round(t * 1000) / 1000);
 		const first = points[0]?.at ?? 0;
 		const last = points.at(-1)?.at ?? first;
-		const plotWidth = Math.max(width - PAD.left - PAD.right, 1);
-		const plotHeight = HEIGHT - PAD.top - PAD.bottom;
+		const plotWidth = Math.max(width - PAD.left - padRight, 1);
+		const plotHeight = height - PAD.top - PAD.bottom;
 		return {
 			ticks,
 			x: (at: number) =>
@@ -66,16 +70,26 @@
 	);
 	const area = $derived(
 		points.length
-			? `${line}L${scale.x(points.at(-1)!.at)},${HEIGHT - PAD.bottom}L${scale.x(points[0].at)},${HEIGHT - PAD.bottom}Z`
+			? `${line}L${scale.x(points.at(-1)!.at)},${height - PAD.bottom}L${scale.x(points[0].at)},${height - PAD.bottom}Z`
 			: ''
 	);
 
 	const day = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+	const hour = new Intl.DateTimeFormat(undefined, { hour: 'numeric' });
+	// Within a day, label the hours; over longer spans, the dates.
+	const tickFormat = $derived(
+		points.length > 1 && points.at(-1)!.at - points[0].at <= 36 * 3_600_000 ? hour : day
+	);
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-	/** At most about six date labels, evenly spread, always including the latest. */
+	/** Labels from the latest reading back, at least 90px apart so they never overlap. */
 	const xTicks = $derived.by(() => {
-		const every = Math.max(1, Math.ceil(points.length / Math.max(2, Math.floor(width / 110))));
-		return points.filter((_, i) => (points.length - 1 - i) % every === 0);
+		const ticks: typeof points = [];
+		for (const point of points.toReversed()) {
+			const x = scale.x(point.at);
+			if (x < PAD.left + 20) break;
+			if (!ticks.length || scale.x(ticks.at(-1)!.at) - x >= 90) ticks.push(point);
+		}
+		return ticks;
 	});
 
 	function format(value: number) {
@@ -120,7 +134,7 @@
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 		<svg
 			{width}
-			height={HEIGHT}
+			{height}
 			role="img"
 			tabindex="0"
 			aria-label={`${label} over time, ${points.length} readings, latest ${format(points.at(-1)!.value)}. Use the arrow keys to read each value.`}
@@ -134,7 +148,7 @@
 			{#each scale.ticks as tick (tick)}
 				<line
 					x1={PAD.left}
-					x2={width - PAD.right}
+					x2={width - padRight}
 					y1={scale.y(tick)}
 					y2={scale.y(tick)}
 					class="stroke-line"
@@ -151,9 +165,9 @@
 			{#each xTicks as point (point.at)}
 				<text
 					x={scale.x(point.at)}
-					y={HEIGHT - 8}
+					y={height - 8}
 					text-anchor="middle"
-					class="fill-muted text-[11px]">{day.format(point.at)}</text
+					class="fill-muted text-[11px]">{tickFormat.format(point.at)}</text
 				>
 			{/each}
 
@@ -172,7 +186,7 @@
 					x1={scale.x(shown.at)}
 					x2={scale.x(shown.at)}
 					y1={PAD.top}
-					y2={HEIGHT - PAD.bottom}
+					y2={height - PAD.bottom}
 					class="stroke-line-strong"
 					stroke-width="1"
 				/>

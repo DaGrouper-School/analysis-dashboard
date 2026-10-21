@@ -70,26 +70,29 @@ Services and the backend verifies the token.
 
 ## Routes
 
-| Route                 | Story                                                   |
-| --------------------- | ------------------------------------------------------- |
-| `/signup`             | AP-01 sign up with Google or phone                      |
-| `/verify-phone`       | AP-01 SMS code with 30 s resend                         |
-| `/onboarding/profile` | AP-02 profile and contact (Google users verify a phone) |
-| `/onboarding/address` | AP-02 address with places autocomplete                  |
-| `/dashboard`          | Pick a classroom and sensor: conditions, chart, history |
-| `/dashboard/readings` | Raw readings of the picked sensor, every value it sent  |
-| `/map`                | AP-06 device map with current conditions and alerts     |
-| `/classrooms/[id]`    | AP-03 classroom, members, invites; edit name and school |
-| `/labs/[labId]`       | AP-05 devices, readings, record-data demo               |
-| `/labs/[labId]/edit`  | Edit the lab and its site profile                       |
-| `/profile`            | Edit profile and address, sign out                      |
+| Route                 | Story                                                    |
+| --------------------- | -------------------------------------------------------- |
+| `/signup`             | AP-01 sign up with Google or phone                       |
+| `/verify-phone`       | AP-01 SMS code with 30 s resend                          |
+| `/onboarding/profile` | AP-02 profile and contact (Google users verify a phone)  |
+| `/onboarding/address` | AP-02 address with places autocomplete                   |
+| `/dashboard`          | Pick a classroom and sensor: conditions, chart, history  |
+| `/dashboard/readings` | Raw readings of the picked sensor, every value it sent   |
+| `/dashboard/domains`  | AP-10 domain tabs: thresholds, trends, 24 h / 7 d / 30 d |
+| `/map`                | AP-06 device map with current conditions and alerts      |
+| `/classrooms/[id]`    | AP-03 classroom, members, invites; edit name and school  |
+| `/labs/[labId]`       | AP-05 devices, readings, record-data demo                |
+| `/labs/[labId]/edit`  | Edit the lab and its site profile                        |
+| `/profile`            | Edit profile and address, sign out                       |
 
 Route groups `(auth)` and `(app)` hold the guards: signed-in users skip sign-up, and the app
 requires a completed onboarding.
 
 ## Seed data
 
-Every seeded device has two weeks of daily readings, so the dashboard chart has a history.
+Every seeded device has 30 days of daily readings and the last 24 hours hourly, so the dashboard
+chart and the domain views' 24 h, 7 d and 30 d ranges have a history. UV, solar radiation and
+brightness follow the sun through the day.
 Each sensor type shows its own key values on the dashboard and map: temperature, wind, rain and
 UV for a weather station, soil moisture and temperature for a soil sensor, and so on
 (`src/lib/key-values.ts`).

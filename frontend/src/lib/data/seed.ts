@@ -510,7 +510,7 @@ function reading(
 	const lab = labs.find((l) => l.id === device.labId)!;
 	const classroom = classrooms.find((c) => c.id === lab.classroomId)!;
 	return {
-		id: `rdg_${deviceId.slice(4)}_${observedAt.slice(0, 10)}`,
+		id: `rdg_${deviceId.slice(4)}_${observedAt.slice(0, 13)}`,
 		deviceId,
 		labId: lab.id,
 		classroomId: classroom.id,
@@ -573,28 +573,48 @@ const DAILY_SWING: Record<string, number> = {
 	soil_moisture: 4,
 	soil_temperature: 1.5
 };
-const HISTORY_DAYS = 14;
+const HISTORY_DAYS = 30;
+const HOUR = 3_600_000;
 
 /**
- * Two weeks of daily readings behind each device's latest one, so the dashboard has a history
- * to chart. Values swing smoothly around the latest reading; no reading goes below zero.
+ * A month of daily readings behind each device's latest one, plus hourly readings over the last
+ * day, so the 24 h, 7 d and 30 d views all have a history. Values swing smoothly around the
+ * latest reading; UV follows the sun through the day; no reading goes below zero.
  */
 function history(): MockDbState['readings'] {
 	const result: MockDbState['readings'] = [];
 	devices.forEach((device, d) => {
 		const latest = readings.find((r) => r.deviceId === device.id && r.observedAt === READING_AT)!;
 		const gps = latest.locationSource === 'device' ? latest.location : null;
-		for (let day = 1; day < HISTORY_DAYS; day++) {
-			const observedAt = new Date(Date.parse(READING_AT) - day * 86_400_000).toISOString();
-			if (readings.some((r) => r.deviceId === device.id && r.observedAt === observedAt)) continue;
+		const add = (observedAt: string, wave: number, daylight: number | null) => {
+			if (readings.some((r) => r.deviceId === device.id && r.observedAt === observedAt)) return;
 			const values = { ...latest.values };
 			for (const [id, swing] of Object.entries(DAILY_SWING)) {
 				const value = values[id];
 				if (typeof value !== 'number') continue;
-				const wave = Math.sin(day * 0.9 + d) + 0.5 * Math.sin(day * 2.3 + d * 2);
-				values[id] = Math.max(0, Math.round((value + (swing * wave) / 1.5) * 10) / 10);
+				const shifted =
+					id === 'uv' && daylight !== null ? value * daylight : value + (swing * wave) / 1.5;
+				values[id] = Math.max(0, Math.round(shifted * 10) / 10);
+			}
+			// Sunlight follows the sun by the hour, and the cloud cover from day to day.
+			for (const id of ['solar_radiation', 'brightness']) {
+				const value = values[id];
+				if (typeof value !== 'number') continue;
+				values[id] = Math.round(value * (daylight ?? 1 + wave / 4));
 			}
 			result.push(reading(device.id, observedAt, values, gps));
+		};
+		for (let day = 1; day < HISTORY_DAYS; day++) {
+			const wave = Math.sin(day * 0.9 + d) + 0.5 * Math.sin(day * 2.3 + d * 2);
+			add(new Date(Date.parse(READING_AT) - day * 24 * HOUR).toISOString(), wave, null);
+		}
+		for (let hour = 1; hour < 24; hour++) {
+			const at = Date.parse(READING_AT) - hour * HOUR;
+			// Local solar time, roughly: the sun is up from 6 to 18 at the lab's longitude.
+			const lab = labs.find((l) => l.id === device.labId)!;
+			const solar = (new Date(at).getUTCHours() + lab.location.lng / 15 + 24) % 24;
+			const daylight = Math.max(0, Math.sin(((solar - 6) / 12) * Math.PI));
+			add(new Date(at).toISOString(), 0.6 * Math.sin(hour * 0.5 + d) + daylight - 0.5, daylight);
 		}
 	});
 	return result;
