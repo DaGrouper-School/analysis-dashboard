@@ -882,7 +882,8 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		description: 'Manual gauge read once a day.',
 		color: '#00bdff',
 		icon: 'gauge',
-		parameterIds: ['rain_gauge_daily_accumulation']
+		parameterIds: ['rain_gauge_daily_accumulation'],
+		manual: true
 	},
 	{
 		id: 'soil_sensor',

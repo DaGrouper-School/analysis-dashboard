@@ -28,6 +28,15 @@ function sourceIdFor(state: MockDbState, device: StoredDevice): string {
 	return `${classroomOf(state, lab).code}:${device.identifier}`;
 }
 
+/** `MAN-0003`: the next free identifier for a manual measurement in a classroom. */
+function manualIdentifier(state: MockDbState, classroomId: string) {
+	const labIds = new Set(state.labs.filter((l) => l.classroomId === classroomId).map((l) => l.id));
+	const taken = new Set(state.devices.filter((d) => labIds.has(d.labId)).map((d) => d.identifier));
+	let n = 1;
+	while (taken.has(`MAN-${String(n).padStart(4, '0')}`)) n++;
+	return `MAN-${String(n).padStart(4, '0')}`;
+}
+
 function toDevice(state: MockDbState, device: StoredDevice, showSource: boolean): Device {
 	const lab = state.labs.find((l) => l.id === device.labId)!;
 	return {
@@ -224,11 +233,12 @@ export function createMockLabs({
 
 		async registerDevice(labId, input) {
 			await delay();
-			const errors = validateDevice(input);
-			if (Object.keys(errors).length) {
-				throw new ServiceError('invalid_input', 'Check the highlighted fields.', errors);
-			}
 			return updateDb((state) => {
+				const manual = state.deviceTypes.find((t) => t.id === input.type)?.manual === true;
+				const errors = validateDevice(input, manual);
+				if (Object.keys(errors).length) {
+					throw new ServiceError('invalid_input', 'Check the highlighted fields.', errors);
+				}
 				const { lab, canManage } = accessLab(state, labId);
 				if (!canManage) {
 					throw new ServiceError(
@@ -245,7 +255,10 @@ export function createMockLabs({
 					labId: lab.id,
 					name: input.name.trim(),
 					type: input.type,
-					identifier: input.identifier.trim().toUpperCase(),
+					// A manual measurement has no serial: it gets one, unique in its classroom.
+					identifier: manual
+						? manualIdentifier(state, lab.classroomId)
+						: input.identifier.trim().toUpperCase(),
 					registeredAt: iso()
 				};
 				// SAM source identity is the classroom code plus the device identifier (SAM-06).

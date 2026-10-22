@@ -20,6 +20,21 @@
 	const paramsById = $derived(new Map(data.parameters.map((p) => [p.id, p])));
 	const latest = $derived(data.readings[0] ?? null);
 	const shown = $derived(withinRange(data.readings, data.range));
+	// svelte-ignore state_referenced_locally
+	let search = $state(data.search);
+	// svelte-ignore state_referenced_locally
+	let alertsOnly = $state(data.alertsOnly);
+	/** The open tab's values that match the search, and are in alert when only those are shown. */
+	const visibleIds = $derived(
+		(data.tab?.parameterIds ?? []).filter((id) => {
+			const q = search.trim().toLowerCase();
+			const { label } = describeParameter(id, paramsById);
+			if (q && !label.toLowerCase().includes(q) && !id.toLowerCase().includes(q)) return false;
+			if (!alertsOnly) return true;
+			const status = thresholdStatus(alertRules, id, latest?.values[id]);
+			return !!status && status.level !== 'normal';
+		})
+	);
 	let calculating = $state(false);
 	let calculationId = $state('');
 
@@ -41,6 +56,8 @@
 		const domain = change.device ? undefined : (change.domain ?? data.tab?.id);
 		if (domain) query += `&domain=${encodeURIComponent(domain)}`;
 		query += `&range=${encodeURIComponent(change.range ?? data.range)}`;
+		if (search.trim()) query += `&q=${encodeURIComponent(search.trim())}`;
+		if (alertsOnly) query += '&show=alerts';
 		return resolve('/(app)/dashboard/domains') + query;
 	}
 
@@ -82,12 +99,12 @@
 		{#if device}
 			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 			<a href={rawReadings} class="btn btn-ghost"
-				><Icon name="readings" class="size-4" /> Show raw sensor readings</a
+				><Icon name="readings" class="size-4" /> Show raw measurements</a
 			>
 		{/if}
 		{#if data.classroom && data.devices.length > 1}
 			<div class="w-full sm:w-72">
-				<label class="label" for="domain-device">Sensor</label>
+				<label class="label" for="domain-device">Measurement</label>
 				<select
 					id="domain-device"
 					class="input"
@@ -106,12 +123,12 @@
 {#if !device || !data.tab}
 	<div class="card mt-8">
 		<h2 class="text-xl font-semibold">
-			{device ? `No readings from ${device.name} yet` : 'No sensor to show'}
+			{device ? `No readings from ${device.name} yet` : 'Nothing to show'}
 		</h2>
 		<p class="mt-2 text-sm text-muted">
 			{device
-				? 'Domains show here once the sensor sends data.'
-				: 'Domain views open for sensors in your own classrooms. Join a classroom to see its sensors.'}
+				? 'Domains show here once it has readings.'
+				: 'Domain views open for measurements in your own classrooms. Join a classroom to see them.'}
 		</p>
 	</div>
 {:else}
@@ -168,7 +185,41 @@
 		)!.label} of data{#if latest}, up to {dateTime.format(new Date(latest.observedAt))}{/if}.
 	</p>
 
-	{#if data.tab.parameterIds.length > 1}
+	<div class="mt-4 flex flex-wrap items-center gap-3">
+		<div class="flex rounded-full border border-line p-0.5 text-sm" role="group" aria-label="Show">
+			{#each [[false, 'All'], [true, 'Alert triggered']] as const as [option, label] (label)}
+				<button
+					type="button"
+					class={[
+						'rounded-full px-3 py-1 whitespace-nowrap transition',
+						alertsOnly === option ? 'bg-ink text-canvas' : 'text-muted hover:text-ink'
+					]}
+					aria-pressed={alertsOnly === option}
+					onclick={() => (alertsOnly = option)}>{label}</button
+				>
+			{/each}
+		</div>
+		<div class="relative w-full sm:w-72">
+			<label class="sr-only" for="value-search">Find a value</label>
+			<input
+				id="value-search"
+				type="search"
+				class="input pr-9"
+				placeholder="Find a value…"
+				bind:value={search}
+			/>
+			{#if search}
+				<button
+					type="button"
+					class="absolute top-1/2 right-2 -translate-y-1/2 px-1 text-muted hover:text-ink"
+					aria-label="Clear search"
+					onclick={() => (search = '')}>×</button
+				>
+			{/if}
+		</div>
+	</div>
+
+	{#if visibleIds.length > 1}
 		<p class="mt-2 text-xs text-muted">
 			Shown together for comparison. One does not cause the other.
 		</p>
@@ -180,7 +231,24 @@
 		aria-labelledby="tab-{data.tab.id}"
 		class="mt-4 grid gap-4 lg:grid-cols-2"
 	>
-		{#each data.tab.parameterIds as id (id)}
+		{#if !visibleIds.length}
+			<div class="card lg:col-span-2">
+				<p class="text-sm text-muted">
+					{alertsOnly && !search.trim()
+						? `No ${data.tab.label} values are in alert.`
+						: `No ${data.tab.label} values match.`}
+				</p>
+				<button
+					type="button"
+					class="btn btn-ghost mt-3"
+					onclick={() => {
+						search = '';
+						alertsOnly = false;
+					}}>Show all values</button
+				>
+			</div>
+		{/if}
+		{#each visibleIds as id (id)}
 			{@const param = describeParameter(id, paramsById)}
 			{@const value = latest?.values[id]}
 			{@const status = thresholdStatus(alertRules, id, value)}

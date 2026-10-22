@@ -12,13 +12,14 @@
 	import Modal from '#lib/components/Modal.svelte';
 	import PairingVisual, { type PairingState } from '#lib/components/PairingVisual.svelte';
 	import StepTrack from '#lib/components/StepTrack.svelte';
-	import { deviceTypeColor, deviceTypeIcon } from '#lib/labels.ts';
+	import { deviceTypeColor, deviceTypeIcon, isManualType } from '#lib/labels.ts';
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
 
 	/**
-	 * Register a sensor to a lab as a step-by-step modal: pick its type, identify it, pair (the
-	 * device is registered in SAM as a source), done. `onclose` runs when the modal closes, so
-	 * the page can show the new devices.
+	 * Add a measurement to a lab as a step-by-step modal: pick its type, identify it, pair (the
+	 * device is registered in SAM as a source), done. A manual type has no sensor: it is named,
+	 * gets a generated identifier and is added without pairing. `onclose` runs when the modal
+	 * closes, so the page can show the new measurements.
 	 */
 	let {
 		open = $bindable(false),
@@ -41,11 +42,16 @@
 	} = $props();
 
 	type Phase = 'type' | 'identify' | 'scanning' | 'handshake' | 'paired' | 'error';
-	const STEPS = [
+	const SENSOR_STEPS = [
 		{ label: 'Type', icon: 'sensor' },
 		{ label: 'Identify', icon: 'tag' },
 		{ label: 'Pair', icon: 'radar' },
 		{ label: 'Paired', icon: 'check' }
+	];
+	const MANUAL_STEPS = [
+		{ label: 'Type', icon: 'sensor' },
+		{ label: 'Name', icon: 'tag' },
+		{ label: 'Added', icon: 'check' }
 	];
 	const STEP_OF: Record<Phase, number> = {
 		type: 0,
@@ -74,6 +80,9 @@
 	let registered = $state<Device | null>(null);
 	let run = 0;
 
+	const manual = $derived(isManualType(deviceTypes, type));
+	const steps = $derived(manual ? MANUAL_STEPS : SENSOR_STEPS);
+	const step = $derived(manual ? Math.min(STEP_OF[phase], 3) : STEP_OF[phase]);
 	const busy = $derived(phase === 'scanning' || phase === 'handshake');
 	const color = $derived(deviceTypeColor(deviceTypes, type));
 	const icon = $derived(deviceTypeIcon(deviceTypes, type));
@@ -106,7 +115,30 @@
 			phase = 'identify';
 			return;
 		}
-		pair();
+		if (manual) add();
+		else pair();
+	}
+
+	/** A manual measurement: no sensor to find, so it is added straight away. */
+	async function add() {
+		const input: RegisterDeviceInput = { name, type, identifier: '' };
+		errors = validateDevice(input, true);
+		if (Object.keys(errors).length) return;
+		error = '';
+		phase = 'handshake';
+		try {
+			registered = await services.labs.registerDevice(labId, input);
+			phase = 'paired';
+			await onregistered?.(registered);
+		} catch (e) {
+			if (e instanceof ServiceError && Object.keys(e.fields).length) {
+				errors = e.fields;
+				phase = e.fields.type ? 'type' : 'identify';
+				return;
+			}
+			error = errorMessage(e);
+			phase = 'error';
+		}
 	}
 
 	async function pair() {
@@ -155,13 +187,13 @@
 	}
 </script>
 
-<Modal bind:open title="Register a sensor" eyebrow={labName} onclose={closed}>
+<Modal bind:open title="Add measurement" eyebrow={labName} onclose={closed}>
 	<form id="register-sensor" class="space-y-5" style:--accent={color} onsubmit={next} novalidate>
-		<StepTrack steps={STEPS} current={STEP_OF[phase]} failed={phase === 'error'} />
+		<StepTrack {steps} current={step} failed={phase === 'error'} />
 
 		{#if phase === 'type'}
 			<fieldset>
-				<legend class="label">What kind of sensor is it?</legend>
+				<legend class="label">What are you measuring with?</legend>
 				<div class="grid gap-2 sm:grid-cols-2">
 					{#each deviceTypes as option (option.id)}
 						<label class="cursor-pointer">
@@ -184,7 +216,11 @@
 									<Icon name={option.icon} />
 								</span>
 								<span class="min-w-0">
-									<span class="block text-sm font-medium text-ink">{option.label}</span>
+									<span class="block text-sm font-medium text-ink"
+										>{option.label}{#if option.manual}<span class="chip ml-2 py-0 text-[11px]"
+												>Manual</span
+											>{/if}</span
+									>
 									<span class="block text-xs text-muted">{option.description}</span>
 								</span>
 							</span>
@@ -217,6 +253,35 @@
 					</p>
 				{:else}
 					<p class="text-muted">This type has no expected values; it shows whatever it sends.</p>
+				{/if}
+			</div>
+		{:else if phase === 'identify' && manual}
+			<p class="text-sm text-muted">
+				Entered by hand, so there is no sensor to pair. It gets its own identifier, and people in
+				the lab record it with “Enter measurement”.
+			</p>
+			<div>
+				<label class="label" for="sensor-name">Name</label>
+				<input
+					id="sensor-name"
+					class={['input', errors.name && 'input-error']}
+					placeholder="School rain gauge"
+					bind:value={name}
+				/>
+				{#if errors.name}<p class="field-error">{errors.name}</p>{/if}
+			</div>
+		{:else if manual}
+			<div aria-live="polite">
+				{#if phase === 'paired' && registered}
+					<p class="text-sm text-ink" role="status">{registered.name} is added to {labName}.</p>
+					<p class="mt-1 text-sm text-muted">
+						Identifier <span class="font-mono text-ink">{registered.identifier}</span>
+					</p>
+					<p class="mt-1 text-sm text-muted">Use “Enter measurement” to record its readings.</p>
+				{:else if phase === 'error'}
+					<p class="field-error mt-0" role="alert">{error}</p>
+				{:else}
+					<p class="text-sm text-muted">Adding…</p>
 				{/if}
 			</div>
 		{:else if phase === 'identify'}
@@ -290,9 +355,15 @@
 			</button>
 		{:else if phase === 'identify'}
 			<button type="button" class="btn btn-ghost" onclick={() => (phase = 'type')}>Back</button>
-			<button form="register-sensor" class="btn btn-primary">
-				<Icon name="radar" class="size-4" /> Pair sensor
-			</button>
+			{#if manual}
+				<button form="register-sensor" class="btn btn-primary">
+					<Icon name="plus" class="size-4" /> Add measurement
+				</button>
+			{:else}
+				<button form="register-sensor" class="btn btn-primary">
+					<Icon name="radar" class="size-4" /> Pair sensor
+				</button>
+			{/if}
 		{:else if busy}
 			<button
 				type="button"
@@ -304,10 +375,10 @@
 			>
 		{:else if phase === 'error'}
 			<button type="button" class="btn btn-ghost" onclick={() => (phase = 'identify')}>Back</button>
-			<button type="button" class="btn btn-primary" onclick={pair}>Try again</button>
+			<button type="button" class="btn btn-primary" onclick={manual ? add : pair}>Try again</button>
 		{:else}
 			<button type="button" class="btn btn-ghost" onclick={another}>
-				<Icon name="plus" class="size-4" /> Register another
+				<Icon name="plus" class="size-4" /> Add another
 			</button>
 			<button type="button" class="btn btn-primary" onclick={() => (open = false)}>Done</button>
 		{/if}

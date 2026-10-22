@@ -6,7 +6,12 @@ import type {
 	Parameter
 } from '#lib/domain/types.ts';
 import { checkAlertRule, ruleText } from '#lib/domain/alerts.ts';
-import { PARAMETER_ID, validateDeviceType, validateDomain } from '#lib/domain/validation.ts';
+import {
+	PARAMETER_ID,
+	checkExplanation,
+	validateDeviceType,
+	validateDomain
+} from '#lib/domain/validation.ts';
 import { newId, readDb, updateDb, type MockDbState } from '#lib/data/mock-db.ts';
 import { ServiceError, type RegistryService } from '../types';
 import { currentUser } from './classrooms';
@@ -242,7 +247,8 @@ export function createMockRegistry({
 					description: input.description.trim(),
 					color: input.color || DEVICE_TYPE_PALETTE.at(-1)!,
 					icon: input.icon?.trim() || FALLBACK_TYPE_ICON,
-					parameterIds: input.values.map((v) => v.id.trim())
+					parameterIds: input.values.map((v) => v.id.trim()),
+					...(input.manual ? { manual: true } : {})
 				};
 				state.deviceTypes.push(type);
 				const count = type.parameterIds.length;
@@ -291,6 +297,8 @@ export function createMockRegistry({
 				type.description = input.description.trim();
 				type.color = input.color || type.color;
 				type.icon = input.icon?.trim() || type.icon;
+				if (input.manual) type.manual = true;
+				else delete type.manual;
 				type.parameterIds = input.values.map((v) => v.id.trim());
 				const removed = before.filter((p) => !type.parameterIds.includes(p));
 				const parts = [
@@ -319,6 +327,26 @@ export function createMockRegistry({
 				if (parameter.domain === domainId) return parameter;
 				move(state, parameter, domainId, user.fullName);
 				return parameter;
+			});
+		},
+
+		async explainParameter(parameterId, input) {
+			await delay();
+			return updateDb((state) => {
+				const user = asAdmin(state);
+				const parameter = state.parameters.find((p) => p.id === parameterId);
+				if (!parameter) throw new ServiceError('not_found', 'That value is not in the registry.');
+				const inputs = [...new Set(input.inputs.map((id) => id.trim()).filter(Boolean))];
+				invalid(checkExplanation({ ...input, inputs }, parameterId, state.parameters));
+				parameter.plain = input.plain.trim() || undefined;
+				parameter.calculation = {
+					method: input.method,
+					formula: input.formula.trim(),
+					inputs,
+					...state.registryVersion
+				};
+				log(state, user.fullName, `Edited what ${parameter.label} means and how it is calculated.`);
+				return structuredClone(parameter);
 			});
 		},
 

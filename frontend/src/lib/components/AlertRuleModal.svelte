@@ -27,6 +27,7 @@
 	let {
 		open = $bindable(false),
 		parameter,
+		source,
 		rule = null,
 		scopes = [],
 		initialScope = '',
@@ -35,6 +36,8 @@
 	}: {
 		open?: boolean;
 		parameter: Parameter;
+		/** What the level is on, e.g. the sensor's name, shown beside the value's. */
+		source?: string;
 		/** The rule to change, or null to add one. */
 		rule?: AlertRule | null;
 		/** Where the level can apply, when there is a choice. */
@@ -111,7 +114,11 @@
 	}
 </script>
 
-<Modal bind:open title={rule ? 'Change alert' : 'Add alert'} eyebrow={parameter.label}>
+<Modal
+	bind:open
+	title={rule ? 'Change alert' : 'Add alert'}
+	eyebrow={source ? `${parameter.label} · ${source}` : parameter.label}
+>
 	<form id="alert-rule" class="space-y-5" onsubmit={save} novalidate>
 		{#if scopes.length > 1}
 			<fieldset>

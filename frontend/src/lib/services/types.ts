@@ -2,6 +2,7 @@ import type {
 	Address,
 	AlertRule,
 	AlertRuleInput,
+	ExplanationInput,
 	AlertScope,
 	DeviceAlerts,
 	CalculationDetails,
@@ -103,6 +104,8 @@ export interface RegistryService {
 	updateDeviceType(id: string, input: DeviceTypeInput): Promise<DeviceTypeDefinition>;
 	/** Puts a parameter under a domain, or takes it out with null. */
 	mapParameter(parameterId: string, domain: string | null): Promise<Parameter>;
+	/** Sets what a value means and how it is calculated (AP-07). */
+	explainParameter(parameterId: string, input: ExplanationInput): Promise<Parameter>;
 	/**
 	 * The platform default alert levels (AP-08): in force on every device whose classroom and
 	 * device have no levels of their own for that value.

@@ -4,10 +4,12 @@
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import RollingNumber from '#lib/components/RollingNumber.svelte';
 	import type { DeviceType } from '#lib/domain/types.ts';
+	import { domainOf } from '#lib/domains.ts';
 	import { formatPoint } from '#lib/geo.ts';
 	import { formatValue, keyValues } from '#lib/key-values.ts';
 	import { deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
 	import { reveal } from '#lib/reveal.ts';
+	import { domainQuery } from '#lib/sensor-selection.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -81,6 +83,19 @@
 		hiddenTypes = hiddenTypes.includes(type)
 			? hiddenTypes.filter((t) => t !== type)
 			: [...hiddenTypes, type];
+	}
+
+	/** The selected sensor's domain view, opened on one alert's value when given. */
+	function domainsHref(parameterId?: string) {
+		const { device, reading } = selected!;
+		const label = parameterId ? (paramsById.get(parameterId)?.label ?? parameterId) : '';
+		return (
+			resolve('/(app)/dashboard/domains') +
+			domainQuery(reading.classroomId, device.id, {
+				domain: parameterId ? domainOf(parameterId, paramsById, data.domains) : null,
+				search: label
+			})
+		);
 	}
 
 	// Only the values that matter for the selected sensor's type: no rain on a soil sensor.
@@ -240,14 +255,21 @@
 				aria-live="polite"
 				aria-label="Current conditions"
 			>
-				<p class="text-xs text-muted">Current conditions</p>
-				<h2 class="mt-1 flex items-center gap-2 text-xl">
-					<Icon
-						name={deviceTypeIcon(data.deviceTypes, selected.device.type)}
-						class="size-6 text-(--accent)"
-					/>
-					{selected.device.name}
-				</h2>
+				<div class="flex items-start justify-between gap-3">
+					<div class="min-w-0">
+						<p class="text-xs text-muted">Current conditions</p>
+						<h2 class="mt-1 flex items-center gap-2 text-xl">
+							<Icon
+								name={deviceTypeIcon(data.deviceTypes, selected.device.type)}
+								class="size-6 shrink-0 text-(--accent)"
+							/>
+							<span class="min-w-0 break-words">{selected.device.name}</span>
+						</h2>
+					</div>
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+					<a href={domainsHref()} class="btn btn-ghost shrink-0 px-3 py-1.5 text-sm">View domains</a
+					>
+				</div>
 				<p class="mt-1 text-sm text-muted">
 					{selected.classroomName} ·
 					<a
@@ -275,9 +297,9 @@
 					]}
 				>
 					{#each tiles as item, i (i)}
-						<div class="accent-tile p-3">
+						<div class="accent-tile min-w-0 p-3">
 							<dt class="text-xs text-muted">{item.label}</dt>
-							<dd class="mt-1 text-2xl text-ink">
+							<dd class="mt-1 text-2xl break-words text-ink">
 								<RollingNumber value={formatValue(item.value, item.unit, item.valueType)} />
 							</dd>
 						</div>
@@ -288,18 +310,23 @@
 				{#if selected.alerts.length}
 					<ul class="mt-2 space-y-2">
 						{#each selected.alerts as alert (alert.parameterId)}
-							<li
-								class={[
-									'border-l-2 bg-ink/[0.03] py-2 pr-2 pl-3 text-sm',
-									alert.level === 'warning' ? 'border-danger' : 'border-orange'
-								]}
-							>
-								<p class="text-ink">
-									<span aria-hidden="true">{alert.level === 'warning' ? '▲▲' : '▲'}</span>
-									{alert.title}
-									<span class="sr-only">({alert.level})</span>
-								</p>
-								<p class="text-muted">{alert.message}</p>
+							<li>
+								<!-- eslint-disable svelte/no-navigation-without-resolve -->
+								<a
+									href={domainsHref(alert.parameterId)}
+									class={[
+										'block border-l-2 bg-ink/[0.03] py-2 pr-2 pl-3 text-sm hover:bg-ink/[0.08]',
+										alert.level === 'warning' ? 'border-danger' : 'border-orange'
+									]}
+								>
+									<p class="text-ink">
+										<span aria-hidden="true">{alert.level === 'warning' ? '▲▲' : '▲'}</span>
+										{alert.title}
+										<span class="sr-only">({alert.level})</span>
+									</p>
+									<p class="text-muted">{alert.message}</p>
+								</a>
+								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 							</li>
 						{/each}
 					</ul>

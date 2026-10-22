@@ -210,6 +210,14 @@ export interface Calculation {
 	publishedAt: string;
 }
 
+/** What a platform admin sets for a value's "What it means" and "How is this calculated?". */
+export interface ExplanationInput {
+	plain: string;
+	method: Calculation['method'];
+	formula: string;
+	inputs: string[];
+}
+
 /** What "How is this calculated?" shows: the calculation with its inputs named. */
 export interface CalculationDetails extends Calculation {
 	parameter: Pick<Parameter, 'id' | 'label' | 'unit' | 'source' | 'plain'>;
@@ -258,6 +266,11 @@ export interface DeviceTypeDefinition {
 	icon: string;
 	/** Registry parameters the device sends, in display order. */
 	parameterIds: string[];
+	/**
+	 * Entered by hand, with no sensor: added to a lab without pairing, with a generated
+	 * identifier, and recorded with "Enter measurement" instead of a sync.
+	 */
+	manual?: boolean;
 }
 
 /** One change to the registry, kept so stewards can see who changed what. */
@@ -291,6 +304,8 @@ export interface DeviceTypeInput {
 	color: string;
 	/** A registry icon name. Blank keeps the current icon, or the generic sensor for a new type. */
 	icon?: string;
+	/** Entered by hand, with no sensor attached. */
+	manual?: boolean;
 	values: ExpectedValueInput[];
 }
 
@@ -492,6 +507,7 @@ export interface EffectiveAlertRule extends AlertRule {
 
 export interface DeviceAlerts {
 	deviceId: string;
+	deviceName: string;
 	deviceType: DeviceType;
 	classroomName: string;
 	rules: EffectiveAlertRule[];

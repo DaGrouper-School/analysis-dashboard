@@ -39,6 +39,21 @@
 	::selection {
 		@apply bg-teal/40 text-ink;
 	}
+	/* Everything that acts on a click shows the hand; disabled controls say they are not allowed. */
+	button,
+	[role='button'],
+	[role='tab'],
+	summary,
+	select,
+	label:has(> input[type='radio'], > input[type='checkbox']),
+	input[type='radio'],
+	input[type='checkbox'],
+	input[type='file'] {
+		cursor: pointer;
+	}
+	:is(button, select, input):disabled {
+		cursor: not-allowed;
+	}
 	/* Native controls (date pickers, scrollbars) follow the theme. */
 	:root {
 		color-scheme: dark;

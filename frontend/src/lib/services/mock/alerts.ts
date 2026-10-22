@@ -76,6 +76,7 @@ export function createMockAlerts({
 		const can = permissionsFor(user, roleIn(state, lab.classroomId, user.id));
 		return structuredClone({
 			deviceId: device.id,
+			deviceName: device.name,
 			deviceType: device.type,
 			classroomName: state.classrooms.find((c) => c.id === lab.classroomId)?.name ?? '',
 			rules: deviceRules(state, device),

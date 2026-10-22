@@ -37,7 +37,7 @@ function reading(observedAt: string, values: Reading['values']): Reading {
 }
 
 describe('domain tabs', () => {
-	it('shows only the domains a device sends numbers for', () => {
+	it('shows only the domains a device sends values for, text ones included', () => {
 		const tabs = domainTabs(
 			[reading('2026-10-20T08:00:00Z', { air_temperature: 27, uv: 3, pressure_trend: 'steady' })],
 			parameters,
@@ -45,7 +45,8 @@ describe('domain tabs', () => {
 		);
 		expect(tabs.map((t) => [t.id, t.parameterIds])).toEqual([
 			['AIR', ['air_temperature']],
-			['SUN', ['uv']]
+			['SUN', ['uv']],
+			['OTHER', ['pressure_trend']]
 		]);
 	});
 

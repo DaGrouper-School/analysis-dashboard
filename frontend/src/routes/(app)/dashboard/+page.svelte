@@ -2,7 +2,7 @@
 	import { tick } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { domainTabs } from '#lib/domains.ts';
+	import { domainOf, domainTabs } from '#lib/domains.ts';
 	import { formatPoint } from '#lib/geo.ts';
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
@@ -15,12 +15,13 @@
 	import { formatValue, keySummary, keyValues } from '#lib/key-values.ts';
 	import { TREND_LABELS, trendOf, trendText } from '#lib/indicators.ts';
 	import { reveal } from '#lib/reveal.ts';
-	import { sensorQuery } from '#lib/sensor-selection.ts';
+	import { domainQuery, sensorQuery } from '#lib/sensor-selection.ts';
 	import {
 		CLASSROOM_ROLE_LABELS,
 		deviceTypeColor,
 		deviceTypeIcon,
-		deviceTypeLabel
+		deviceTypeLabel,
+		isManualType
 	} from '#lib/labels.ts';
 	import type { PageProps } from './$types';
 
@@ -59,6 +60,8 @@
 		resolve('/(app)/observe') +
 			(data.device ? `?lab=${data.device.labId}&device=${data.device.id}` : '')
 	);
+	// A manual measurement has no sensor to sync: it is only ever entered by hand.
+	const manual = $derived(!!device && isManualType(data.deviceTypes, device.type));
 	const latest = $derived(data.readings[0] ?? null);
 	const tiles = $derived(device && latest ? keyValues(device.type, latest.values, paramsById) : []);
 
@@ -142,20 +145,7 @@
 			aria-label="Show data for"
 		>
 			<div class="w-full sm:w-72">
-				<label class="label" for="pick-classroom">Classroom</label>
-				<select
-					id="pick-classroom"
-					class="input"
-					value={data.classroom.id}
-					onchange={(e) => choose(e.currentTarget.value)}
-				>
-					{#each data.classrooms as classroom (classroom.id)}
-						<option value={classroom.id}>{classroom.name}</option>
-					{/each}
-				</select>
-			</div>
-			<div class="w-full sm:w-72">
-				<label class="label" for="pick-device">Sensor</label>
+				<label class="label" for="pick-device">Measurement</label>
 				<select
 					id="pick-device"
 					class="input"
@@ -166,7 +156,7 @@
 					{#each data.devices as option (option.id)}
 						<option value={option.id}>{option.name}</option>
 					{:else}
-						<option value="">No sensors yet</option>
+						<option value="">No measurements yet</option>
 					{/each}
 				</select>
 			</div>
@@ -184,7 +174,7 @@
 		<h2 class="mt-1 text-xl font-semibold">You're not in a classroom yet</h2>
 		<p class="mt-2 text-sm text-muted">
 			Conditions come only from devices in your classrooms' labs. Join a classroom with an invite
-			link to see its sensors here.
+			link to see its measurements here.
 		</p>
 		<a class="btn btn-ghost mt-4" href={resolve('/(app)/classrooms')}>Your classrooms</a>
 	</div>
@@ -277,27 +267,44 @@
 						{#if data.alerts.length}
 							<ul class="mt-2 space-y-2">
 								{#each data.alerts as alert (alert.parameterId)}
-									<li
-										class={[
-											'border-l-2 bg-ink/[0.04] py-2 pr-2 pl-3 text-sm',
-											alert.level === 'warning' ? 'border-danger' : 'border-orange'
-										]}
-									>
-										<span class="text-ink">
-											<span aria-hidden="true">{alert.level === 'warning' ? '▲▲' : '▲'}</span>
-											{alert.title}</span
+									{@const label = paramsById.get(alert.parameterId)?.label ?? alert.parameterId}
+									<li>
+										<!-- Opens the alert's value in its domain; the search can be cleared there. -->
+										<!-- eslint-disable svelte/no-navigation-without-resolve -->
+										<a
+											href={resolve('/(app)/dashboard/domains') +
+												domainQuery(data.classroom!.id, data.device!.id, {
+													domain: domainOf(alert.parameterId, paramsById, data.domains),
+													search: label
+												})}
+											class={[
+												'block border-l-2 bg-ink/[0.04] py-2 pr-2 pl-3 text-sm hover:bg-ink/[0.08]',
+												alert.level === 'warning' ? 'border-danger' : 'border-orange'
+											]}
 										>
-										<span class="text-muted">· {alert.message}</span>
+											<span class="text-ink">
+												<span aria-hidden="true">{alert.level === 'warning' ? '▲▲' : '▲'}</span>
+												{alert.title}</span
+											>
+											<span class="text-muted">· {alert.message}</span>
+											<span class="sr-only">Open {label} in its domain</span>
+										</a>
+										<!-- eslint-enable svelte/no-navigation-without-resolve -->
 									</li>
 								{/each}
 							</ul>
 						{:else}
-							<p class="mt-1 text-sm text-muted">No active alerts for this sensor.</p>
+							<p class="mt-1 text-sm text-muted">No active alerts for this measurement.</p>
 						{/if}
 					</div>
 				</div>
 				<div class="flex flex-wrap gap-2">
-					{#if data.canRecord}
+					{#if data.canRecord && manual}
+						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+						<a class="btn btn-primary" href={observeHref}
+							><Icon name="plus" class="size-4" /> Enter measurement</a
+						>
+					{:else if data.canRecord}
 						<button
 							type="button"
 							class="btn btn-primary"
@@ -312,7 +319,7 @@
 						>
 					{/if}
 					<button type="button" class="btn btn-ghost" onclick={showReadings}>
-						<Icon name="readings" class="size-4" /> Show raw sensor readings
+						<Icon name="readings" class="size-4" /> Show raw measurements
 					</button>
 				</div>
 			</div>
@@ -320,13 +327,21 @@
 			<div class="card lg:col-span-2">
 				<p class="text-sm text-muted">Current conditions</p>
 				<h2 class="mt-1 text-xl font-semibold">
-					{device ? `No readings from ${device.name} yet` : 'No sensors in this classroom yet'}
+					{device ? `No readings from ${device.name} yet` : 'No measurements in this classroom yet'}
 				</h2>
 				<p class="mt-2 text-sm text-muted">
 					{device
-						? 'Readings show here once the device is connected and sends data.'
-						: 'Ask your facilitator to register a device in one of its labs.'}
+						? manual
+							? 'Readings show here once someone enters a measurement.'
+							: 'Readings show here once the device is connected and sends data.'
+						: 'Ask your facilitator to add a measurement in one of its labs.'}
 				</p>
+				{#if device && manual && data.canRecord}
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+					<a class="btn btn-primary mt-4" href={observeHref}
+						><Icon name="plus" class="size-4" /> Enter measurement</a
+					>
+				{/if}
 			</div>
 		{/if}
 
@@ -337,7 +352,7 @@
 			class="card group relative flex min-h-80 flex-col overflow-hidden p-0 transition hover:border-line-strong"
 		>
 			<div class="flex items-baseline justify-between gap-3 p-5 pb-0">
-				<h2 class="font-medium">Sensors in this classroom</h2>
+				<h2 class="font-medium">Measurements in this classroom</h2>
 				<span class="text-sm text-muted group-hover:text-ink">Open the map →</span>
 			</div>
 			<div class="pointer-events-none relative min-h-64 flex-1">
@@ -345,7 +360,7 @@
 					<Globe
 						{markers}
 						selectedId={device?.id ?? ''}
-						ariaLabel="Globe of this classroom's sensors"
+						ariaLabel="Globe of this classroom's measurements"
 						interactive={false}
 						tint={device ? deviceTypeColor(data.deviceTypes, device.type) : undefined}
 					/>
@@ -414,7 +429,7 @@
 			</div>
 			{#if chartLevels.length}
 				<p class="mt-2 text-xs text-muted">
-					Dashed lines are this sensor's alert levels. Set them under each chart in its
+					Dashed lines are this measurement's alert levels. Set them under each chart in its
 					environmental domains.
 				</p>
 			{/if}
@@ -423,7 +438,7 @@
 
 	{#if data.devices.length > 1}
 		<section class="mt-8">
-			<h2 class="text-lg font-semibold">Other sensors in {data.classroom.name}</h2>
+			<h2 class="text-lg font-semibold">Other measurements in {data.classroom.name}</h2>
 			<ul class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 				{#each data.devices.filter((d) => d.id !== device?.id) as other (other.id)}
 					{@const item = data.classroomConditions.find((c) => c.device.id === other.id)}

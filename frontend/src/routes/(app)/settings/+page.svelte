@@ -3,6 +3,7 @@
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import AddressForm from '#lib/components/AddressForm.svelte';
 	import Avatar from '#lib/components/Avatar.svelte';
+	import ClassroomList from '#lib/components/ClassroomList.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
 	import { resetDb } from '#lib/data/mock-db.ts';
@@ -15,12 +16,13 @@
 	const user = $derived(data.user);
 
 	/** Each tab's icon, also drawn by its section title. */
-	const ICONS = { profile: 'user', address: 'pin', demo: 'database' };
+	const ICONS = { profile: 'user', address: 'pin', classrooms: 'users', demo: 'database' };
 	type Tab = keyof typeof ICONS;
 	let tab = $state<Tab>();
 	const tabs: TabItem<Tab>[] = [
 		{ id: 'profile', label: 'Profile & contact', icon: ICONS.profile },
 		{ id: 'address', label: 'Address', icon: ICONS.address },
+		{ id: 'classrooms', label: 'Classrooms', icon: ICONS.classrooms },
 		...(isMockDataSource ? [{ id: 'demo' as const, label: 'Demo data', icon: ICONS.demo }] : [])
 	];
 
@@ -81,7 +83,7 @@
 	}
 </script>
 
-<svelte:head><title>Profile · DaGrouper Analysis</title></svelte:head>
+<svelte:head><title>Settings · DaGrouper Analysis</title></svelte:head>
 
 <div class="flex items-center gap-4">
 	<Avatar name={user.fullName} src={user.avatarUrl} size="lg" />
@@ -98,7 +100,7 @@
 </div>
 
 <div class="mt-8">
-	<VerticalTabs {tabs} bind:active={tab} label="Profile">
+	<VerticalTabs {tabs} bind:active={tab} label="Settings">
 		{#if tab === 'profile'}
 			<section class="card max-w-2xl">
 				<h2 class="flex items-center gap-2 text-lg font-semibold">
@@ -158,6 +160,15 @@
 						</p>{/if}
 				</div>
 			</section>
+		{:else if tab === 'classrooms'}
+			<ClassroomList
+				classrooms={data.classrooms}
+				invitations={data.invitations}
+				canCreate={data.canCreate}
+				platformAdmin={user.platformAdmin}
+				head={user.role === 'institution_head'}
+				icon={ICONS.classrooms}
+			/>
 		{:else}
 			<section
 				class="card flex max-w-2xl flex-wrap items-center justify-between gap-4 border-dashed"

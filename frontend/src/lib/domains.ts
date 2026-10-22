@@ -25,7 +25,7 @@ export function domainTabs(
 ): DomainTab[] {
 	const sent = new Set<string>();
 	for (const r of readings)
-		for (const [id, value] of Object.entries(r.values)) if (typeof value === 'number') sent.add(id);
+		for (const [id, value] of Object.entries(r.values)) if (value !== undefined) sent.add(id);
 	const tabs: DomainTab[] = domains.map((d) => ({
 		id: d.id,
 		label: d.label,
@@ -61,4 +61,14 @@ export function withinRange(readings: Reading[], range: TimeRange): Reading[] {
 	const hours = TIME_RANGES.find((r) => r.id === range)!.hours;
 	const newest = Math.max(...readings.map((r) => Date.parse(r.observedAt)));
 	return readings.filter((r) => Date.parse(r.observedAt) > newest - hours * 3_600_000);
+}
+
+/** The domain tab a value shows under: its mapped domain, else "Not in a domain". */
+export function domainOf(
+	parameterId: string,
+	parameters: ReadonlyMap<string, Parameter>,
+	domains: DomainDefinition[]
+) {
+	const domain = parameters.get(parameterId)?.domain;
+	return domains.some((d) => d.id === domain) ? domain! : OTHER_TAB.id;
 }

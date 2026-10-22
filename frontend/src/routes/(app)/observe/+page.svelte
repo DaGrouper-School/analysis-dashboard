@@ -35,6 +35,13 @@
 	// svelte-ignore state_referenced_locally
 	let deviceId = $state(askedDevice?.labId === labId ? askedDevice.id : '');
 
+	// Opened for one sensor ("Enter measurement"): its form only, with nothing else to pick.
+	// svelte-ignore state_referenced_locally
+	const locked =
+		!!askedDevice &&
+		askedDevice.labId === labId &&
+		data.templates.some((t) => t.id === templateId && t.deviceType === askedDevice.type);
+
 	const target = $derived(data.targets.find((t) => t.lab.id === labId) ?? null);
 	const template = $derived(data.templates.find((t) => t.id === templateId) ?? null);
 	/** The lab's registered devices this template is read from. Nothing else can be picked. */
@@ -130,12 +137,16 @@
 		serverErrors[id] ?? (tried || touched[id] ? checked.errors[id] : undefined);
 
 	/** The steps: the device one only when the template is read from a device. */
-	const stepIds = $derived([
-		'what',
-		...(template?.deviceType ? ['device'] : []),
-		'values',
-		'review'
-	] as const);
+	const stepIds = $derived(
+		locked
+			? (['values', 'review'] as const)
+			: ([
+					'what',
+					...(template?.deviceType ? (['device'] as const) : []),
+					'values',
+					'review'
+				] as const)
+	);
 	const STEP_INFO = {
 		what: { label: 'What', icon: 'clipboard' },
 		device: { label: 'Device', icon: 'sensor' },
@@ -228,7 +239,7 @@
 		observedAt = localNow();
 		reset(template);
 		// Same thing again: skip straight past picking it.
-		step = 1;
+		step = locked ? 0 : 1;
 	}
 
 	const sentDevice = $derived(target?.devices.find((d) => d.id === sent?.deviceId) ?? null);
@@ -351,7 +362,16 @@
 			</div>
 		</section>
 	{:else}
-		<div class="card mt-8">
+		{#if locked && device && target}
+			<p class="mt-6 flex flex-wrap items-center gap-2 text-sm text-muted">
+				<span class="inline-flex" style:color={deviceTypeColor(data.deviceTypes, device.type)}
+					><Icon name={deviceTypeIcon(data.deviceTypes, device.type)} class="size-5" /></span
+				>
+				Entering a measurement for <span class="text-ink">{device.name}</span>
+				<span class="font-mono text-xs">{device.identifier}</span> · {target.lab.name}
+			</p>
+		{/if}
+		<div class={['card', locked ? 'mt-3' : 'mt-8']}>
 			<Wizard
 				{steps}
 				bind:current={step}

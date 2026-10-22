@@ -1,16 +1,8 @@
-import { services } from '#lib/services/index.ts';
+import { resolve } from '$app/paths';
+import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 
-export const load: PageLoad = async ({ parent }) => {
-	const { user } = await parent();
-	const [classrooms, invitations] = await Promise.all([
-		services.classrooms.listMine(),
-		services.classrooms.listMyInvitations()
-	]);
-	return {
-		classrooms,
-		invitations,
-		// Platform admins create classrooms and invite each one's institution head.
-		canCreate: user.platformAdmin
-	};
+/** Classrooms live under Settings now. */
+export const load: PageLoad = () => {
+	redirect(307, resolve('/(app)/settings') + '?tab=classrooms');
 };
