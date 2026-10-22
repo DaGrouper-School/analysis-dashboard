@@ -4,6 +4,7 @@
 	import ClassroomAlertList from '#lib/components/ClassroomAlertList.svelte';
 	import CopyButton from '#lib/components/CopyButton.svelte';
 	import Icon from '#lib/components/Icon.svelte';
+	import Modal from '#lib/components/Modal.svelte';
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
 	import type { ClassroomRole, Invitation } from '#lib/domain/types.ts';
 	import { validateClassroomUpdate } from '#lib/domain/validation.ts';
@@ -51,6 +52,14 @@
 	let inviteError = $state('');
 	let inviting = $state(false);
 	let sent = $state<Invitation[]>([]);
+	let inviteOpen = $state(false);
+
+	function openInvite() {
+		emails = '';
+		inviteError = '';
+		sent = [];
+		inviteOpen = true;
+	}
 	let actionError = $state('');
 
 	function inviteUrl(token: string) {
@@ -219,7 +228,7 @@
 					{#if permissions.invite.length && data.labs.length}
 						<a
 							href={resolve('/(app)/classrooms/[id]/labs/new', { id: classroom.id })}
-							class="btn btn-ghost px-3 py-1.5 text-xs">Add a lab</a
+							class="btn btn-primary"><Icon name="plus" class="size-4" /> Add a lab</a
 						>
 					{/if}
 				</div>
@@ -320,82 +329,105 @@
 				</ul>
 			</section>
 		{:else}
-			<div class="grid gap-6 xl:grid-cols-2">
-				<section class="card self-start">
+			<section class="card">
+				<div class="flex flex-wrap items-center justify-between gap-3">
 					<h2 class="flex items-center gap-2 text-lg font-semibold">
-						<Icon name={ICONS.invitations} class="size-5 text-muted" /> Invite by email
-					</h2>
-					<p class="mt-1 text-sm text-muted">
-						Each person gets a link to sign up and join. Only invited people can join.
-					</p>
-					<form class="mt-4 space-y-4" onsubmit={invite} novalidate>
-						<div>
-							<label class="label" for="emails">Email addresses</label>
-							<textarea
-								id="emails"
-								rows="3"
-								class={['input', inviteError && 'input-error']}
-								placeholder="one@example.org, two@example.org"
-								bind:value={emails}></textarea>
-							{#if inviteError}<p class="field-error">{inviteError}</p>{/if}
-						</div>
-						<div>
-							<label class="label" for="inviteRole">Role</label>
-							<select id="inviteRole" class="input" bind:value={inviteRole}>
-								{#each permissions.invite as role (role)}
-									<option value={role}>{CLASSROOM_ROLE_LABELS[role]}</option>
-								{/each}
-							</select>
-						</div>
-						<button class="btn btn-primary" disabled={inviting || !emails.trim()}>
-							{inviting ? 'Sending…' : 'Send invitations'}
-						</button>
-					</form>
-					{#if sent.length}
-						<div
-							class="mt-4 rounded-md border border-lime-strong/50 bg-lime/25 p-4 text-sm"
-							role="status"
-						>
-							<p class="font-medium">
-								Sent {sent.length}
-								{sent.length === 1 ? 'invitation' : 'invitations'}.
-							</p>
-							{#if isMockDataSource}
-								<p class="mt-1 text-muted">Demo mode sends no email. Share the links below.</p>
-							{/if}
-						</div>
-					{/if}
-				</section>
-
-				<section class="card self-start">
-					<h2 class="flex items-center gap-2 text-lg font-semibold">
-						<Icon name="link" class="size-5 text-muted" /> Pending invitations
+						<Icon name={ICONS.invitations} class="size-5 text-muted" /> Pending invitations
 						<span class="text-muted">{data.detail.invitations.length}</span>
 					</h2>
-					{#if data.detail.invitations.length}
-						<ul class="mt-4 divide-y divide-line">
-							{#each data.detail.invitations as invitation (invitation.id)}
-								<li class="flex flex-wrap items-center gap-2 py-3">
-									<div class="min-w-0 flex-1">
-										<p class="truncate text-sm font-medium">{invitation.email}</p>
-										<p class="text-xs text-muted">
-											{CLASSROOM_ROLE_LABELS[invitation.role]} · invited by {invitation.invitedByName}
-										</p>
-									</div>
-									<CopyButton text={inviteUrl(invitation.token)} label="Copy link" />
-									<button
-										class="btn btn-ghost px-3 py-1.5 text-xs"
-										onclick={() => run(() => services.classrooms.revokeInvitation(invitation.id))}
-										>Revoke</button
-									>
-								</li>
-							{/each}
-						</ul>
-					{:else}
-						<p class="mt-2 text-sm text-muted">No pending invitations.</p>
-					{/if}
-				</section>
-			</div>
+					<button type="button" class="btn btn-primary" aria-haspopup="dialog" onclick={openInvite}
+						><Icon name="plus" class="size-4" /> Invite people</button
+					>
+				</div>
+				<p class="mt-1 text-sm text-muted">
+					Each person gets a link to sign up and join. Only invited people can join.
+				</p>
+				{#if data.detail.invitations.length}
+					<ul class="mt-4 divide-y divide-line">
+						{#each data.detail.invitations as invitation (invitation.id)}
+							<li class="flex flex-wrap items-center gap-2 py-3">
+								<div class="min-w-0 flex-1">
+									<p class="truncate text-sm font-medium">{invitation.email}</p>
+									<p class="text-xs text-muted">
+										{CLASSROOM_ROLE_LABELS[invitation.role]} · invited by {invitation.invitedByName}
+									</p>
+								</div>
+								<CopyButton text={inviteUrl(invitation.token)} label="Copy link" />
+								<button
+									class="btn btn-ghost px-3 py-1.5 text-xs"
+									onclick={() => run(() => services.classrooms.revokeInvitation(invitation.id))}
+									>Revoke</button
+								>
+							</li>
+						{/each}
+					</ul>
+				{:else}
+					<p class="mt-2 text-sm text-muted">No pending invitations.</p>
+				{/if}
+			</section>
 		{/if}
 	</VerticalTabs>
 </div>
+
+{#if permissions.invite.length}
+	<Modal bind:open={inviteOpen} eyebrow={classroom.name} title="Invite people">
+		{#if sent.length}
+			<div class="rounded-md border border-lime-strong/50 bg-lime/25 p-4 text-sm" role="status">
+				<p class="font-medium">
+					Sent {sent.length}
+					{sent.length === 1 ? 'invitation' : 'invitations'}.
+				</p>
+				{#if isMockDataSource}
+					<p class="mt-1 text-muted">Demo mode sends no email. Share the links below.</p>
+				{/if}
+			</div>
+			<ul class="mt-4 divide-y divide-line">
+				{#each sent as invitation (invitation.id)}
+					<li class="flex flex-wrap items-center gap-2 py-3">
+						<div class="min-w-0 flex-1">
+							<p class="truncate text-sm font-medium">{invitation.email}</p>
+							<p class="text-xs text-muted">{CLASSROOM_ROLE_LABELS[invitation.role]}</p>
+						</div>
+						<CopyButton text={inviteUrl(invitation.token)} label="Copy link" />
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<form id="invite-form" class="space-y-4" onsubmit={invite} novalidate>
+				<div>
+					<label class="label" for="emails">Email addresses</label>
+					<textarea
+						id="emails"
+						rows="3"
+						class={['input', inviteError && 'input-error']}
+						placeholder="one@example.org, two@example.org"
+						bind:value={emails}></textarea>
+					{#if inviteError}<p class="field-error">{inviteError}</p>{/if}
+				</div>
+				<div>
+					<label class="label" for="inviteRole">Role</label>
+					<select id="inviteRole" class="input" bind:value={inviteRole}>
+						{#each permissions.invite as role (role)}
+							<option value={role}>{CLASSROOM_ROLE_LABELS[role]}</option>
+						{/each}
+					</select>
+				</div>
+			</form>
+		{/if}
+		{#snippet footer()}
+			{#if sent.length}
+				<button type="button" class="btn btn-ghost" onclick={openInvite}>Invite more</button>
+				<button type="button" class="btn btn-primary" onclick={() => (inviteOpen = false)}
+					>Done</button
+				>
+			{:else}
+				<button type="button" class="btn btn-ghost" onclick={() => (inviteOpen = false)}
+					>Cancel</button
+				>
+				<button form="invite-form" class="btn btn-primary" disabled={inviting || !emails.trim()}>
+					{inviting ? 'Sending…' : 'Send invitations'}
+				</button>
+			{/if}
+		{/snippet}
+	</Modal>
+{/if}

@@ -116,133 +116,123 @@
 <div class="mt-8">
 	<VerticalTabs {tabs} bind:active={tab} label="Lab">
 		{#if tab === 'devices'}
-			<div class="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-				<section class="card">
+			<section class="card">
+				<div class="flex flex-wrap items-center justify-between gap-3">
 					<h2 class="flex items-center gap-2 text-lg font-semibold">
 						<Icon name={ICONS.devices} class="size-5 text-muted" /> Devices
 						<span class="text-muted">{devices.length}</span>
 					</h2>
-					<p class="mt-1 text-sm text-muted">
-						Each device is registered in SAM as a source for this lab. Location comes with each
-						reading, so a device can report from different places over time.
-					</p>
-					{#if actionError}<p class="field-error" role="alert">{actionError}</p>{/if}
-					<ul class="mt-4 divide-y divide-line">
-						{#each devices as device (device.id)}
-							{@const readings = readingsByDevice.get(device.id) ?? []}
-							<li class="py-4">
-								<div class="flex flex-wrap items-start gap-3">
-									<div class="min-w-0 flex-1">
-										<p class="font-medium">{device.name}</p>
-										<p class="text-sm text-muted">
-											{readings.length
-												? `Last reading ${dateTime.format(new Date(readings[0].observedAt))}`
-												: 'No readings yet'}
-										</p>
-									</div>
-									<span class="chip shrink-0"
-										><span style:color={deviceTypeColor(data.deviceTypes, device.type)}
-											><Icon
-												name={deviceTypeIcon(data.deviceTypes, device.type)}
-												class="size-3.5"
-											/></span
-										>
-										{deviceTypeLabel(data.deviceTypes, device.type)}</span
-									>
-								</div>
-								<dl class="mt-3 grid gap-x-6 gap-y-1 text-xs text-muted sm:grid-cols-2">
-									<div>
-										<dt class="inline">ID</dt>
-										<dd class="inline font-mono text-ink">{device.identifier}</dd>
-									</div>
-									{#if device.samSourceId}
-										<div>
-											<dt class="inline">SAM source</dt>
-											<dd class="inline font-mono break-all text-ink">{device.samSourceId}</dd>
-										</div>
-									{/if}
-								</dl>
-								{#if readings.length}
-									<ul class="mt-3 space-y-1 text-xs" aria-label="Where recent readings were taken">
-										{#each readings.slice(0, 3) as reading (reading.id)}
-											<li class="flex flex-wrap items-center gap-x-2">
-												<span class="text-muted"
-													>{dateTime.format(new Date(reading.observedAt))}</span
-												>
-												<span>{formatPoint(reading.location)}</span>
-												{#if reading.locationSource === 'device'}
-													<span class="text-muted">
-														device GPS · {distanceLabel(distanceKm(lab.location, reading.location))}
-													</span>
-												{:else}
-													<span
-														class="rounded-full bg-raised px-2 py-0.5 font-medium text-ink ring-1 ring-line"
-														title="The device sent no GPS with this reading."
-														>Lab location, not from the device</span
-													>
-												{/if}
-												{#if reading.creditedTo}
-													<span class="text-muted">· recorded by {reading.creditedTo}</span>
-												{/if}
-											</li>
-										{/each}
-									</ul>
-								{/if}
-								{#if data.detail.canRecord || data.detail.canManage}
-									<div class="mt-3 flex flex-wrap items-center gap-3">
-										{#if data.detail.canRecord}
-											<button
-												type="button"
-												class="btn btn-ghost px-3 py-1.5"
-												aria-haspopup="dialog"
-												onclick={() => sync(device.id)}
-											>
-												<Icon name="sync" class="size-4" /> Sync
-											</button>
-										{/if}
-										{#if data.detail.canManage}
-											<button
-												type="button"
-												class="text-xs font-medium text-muted hover:text-danger"
-												onclick={() => remove(device.id, device.name)}>Remove device</button
-											>
-										{/if}
-									</div>
-								{/if}
-							</li>
-						{:else}
-							<li class="py-3 text-sm text-muted">No devices registered yet.</li>
-						{/each}
-					</ul>
-				</section>
-				{#if data.detail.canManage}
-					<section class="card self-start">
-						<h2 class="flex items-center gap-2 text-lg font-semibold">
-							<Icon name="plus" class="size-5 text-muted" /> Register a sensor
-						</h2>
-						<p class="mt-1 text-sm text-muted">
-							Pick its type, enter the serial on the sensor and pair it. It becomes a SAM source for
-							this lab; its GPS position comes with each reading.
-						</p>
+					{#if data.detail.canManage}
 						<button
 							type="button"
-							class="btn btn-primary mt-4"
+							class="btn btn-primary"
 							aria-haspopup="dialog"
 							onclick={() => (registering = true)}
 						>
 							<Icon name="plus" class="size-4" /> Register a sensor
 						</button>
-						{#if justAdded}
-							<p class="mt-3 text-sm text-muted" role="status">
-								{justAdded} is registered. Add another, or
-								<a class="link" href={resolve('/(app)/classrooms/[id]', { id: lab.classroomId })}
-									>finish setup</a
-								>.
-							</p>
-						{/if}
-					</section>
+					{/if}
+				</div>
+				<p class="mt-1 text-sm text-muted">
+					Each device is registered in SAM as a source for this lab. Location comes with each
+					reading, so a device can report from different places over time.
+				</p>
+				{#if actionError}<p class="field-error" role="alert">{actionError}</p>{/if}
+				{#if justAdded}
+					<p class="mt-3 rounded-md bg-lime/25 p-3 text-sm" role="status">
+						{justAdded} is registered. Add another, or
+						<a class="link" href={resolve('/(app)/classrooms/[id]', { id: lab.classroomId })}
+							>finish setup</a
+						>.
+					</p>
 				{/if}
-			</div>
+				<ul class="mt-4 divide-y divide-line">
+					{#each devices as device (device.id)}
+						{@const readings = readingsByDevice.get(device.id) ?? []}
+						<li class="py-4">
+							<div class="flex flex-wrap items-start gap-3">
+								<div class="min-w-0 flex-1">
+									<p class="font-medium">{device.name}</p>
+									<p class="text-sm text-muted">
+										{readings.length
+											? `Last reading ${dateTime.format(new Date(readings[0].observedAt))}`
+											: 'No readings yet'}
+									</p>
+								</div>
+								<span class="chip shrink-0"
+									><span style:color={deviceTypeColor(data.deviceTypes, device.type)}
+										><Icon
+											name={deviceTypeIcon(data.deviceTypes, device.type)}
+											class="size-3.5"
+										/></span
+									>
+									{deviceTypeLabel(data.deviceTypes, device.type)}</span
+								>
+							</div>
+							<dl class="mt-3 grid gap-x-6 gap-y-1 text-xs text-muted sm:grid-cols-2">
+								<div>
+									<dt class="inline">ID</dt>
+									<dd class="inline font-mono text-ink">{device.identifier}</dd>
+								</div>
+								{#if device.samSourceId}
+									<div>
+										<dt class="inline">SAM source</dt>
+										<dd class="inline font-mono break-all text-ink">{device.samSourceId}</dd>
+									</div>
+								{/if}
+							</dl>
+							{#if readings.length}
+								<ul class="mt-3 space-y-1 text-xs" aria-label="Where recent readings were taken">
+									{#each readings.slice(0, 3) as reading (reading.id)}
+										<li class="flex flex-wrap items-center gap-x-2">
+											<span class="text-muted">{dateTime.format(new Date(reading.observedAt))}</span
+											>
+											<span>{formatPoint(reading.location)}</span>
+											{#if reading.locationSource === 'device'}
+												<span class="text-muted">
+													device GPS · {distanceLabel(distanceKm(lab.location, reading.location))}
+												</span>
+											{:else}
+												<span
+													class="rounded-full bg-raised px-2 py-0.5 font-medium text-ink ring-1 ring-line"
+													title="The device sent no GPS with this reading."
+													>Lab location, not from the device</span
+												>
+											{/if}
+											{#if reading.creditedTo}
+												<span class="text-muted">· recorded by {reading.creditedTo}</span>
+											{/if}
+										</li>
+									{/each}
+								</ul>
+							{/if}
+							{#if data.detail.canRecord || data.detail.canManage}
+								<div class="mt-3 flex flex-wrap items-center gap-3">
+									{#if data.detail.canRecord}
+										<button
+											type="button"
+											class="btn btn-ghost px-3 py-1.5"
+											aria-haspopup="dialog"
+											onclick={() => sync(device.id)}
+										>
+											<Icon name="sync" class="size-4" /> Sync
+										</button>
+									{/if}
+									{#if data.detail.canManage}
+										<button
+											type="button"
+											class="text-xs font-medium text-muted hover:text-danger"
+											onclick={() => remove(device.id, device.name)}>Remove device</button
+										>
+									{/if}
+								</div>
+							{/if}
+						</li>
+					{:else}
+						<li class="py-3 text-sm text-muted">No devices registered yet.</li>
+					{/each}
+				</ul>
+			</section>
 		{:else if tab === 'site'}
 			<section class="card">
 				<h2 class="flex items-center gap-2 text-lg font-semibold">
@@ -258,57 +248,53 @@
 				</ul>
 			</section>
 		{:else}
-			<div class="space-y-6">
-				{#if data.detail.canRecord}
-					<section class="card" aria-labelledby="observe-heading">
-						<h2 id="observe-heading" class="flex items-center gap-2 text-lg font-semibold">
-							<Icon name={ICONS.observations} class="size-5 text-muted" /> Manual observations
-						</h2>
-						<p class="mt-1 text-sm text-muted">
-							A rain gauge reading, a coral spawning check or a species sighting, on a guided form
-							that checks your values before they are sent.
-						</p>
+			<section class="card" aria-labelledby="field-heading">
+				<div class="flex flex-wrap items-center justify-between gap-3">
+					<h2 id="field-heading" class="flex items-center gap-2 text-lg font-semibold">
+						<Icon name={ICONS.observations} class="size-5 text-muted" /> Observations
+						<span class="text-muted">{data.detail.observations.length}</span>
+					</h2>
+					{#if data.detail.canRecord}
 						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-						<a class="btn btn-primary mt-4" href={observeHref}
+						<a class="btn btn-primary" href={observeHref}
 							><Icon name="plus" class="size-4" /> Submit an observation</a
 						>
-					</section>
-				{/if}
-
+					{/if}
+				</div>
+				<p class="mt-1 text-sm text-muted">
+					A rain gauge reading, a coral spawning check or a species sighting, on a guided form that
+					checks your values before they are sent.
+				</p>
 				{#if data.detail.observations.length}
-					<section class="card" aria-labelledby="field-heading">
-						<h2 id="field-heading" class="flex items-center gap-2 text-lg font-semibold">
-							<Icon name="readings" class="size-5 text-muted" /> Field observations
-							<span class="text-muted">{data.detail.observations.length}</span>
-						</h2>
-						<ul class="mt-3 divide-y divide-line text-sm">
-							{#each data.detail.observations as observation (observation.id)}
-								<li class="py-3">
-									<p class="font-medium">
-										{templateLabel(observation.templateId)}
-										<span class="font-normal text-muted"
-											>· {dateTime.format(new Date(observation.observedAt))}</span
-										>
-									</p>
-									<p class="text-muted">
-										{Object.entries(observation.values)
-											.map(
-												([id, value]) =>
-													`${paramsById.get(id)?.label ?? id} ${formatValue(value, paramsById.get(id)?.unit)}`
-											)
-											.join(' · ')}
-									</p>
-									<p class="text-xs text-muted">
-										{formatPoint(observation.location)}
-										{observation.locationSource === 'device' ? '· GPS' : '· lab location, no GPS'}
-										{observation.creditedTo ? `· recorded by ${observation.creditedTo}` : ''}
-									</p>
-								</li>
-							{/each}
-						</ul>
-					</section>
+					<ul class="mt-3 divide-y divide-line text-sm">
+						{#each data.detail.observations as observation (observation.id)}
+							<li class="py-3">
+								<p class="font-medium">
+									{templateLabel(observation.templateId)}
+									<span class="font-normal text-muted"
+										>· {dateTime.format(new Date(observation.observedAt))}</span
+									>
+								</p>
+								<p class="text-muted">
+									{Object.entries(observation.values)
+										.map(
+											([id, value]) =>
+												`${paramsById.get(id)?.label ?? id} ${formatValue(value, paramsById.get(id)?.unit)}`
+										)
+										.join(' · ')}
+								</p>
+								<p class="text-xs text-muted">
+									{formatPoint(observation.location)}
+									{observation.locationSource === 'device' ? '· GPS' : '· lab location, no GPS'}
+									{observation.creditedTo ? `· recorded by ${observation.creditedTo}` : ''}
+								</p>
+							</li>
+						{/each}
+					</ul>
+				{:else}
+					<p class="mt-3 text-sm text-muted">No observations yet.</p>
 				{/if}
-			</div>
+			</section>
 		{/if}
 	</VerticalTabs>
 </div>

@@ -10,6 +10,7 @@
 		open = $bindable(false),
 		title,
 		eyebrow,
+		wide = false,
 		onclose,
 		children,
 		footer
@@ -17,6 +18,8 @@
 		open?: boolean;
 		title: string;
 		eyebrow?: string;
+		/** For forms with tables or several columns. */
+		wide?: boolean;
 		onclose?: () => unknown;
 		children: Snippet;
 		footer?: Snippet;
@@ -34,7 +37,10 @@
 
 <dialog
 	bind:this={dialog}
-	class="modal m-auto w-[min(36rem,calc(100vw-2rem))] overflow-hidden rounded-md border border-line-strong bg-surface p-0 text-text shadow-2xl backdrop:bg-black/75 backdrop:backdrop-blur-sm"
+	class={[
+		'modal m-auto overflow-hidden rounded-md border border-line-strong bg-surface p-0 text-text shadow-2xl backdrop:bg-black/75 backdrop:backdrop-blur-sm',
+		wide ? 'w-[min(60rem,calc(100vw-2rem))]' : 'w-[min(36rem,calc(100vw-2rem))]'
+	]}
 	aria-labelledby="{id}-title"
 	onclose={() => {
 		open = false;
