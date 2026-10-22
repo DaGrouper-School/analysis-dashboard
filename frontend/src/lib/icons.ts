@@ -122,7 +122,26 @@ export const UI_ICONS = {
 	upload: [{ d: 'M12 16V4M7 9l5-5 5 5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4' }],
 	alert: [{ d: 'M12 3 2 20.5h20L12 3ZM12 10v4.5M12 17.5v.5' }],
 	info: [{ cx: 12, cy: 12, r: 9 }, { d: 'M12 11v5.5M12 7.5v.5' }],
-	arrow: [{ d: 'M5 12h14M13 6l6 6-6 6' }]
+	arrow: [{ d: 'M5 12h14M13 6l6 6-6 6' }],
+	back: [{ d: 'M19 12H5M11 6l-6 6 6 6' }],
+	user: [{ cx: 12, cy: 8, r: 4 }, { d: 'M4.5 21a7.5 7.5 0 0 1 15 0' }],
+	users: [
+		{ cx: 9, cy: 8, r: 3.5 },
+		{ d: 'M2.5 20.5a6.5 6.5 0 0 1 13 0M15.5 4.8a3.5 3.5 0 0 1 0 6.4M18 14.6a6.5 6.5 0 0 1 3.5 5.9' }
+	],
+	mail: [{ x: 3, y: 5, width: 18, height: 14, rx: 2 }, { d: 'm3.5 6.5 8.5 6.5 8.5-6.5' }],
+	clipboard: [
+		{ x: 5, y: 4, width: 14, height: 17.5, rx: 2 },
+		{ x: 9, y: 2.5, width: 6, height: 3.5, rx: 1 },
+		{ d: 'M8.5 11h7M8.5 15h5' }
+	],
+	history: [{ d: 'M3.5 12a8.5 8.5 0 1 0 2.5-6L3.5 8.5M3.5 4v4.5H8M12 7.5V12l3 2' }],
+	layers: [{ d: 'm12 3 9 5-9 5-9-5 9-5ZM3 12.5l9 5 9-5M3 17l9 5 9-5' }],
+	database: [
+		{ d: 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Z' },
+		{ d: 'M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3' }
+	],
+	review: [{ d: 'M4 4h11l5 5v11H4V4ZM15 4v5h5M8 14l2.5 2.5L16 11' }]
 } satisfies Record<string, Shape[]>;
 
 export type RegistryIconName = keyof typeof REGISTRY_ICONS;

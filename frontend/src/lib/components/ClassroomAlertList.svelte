@@ -117,10 +117,10 @@
 	}
 </script>
 
-<section id="alerts" class="card mt-6 scroll-mt-24" aria-labelledby="alerts-title">
+<section id="alerts" class="card scroll-mt-24" aria-labelledby="alerts-title">
 	<div class="flex flex-wrap items-center justify-between gap-3">
-		<h2 id="alerts-title" class="text-lg font-semibold">
-			Alerts <span class="text-muted">{count}</span>
+		<h2 id="alerts-title" class="flex items-center gap-2 text-lg font-semibold">
+			<Icon name="alert" class="size-5 text-muted" /> Alerts <span class="text-muted">{count}</span>
 		</h2>
 		{#if alerts.canEdit}
 			<button
