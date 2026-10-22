@@ -5,7 +5,8 @@
 	/**
 	 * One parameter of one device over time: a 2px line with a soft wash, the latest value
 	 * labelled at the end, and a crosshair that snaps to the nearest reading on hover or with
-	 * the arrow keys. Alert levels show as dashed lines in their status color; a level far
+	 * the arrow keys. Alert levels show as dashed lines in their status color, and the stretch of
+	 * line past a level takes that color too (orange past caution, red past warning); a level far
 	 * outside the readings is listed under the chart instead of squashing the line flat.
 	 */
 	let {
@@ -25,11 +26,13 @@
 		height?: number;
 		/** The device's registry color (deviceTypeColor). Falls back to the theme's data color. */
 		color?: string;
-		/** The classroom's enabled alert levels for this parameter (AP-08). */
-		thresholds?: Pick<AlertRule, 'id' | 'value' | 'level'>[];
+		/** The enabled alert levels in force for this parameter (AP-08). */
+		thresholds?: Pick<AlertRule, 'id' | 'value' | 'level' | 'direction'>[];
 	} = $props();
 
 	const LINE = { warning: 'stroke-danger', caution: 'stroke-orange' };
+	const FILL = { warning: 'fill-danger', caution: 'fill-orange' };
+	const uid = $props.id();
 
 	const PAD = { top: 16, bottom: 28, left: 44 };
 
@@ -96,6 +99,35 @@
 			? `${line}L${scale.x(points.at(-1)!.at)},${height - PAD.bottom}L${scale.x(points[0].at)},${height - PAD.bottom}Z`
 			: ''
 	);
+
+	/**
+	 * The part of the plot past each level, as a clip for the colored copy of the line: above
+	 * the level for an "above" alert, below it for a "below" one. Cautions first, so a warning
+	 * paints over the caution it sits inside.
+	 */
+	const bands = $derived(
+		thresholds
+			.toSorted((a, b) => (a.level === b.level ? 0 : a.level === 'caution' ? -1 : 1))
+			.map((t) => {
+				const top = PAD.top;
+				const bottom = height - PAD.bottom;
+				const y = Math.min(Math.max(scale.y(t.value), top), bottom);
+				return {
+					...t,
+					y: t.direction === 'above' ? top - 8 : y,
+					h: t.direction === 'above' ? y - top + 8 : bottom - y + 8
+				};
+			})
+			.filter((b) => b.h > 0)
+	);
+
+	/** The most severe level a value is past, for the tooltip. */
+	function levelAt(value: number) {
+		const hit = thresholds
+			.filter((t) => (t.direction === 'above' ? value >= t.value : value <= t.value))
+			.sort((a, b) => (a.level === b.level ? 0 : a.level === 'warning' ? -1 : 1))[0];
+		return hit ? LEVEL_LABELS[hit.level] : null;
+	}
 
 	const day = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
 	const hour = new Intl.DateTimeFormat(undefined, { hour: 'numeric' });
@@ -224,6 +256,22 @@
 				stroke-linejoin="round"
 				stroke-linecap="round"
 			/>
+			{#each bands as band (band.id)}
+				<clipPath id="{uid}-{band.id}">
+					<rect x="0" y={band.y} {width} height={band.h} />
+				</clipPath>
+				<g clip-path="url(#{uid}-{band.id})">
+					<path d={area} class={FILL[band.level]} fill-opacity="0.14" />
+					<path
+						d={line}
+						fill="none"
+						class={LINE[band.level]}
+						stroke-width="2"
+						stroke-linejoin="round"
+						stroke-linecap="round"
+					/>
+				</g>
+			{/each}
 			{#each levels.drawn as level (level.id)}
 				<!-- At the start of the line, clear of the latest value; a halo keeps it legible. -->
 				<text
@@ -276,7 +324,9 @@
 				<p class="mt-0.5 flex items-center gap-2 font-medium text-ink">
 					<span class="h-0.5 w-3 rounded-full bg-(--series)" aria-hidden="true"></span>
 					{label}
-					{format(shown.value)}
+					{format(shown.value)}{#if levelAt(shown.value)}<span class="text-muted"
+							>&nbsp;· {levelAt(shown.value)}</span
+						>{/if}
 				</p>
 			</div>
 		{/if}

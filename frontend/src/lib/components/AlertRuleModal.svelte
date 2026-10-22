@@ -2,7 +2,8 @@
 	import type {
 		AlertDirection,
 		AlertLevel,
-		ClassroomAlerts,
+		AlertScope,
+		DeviceAlerts,
 		EffectiveAlertRule,
 		Parameter
 	} from '#lib/domain/types.ts';
@@ -19,27 +20,30 @@
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
 
 	/**
-	 * Adds an alert level to a classroom, or changes one (AP-08). The value can be typed in any
-	 * of the parameter's units and gets the same checks as a manual observation, wrong-unit hint
-	 * included. Editing a platform default saves it as the classroom's own.
+	 * Adds an alert level on one value of a device, or changes one (AP-08). The head picks
+	 * whether it applies to this device only or to every sensor of its type in the classroom;
+	 * facilitators set this device's. The value can be typed in any of the parameter's units and
+	 * gets the same checks as a manual observation, wrong-unit hint included.
 	 */
 	let {
 		open = $bindable(false),
-		classroomId,
-		parameters,
+		alerts,
+		parameter,
+		typeLabel,
 		rule = null,
 		onsaved
 	}: {
 		open?: boolean;
-		classroomId: string;
-		/** The numeric values the classroom's devices send, to pick from when adding. */
-		parameters: Parameter[];
+		alerts: DeviceAlerts;
+		parameter: Parameter;
+		/** e.g. `weather stations in Trinity Lab`, for the classroom-wide choice. */
+		typeLabel: string;
 		/** The rule to change, or null to add one. */
 		rule?: EffectiveAlertRule | null;
-		onsaved: (alerts: ClassroomAlerts) => unknown;
+		onsaved: (alerts: DeviceAlerts) => unknown;
 	} = $props();
 
-	let parameterId = $state('');
+	let scope = $state<AlertScope>('device');
 	let direction = $state<AlertDirection>('above');
 	let level = $state<AlertLevel>('caution');
 	let value = $state('');
@@ -49,32 +53,23 @@
 	let error = $state('');
 	let saving = $state(false);
 
-	const parameter = $derived(parameters.find((p) => p.id === parameterId));
-
 	// Fill the form each time it opens, from the rule being changed or blank.
 	$effect(() => {
 		if (!open) return;
-		parameterId = rule?.parameterId ?? parameters[0]?.id ?? '';
+		scope = rule?.source === 'type' && alerts.canEditType ? 'type' : 'device';
 		direction = rule?.direction ?? 'above';
 		level = rule?.level ?? 'caution';
 		value = rule ? String(rule.value) : '';
-		unit = parameters.find((p) => p.id === parameterId)?.unit ?? '';
+		unit = parameter.unit;
 		title = rule?.title ?? '';
 		errors = {};
 		error = '';
 	});
 
-	function pickParameter(id: string) {
-		parameterId = id;
-		unit = parameters.find((p) => p.id === id)?.unit ?? '';
-		errors = {};
-	}
-
 	async function save(event: SubmitEvent) {
 		event.preventDefault();
-		if (!parameter) return;
 		error = '';
-		const field = { parameterId, required: true };
+		const parameterId = parameter.id;
 		const read = readEntries(
 			{
 				id: 'alert',
@@ -82,7 +77,7 @@
 				description: '',
 				domain: null,
 				deviceType: null,
-				fields: [field]
+				fields: [{ parameterId, required: true }]
 			},
 			[parameter],
 			{ [parameterId]: { value, unit } }
@@ -102,9 +97,10 @@
 		if (Object.keys(errors).length) return;
 		saving = true;
 		try {
-			const saved = await services.classrooms.saveAlert(classroomId, input, rule?.id);
-			open = false;
+			const saved = await services.labs.saveAlert(alerts.deviceId, scope, input, rule?.id);
+			// Close once the page shows the change, so nothing flickers back to the old levels.
 			await onsaved(saved);
+			open = false;
 		} catch (e) {
 			if (e instanceof ServiceError) errors = e.fields;
 			error = errorMessage(e);
@@ -114,27 +110,41 @@
 	}
 </script>
 
-<Modal bind:open title={rule ? 'Change alert' : 'Add alert'} eyebrow="Classroom alerts">
+<Modal bind:open title={rule ? 'Change alert' : 'Add alert'} eyebrow={parameter.label}>
 	<form id="alert-rule" class="space-y-5" onsubmit={save} novalidate>
-		<div>
-			<label class="label" for="alert-parameter">Value</label>
-			<select
-				id="alert-parameter"
-				class={['input', errors.parameterId && 'input-error']}
-				value={parameterId}
-				disabled={!!rule}
-				onchange={(e) => pickParameter(e.currentTarget.value)}
-			>
-				{#each parameters as option (option.id)}
-					<option value={option.id}>{option.label}</option>
-				{/each}
-			</select>
-			{#if errors.parameterId}
-				<p class="field-error">{errors.parameterId}</p>
-			{:else if rule}
-				<p class="mt-1.5 text-xs text-muted">An alert stays on its value.</p>
-			{/if}
-		</div>
+		{#if alerts.canEditType}
+			<fieldset>
+				<legend class="label">Applies to</legend>
+				<div class="space-y-2">
+					{#each [['device', 'This device only'], ['type', `All ${typeLabel}`]] as [option, label] (option)}
+						<label
+							class={[
+								'flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2 text-sm transition',
+								scope === option
+									? 'border-ink bg-ink/[0.05]'
+									: 'border-line hover:border-line-strong'
+							]}
+						>
+							<input
+								type="radio"
+								name="alert-scope"
+								class="mt-0.5 border-line-strong bg-transparent text-teal checked:bg-current focus:ring-teal"
+								value={option}
+								bind:group={scope}
+							/>
+							<span>
+								<span class="block text-ink">{label}</span>
+								<span class="block text-xs text-muted">
+									{option === 'device'
+										? 'Replaces the classroom and default levels for this value on this device.'
+										: 'A device with its own levels for this value keeps them.'}
+								</span>
+							</span>
+						</label>
+					{/each}
+				</div>
+			</fieldset>
+		{/if}
 
 		<fieldset>
 			<legend class="label">Level</legend>
@@ -180,7 +190,7 @@
 					bind:value
 				/>
 			</div>
-			{#if parameter && unitsFor(parameter).length > 1}
+			{#if unitsFor(parameter).length > 1}
 				<div>
 					<label class="label" for="alert-unit">Unit</label>
 					<select id="alert-unit" class="input w-auto pr-9" bind:value={unit}>
@@ -189,13 +199,13 @@
 						{/each}
 					</select>
 				</div>
-			{:else if parameter?.unit}
+			{:else if parameter.unit}
 				<p class="self-end pb-2.5 text-sm text-muted">{parameter.unit}</p>
 			{/if}
 		</div>
 		{#if errors.value}
 			<p class="field-error -mt-3">{errors.value}</p>
-		{:else if parameter && rangeText(parameter)}
+		{:else if rangeText(parameter)}
 			<p class="-mt-3 text-xs text-muted">Expected range {rangeText(parameter)}.</p>
 		{/if}
 
@@ -217,10 +227,16 @@
 			{/if}
 		</div>
 
-		{#if rule?.source === 'default'}
+		{#if rule && rule.source !== scope}
 			<p class="rounded-md border border-line p-3 text-sm text-muted">
-				This is a platform default. Saving makes the classroom's own copy of the {parameter?.label}
-				levels; the platform defaults stay as they are.
+				{rule.source === 'default'
+					? 'This is a platform default.'
+					: 'This level is set for all ' + typeLabel + '.'}
+				Saving copies the {parameter.label} levels to {scope === 'device'
+					? 'this device'
+					: 'all ' + typeLabel}, with this change; the {rule.source === 'default'
+					? 'platform defaults'
+					: 'classroom levels'} stay as they are.
 			</p>
 		{/if}
 		{#if error}<p class="field-error" role="alert">{error}</p>{/if}
@@ -228,7 +244,7 @@
 
 	{#snippet footer()}
 		<button type="button" class="btn btn-ghost" onclick={() => (open = false)}>Cancel</button>
-		<button form="alert-rule" class="btn btn-primary" disabled={saving || !parameter}>
+		<button form="alert-rule" class="btn btn-primary" disabled={saving}>
 			{saving ? 'Saving…' : rule ? 'Save changes' : 'Add alert'}
 		</button>
 	{/snippet}

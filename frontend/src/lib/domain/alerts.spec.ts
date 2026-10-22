@@ -7,23 +7,33 @@ import {
 	effectiveRules,
 	thresholdStatus,
 	thresholdsFor,
-	type ClassroomRuleRecord
+	type StoredAlertRule
 } from './alerts';
 
 const { alertDefaults: defaults, parameters } = createSeed();
-const platform = effectiveRules(defaults, []);
+const platform = effectiveRules(defaults, [], []);
 
-const own = (rule: Partial<AlertRule> & Pick<AlertRule, 'parameterId'>): ClassroomRuleRecord => ({
-	id: `alr_${rule.parameterId}_${rule.level ?? 'warning'}`,
-	direction: 'above',
+const stamp = { updatedBy: 'usr_tesfaye', updatedAt: '2026-10-21T09:00:00.000Z' };
+const base = (rule: Partial<AlertRule> & Pick<AlertRule, 'parameterId'>) => ({
+	id: `alr_${rule.parameterId}_${rule.level ?? 'warning'}_${rule.value ?? 5}`,
+	direction: 'above' as const,
 	value: 5,
-	level: 'warning',
+	level: 'warning' as const,
 	title: 'UV',
 	enabled: true,
-	classroomId: 'cls_trinity',
-	updatedBy: 'usr_tesfaye',
-	updatedAt: '2026-10-21T09:00:00.000Z',
+	...stamp,
 	...rule
+});
+const forType = (rule: Partial<AlertRule> & Pick<AlertRule, 'parameterId'>): StoredAlertRule => ({
+	...base(rule),
+	scope: 'type',
+	classroomId: 'cls_trinity',
+	deviceType: 'weather_station'
+});
+const forDevice = (rule: Partial<AlertRule> & Pick<AlertRule, 'parameterId'>): StoredAlertRule => ({
+	...base(rule),
+	scope: 'device',
+	deviceId: 'dev_shashamane_ws'
 });
 
 describe('platform default levels', () => {
@@ -66,24 +76,38 @@ describe('platform default levels', () => {
 	});
 });
 
-describe("a classroom's own levels", () => {
-	it('replace the defaults for that parameter only', () => {
+describe('the three layers', () => {
+	it("use a sensor type's levels over the defaults, for that parameter only", () => {
 		const rules = effectiveRules(
 			defaults,
-			[own({ parameterId: 'uv', value: 5 })],
+			[forType({ parameterId: 'uv' })],
+			[],
 			() => 'Tesfaye G.'
 		);
 		expect(thresholdsFor(rules, 'uv')).toEqual([
-			expect.objectContaining({ value: 5, source: 'classroom', updatedBy: 'Tesfaye G.' })
+			expect.objectContaining({ value: 5, source: 'type', updatedBy: 'Tesfaye G.' })
 		]);
 		expect(thresholdsFor(rules, 'heat_index')[0]).toMatchObject({ source: 'default' });
 		expect(alertsFor({ values: { uv: 6 } }, rules, parameters)[0].message).toBe(
-			"UV index 6 is at or above this classroom's warning level of 5."
+			"UV index 6 is at or above the classroom's warning level of 5."
+		);
+	});
+
+	it("use a device's own levels over its type's", () => {
+		const rules = effectiveRules(
+			defaults,
+			[forType({ parameterId: 'uv' })],
+			[forDevice({ parameterId: 'uv', value: 7 })]
+		);
+		expect(thresholdsFor(rules, 'uv').map((r) => [r.source, r.value])).toEqual([['device', 7]]);
+		expect(alertsFor({ values: { uv: 6 } }, rules, parameters)).toEqual([]);
+		expect(alertsFor({ values: { uv: 7.5 } }, rules, parameters)[0].message).toBe(
+			"UV index 7.5 is at or above this device's warning level of 7."
 		);
 	});
 
 	it('raise nothing while turned off, and a parameter with all off is silent', () => {
-		const rules = effectiveRules(defaults, [own({ parameterId: 'uv', enabled: false })]);
+		const rules = effectiveRules(defaults, [], [forDevice({ parameterId: 'uv', enabled: false })]);
 		expect(alertsFor({ values: { uv: 11 } }, rules, parameters)).toEqual([]);
 		expect(thresholdStatus(rules, 'uv', 11)).toBeNull();
 		expect(thresholdsFor(rules, 'uv')).toEqual([]);

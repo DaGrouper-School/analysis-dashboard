@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { invalidate } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import ClassroomAlertList from '#lib/components/ClassroomAlertList.svelte';
 	import CopyButton from '#lib/components/CopyButton.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import Modal from '#lib/components/Modal.svelte';
@@ -18,17 +17,11 @@
 	const permissions = $derived(data.detail.permissions);
 
 	/** Each tab's icon, also drawn by its section titles. */
-	const ICONS = { labs: 'flask', alerts: 'alert', members: 'users', invitations: 'mail' };
+	const ICONS = { labs: 'flask', members: 'users', invitations: 'mail' };
 	type Tab = keyof typeof ICONS;
 	let tab = $state<Tab>();
 	const tabs = $derived<TabItem<Tab>[]>([
 		{ id: 'labs', label: 'Labs', icon: ICONS.labs, count: data.labs.length },
-		{
-			id: 'alerts',
-			label: 'Alerts',
-			icon: ICONS.alerts,
-			count: data.alerts.rules.filter((r) => r.enabled).length
-		},
 		{ id: 'members', label: 'Members', icon: ICONS.members, count: data.detail.members.length },
 		...(permissions.invite.length
 			? [
@@ -262,16 +255,6 @@
 					<p class="mt-2 text-sm text-muted">Your facilitator hasn't registered a lab yet.</p>
 				{/if}
 			</section>
-		{:else if tab === 'alerts'}
-			<ClassroomAlertList
-				classroomId={classroom.id}
-				alerts={data.alerts}
-				devices={data.devices}
-				deviceTypes={data.deviceTypes}
-				domains={data.domains}
-				parameters={data.parameters}
-				onchange={refresh}
-			/>
 		{:else if tab === 'members'}
 			<section class="card">
 				<h2 class="flex items-center gap-2 text-lg font-semibold">
