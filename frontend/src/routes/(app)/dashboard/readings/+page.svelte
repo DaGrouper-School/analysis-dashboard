@@ -5,7 +5,7 @@
 	import type { RawSortKey } from '#lib/domain/types.ts';
 	import { formatPoint } from '#lib/geo.ts';
 	import { describeParameter, formatValue } from '#lib/key-values.ts';
-	import { PAGE_SIZE } from '#lib/raw-data.ts';
+	import { PAGE_SIZE, UTF8_BOM } from '#lib/raw-data.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
@@ -98,7 +98,13 @@
 		exportError = '';
 		try {
 			const file = await services.exports.rawCsv(query);
-			const url = URL.createObjectURL(new Blob([file.content], { type: 'text/csv;charset=utf-8' }));
+			const url = URL.createObjectURL(
+				new Blob(
+					// Excel reads a CSV without the mark as a local code page and mangles `°C`.
+					[file.content.startsWith(UTF8_BOM) ? '' : UTF8_BOM, file.content],
+					{ type: 'text/csv;charset=utf-8' }
+				)
+			);
 			const link = Object.assign(document.createElement('a'), {
 				href: url,
 				download: file.filename

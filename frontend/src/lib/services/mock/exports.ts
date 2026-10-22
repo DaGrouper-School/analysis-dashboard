@@ -1,5 +1,5 @@
 import type { RawPage, RawQuery, RawRow } from '#lib/domain/types.ts';
-import { readDb, type MockDbState } from '#lib/data/mock-db.ts';
+import { newId, readDb, type MockDbState } from '#lib/data/mock-db.ts';
 import { FIELD_SOURCE, coarsen, csvFilename, filterRows, sortRows, toCsv } from '#lib/raw-data.ts';
 import { ServiceError, type ExportService } from '../types';
 import { currentUser, roleIn } from './classrooms';
@@ -51,6 +51,13 @@ function classroomRows(state: MockDbState, classroomId: string): RawRow[] {
 	});
 }
 
+/** The source's name even when no row matched: the device's, or field observations. */
+function sourceName(state: MockDbState, sourceId: string) {
+	return sourceId === FIELD_SOURCE
+		? 'Field observation'
+		: (state.devices.find((d) => d.id === sourceId)?.name ?? sourceId);
+}
+
 function matching(state: MockDbState, query: RawQuery) {
 	const classroom = memberClassroom(state, query.classroomId);
 	const all = classroomRows(state, classroom.id);
@@ -98,7 +105,12 @@ export function createMockExports({
 			const { classroom, rows } = matching(state, query);
 			const parameters = new Map(state.parameters.map((p) => [p.id, p]));
 			return {
-				filename: csvFilename(classroom.name, new Date(now()).toISOString().slice(0, 10)),
+				filename: csvFilename(
+					classroom.name,
+					query.sourceId ? (rows[0]?.sourceName ?? sourceName(state, query.sourceId)) : null,
+					new Date(now()),
+					newId('exp').slice(4, 10)
+				),
 				content: toCsv(rows, classroom.name, classroom.terms, parameters),
 				rows: rows.length
 			};
