@@ -1,5 +1,6 @@
 import type {
 	AlertRule,
+	DataTerms,
 	DeviceTypeDefinition,
 	DomainDefinition,
 	RegistryChange,
@@ -39,6 +40,8 @@ export interface StoredClassroom {
 	setup: 'self_service' | 'admin_assisted';
 	createdBy: string;
 	createdAt: string;
+	/** Licence, credit and restrictions every export of its data carries (AP-14). */
+	terms: DataTerms;
 }
 
 export interface StoredMembership {
@@ -113,6 +116,8 @@ export interface MockDbState {
 	/** Field observations: no device, sent to SAM under the classroom's source. */
 	observations: (Omit<StoredRecord, 'deviceId'> & { deviceId: null; templateId: string })[];
 	classrooms: StoredClassroom[];
+	/** New classrooms start with these; `{classroom}` and `{institution}` are filled in. */
+	defaultDataTerms: DataTerms;
 	memberships: StoredMembership[];
 	invitations: StoredInvitation[];
 	samSources: StoredSamSource[];
@@ -122,7 +127,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 18;
+const VERSION = 19;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;

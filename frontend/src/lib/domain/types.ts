@@ -525,3 +525,77 @@ export interface CurrentConditions {
 	/** Active alerts from the latest reading. Empty for older readings. */
 	alerts: DeviceAlert[];
 }
+
+/**
+ * The terms attached to a classroom's data in SAM (AP-14). Every export of it carries them, so
+ * the data keeps its licence, credit and restrictions once it leaves the dashboard.
+ */
+export interface DataTerms {
+	/** Licence name, e.g. "CC BY 4.0". */
+	licence: string;
+	licenceUrl: string | null;
+	/** How to credit the data in a paper, poster or report. */
+	attribution: string;
+	/** Limits on use or sharing; empty when there are none. */
+	restrictions: string[];
+	/** Positions are rounded to this many decimal places before they leave SAM; null for full. */
+	coordinateDecimals: number | null;
+}
+
+/** Columns the raw data table sorts by. */
+export type RawSortKey = 'time' | 'parameter' | 'source' | 'site';
+
+/** What to browse or export from one classroom. Unset filters include everything. */
+export interface RawQuery {
+	classroomId: string;
+	/** First day included, `YYYY-MM-DD` in UTC. */
+	from?: string;
+	/** Last day included, `YYYY-MM-DD` in UTC. */
+	to?: string;
+	parameterId?: string;
+	/** A device ID, or `field` for field observations. */
+	sourceId?: string;
+	labId?: string;
+	sort?: RawSortKey;
+	order?: 'asc' | 'desc';
+}
+
+/** One value of one reading or field observation, as SAM's export service returns it. */
+export interface RawRow {
+	/** The reading's ID plus the parameter ID: unique per row. */
+	id: string;
+	observedAt: string;
+	receivedAt: string;
+	parameterId: string;
+	value: number | string;
+	sourceId: string;
+	sourceName: string;
+	sourceKind: 'device' | 'field';
+	labId: string;
+	siteName: string;
+	location: GeoPoint;
+	locationSource: ReadingLocationSource;
+	creditedTo: string | null;
+}
+
+/** A page of raw values from one classroom, with the filters it can offer and its terms. */
+export interface RawPage {
+	classroomId: string;
+	classroomName: string;
+	rows: RawRow[];
+	/** Rows matching the filters, before the page limit. */
+	total: number;
+	terms: DataTerms;
+	options: {
+		parameterIds: string[];
+		sources: { id: string; name: string; kind: RawRow['sourceKind'] }[];
+		sites: { id: string; name: string }[];
+	};
+}
+
+/** A CSV file from SAM's export service, ready to save. */
+export interface CsvExport {
+	filename: string;
+	content: string;
+	rows: number;
+}

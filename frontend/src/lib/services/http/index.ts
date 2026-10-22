@@ -16,6 +16,8 @@ import type {
 	PlaceSuggestion,
 	ProfileInput,
 	CurrentConditions,
+	CsvExport,
+	RawPage,
 	Device,
 	Lab,
 	LabDetail,
@@ -110,6 +112,12 @@ export function createHttpServices(baseUrl: string): Services {
 					'POST',
 					`/invitations/by-token/${encodeURIComponent(token)}/accept`
 				)
+		},
+		// SAM's export service filters, sorts and applies each classroom's terms on the server.
+		exports: {
+			rawValues: (query, limit = 200) =>
+				request<RawPage>('POST', '/sam/exports/raw', { ...query, limit }),
+			rawCsv: (query) => request<CsvExport>('POST', '/sam/exports/raw.csv', query)
 		},
 		labs: {
 			listForClassroom: (classroomId) =>

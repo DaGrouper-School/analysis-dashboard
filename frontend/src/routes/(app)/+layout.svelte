@@ -47,7 +47,7 @@
 		{#if data.memberClassrooms.length > 1}
 			<select
 				id="context-classroom-{extra ? 'wide' : 'narrow'}"
-				class="input w-full max-w-64 py-1.5 text-sm"
+				class="input w-full max-w-64 py-1.5 pr-9 text-sm"
 				value={classroomId}
 				onchange={(e) => pickClassroom(e.currentTarget.value)}
 			>

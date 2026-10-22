@@ -14,6 +14,7 @@ import {
 } from '#lib/data/mock-db.ts';
 import { ServiceError, type Services } from '../types';
 import { createMockClassrooms } from './classrooms';
+import { createMockExports } from './exports';
 import { createMockLabs } from './labs';
 import { createMockPlaces } from './places';
 import { createMockRegistry } from './registry';
@@ -281,6 +282,8 @@ export function createMockServices({ latency = 250, now = Date.now }: MockOption
 		classrooms: createMockClassrooms({ delay, now }),
 
 		labs: createMockLabs({ delay, now }),
+
+		exports: createMockExports({ delay, now }),
 
 		places: createMockPlaces(delay),
 

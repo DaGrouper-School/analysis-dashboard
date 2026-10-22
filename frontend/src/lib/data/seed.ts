@@ -129,6 +129,15 @@ const users: User[] = [
 	}
 ];
 
+/** The terms a new classroom's data starts with, until its head changes them. */
+const defaultDataTerms: MockDbState['defaultDataTerms'] = {
+	licence: 'CC BY 4.0',
+	licenceUrl: 'https://creativecommons.org/licenses/by/4.0/',
+	attribution: '{classroom}, {institution}. DaGrouper Global Classrooms.',
+	restrictions: [],
+	coordinateDecimals: null
+};
+
 const classrooms: MockDbState['classrooms'] = [
 	{
 		id: 'cls_trinity',
@@ -137,7 +146,15 @@ const classrooms: MockDbState['classrooms'] = [
 		code: 'DGC-7K3Q9M',
 		setup: 'admin_assisted',
 		createdBy: 'usr_leila',
-		createdAt: SEEDED_AT
+		createdAt: SEEDED_AT,
+		terms: {
+			licence: 'CC BY 4.0',
+			licenceUrl: 'https://creativecommons.org/licenses/by/4.0/',
+			attribution:
+				'Trinity Lab Classroom, Trinity School, Addis Ababa. DaGrouper Global Classrooms.',
+			restrictions: [],
+			coordinateDecimals: null
+		}
 	},
 	{
 		id: 'cls_nassau',
@@ -146,7 +163,14 @@ const classrooms: MockDbState['classrooms'] = [
 		code: 'DGC-BS4N7R',
 		setup: 'admin_assisted',
 		createdBy: 'usr_leila',
-		createdAt: SEEDED_AT
+		createdAt: SEEDED_AT,
+		terms: {
+			licence: 'CC BY-NC 4.0',
+			licenceUrl: 'https://creativecommons.org/licenses/by-nc/4.0/',
+			attribution: 'Bay Street Classroom, Bay Street School, Nassau. DaGrouper Global Classrooms.',
+			restrictions: ['No commercial use.'],
+			coordinateDecimals: null
+		}
 	},
 	{
 		id: 'cls_hargeisa',
@@ -155,7 +179,16 @@ const classrooms: MockDbState['classrooms'] = [
 		code: 'DGC-HG2W5K',
 		setup: 'admin_assisted',
 		createdBy: 'usr_leila',
-		createdAt: SEEDED_AT
+		createdAt: SEEDED_AT,
+		terms: {
+			licence: 'CC BY 4.0',
+			licenceUrl: 'https://creativecommons.org/licenses/by/4.0/',
+			attribution: 'Hargeisa Science Club, Hargeisa Secondary School. DaGrouper Global Classrooms.',
+			restrictions: [
+				'Do not publish positions more precisely than 0.01°: the lab is on school grounds.'
+			],
+			coordinateDecimals: 2
+		}
 	}
 ];
 
@@ -1049,6 +1082,7 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 		readings,
 		observations: [],
 		classrooms,
+		defaultDataTerms,
 		memberships,
 		invitations,
 		labs,

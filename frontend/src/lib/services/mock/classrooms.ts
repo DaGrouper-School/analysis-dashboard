@@ -67,6 +67,15 @@ export function permissionsFor(user: User, role: ClassroomRole | null) {
 	};
 }
 
+/** The platform's starting terms, credited to the new classroom. */
+function termsFor(state: MockDbState, name: string, institution: string) {
+	const terms = structuredClone(state.defaultDataTerms);
+	terms.attribution = terms.attribution
+		.replaceAll('{classroom}', name)
+		.replaceAll('{institution}', institution);
+	return terms;
+}
+
 function generateCode(state: MockDbState): string {
 	const taken = new Set(state.samSources.map((s) => s.sourceId));
 	for (;;) {
@@ -252,7 +261,8 @@ export function createMockClassrooms({
 					code: generateCode(state),
 					setup: 'admin_assisted',
 					createdBy: user.id,
-					createdAt: iso()
+					createdAt: iso(),
+					terms: termsFor(state, input.name.trim(), input.institutionName.trim())
 				};
 				state.classrooms.push(classroom);
 				// The real backend registers the code with SAM so sources can report against it.
