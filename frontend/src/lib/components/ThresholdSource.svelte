@@ -8,7 +8,9 @@
 	// A parameter's levels are either all the classroom's own or all the defaults.
 	const own = $derived(rules.some((r) => r.source === 'classroom'));
 	// The path is resolved; only the section's hash is added to it.
-	const href = $derived(resolve('/(app)/classrooms/[id]', { id: classroomId }) + '#alerts');
+	const href = $derived(
+		resolve('/(app)/classrooms/[id]', { id: classroomId }) + '?tab=alerts#alerts'
+	);
 </script>
 
 <p class="mt-2 text-xs text-muted">
