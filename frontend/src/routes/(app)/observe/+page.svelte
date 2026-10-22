@@ -253,7 +253,9 @@
 	<h2 class="flex items-center gap-2 text-lg font-semibold">
 		<Icon name={STEP_INFO.review.icon} class="size-5 text-muted" /> Check and send
 	</h2>
-	<dl class="mt-4 grid gap-px border border-line bg-line sm:grid-cols-2">
+	<dl
+		class="mt-4 grid gap-px border border-line bg-line sm:grid-cols-2 sm:[&>:last-child:nth-child(odd)]:col-span-2"
+	>
 		<div class="bg-surface p-3">
 			<dt class="text-xs text-muted">Recording</dt>
 			<dd class="mt-1 text-ink">{template.label}</dd>
@@ -322,7 +324,9 @@
 				{dateTime.format(new Date(sent.observedAt))} · {target.classroomName} · {target.lab.name}
 				{#if sentDevice}· {sentDevice.name}{/if}
 			</p>
-			<dl class="mt-5 grid gap-px border border-line bg-line sm:grid-cols-2">
+			<dl
+				class="mt-5 grid gap-px border border-line bg-line sm:grid-cols-2 sm:[&>:last-child:nth-child(odd)]:col-span-2"
+			>
 				{#each Object.entries(sent.values) as [id, value] (id)}
 					<div class="bg-surface p-3">
 						<dt class="text-xs text-muted">{labelFor(paramsById.get(id), id)}</dt>
