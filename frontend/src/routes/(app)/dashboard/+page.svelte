@@ -11,7 +11,6 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import SyncModal from '#lib/components/SyncModal.svelte';
 	import RollingNumber from '#lib/components/RollingNumber.svelte';
-	import ThresholdSource from '#lib/components/ThresholdSource.svelte';
 	import { thresholdsFor } from '#lib/domain/alerts.ts';
 	import { formatValue, keySummary, keyValues } from '#lib/key-values.ts';
 	import { TREND_LABELS, trendOf, trendText } from '#lib/indicators.ts';
@@ -414,7 +413,10 @@
 				/>
 			</div>
 			{#if chartLevels.length}
-				<ThresholdSource classroomId={data.classroom.id} rules={chartLevels} />
+				<p class="mt-2 text-xs text-muted">
+					Dashed lines are this sensor's alert levels. Set them under each chart in its
+					environmental domains.
+				</p>
 			{/if}
 		</section>
 	{/if}

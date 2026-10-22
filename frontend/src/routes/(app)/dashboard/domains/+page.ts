@@ -13,11 +13,11 @@ export const load: PageLoad = async ({ url, parent }) => {
 		services.registry.listParameters(),
 		parent()
 	]);
-	const { device, classroom } = selection;
-	const [readings, alertRules] = await Promise.all([
+	const { device } = selection;
+	const [readings, deviceAlerts] = await Promise.all([
 		// A month of readings covers every time range.
 		device ? services.labs.deviceReadings(device.id, 1000) : [],
-		classroom ? services.classrooms.listAlerts(classroom.id) : null
+		device ? services.labs.listDeviceAlerts(device.id) : null
 	]);
 	const tabs = domainTabs(readings, parameters, domains);
 	const asked = url.searchParams.get('range');
@@ -25,7 +25,7 @@ export const load: PageLoad = async ({ url, parent }) => {
 		...selection,
 		parameters,
 		readings,
-		alertRules: alertRules?.rules ?? [],
+		deviceAlerts,
 		tabs,
 		tab: tabs.find((t) => t.id === url.searchParams.get('domain')) ?? tabs[0] ?? null,
 		range: isTimeRange(asked) ? asked : '7d'

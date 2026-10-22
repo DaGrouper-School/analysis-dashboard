@@ -1111,7 +1111,7 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 		registryVersion,
 		observationTemplates,
 		alertDefaults,
-		classroomAlerts: [],
+		alertRules: [],
 		readings,
 		observations: [],
 		classrooms,

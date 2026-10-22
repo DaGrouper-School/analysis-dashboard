@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { invalidate } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import ClassroomAlertList from '#lib/components/ClassroomAlertList.svelte';
 	import CopyButton from '#lib/components/CopyButton.svelte';
 	import type { ClassroomRole, Invitation } from '#lib/domain/types.ts';
 	import { validateClassroomUpdate } from '#lib/domain/validation.ts';
@@ -218,16 +217,6 @@
 		<p class="mt-2 text-sm text-muted">Your facilitator hasn't registered a lab yet.</p>
 	{/if}
 </section>
-
-<ClassroomAlertList
-	classroomId={classroom.id}
-	alerts={data.alerts}
-	devices={data.devices}
-	deviceTypes={data.deviceTypes}
-	domains={data.domains}
-	parameters={data.parameters}
-	onchange={refresh}
-/>
 
 <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
 	<section class="card">

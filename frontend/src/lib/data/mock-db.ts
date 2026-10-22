@@ -12,7 +12,7 @@ import type {
 	Reading,
 	User
 } from '#lib/domain/types.ts';
-import type { ClassroomRuleRecord } from '#lib/domain/alerts.ts';
+import type { StoredAlertRule } from '#lib/domain/alerts.ts';
 import { createSeed } from './seed';
 
 /**
@@ -103,8 +103,8 @@ export interface MockDbState {
 	observationTemplates: ObservationTemplate[];
 	/** Platform default alert levels (AP-08). */
 	alertDefaults: AlertRule[];
-	/** Classrooms' own alert levels. A parameter with any of these ignores its defaults. */
-	classroomAlerts: ClassroomRuleRecord[];
+	/** Alert levels set for one device, or for a sensor type across a classroom. */
+	alertRules: StoredAlertRule[];
 	/** Readings received from devices. Each was also forwarded to SAM under `samSourceId`. */
 	readings: (StoredRecord & {
 		/** Set when it was entered by hand through an observation template. */
@@ -122,7 +122,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 15;
+const VERSION = 16;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;

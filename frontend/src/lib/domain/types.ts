@@ -126,8 +126,6 @@ export interface ClassroomDetail {
 		manageMembers: boolean;
 		/** Can change the name and institution. The code never changes. */
 		edit: boolean;
-		/** Heads and facilitators of the classroom set its alert levels (AP-08). */
-		manageAlerts: boolean;
 	};
 }
 
@@ -484,19 +482,28 @@ export interface AlertRule {
 export type AlertRuleInput = Omit<AlertRule, 'id'>;
 
 /**
- * A rule in force for a classroom. A classroom's own rules for a parameter replace the platform
- * defaults for that parameter; parameters it has not set keep the defaults.
+ * Where a rule applies: one device, or every device of a sensor type in a classroom. For each
+ * parameter, a device's own rules win over its type's, and those over the platform defaults.
  */
+export type AlertScope = 'device' | 'type';
+
+/** A rule in force for one device, with the layer it comes from. */
 export interface EffectiveAlertRule extends AlertRule {
-	source: 'classroom' | 'default';
-	/** Who last changed a classroom's own rule, and when. */
+	source: AlertScope | 'default';
+	/** Who last changed a device or type rule, and when. */
 	updatedBy: string | null;
 	updatedAt: string | null;
 }
 
-export interface ClassroomAlerts {
+export interface DeviceAlerts {
+	deviceId: string;
+	deviceType: DeviceType;
+	classroomName: string;
 	rules: EffectiveAlertRule[];
-	canEdit: boolean;
+	/** Heads and facilitators set one device's levels. */
+	canEditDevice: boolean;
+	/** Only the institution head sets the classroom's levels for a sensor type. */
+	canEditType: boolean;
 }
 
 /** The latest reading of one device in a classroom the user belongs to. */

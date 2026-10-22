@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import CalculationPanel from '#lib/components/CalculationPanel.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import ReadingChart from '#lib/components/ReadingChart.svelte';
-	import ThresholdSource from '#lib/components/ThresholdSource.svelte';
+	import ChartAlerts from '#lib/components/ChartAlerts.svelte';
 	import { thresholdStatus, thresholdsFor } from '#lib/domain/alerts.ts';
 	import { TIME_RANGES, withinRange } from '#lib/domains.ts';
 	import { bandFor, trendOf, trendText } from '#lib/indicators.ts';
@@ -16,6 +16,7 @@
 	let { data }: PageProps = $props();
 
 	const device = $derived(data.device);
+	const alertRules = $derived(data.deviceAlerts?.rules ?? []);
 	const paramsById = $derived(new Map(data.parameters.map((p) => [p.id, p])));
 	const latest = $derived(data.readings[0] ?? null);
 	const shown = $derived(withinRange(data.readings, data.range));
@@ -182,8 +183,8 @@
 		{#each data.tab.parameterIds as id (id)}
 			{@const param = describeParameter(id, paramsById)}
 			{@const value = latest?.values[id]}
-			{@const status = thresholdStatus(data.alertRules, id, value)}
-			{@const levels = thresholdsFor(data.alertRules, id)}
+			{@const status = thresholdStatus(alertRules, id, value)}
+			{@const levels = thresholdsFor(alertRules, id)}
 			{@const registered = paramsById.get(id)}
 			{@const band = bandFor(registered, value)}
 			{@const trend = registered ? trendOf(shown, registered) : null}
@@ -226,8 +227,13 @@
 						thresholds={levels}
 					/>
 				</div>
-				{#if data.classroom && levels.length}
-					<ThresholdSource classroomId={data.classroom.id} rules={levels} />
+				{#if data.deviceAlerts && registered && (registered.valueType ?? 'number') === 'number'}
+					<ChartAlerts
+						alerts={data.deviceAlerts}
+						parameter={registered}
+						typeName={deviceTypeLabel(data.deviceTypes, device.type)}
+						onchange={() => invalidateAll()}
+					/>
 				{/if}
 				{#if registered}
 					<button

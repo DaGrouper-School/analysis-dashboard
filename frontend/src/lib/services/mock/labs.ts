@@ -2,7 +2,6 @@ import type {
 	CreateLabInput,
 	CurrentConditions,
 	Device,
-	EffectiveAlertRule,
 	Lab,
 	Observation,
 	Reading
@@ -17,7 +16,8 @@ import {
 import { checkObservation, withDeviceTemplates } from '#lib/observations.ts';
 import { newId, readDb, updateDb, type MockDbState, type StoredDevice } from '#lib/data/mock-db.ts';
 import { ServiceError, type LabService } from '../types';
-import { classroomRules, currentUser, permissionsFor, roleIn } from './classrooms';
+import { currentUser, permissionsFor, roleIn } from './classrooms';
+import { createMockAlerts, deviceRules } from './alerts';
 
 function classroomOf(state: MockDbState, lab: Lab) {
 	return state.classrooms.find((c) => c.id === lab.classroomId)!;
@@ -323,22 +323,12 @@ export function createMockLabs({
 			await delay();
 			const latest = new Map<string, CurrentConditions>();
 			const state = readDb();
-			// Each classroom's own levels, falling back to the platform defaults.
-			const rules = new Map<string, EffectiveAlertRule[]>();
-			const rulesOf = (classroomId: string) => {
-				if (!rules.has(classroomId)) rules.set(classroomId, classroomRules(state, classroomId));
-				return rules.get(classroomId)!;
-			};
 			// Entries come newest first, so the first one per device is its latest reading.
 			for (const entry of memberReadings(state)) {
-				if (!latest.has(entry.device.id)) {
-					const alerts = alertsFor(
-						entry.reading,
-						rulesOf(entry.reading.classroomId),
-						state.parameters
-					);
-					latest.set(entry.device.id, { ...entry, alerts });
-				}
+				if (latest.has(entry.device.id)) continue;
+				const device = state.devices.find((d) => d.id === entry.device.id)!;
+				const alerts = alertsFor(entry.reading, deviceRules(state, device), state.parameters);
+				latest.set(entry.device.id, { ...entry, alerts });
 			}
 			return [...latest.values()];
 		},
@@ -465,6 +455,8 @@ export function createMockLabs({
 				state.observations.push(stored);
 				return toObservation(state, stored);
 			});
-		}
+		},
+
+		...createMockAlerts({ delay, now })
 	};
 }

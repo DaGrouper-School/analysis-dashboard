@@ -5,15 +5,17 @@ import type {
 	AlertRule,
 	AlertRuleInput,
 	DeviceAlert,
+	DeviceType,
 	EffectiveAlertRule,
 	Parameter,
 	Reading
 } from './types';
 
 /**
- * Alert levels (AP-08). The registry holds platform defaults; a classroom's own rules for a
- * parameter replace the defaults for that parameter. The backend evaluates them on each reading,
- * and the dashboard draws the same levels as its thresholds. Nothing here is hard-coded: the
+ * Alert levels (AP-08), in three layers per parameter: a device's own rules, then its
+ * classroom's rules for the device's sensor type, then the registry's platform defaults. The
+ * first layer with rules for a parameter is the one in force. The backend evaluates them on each
+ * reading, and the charts draw the same levels as thresholds. Nothing here is hard-coded: the
  * rules are always passed in.
  */
 
@@ -29,25 +31,35 @@ export const DIRECTION_LABELS: Record<AlertRule['direction'], string> = {
 
 const SEVERITY: Record<AlertLevel, number> = { warning: 2, caution: 1 };
 
-/** A stored classroom rule: whose it is and who last changed it. */
-export interface ClassroomRuleRecord extends AlertRule {
-	classroomId: string;
+const WHOSE: Record<EffectiveAlertRule['source'], string> = {
+	device: "this device's",
+	type: "the classroom's",
+	default: 'the default'
+};
+
+/** A stored rule: the layer it belongs to, and who last changed it. */
+export type StoredAlertRule = AlertRule & {
 	updatedBy: string;
 	updatedAt: string;
-}
+} & (
+		| { scope: 'device'; deviceId: string }
+		| { scope: 'type'; classroomId: string; deviceType: DeviceType }
+	);
 
 /**
- * The rules in force for one classroom: its own rules for the parameters it has set, the
- * defaults for the rest. `nameOf` turns a user ID into the name shown beside a rule.
+ * The rules in force for one device, from its own rules, its classroom's rules for its sensor
+ * type, and the defaults. `nameOf` turns a user ID into the name shown beside a rule.
  */
 export function effectiveRules(
 	defaults: AlertRule[],
-	own: ClassroomRuleRecord[],
+	typeRules: StoredAlertRule[],
+	deviceRules: StoredAlertRule[],
 	nameOf: (userId: string) => string = (id) => id
 ): EffectiveAlertRule[] {
-	const set = new Set(own.map((r) => r.parameterId));
-	return [
-		...own.map((rule) => ({
+	const fromDevice = new Set(deviceRules.map((r) => r.parameterId));
+	const fromType = new Set(typeRules.map((r) => r.parameterId));
+	const layer = (rules: StoredAlertRule[]) =>
+		rules.map((rule): EffectiveAlertRule => ({
 			id: rule.id,
 			parameterId: rule.parameterId,
 			direction: rule.direction,
@@ -55,12 +67,15 @@ export function effectiveRules(
 			level: rule.level,
 			title: rule.title,
 			enabled: rule.enabled,
-			source: 'classroom' as const,
+			source: rule.scope,
 			updatedBy: nameOf(rule.updatedBy),
 			updatedAt: rule.updatedAt
-		})),
+		}));
+	return [
+		...layer(deviceRules),
+		...layer(typeRules.filter((r) => !fromDevice.has(r.parameterId))),
 		...defaults
-			.filter((r) => !set.has(r.parameterId))
+			.filter((r) => !fromDevice.has(r.parameterId) && !fromType.has(r.parameterId))
 			.map((rule) => ({
 				...rule,
 				source: 'default' as const,
@@ -114,7 +129,7 @@ export function alertsFor(
 		if (!rule) continue;
 		const parameter = byId.get(parameterId);
 		const unit = parameter?.unit ?? '';
-		const whose = rule.source === 'classroom' ? "this classroom's" : 'the default';
+		const whose = WHOSE[rule.source];
 		alerts.push([
 			rule,
 			{
@@ -131,7 +146,7 @@ export function alertsFor(
 export type ThresholdLevel = 'normal' | AlertLevel;
 
 /**
- * Where a value sits against a classroom's levels, for a badge beside it. Null when the
+ * Where a value sits against the levels in force, for a badge beside it. Null when the
  * parameter has no enabled level.
  */
 export function thresholdStatus(
