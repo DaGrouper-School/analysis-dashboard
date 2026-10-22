@@ -62,10 +62,12 @@
 		<h2 class="font-semibold">You're not in a classroom yet</h2>
 		<p class="mx-auto mt-2 max-w-md text-sm text-muted">
 			{data.canCreate
-				? 'Create one to get a global classroom code and invite your facilitators and community scientists.'
+				? 'Create one and invite its institution head. They set up the lab and invite the rest.'
 				: data.invitations.length
 					? 'Join from the invitation above.'
-					: 'Ask your facilitator or institution head for an invitation. It arrives by email.'}
+					: data.user.role === 'institution_head'
+						? 'A platform admin sets up classrooms and invites the institution head. Your invitation arrives by email.'
+						: 'Ask your facilitator or institution head for an invitation. It arrives by email.'}
 		</p>
 	</div>
 {/if}

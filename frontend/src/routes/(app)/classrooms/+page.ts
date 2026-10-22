@@ -10,6 +10,7 @@ export const load: PageLoad = async ({ parent }) => {
 	return {
 		classrooms,
 		invitations,
-		canCreate: user.platformAdmin || user.role === 'institution_head'
+		// Platform admins create classrooms and invite each one's institution head.
+		canCreate: user.platformAdmin
 	};
 };
