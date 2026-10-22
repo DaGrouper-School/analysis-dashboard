@@ -23,6 +23,9 @@ import type {
 	PlaceSuggestion,
 	ProfileInput,
 	CreateLabInput,
+	CsvExport,
+	RawPage,
+	RawQuery,
 	CurrentConditions,
 	Device,
 	Lab,
@@ -201,11 +204,23 @@ export interface LabService {
 	resetAlerts(deviceId: string, scope: AlertScope, parameterId: string): Promise<DeviceAlerts>;
 }
 
+/**
+ * SAM's export service (AP-14): raw values of one classroom, filtered and sorted on the server,
+ * and the same as a CSV file. Only classrooms the user belongs to; platform admins included.
+ */
+export interface ExportService {
+	/** Up to `limit` matching values, with the classroom's data terms. */
+	rawValues(query: RawQuery, limit?: number): Promise<RawPage>;
+	/** Every matching value as CSV. Each row carries the licence, attribution and restrictions. */
+	rawCsv(query: RawQuery): Promise<CsvExport>;
+}
+
 export interface Services {
 	auth: AuthService;
 	profile: ProfileService;
 	classrooms: ClassroomService;
 	labs: LabService;
+	exports: ExportService;
 	places: PlacesService;
 	registry: RegistryService;
 }
