@@ -124,6 +124,13 @@
 		}
 	}
 
+	/** Sends a fresh link. The old one stops working. */
+	function resend(invitation: Invitation) {
+		run(async () => {
+			await services.classrooms.invite(classroom.id, [invitation.email], invitation.role);
+		});
+	}
+
 	function remove(userId: string, name: string) {
 		if (!confirm(`Remove ${name} from ${classroom.name}?`)) return;
 		run(() => services.classrooms.removeMember(classroom.id, userId));
@@ -157,7 +164,7 @@
 				<p class="field-error">{editErrors.institutionName}</p>
 			{/if}
 		</div>
-		{#if classroom.code}
+		{#if permissions.viewCode && classroom.code}
 			<div>
 				<label class="label" for="edit-code">Classroom code</label>
 				<input id="edit-code" class="input font-mono" value={classroom.code} readonly disabled />
@@ -189,23 +196,21 @@
 	</div>
 {/if}
 
-<section
-	class="card mt-8 flex flex-wrap items-center justify-between gap-4 border-teal/25 bg-forest text-ink"
->
-	<div>
-		<p class="text-sm text-muted">Global classroom code</p>
-		{#if classroom.code}
+{#if permissions.viewCode && classroom.code}
+	<section
+		class="card mt-8 flex flex-wrap items-center justify-between gap-4 border-teal/25 bg-forest text-ink"
+	>
+		<div>
+			<p class="text-sm text-muted">Global classroom code</p>
 			<p class="mt-1 font-mono text-3xl tracking-wider text-lime">{classroom.code}</p>
 			<p class="mt-2 max-w-xl text-sm text-muted">
 				Registered in SAM as this classroom's source identifier. Only facilitators and the
 				institution head can see it.
 			</p>
-		{:else}
-			<p class="mt-1 text-lg">Visible to facilitators and the institution head</p>
-		{/if}
-	</div>
-	{#if classroom.code}<CopyButton text={classroom.code} label="Copy code" />{/if}
-</section>
+		</div>
+		<CopyButton text={classroom.code} label="Copy code" />
+	</section>
+{/if}
 
 {#if actionError}<p class="field-error mt-4" role="alert">{actionError}</p>{/if}
 
@@ -336,11 +341,17 @@
 									</p>
 								</div>
 								<CopyButton text={inviteUrl(invitation.token)} label="Copy link" />
-								<button
-									class="btn btn-ghost px-3 py-1.5 text-xs"
-									onclick={() => run(() => services.classrooms.revokeInvitation(invitation.id))}
-									>Revoke</button
-								>
+								{#if permissions.invite.includes(invitation.role)}
+									<button
+										class="btn btn-ghost px-3 py-1.5 text-xs"
+										onclick={() => resend(invitation)}>Resend</button
+									>
+									<button
+										class="btn btn-ghost px-3 py-1.5 text-xs"
+										onclick={() => run(() => services.classrooms.revokeInvitation(invitation.id))}
+										>Revoke</button
+									>
+								{/if}
 							</li>
 						{/each}
 					</ul>

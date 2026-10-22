@@ -206,7 +206,8 @@ export function createMockClassrooms({
 				permissions: {
 					invite: can.invite,
 					manageMembers: can.manageMembers,
-					edit: can.manageMembers
+					edit: can.manageMembers,
+					viewCode: can.seeCode
 				}
 			};
 		},
@@ -233,32 +234,23 @@ export function createMockClassrooms({
 		async create(input) {
 			await delay();
 			const errors = validateClassroomUpdate(input);
-			const headEmail = input.headEmail?.trim().toLowerCase();
-			if (headEmail !== undefined && headEmail !== '' && !isValidEmail(headEmail)) {
-				errors.headEmail = 'Enter a valid email address.';
-			}
+			const headEmail = input.headEmail.trim().toLowerCase();
+			if (!headEmail) errors.headEmail = "Enter the institution head's email.";
+			else if (!isValidEmail(headEmail)) errors.headEmail = 'Enter a valid email address.';
 			if (Object.keys(errors).length) {
 				throw new ServiceError('invalid_input', 'Check the highlighted fields.', errors);
 			}
 			return updateDb((state) => {
 				const user = currentUser(state);
-				const assisted = Boolean(headEmail);
-				if (
-					assisted ? !user.platformAdmin : user.role !== 'institution_head' && !user.platformAdmin
-				) {
-					throw new ServiceError(
-						'forbidden',
-						assisted
-							? 'Only platform admins can set up a classroom for someone else.'
-							: 'Only institution heads can create a classroom.'
-					);
+				if (!user.platformAdmin) {
+					throw new ServiceError('forbidden', 'Only platform admins can create a classroom.');
 				}
 				const classroom: StoredClassroom = {
 					id: newId('cls'),
 					name: input.name.trim(),
 					institutionName: input.institutionName.trim(),
 					code: generateCode(state),
-					setup: assisted ? 'admin_assisted' : 'self_service',
+					setup: 'admin_assisted',
 					createdBy: user.id,
 					createdAt: iso()
 				};
@@ -269,16 +261,8 @@ export function createMockClassrooms({
 					kind: 'classroom',
 					registeredAt: classroom.createdAt
 				});
-				if (assisted) {
-					createInvitation(state, classroom.id, headEmail!, 'institution_head', user.id);
-				} else {
-					state.memberships.push({
-						classroomId: classroom.id,
-						userId: user.id,
-						role: 'institution_head',
-						joinedAt: classroom.createdAt
-					});
-				}
+				// The head joins by accepting this invitation, then sets up the lab and invites the rest.
+				createInvitation(state, classroom.id, headEmail, 'institution_head', user.id);
 				return summarize(state, user, classroom);
 			});
 		},

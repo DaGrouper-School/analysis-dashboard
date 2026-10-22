@@ -126,6 +126,8 @@ export interface ClassroomDetail {
 		manageMembers: boolean;
 		/** Can change the name and institution. The code never changes. */
 		edit: boolean;
+		/** Can see the classroom code: platform admins, the institution head and facilitators. */
+		viewCode: boolean;
 	};
 }
 
@@ -149,8 +151,8 @@ export interface UpdateClassroomInput {
 export interface CreateClassroomInput {
 	name: string;
 	institutionName: string;
-	/** Admin-assisted setup: invite this person as institution head instead of joining yourself. */
-	headEmail?: string;
+	/** Only platform admins create classrooms. Creating one invites this person as its head. */
+	headEmail: string;
 }
 
 // ---- Parameter registry (SAM-01, SAM-05) -------------------------------------------
