@@ -166,6 +166,7 @@
 				invitations={data.invitations}
 				canCreate={data.canCreate}
 				platformAdmin={user.platformAdmin}
+				head={user.role === 'institution_head'}
 				icon={ICONS.classrooms}
 			/>
 		{:else}

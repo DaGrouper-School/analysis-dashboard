@@ -14,12 +14,15 @@
 		invitations,
 		canCreate,
 		platformAdmin,
+		head,
 		icon
 	}: {
 		classrooms: ClassroomSummary[];
 		invitations: InvitationPreview[];
 		canCreate: boolean;
 		platformAdmin: boolean;
+		/** An institution head waits for a platform admin's invitation. */
+		head: boolean;
 		/** The section title's icon, as on its tab. */
 		icon: string;
 	} = $props();
@@ -80,10 +83,12 @@
 		<h3 class="font-semibold">You're not in a classroom yet</h3>
 		<p class="mx-auto mt-2 max-w-md text-sm text-muted">
 			{canCreate
-				? 'Create one to get a global classroom code and invite your facilitators and community scientists.'
+				? 'Create one and invite its institution head. They set up the lab and invite the rest.'
 				: invitations.length
 					? 'Join from the invitation above.'
-					: 'Ask your facilitator or institution head for an invitation. It arrives by email.'}
+					: head
+						? 'A platform admin sets up classrooms and invites the institution head. Your invitation arrives by email.'
+						: 'Ask your facilitator or institution head for an invitation. It arrives by email.'}
 		</p>
 	</div>
 {/if}

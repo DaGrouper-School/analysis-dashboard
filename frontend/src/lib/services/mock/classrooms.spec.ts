@@ -23,13 +23,13 @@ async function signUpWithPhone(phone: string, fullName: string, email: string) {
 }
 
 describe('creating a classroom (AP-03)', () => {
-	it('gives an institution head a unique code registered as a SAM source', async () => {
-		await signInAs('g-tesfaye');
-		const a = await services.classrooms.create({ name: 'Second Lab', institutionName: 'Trinity' });
-		const b = await services.classrooms.create({ name: 'Third Lab', institutionName: 'Trinity' });
+	it('gives each classroom a unique code registered as a SAM source', async () => {
+		await signInAs('g-leila');
+		const input = { institutionName: 'Trinity', headEmail: 'head@example.org' };
+		const a = await services.classrooms.create({ ...input, name: 'Second Lab' });
+		const b = await services.classrooms.create({ ...input, name: 'Third Lab' });
 		expect(a.code).toMatch(/^DGC-[A-Z2-9]{6}$/);
 		expect(a.code).not.toBe(b.code);
-		expect(a).toMatchObject({ myRole: 'institution_head', setup: 'self_service', memberCount: 1 });
 	});
 
 	it('lets a platform admin set one up for an institution head (admin-assisted)', async () => {
@@ -51,11 +51,41 @@ describe('creating a classroom (AP-03)', () => {
 		expect((await services.auth.getCurrentUser())?.role).toBe('custodian');
 	});
 
-	it('refuses contributors', async () => {
-		await signInAs('g-sarah');
+	it('refuses everyone but platform admins, institution heads included', async () => {
+		for (const sub of ['g-tesfaye', 'g-sarah']) {
+			await signInAs(sub);
+			await expect(
+				services.classrooms.create({
+					name: 'Mine',
+					institutionName: 'School',
+					headEmail: 'head@example.org'
+				})
+			).rejects.toMatchObject({ code: 'forbidden' });
+		}
+	});
+
+	it('requires the institution head email', async () => {
+		await signInAs('g-leila');
 		await expect(
-			services.classrooms.create({ name: 'Mine', institutionName: 'School' })
-		).rejects.toMatchObject({ code: 'forbidden' });
+			services.classrooms.create({ name: 'Mine', institutionName: 'School', headEmail: ' ' })
+		).rejects.toMatchObject({ code: 'invalid_input', fields: { headEmail: expect.any(String) } });
+	});
+
+	it('lets the admin resend the head invitation, which replaces the old link', async () => {
+		await signInAs('g-leila');
+		const classroom = await services.classrooms.create({
+			name: 'Nassau Coastal Classroom',
+			institutionName: 'Bay Street School',
+			headEmail: 'sarah.k@example.org'
+		});
+		const [first] = (await services.classrooms.get(classroom.id)).invitations;
+		await services.classrooms.invite(classroom.id, [first.email], 'institution_head');
+		const pending = (await services.classrooms.get(classroom.id)).invitations;
+		expect(pending).toHaveLength(1);
+		expect(pending[0].token).not.toBe(first.token);
+		await expect(services.classrooms.getInvitation(first.token)).rejects.toMatchObject({
+			code: 'not_found'
+		});
 	});
 });
 
@@ -73,7 +103,8 @@ describe('classroom code visibility', () => {
 		expect(detail.permissions).toEqual({
 			invite: [],
 			manageMembers: false,
-			edit: false
+			edit: false,
+			viewCode: false
 		});
 	});
 
@@ -81,6 +112,7 @@ describe('classroom code visibility', () => {
 		await signInAs('g-tesfaye');
 		const [classroom] = await services.classrooms.listMine();
 		expect(classroom.code).toBe('DGC-7K3Q9M');
+		expect((await services.classrooms.get(classroom.id)).permissions.viewCode).toBe(true);
 	});
 
 	it('hides classrooms from non-members', async () => {
