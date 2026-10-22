@@ -4,6 +4,7 @@
 	import { formatPoint } from '#lib/geo.ts';
 	import { formatValue } from '#lib/key-values.ts';
 	import Icon from '#lib/components/Icon.svelte';
+	import Wizard from '#lib/components/Wizard.svelte';
 	import { FALLBACK_DOMAIN_ICON } from '#lib/icons.ts';
 	import { deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
 	import { rangeText, readEntries, unitsFor, type FieldEntry } from '#lib/observations.ts';
@@ -76,6 +77,9 @@
 	let gps = $state<'idle' | 'locating' | 'fix' | 'none'>('idle');
 	let touched = $state<Record<string, boolean>>({});
 	let tried = $state(false);
+	let triedDevice = $state(false);
+	let triedWhat = $state(false);
+	let step = $state(0);
 	let sending = $state(false);
 	let serverErrors = $state<Record<string, string>>({});
 	let formError = $state('');
@@ -90,7 +94,7 @@
 			])
 		);
 		touched = {};
-		tried = false;
+		tried = triedDevice = false;
 		serverErrors = {};
 		formError = '';
 	}
@@ -121,16 +125,52 @@
 				? 'That time is in the future.'
 				: ''
 	);
-	/** Shown once a field was left, or after a send was tried. The server's word wins. */
+	/** Shown once a field was left, or after Next was tried. The server's word wins. */
 	const shownError = (id: string) =>
 		serverErrors[id] ?? (tried || touched[id] ? checked.errors[id] : undefined);
-	const problems = $derived(
-		[
-			...Object.entries(checked.errors).map(([id, message]) => ({ id: `field-${id}`, message })),
-			deviceError && { id: 'observe-device', message: deviceError },
-			timeError && { id: 'observe-time', message: timeError }
-		].filter((p): p is { id: string; message: string } => !!p)
-	);
+
+	/** The steps: the device one only when the template is read from a device. */
+	const stepIds = $derived([
+		'what',
+		...(template?.deviceType ? ['device'] : []),
+		'values',
+		'review'
+	] as const);
+	const STEP_INFO = {
+		what: { label: 'What', icon: 'clipboard' },
+		device: { label: 'Device', icon: 'sensor' },
+		values: { label: 'Values', icon: 'readings' },
+		review: { label: 'Review', icon: 'review' }
+	};
+	const steps = $derived(stepIds.map((id) => STEP_INFO[id as keyof typeof STEP_INFO]));
+	const stepId = $derived(stepIds[step]);
+
+	/** Whether a step is ready to leave; shows its errors and focuses the first one if not. */
+	function check(at: number) {
+		const id = stepIds[at];
+		let first = '';
+		if (id === 'what') {
+			triedWhat = true;
+			if (!template || !target) first = 'observe-what';
+		} else if (id === 'device') {
+			triedDevice = true;
+			if (deviceError) first = 'observe-device';
+		} else if (id === 'values') {
+			tried = true;
+			const field = Object.keys(checked.errors)[0];
+			if (field) first = `field-${field}`;
+			else if (timeError) first = 'observe-time';
+		} else {
+			// Review: send the person back to the first step that still has a problem.
+			const back = stepIds.findIndex((s, i) => i < at && !check(i));
+			if (back >= 0) {
+				step = back;
+				return false;
+			}
+		}
+		if (first) document.getElementById(first)?.focus();
+		return !first;
+	}
 
 	function locate() {
 		if (!('geolocation' in navigator)) {
@@ -157,13 +197,8 @@
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
 		if (!template || !target) return;
-		tried = true;
 		serverErrors = {};
 		formError = '';
-		if (problems.length) {
-			document.getElementById(problems[0].id)?.focus();
-			return;
-		}
 		sending = true;
 		try {
 			sent = await services.labs.submitObservation(
@@ -178,7 +213,10 @@
 				{ credit }
 			);
 		} catch (e) {
-			if (e instanceof ServiceError && Object.keys(e.fields).length) serverErrors = e.fields;
+			if (e instanceof ServiceError && Object.keys(e.fields).length) {
+				serverErrors = e.fields;
+				step = stepIds.indexOf('values');
+			}
 			formError = errorMessage(e);
 		} finally {
 			sending = false;
@@ -189,6 +227,8 @@
 		sent = null;
 		observedAt = localNow();
 		reset(template);
+		// Same thing again: skip straight past picking it.
+		step = 1;
 	}
 
 	const sentDevice = $derived(target?.devices.find((d) => d.id === sent?.deviceId) ?? null);
@@ -197,6 +237,52 @@
 </script>
 
 <svelte:head><title>Submit an observation · DaGrouper</title></svelte:head>
+
+{#snippet review(template: ObservationTemplate, target: (typeof data.targets)[number])}
+	<h2 class="flex items-center gap-2 text-lg font-semibold">
+		<Icon name={STEP_INFO.review.icon} class="size-5 text-muted" /> Check and send
+	</h2>
+	<dl class="mt-4 grid gap-px border border-line bg-line sm:grid-cols-2">
+		<div class="bg-surface p-3">
+			<dt class="text-xs text-muted">Recording</dt>
+			<dd class="mt-1 text-ink">{template.label}</dd>
+		</div>
+		<div class="bg-surface p-3">
+			<dt class="text-xs text-muted">Lab</dt>
+			<dd class="mt-1 text-ink">{target.lab.name} · {target.classroomName}</dd>
+		</div>
+		{#if device}
+			<div class="bg-surface p-3">
+				<dt class="text-xs text-muted">Device</dt>
+				<dd class="mt-1 text-ink">{device.name} · {device.identifier}</dd>
+			</div>
+		{/if}
+		{#each Object.entries(checked.values) as [id, value] (id)}
+			<div class="bg-surface p-3">
+				<dt class="text-xs text-muted">{labelFor(paramsById.get(id), id)}</dt>
+				<dd class="mt-1 text-lg text-ink">{formatValue(value, paramsById.get(id)?.unit)}</dd>
+			</div>
+		{/each}
+		<div class="bg-surface p-3">
+			<dt class="text-xs text-muted">When</dt>
+			<dd class="mt-1 text-ink">{observedAt ? dateTime.format(new Date(observedAt)) : '—'}</dd>
+		</div>
+		<div class="bg-surface p-3">
+			<dt class="text-xs text-muted">Where</dt>
+			<dd class="mt-1 text-ink">
+				{#if gps === 'fix' && location}
+					{formatPoint(location)} <span class="text-muted">· your GPS</span>
+				{:else}
+					{target.lab.name}'s location <span class="text-muted">· no GPS</span>
+				{/if}
+			</dd>
+		</div>
+	</dl>
+	<p class="mt-3 text-sm text-muted">
+		{credit ? 'Credited to you.' : 'Not credited to anyone: public outputs show it without a name.'}
+	</p>
+	{#if formError}<p class="field-error mt-3" role="alert">{formError}</p>{/if}
+{/snippet}
 
 <div class="mx-auto max-w-3xl">
 	<p class="text-sm text-muted">Contribute</p>
@@ -261,96 +347,116 @@
 			</div>
 		</section>
 	{:else}
-		<form class="mt-8 space-y-8" novalidate onsubmit={submit}>
-			{#if data.targets.length > 1}
-				<div class="max-w-sm">
-					<label class="label" for="observe-lab">Lab</label>
-					<select
-						id="observe-lab"
-						class="input"
-						bind:value={labId}
-						onchange={() => (deviceId = '')}
-					>
-						{#each data.targets as t (t.lab.id)}
-							<option value={t.lab.id}>{t.lab.name} · {t.classroomName}</option>
-						{/each}
-					</select>
-				</div>
-			{:else if target}
-				<p class="text-sm text-muted">
-					Recording in <span class="text-ink">{target.lab.name}</span> · {target.classroomName}
-				</p>
-			{/if}
-
-			<fieldset>
-				<legend class="text-lg font-semibold text-ink">1. What are you recording?</legend>
-				<div class="mt-3 space-y-5">
-					{#each groups as group (group.id)}
-						<div>
-							<p class="eyebrow flex items-center gap-1.5">
-								<Icon name={group.icon} fallback={FALLBACK_DOMAIN_ICON} class="size-4" />
-								{group.label}
+		<div class="card mt-8">
+			<Wizard
+				{steps}
+				bind:current={step}
+				{check}
+				onsubmit={submit}
+				submitLabel="Send observation"
+				busy={sending}
+				busyLabel="Sending…"
+				label="Submit an observation"
+			>
+				{#if stepId === 'what'}
+					<div class="space-y-6">
+						{#if data.targets.length > 1}
+							<div class="max-w-sm">
+								<label class="label" for="observe-lab">Lab</label>
+								<select
+									id="observe-lab"
+									class="input"
+									bind:value={labId}
+									onchange={() => (deviceId = '')}
+								>
+									{#each data.targets as t (t.lab.id)}
+										<option value={t.lab.id}>{t.lab.name} · {t.classroomName}</option>
+									{/each}
+								</select>
+							</div>
+						{:else if target}
+							<p class="text-sm text-muted">
+								Recording in <span class="text-ink">{target.lab.name}</span> · {target.classroomName}
 							</p>
-							<div class="mt-2 grid gap-2 sm:grid-cols-2">
-								{#each group.templates as t (t.id)}
-									{@const count = devicesOfType(t)}
-									<label
-										class={[
-											'flex cursor-pointer gap-3 rounded-md border p-4 transition',
-											t.id === templateId
-												? 'border-ink bg-ink/[0.05]'
-												: 'border-line hover:border-line-strong'
-										]}
-									>
-										<input
-											type="radio"
-											name="template"
-											class="mt-1 border-line-strong bg-transparent text-teal checked:bg-current focus:ring-teal"
-											value={t.id}
-											checked={t.id === templateId}
-											onchange={() => pick(t.id)}
-										/>
-										<span class="min-w-0">
-											<span class="block font-medium text-ink">{t.label}</span>
-											<span class="block text-sm text-muted">{t.description}</span>
-											<span class="mt-1 block text-xs text-muted">
-												{#if t.deviceType}
-													<span
-														class="mr-1 inline-flex align-[-2px]"
-														style:color={deviceTypeColor(data.deviceTypes, t.deviceType)}
-														><Icon
-															name={deviceTypeIcon(data.deviceTypes, t.deviceType)}
-															class="size-3.5"
-														/></span
-													>
-													{deviceTypeLabel(data.deviceTypes, t.deviceType)} reading{count === 0
-														? ' · none registered in this lab'
-														: ''}
-												{:else}
-													Field observation, no device
-												{/if}
-											</span>
-										</span>
-									</label>
+						{/if}
+						<fieldset id="observe-what" tabindex="-1" class="outline-none">
+							<legend class="flex items-center gap-2 text-lg font-semibold text-ink">
+								<Icon name={STEP_INFO.what.icon} class="size-5 text-muted" /> What are you recording?
+							</legend>
+							<div class="mt-3 space-y-5">
+								{#each groups as group (group.id)}
+									<div>
+										<p class="eyebrow flex items-center gap-1.5">
+											<Icon name={group.icon} fallback={FALLBACK_DOMAIN_ICON} class="size-4" />
+											{group.label}
+										</p>
+										<div class="mt-2 grid gap-2 sm:grid-cols-2">
+											{#each group.templates as t (t.id)}
+												{@const count = devicesOfType(t)}
+												<label
+													class={[
+														'flex cursor-pointer gap-3 rounded-md border p-4 transition',
+														t.id === templateId
+															? 'border-ink bg-ink/[0.05]'
+															: 'border-line hover:border-line-strong'
+													]}
+												>
+													<input
+														type="radio"
+														name="template"
+														class="mt-1 border-line-strong bg-transparent text-teal checked:bg-current focus:ring-teal"
+														value={t.id}
+														checked={t.id === templateId}
+														onchange={() => pick(t.id)}
+													/>
+													<span class="min-w-0">
+														<span class="block font-medium text-ink">{t.label}</span>
+														<span class="block text-sm text-muted">{t.description}</span>
+														<span class="mt-1 block text-xs text-muted">
+															{#if t.deviceType}
+																<span
+																	class="mr-1 inline-flex align-[-2px]"
+																	style:color={deviceTypeColor(data.deviceTypes, t.deviceType)}
+																	><Icon
+																		name={deviceTypeIcon(data.deviceTypes, t.deviceType)}
+																		class="size-3.5"
+																	/></span
+																>
+																{deviceTypeLabel(data.deviceTypes, t.deviceType)} reading{count ===
+																0
+																	? ' · none registered in this lab'
+																	: ''}
+															{:else}
+																Field observation, no device
+															{/if}
+														</span>
+													</span>
+												</label>
+											{/each}
+										</div>
+									</div>
 								{/each}
 							</div>
-						</div>
-					{/each}
-				</div>
-			</fieldset>
-
-			{#if template && target}
-				{#if template.deviceType}
+						</fieldset>
+						{#if triedWhat && !template}
+							<p class="field-error">Pick what you are recording.</p>
+						{/if}
+					</div>
+				{:else if !template || !target}
+					<p class="text-sm text-muted">Pick what you are recording first.</p>
+				{:else if stepId === 'device'}
 					<div>
-						<h2 class="text-lg font-semibold">2. Which device did you read?</h2>
+						<h2 class="flex items-center gap-2 text-lg font-semibold">
+							<Icon name={STEP_INFO.device.icon} class="size-5 text-muted" /> Which device did you read?
+						</h2>
 						{#if fitting.length > 1}
 							<div class="mt-3 max-w-sm">
 								<label class="label" for="observe-device">Device</label>
 								<select
 									id="observe-device"
-									class={['input', tried && deviceError && 'input-error']}
+									class={['input', triedDevice && deviceError && 'input-error']}
 									bind:value={deviceId}
-									aria-invalid={tried && !!deviceError}
+									aria-invalid={triedDevice && !!deviceError}
 									aria-describedby="observe-device-help"
 								>
 									<option value="" disabled>Choose a device</option>
@@ -366,7 +472,7 @@
 						{:else}
 							<p id="observe-device" tabindex="-1" class="field-error">{deviceError}</p>
 						{/if}
-						{#if tried && deviceError && fitting.length > 1}
+						{#if triedDevice && deviceError && fitting.length > 1}
 							<p class="field-error">{deviceError}</p>
 						{/if}
 						<p id="observe-device-help" class="mt-2 text-sm text-muted">
@@ -374,147 +480,140 @@
 							on the lab page.
 						</p>
 					</div>
-				{/if}
+				{:else if stepId === 'values'}
+					<div class="space-y-8">
+						<fieldset>
+							<legend class="flex items-center gap-2 text-lg font-semibold text-ink">
+								<Icon name={STEP_INFO.values.icon} class="size-5 text-muted" /> Your values
+							</legend>
+							<div class="mt-3 grid gap-5 sm:grid-cols-2">
+								{#each template.fields as field (field.parameterId)}
+									{@const param = paramsById.get(field.parameterId)}
+									{@const error = shownError(field.parameterId)}
+									{@const entry = entries[field.parameterId]}
+									{#if param && entry}
+										{@const units = unitsFor(param)}
+										{@const range = rangeText(param)}
+										<div>
+											<label class="label" for="field-{param.id}">
+												{param.label}
+												{#if !field.required}<span class="font-normal text-muted">(optional)</span
+													>{/if}
+											</label>
+											<div class="flex gap-2">
+												{#if param.options}
+													<select
+														id="field-{param.id}"
+														class={['input', error && 'input-error']}
+														bind:value={entry.value}
+														onblur={() => (touched[param.id] = true)}
+														aria-invalid={!!error}
+														aria-describedby="help-{param.id}"
+													>
+														<option value="">Choose</option>
+														{#each param.options as option (option)}
+															<option value={option}>{option}</option>
+														{/each}
+													</select>
+												{:else}
+													<input
+														id="field-{param.id}"
+														class={['input min-w-0', error && 'input-error']}
+														inputmode={(param.valueType ?? 'number') === 'number'
+															? 'decimal'
+															: 'text'}
+														autocomplete="off"
+														bind:value={entry.value}
+														onblur={() => (touched[param.id] = true)}
+														aria-invalid={!!error}
+														aria-describedby="help-{param.id}"
+													/>
+												{/if}
+												{#if units.length > 1}
+													<select
+														class="input w-24 shrink-0"
+														aria-label="{param.label} unit"
+														bind:value={entry.unit}
+													>
+														{#each units as unit (unit)}
+															<option value={unit}>{unit}</option>
+														{/each}
+													</select>
+												{:else if param.unit}
+													<span class="self-center text-sm text-muted">{param.unit}</span>
+												{/if}
+											</div>
+											<p id="help-{param.id}" class="mt-1.5 text-xs text-muted">
+												{param.definition}{range ? ` Expected ${range}.` : ''}
+											</p>
+											{#if error}<p class="field-error">{error}</p>{/if}
+										</div>
+									{/if}
+								{/each}
+							</div>
+						</fieldset>
 
-				<fieldset>
-					<legend class="text-lg font-semibold text-ink">
-						{template.deviceType ? '3' : '2'}. Your values
-					</legend>
-					<div class="mt-3 grid gap-5 sm:grid-cols-2">
-						{#each template.fields as field (field.parameterId)}
-							{@const param = paramsById.get(field.parameterId)}
-							{@const error = shownError(field.parameterId)}
-							{@const entry = entries[field.parameterId]}
-							{#if param && entry}
-								{@const units = unitsFor(param)}
-								{@const range = rangeText(param)}
-								<div>
-									<label class="label" for="field-{param.id}">
-										{param.label}
-										{#if !field.required}<span class="font-normal text-muted">(optional)</span>{/if}
-									</label>
-									<div class="flex gap-2">
-										{#if param.options}
-											<select
-												id="field-{param.id}"
-												class={['input', error && 'input-error']}
-												bind:value={entry.value}
-												onblur={() => (touched[param.id] = true)}
-												aria-invalid={!!error}
-												aria-describedby="help-{param.id}"
-											>
-												<option value="">Choose</option>
-												{#each param.options as option (option)}
-													<option value={option}>{option}</option>
-												{/each}
-											</select>
-										{:else}
-											<input
-												id="field-{param.id}"
-												class={['input min-w-0', error && 'input-error']}
-												inputmode={(param.valueType ?? 'number') === 'number' ? 'decimal' : 'text'}
-												autocomplete="off"
-												bind:value={entry.value}
-												onblur={() => (touched[param.id] = true)}
-												aria-invalid={!!error}
-												aria-describedby="help-{param.id}"
-											/>
-										{/if}
-										{#if units.length > 1}
-											<select
-												class="input w-24 shrink-0"
-												aria-label="{param.label} unit"
-												bind:value={entry.unit}
-											>
-												{#each units as unit (unit)}
-													<option value={unit}>{unit}</option>
-												{/each}
-											</select>
-										{:else if param.unit}
-											<span class="self-center text-sm text-muted">{param.unit}</span>
-										{/if}
-									</div>
-									<p id="help-{param.id}" class="mt-1.5 text-xs text-muted">
-										{param.definition}{range ? ` Expected ${range}.` : ''}
-									</p>
-									{#if error}<p class="field-error">{error}</p>{/if}
+						<div class="grid gap-5 sm:grid-cols-2">
+							<div>
+								<label class="label" for="observe-time">When</label>
+								<input
+									id="observe-time"
+									type="datetime-local"
+									class={['input', tried && timeError && 'input-error']}
+									max={localNow()}
+									bind:value={observedAt}
+								/>
+								{#if (tried && timeError) || serverErrors.observedAt}
+									<p class="field-error">{serverErrors.observedAt ?? timeError}</p>
+								{/if}
+							</div>
+							<div>
+								<p class="label">Where</p>
+								<div class="flex flex-wrap items-center gap-2">
+									<button
+										type="button"
+										class="btn btn-ghost"
+										onclick={locate}
+										disabled={gps === 'locating'}
+									>
+										{gps === 'locating'
+											? 'Finding you…'
+											: gps === 'fix'
+												? 'Update GPS'
+												: 'Use my GPS'}
+									</button>
+									{#if gps === 'fix' && location}
+										<span class="text-sm text-ink">{formatPoint(location)}</span>
+									{/if}
 								</div>
-							{/if}
-						{/each}
-					</div>
-				</fieldset>
-
-				<div class="grid gap-5 sm:grid-cols-2">
-					<div>
-						<label class="label" for="observe-time">When</label>
-						<input
-							id="observe-time"
-							type="datetime-local"
-							class={['input', tried && timeError && 'input-error']}
-							max={localNow()}
-							bind:value={observedAt}
-						/>
-						{#if (tried && timeError) || serverErrors.observedAt}
-							<p class="field-error">{serverErrors.observedAt ?? timeError}</p>
-						{/if}
-					</div>
-					<div>
-						<p class="label">Where</p>
-						<div class="flex flex-wrap items-center gap-2">
-							<button
-								type="button"
-								class="btn btn-ghost"
-								onclick={locate}
-								disabled={gps === 'locating'}
-							>
-								{gps === 'locating' ? 'Finding you…' : gps === 'fix' ? 'Update GPS' : 'Use my GPS'}
-							</button>
-							{#if gps === 'fix' && location}
-								<span class="text-sm text-ink">{formatPoint(location)}</span>
-							{/if}
+								<p class="mt-1.5 text-xs text-muted" aria-live="polite">
+									{gps === 'fix'
+										? 'Sent with the observation.'
+										: `${gps === 'none' ? 'No GPS fix. ' : ''}Without GPS, ${target.lab.name}'s location is used and flagged as not from the device.`}
+								</p>
+							</div>
 						</div>
-						<p class="mt-1.5 text-xs text-muted" aria-live="polite">
-							{gps === 'fix'
-								? 'Sent with the observation.'
-								: `${gps === 'none' ? 'No GPS fix. ' : ''}Without GPS, ${target.lab.name}'s location is used and flagged as not from the device.`}
-						</p>
-					</div>
-				</div>
 
-				<label class="flex items-start gap-2 text-sm">
-					<input
-						id="observe-credit"
-						type="checkbox"
-						class="mt-0.5 rounded-sm border-line-strong bg-transparent text-teal focus:ring-teal"
-						bind:checked={credit}
-					/>
-					<span>
-						Credit this observation to me
-						<span class="block text-xs text-muted"
-							>Your name is shown on it to people in {target.classroomName} and in public outputs. Leave
-							it off and it is stored without your name.</span
-						>
-					</span>
-				</label>
-
-				{#if tried && problems.length}
-					<div class="rounded-md border border-danger/50 p-4" role="alert">
-						<p class="text-sm font-medium text-ink">
-							Fix {problems.length === 1 ? 'this' : `these ${problems.length}`} before sending:
-						</p>
-						<ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-danger">
-							{#each problems as problem (problem.id)}
-								<li><a class="underline" href="#{problem.id}">{problem.message}</a></li>
-							{/each}
-						</ul>
+						<label class="flex items-start gap-2 text-sm">
+							<input
+								id="observe-credit"
+								type="checkbox"
+								class="mt-0.5 rounded-sm border-line-strong bg-transparent text-teal focus:ring-teal"
+								bind:checked={credit}
+							/>
+							<span>
+								Credit this observation to me
+								<span class="block text-xs text-muted"
+									>Your name is shown on it to people in {target.classroomName} and in public outputs.
+									Leave it off and it is stored without your name.</span
+								>
+							</span>
+						</label>
 					</div>
+				{:else}
+					{@render review(template, target)}
 				{/if}
-				{#if formError}<p class="field-error" role="alert">{formError}</p>{/if}
-
-				<button class="btn btn-primary" disabled={sending}>
-					{sending ? 'Sending…' : 'Send observation'}
-				</button>
-			{/if}
-		</form>
+			</Wizard>
+		</div>
 	{/if}
 </div>

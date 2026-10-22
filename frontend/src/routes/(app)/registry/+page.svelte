@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
-	import { page } from '$app/state';
 	import type {
 		DeviceTypeDefinition,
 		DomainDefinition,
@@ -10,7 +9,10 @@
 	} from '#lib/domain/types.ts';
 	import { validateDeviceType, validateDomain } from '#lib/domain/validation.ts';
 	import Icon from '#lib/components/Icon.svelte';
+	import Modal from '#lib/components/Modal.svelte';
 	import IconPicker from '#lib/components/IconPicker.svelte';
+	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
+	import Wizard from '#lib/components/Wizard.svelte';
 	import { FALLBACK_TYPE_ICON } from '#lib/icons.ts';
 	import { DEVICE_TYPE_PALETTE } from '#lib/labels.ts';
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
@@ -30,32 +32,29 @@
 		data.deviceTypes.filter((t) => t.parameterIds.includes(parameterId));
 	const unmapped = $derived(parameters.filter((p) => !p.domain || !domainsById.has(p.domain)));
 
-	const TABS = [
-		{ id: 'domains', label: 'Domains' },
-		{ id: 'types', label: 'Device types' },
-		{ id: 'values', label: 'Values & domains' },
-		{ id: 'log', label: 'Change log' }
-	] as const;
-	type Tab = (typeof TABS)[number]['id'];
-	let tab = $state<Tab>(
-		TABS.find((t) => t.id === page.url.searchParams.get('tab'))?.id ?? 'domains'
-	);
-	const counts = $derived<Record<Tab, number>>({
-		domains: data.domains.length,
-		types: data.deviceTypes.length,
-		values: parameters.length,
-		log: data.allowed ? data.changes.length : 0
-	});
-
-	/** Arrow keys move between tabs, as in any tab list. */
-	function tabKeys(event: KeyboardEvent) {
-		const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key];
-		if (!step) return;
-		event.preventDefault();
-		const i = TABS.findIndex((t) => t.id === tab);
-		tab = TABS[(i + step + TABS.length) % TABS.length].id;
-		document.getElementById(`tab-${tab}`)?.focus();
-	}
+	/** Each tab's icon, also drawn by its section title. */
+	const ICONS = { domains: 'tag', types: 'layers', values: 'readings', log: 'history' };
+	type Tab = keyof typeof ICONS;
+	let tab = $state<Tab>();
+	const tabs = $derived<TabItem<Tab>[]>([
+		{ id: 'domains', label: 'Domains', icon: ICONS.domains, count: data.domains.length },
+		{ id: 'types', label: 'Device types', icon: ICONS.types, count: data.deviceTypes.length },
+		{
+			id: 'values',
+			label: 'Values & domains',
+			icon: ICONS.values,
+			count: parameters.length,
+			badge: unmapped.length
+				? { text: String(unmapped.length), title: `${unmapped.length} not in a domain` }
+				: undefined
+		},
+		{
+			id: 'log',
+			label: 'Change log',
+			icon: ICONS.log,
+			count: data.allowed ? data.changes.length : 0
+		}
+	]);
 
 	let notice = $state('');
 	let actionError = $state('');
@@ -109,79 +108,60 @@
 	// ---- Domains ---------------------------------------------------------------------------
 
 	const blankDomain = (): DomainInput => ({ id: '', label: '', icon: 'tag', description: '' });
-	let domainForm = $state(blankDomain());
 	let domainErrors = $state<Record<string, string>>({});
 	let savingDomain = $state(false);
-	let editingDomain = $state<string | null>(null);
-	let editForm = $state(blankDomain());
 
-	async function addDomain(event: SubmitEvent) {
-		event.preventDefault();
-		const created = await createDomain(domainForm);
-		if (created) domainForm = blankDomain();
+	// One dialog adds a domain (from the Add button or a value's domain picker) or edits one.
+	let domainOpen = $state(false);
+	let editingDomain = $state<string | null>(null);
+	let domainForm = $state(blankDomain());
+	/** Set when a domain picker asked for the new domain: it is used there once added. */
+	let afterCreate = $state<((domain: DomainDefinition) => unknown) | null>(null);
+	// Bumped when the dialog closes, so a picker left on "New domain…" shows its value again.
+	let pickers = $state(0);
+
+	function openNewDomain(then: ((domain: DomainDefinition) => unknown) | null = null) {
+		afterCreate = then;
+		editingDomain = null;
+		domainForm = blankDomain();
+		domainErrors = {};
+		domainOpen = true;
 	}
 
-	/** Shared by the add form and the dialog. Returns the new domain, or null on errors. */
-	async function createDomain(input: DomainInput): Promise<DomainDefinition | null> {
-		domainErrors = validateDomain(input);
-		if (Object.keys(domainErrors).length) return null;
+	function startEdit(domain: DomainDefinition) {
+		afterCreate = null;
+		editingDomain = domain.id;
+		domainForm = { ...domain };
+		domainErrors = {};
+		domainOpen = true;
+	}
+
+	async function submitDomain(event: SubmitEvent) {
+		event.preventDefault();
+		domainErrors = validateDomain(domainForm);
+		if (Object.keys(domainErrors).length) return;
 		savingDomain = true;
 		actionError = notice = '';
 		try {
-			const domain = await services.registry.createDomain(input);
+			const { id, ...rest } = domainForm;
+			const domain = editingDomain
+				? await services.registry.updateDomain(id, rest)
+				: await services.registry.createDomain(domainForm);
 			await invalidateAll();
-			notice = `Added the ${domain.label} domain.`;
-			return domain;
+			notice = editingDomain ? `Saved ${domain.label}.` : `Added the ${domain.label} domain.`;
+			const then = afterCreate;
+			domainOpen = false;
+			await then?.(domain);
 		} catch (e) {
 			if (e instanceof ServiceError) domainErrors = e.fields;
 			if (!Object.keys(domainErrors).length) actionError = errorMessage(e);
-			return null;
 		} finally {
 			savingDomain = false;
 		}
 	}
 
-	function startEdit(domain: DomainDefinition) {
-		editingDomain = domain.id;
-		editForm = { ...domain };
-		domainErrors = {};
-	}
-
-	async function saveEdit(event: SubmitEvent) {
-		event.preventDefault();
-		domainErrors = validateDomain(editForm);
-		if (Object.keys(domainErrors).length) return;
-		const { id, ...rest } = editForm;
-		if (await run(() => services.registry.updateDomain(id, rest), `Saved ${rest.label}.`)) {
-			editingDomain = null;
-		}
-	}
-
 	function removeDomain(domain: DomainDefinition) {
 		run(() => services.registry.deleteDomain(domain.id), `Removed the ${domain.label} domain.`);
-	}
-
-	// The "New domain…" dialog, opened from a domain picker.
-	let dialog = $state<HTMLDialogElement>();
-	let dialogForm = $state(blankDomain());
-	let afterCreate: ((domain: DomainDefinition) => unknown) | null = null;
-	// Bumped when the dialog closes, so a picker left on "New domain…" shows its value again.
-	let pickers = $state(0);
-
-	function openNewDomain(then: (domain: DomainDefinition) => unknown) {
-		afterCreate = then;
-		dialogForm = blankDomain();
-		domainErrors = {};
-		dialog?.showModal();
-	}
-
-	async function submitDialog(event: SubmitEvent) {
-		event.preventDefault();
-		const domain = await createDomain(dialogForm);
-		if (!domain) return;
-		const then = afterCreate;
-		dialog?.close();
-		await then?.(domain);
 	}
 
 	// ---- Device types ----------------------------------------------------------------------
@@ -205,7 +185,15 @@
 	let rows = $state<ValueRow[]>([blankRow()]);
 	let typeErrors = $state<Record<string, string>>({});
 	let savingType = $state(false);
-	let typeSection = $state<HTMLElement>();
+	let typeOpen = $state(false);
+	const TYPE_STEPS = [
+		{ label: 'Basics', icon: 'tag' },
+		{ label: 'Expected values', icon: 'readings' },
+		{ label: 'Review', icon: 'review' }
+	];
+	let typeStep = $state(0);
+	/** Which step holds a field's error: values on step two, the rest on step one. */
+	const typeStepOf = (field: string) => (field.startsWith('values') ? 1 : 0);
 
 	function resetType() {
 		editingType = null;
@@ -214,6 +202,12 @@
 		typeIcon = FALLBACK_TYPE_ICON;
 		rows = [blankRow()];
 		typeErrors = {};
+		typeStep = 0;
+	}
+
+	function newType() {
+		resetType();
+		typeOpen = true;
 	}
 
 	function editType(type: DeviceTypeDefinition) {
@@ -235,7 +229,8 @@
 		});
 		if (!rows.length) rows = [blankRow()];
 		typeErrors = {};
-		typeSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		typeStep = 0;
+		typeOpen = true;
 	}
 
 	/** Typing an ID the registry has fills in that value: the type will share it. */
@@ -258,16 +253,16 @@
 		row.domain = value || null;
 	}
 
-	async function saveType(event: SubmitEvent) {
-		event.preventDefault();
-		// Drop blank rows first, so error positions match the rows left on screen.
-		rows = rows.filter((r) => r.id.trim() || r.label.trim());
-		const input = {
+	/** The form as input. `prune` drops blank rows first, so error positions match the rows left. */
+	function typeInput(prune: boolean) {
+		if (prune) rows = rows.filter((r) => r.id.trim() || r.label.trim());
+		const filled = rows.filter((r) => r.id.trim() || r.label.trim());
+		return {
 			label: typeLabel,
 			description: typeDescription,
 			color: typeColor,
 			icon: typeIcon,
-			values: rows.map((r) => ({
+			values: filled.map((r) => ({
 				id: r.id,
 				label: r.label,
 				unit: r.unit,
@@ -275,8 +270,24 @@
 				domain: r.domain
 			}))
 		};
-		typeErrors = validateDeviceType(input);
-		if (Object.keys(typeErrors).length) return;
+	}
+
+	/** Shows the errors of `step` (all of them on review) and says whether it is clear. */
+	function checkTypeStep(step: number) {
+		const all = validateDeviceType(typeInput(step > 0));
+		typeErrors = Object.fromEntries(
+			Object.entries(all).filter(([field]) => step === 2 || typeStepOf(field) === step)
+		);
+		if (step === 1 && !rows.length) rows = [blankRow()];
+		const fields = Object.keys(typeErrors);
+		// On review, send the person back to the first step with a problem.
+		if (step === 2 && fields.length) typeStep = Math.min(...fields.map(typeStepOf));
+		return !fields.length;
+	}
+
+	async function saveType(event: SubmitEvent) {
+		event.preventDefault();
+		const input = typeInput(true);
 		savingType = true;
 		actionError = notice = '';
 		try {
@@ -288,9 +299,12 @@
 				? `Saved the ${type.label} device type.`
 				: `Registered the ${type.label} device type. Every classroom can now register one.`;
 			resetType();
+			typeOpen = false;
 		} catch (e) {
 			if (e instanceof ServiceError) typeErrors = e.fields;
-			if (!Object.keys(typeErrors).length) actionError = errorMessage(e);
+			const fields = Object.keys(typeErrors);
+			if (fields.length) typeStep = Math.min(...fields.map(typeStepOf));
+			else actionError = errorMessage(e);
 		} finally {
 			savingType = false;
 		}
@@ -317,6 +331,47 @@
 		<option value={domain.id} selected={domain.id === selected}>{domain.label}</option>
 	{/each}
 	<option value={NEW_DOMAIN}>+ New domain…</option>
+{/snippet}
+
+{#snippet typeReview()}
+	<h4 class="text-sm font-semibold text-ink">Check and save</h4>
+	<dl class="mt-3 grid gap-4 text-sm sm:grid-cols-[10rem_1fr]">
+		<dt class="text-muted">Device type</dt>
+		<dd class="flex items-center gap-2 text-ink">
+			<span
+				class="grid size-8 place-items-center rounded-md"
+				style:color={typeColor}
+				style:background="color-mix(in oklab, {typeColor} 15%, transparent)"
+			>
+				<Icon name={typeIcon} />
+			</span>
+			<span>
+				{typeLabel}
+				{#if typeDescription}<span class="block text-xs text-muted">{typeDescription}</span>{/if}
+			</span>
+		</dd>
+		<dt class="text-muted">Expected values</dt>
+		<dd>
+			<ul class="divide-y divide-line rounded-md border border-line">
+				{#each rows as row (row.key)}
+					{@const domain = row.domain ? domainsById.get(row.domain) : null}
+					<li class="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+						<span class="text-ink"
+							>{row.label}{row.unit ? ` (${row.unit})` : ''}
+							<span class="font-mono text-xs text-muted">{row.id}</span></span
+						>
+						{#if domain}
+							<span class="chip"
+								><Icon name={domain.icon} fallback="tag" class="size-3.5" /> {domain.label}</span
+							>
+						{:else}
+							<span class="chip border-orange/60 text-orange">Not in a domain</span>
+						{/if}
+					</li>
+				{/each}
+			</ul>
+		</dd>
+	</dl>
 {/snippet}
 
 {#snippet domainFields(form: DomainInput, codeLocked: boolean, prefix: string)}
@@ -397,120 +452,77 @@
 		{/if}
 	</div>
 
-	<div class="mt-8 grid gap-6 lg:grid-cols-[13rem_minmax(0,1fr)]">
-		<!-- Vertical tabs on wide screens, a scrolling row on narrow ones. -->
-		<div
-			class="flex gap-1 overflow-x-auto border-b border-line lg:sticky lg:top-28 lg:flex-col lg:self-start lg:border-r lg:border-b-0 lg:pr-3"
-			role="tablist"
-			aria-label="Registry"
-			aria-orientation="vertical"
-			tabindex="-1"
-			onkeydown={tabKeys}
-		>
-			{#each TABS as item (item.id)}
-				{@const active = item.id === tab}
-				<button
-					type="button"
-					role="tab"
-					id="tab-{item.id}"
-					aria-selected={active}
-					aria-controls="panel-{item.id}"
-					tabindex={active ? 0 : -1}
-					class={[
-						'-mb-px flex shrink-0 items-center justify-between gap-3 border-b-2 px-3 py-2 text-left text-sm whitespace-nowrap transition lg:-mr-[13px] lg:mb-0 lg:border-r-2 lg:border-b-0',
-						active
-							? 'border-ink font-medium text-ink'
-							: 'border-transparent text-muted hover:text-ink'
-					]}
-					onclick={() => (tab = item.id)}
-				>
-					{item.label}
-					{#if item.id === 'values' && unmapped.length}
-						<span
-							class="rounded-full bg-orange/15 px-1.5 text-xs text-orange"
-							title="{unmapped.length} not in a domain">{unmapped.length}</span
-						>
-					{:else}
-						<span class="text-xs text-muted">{counts[item.id]}</span>
-					{/if}
-				</button>
-			{/each}
-		</div>
-
-		<div class="min-w-0">
+	<div class="mt-8">
+		<VerticalTabs {tabs} bind:active={tab} label="Registry">
 			{#if tab === 'domains'}
 				<!-- Domains -->
-				<div role="tabpanel" id="panel-domains" tabindex="-1" aria-labelledby="domains-title">
-					<h2 id="domains-title" class="text-xl font-semibold">Environmental domains</h2>
-					<p class="mt-1 text-sm text-muted">
-						A domain can be edited at any time. It can only be removed once no values are in it.
-					</p>
+				<div>
+					<div class="flex flex-wrap items-start justify-between gap-3">
+						<div>
+							<h2 class="flex items-center gap-2 text-xl font-semibold">
+								<Icon name={ICONS.domains} class="size-5 text-muted" /> Environmental domains
+							</h2>
+							<p class="mt-1 text-sm text-muted">
+								A domain can be edited at any time. It can only be removed once no values are in it.
+							</p>
+						</div>
+						<button
+							type="button"
+							class="btn btn-primary"
+							aria-haspopup="dialog"
+							onclick={() => openNewDomain()}><Icon name="plus" class="size-4" /> Add domain</button
+						>
+					</div>
 					<ul class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 						{#each data.domains as domain (domain.id)}
 							{@const count = mappedCount(domain.id)}
 							<li class="card flex flex-col p-4">
-								{#if editingDomain === domain.id}
-									<form onsubmit={saveEdit} novalidate>
-										{@render domainFields(editForm, true, `edit-${domain.id}`)}
-										<div class="mt-3 flex gap-2">
-											<button class="btn btn-primary">Save</button>
-											<button
-												type="button"
-												class="btn btn-ghost"
-												onclick={() => (editingDomain = null)}>Cancel</button
-											>
-										</div>
-									</form>
-								{:else}
-									<div class="flex items-start justify-between gap-3">
-										<span
-											class="grid size-10 place-items-center rounded-md border border-line-strong text-ink"
-										>
-											<Icon name={domain.icon} fallback="tag" class="size-6" />
-										</span>
-										<span class="font-mono text-xs text-muted">{domain.id}</span>
-									</div>
-									<p class="mt-2 font-semibold text-ink">{domain.label}</p>
-									<p class="text-sm text-muted">{domain.description || 'No description.'}</p>
-									<p class="mt-2 text-xs text-muted">{count} value{count === 1 ? '' : 's'}</p>
-									<div class="mt-auto flex flex-wrap gap-2 pt-3">
-										<button
-											type="button"
-											class="btn btn-ghost px-3 py-1.5"
-											onclick={() => startEdit(domain)}>Edit</button
-										>
-										<button
-											type="button"
-											class="btn btn-ghost px-3 py-1.5"
-											disabled={count > 0}
-											title={count ? 'Move its values to another domain first' : undefined}
-											onclick={() => removeDomain(domain)}>Remove</button
-										>
-									</div>
-								{/if}
+								<div class="flex items-start justify-between gap-3">
+									<span
+										class="grid size-10 place-items-center rounded-md border border-line-strong text-ink"
+									>
+										<Icon name={domain.icon} fallback="tag" class="size-6" />
+									</span>
+									<span class="font-mono text-xs text-muted">{domain.id}</span>
+								</div>
+								<p class="mt-2 font-semibold text-ink">{domain.label}</p>
+								<p class="text-sm text-muted">{domain.description || 'No description.'}</p>
+								<p class="mt-2 text-xs text-muted">{count} value{count === 1 ? '' : 's'}</p>
+								<div class="mt-auto flex flex-wrap gap-2 pt-3">
+									<button
+										type="button"
+										class="btn btn-ghost px-3 py-1.5"
+										aria-haspopup="dialog"
+										onclick={() => startEdit(domain)}>Edit</button
+									>
+									<button
+										type="button"
+										class="btn btn-ghost px-3 py-1.5"
+										disabled={count > 0}
+										title={count ? 'Move its values to another domain first' : undefined}
+										onclick={() => removeDomain(domain)}>Remove</button
+									>
+								</div>
 							</li>
 						{/each}
 					</ul>
-					<form
-						class="card mt-4"
-						onsubmit={addDomain}
-						novalidate
-						aria-labelledby="add-domain-title"
-					>
-						<h3 id="add-domain-title" class="font-semibold">Add a domain</h3>
-						<div class="mt-3">{@render domainFields(domainForm, false, 'domain')}</div>
-						<button class="btn btn-primary mt-4" disabled={savingDomain}>
-							{savingDomain ? 'Adding…' : 'Add domain'}
-						</button>
-					</form>
 				</div>
 			{:else if tab === 'types'}
 				<!-- Device types -->
-				<div role="tabpanel" id="panel-types" tabindex="-1" aria-labelledby="types-title">
-					<h2 id="types-title" class="text-xl font-semibold">Device types</h2>
-					<p class="mt-1 text-sm text-muted">
-						What a classroom can register, and the values each type is expected to send.
-					</p>
+				<div>
+					<div class="flex flex-wrap items-start justify-between gap-3">
+						<div>
+							<h2 class="flex items-center gap-2 text-xl font-semibold">
+								<Icon name={ICONS.types} class="size-5 text-muted" /> Device types
+							</h2>
+							<p class="mt-1 text-sm text-muted">
+								What a classroom can register, and the values each type is expected to send.
+							</p>
+						</div>
+						<button type="button" class="btn btn-primary" aria-haspopup="dialog" onclick={newType}
+							><Icon name="plus" class="size-4" /> Register device type</button
+						>
+					</div>
 					<ul class="mt-4 grid gap-3 lg:grid-cols-2">
 						{#each data.deviceTypes as type (type.id)}
 							{@const summary = typeDomains(type)}
@@ -532,6 +544,7 @@
 									<button
 										type="button"
 										class="btn btn-ghost px-3 py-1.5"
+										aria-haspopup="dialog"
 										onclick={() => editType(type)}>Edit</button
 									>
 								</div>
@@ -555,185 +568,9 @@
 							</li>
 						{/each}
 					</ul>
-
-					<form
-						class="card mt-4 scroll-mt-28"
-						bind:this={typeSection}
-						onsubmit={saveType}
-						novalidate
-						aria-labelledby="type-form-title"
-					>
-						<h3 id="type-form-title" class="font-semibold">
-							{editingType ? `Edit ${typeLabel || 'device type'}` : 'Register a device type'}
-						</h3>
-						<div class="mt-3 grid gap-3 sm:grid-cols-2">
-							<div>
-								<label class="label" for="type-label">Name</label>
-								<input
-									id="type-label"
-									class={['input', typeErrors.label && 'input-error']}
-									placeholder="Soil probe"
-									bind:value={typeLabel}
-								/>
-								{#if typeErrors.label}<p class="field-error">{typeErrors.label}</p>{/if}
-							</div>
-							<div>
-								<label class="label" for="type-description">Description</label>
-								<input
-									id="type-description"
-									class="input"
-									placeholder="What it is and where it goes."
-									bind:value={typeDescription}
-								/>
-							</div>
-						</div>
-						<fieldset class="mt-3">
-							<legend class="label">Color on the map</legend>
-							<div class="flex flex-wrap gap-2">
-								{#each DEVICE_TYPE_PALETTE as color (color)}
-									<label class="cursor-pointer">
-										<input
-											type="radio"
-											class="peer sr-only"
-											name="type-color"
-											value={color}
-											bind:group={typeColor}
-										/>
-										<span
-											class="block size-7 rounded-full ring-offset-2 ring-offset-surface peer-checked:ring-2 peer-checked:ring-ink peer-focus-visible:ring-2 peer-focus-visible:ring-teal"
-											style:background={color}
-										></span>
-										<span class="sr-only">{color}</span>
-									</label>
-								{/each}
-							</div>
-						</fieldset>
-						<div class="mt-3">
-							<IconPicker
-								name="type-icon"
-								legend="Icon"
-								color={typeColor}
-								bind:value={typeIcon}
-								error={typeErrors.icon}
-							/>
-						</div>
-
-						<h4 class="mt-5 text-sm font-semibold text-ink">Expected values</h4>
-						<p class="text-xs text-muted">
-							Use an ID from the registry to share an existing value, or a new ID to add one.
-							Station values can't be edited here.
-						</p>
-						{#if typeErrors.values}<p class="field-error">{typeErrors.values}</p>{/if}
-						<datalist id="parameter-ids">
-							{#each parameters as parameter (parameter.id)}
-								<option value={parameter.id}>{parameter.label}</option>
-							{/each}
-						</datalist>
-						{#key pickers}
-							<ol class="mt-3 space-y-3">
-								{#each rows as row, i (row.key)}
-									{@const existing = paramsById.get(row.id.trim())}
-									{@const locked = existing && existing.source !== 'device'}
-									<li
-										class="grid gap-2 rounded-md border border-line p-3 sm:grid-cols-[1.2fr_1.2fr_5rem_6.5rem_1.2fr_auto]"
-									>
-										<div>
-											<label class="label text-xs" for="row-{row.key}-id">ID</label>
-											<input
-												id="row-{row.key}-id"
-												class={[
-													'input font-mono text-sm',
-													typeErrors[`values.${i}.id`] && 'input-error'
-												]}
-												list="parameter-ids"
-												placeholder="soil_ph"
-												value={row.id}
-												oninput={(e) => rowId(row, e.currentTarget.value)}
-											/>
-										</div>
-										<div>
-											<label class="label text-xs" for="row-{row.key}-label">Label</label>
-											<input
-												id="row-{row.key}-label"
-												class={['input text-sm', typeErrors[`values.${i}.label`] && 'input-error']}
-												placeholder="Soil pH"
-												disabled={locked}
-												bind:value={row.label}
-											/>
-										</div>
-										<div>
-											<label class="label text-xs" for="row-{row.key}-unit">Unit</label>
-											<input
-												id="row-{row.key}-unit"
-												class="input text-sm"
-												placeholder="%"
-												disabled={locked}
-												bind:value={row.unit}
-											/>
-										</div>
-										<div>
-											<label class="label text-xs" for="row-{row.key}-kind">Type</label>
-											<select
-												id="row-{row.key}-kind"
-												class="input text-sm"
-												disabled={locked}
-												bind:value={row.valueType}
-											>
-												<option value="number">Number</option>
-												<option value="text">Text</option>
-											</select>
-										</div>
-										<div>
-											<label class="label text-xs" for="row-{row.key}-domain">Domain</label>
-											<select
-												id="row-{row.key}-domain"
-												class="input text-sm"
-												onchange={(e) => rowDomain(row, e.currentTarget.value)}
-											>
-												{@render domainOptions(row.domain)}
-											</select>
-										</div>
-										<div class="flex items-end">
-											<button
-												type="button"
-												class="btn btn-ghost px-3"
-												aria-label="Remove value {i + 1}"
-												onclick={() => (rows = rows.filter((r) => r !== row))}>×</button
-											>
-										</div>
-										{#if typeErrors[`values.${i}.id`] || typeErrors[`values.${i}.label`]}
-											<p class="field-error sm:col-span-6">
-												{typeErrors[`values.${i}.id`] ?? typeErrors[`values.${i}.label`]}
-											</p>
-										{:else if existing}
-											<p class="text-xs text-muted sm:col-span-6">
-												{locked
-													? 'Shared station value: the registry keeps its label and unit.'
-													: 'Already in the registry: this type shares it.'}
-												A new domain applies everywhere this value is used.
-											</p>
-										{/if}
-									</li>
-								{/each}
-							</ol>
-						{/key}
-						<button
-							type="button"
-							class="btn btn-ghost mt-3"
-							onclick={() => (rows = [...rows, blankRow()])}>+ Add a value</button
-						>
-						<div class="mt-5 flex flex-wrap gap-2">
-							<button class="btn btn-primary" disabled={savingType}>
-								{savingType ? 'Saving…' : editingType ? 'Save device type' : 'Register device type'}
-							</button>
-							{#if editingType}
-								<button type="button" class="btn btn-ghost" onclick={resetType}>Cancel</button>
-							{/if}
-						</div>
-					</form>
 				</div>
 			{:else if tab === 'values'}
-				<div role="tabpanel" id="panel-values" tabindex="-1" aria-labelledby="tab-values">
+				<div>
 					{#if unmapped.length}
 						<section class="card mb-6 border-orange/50" aria-labelledby="unmapped-title">
 							<h2 id="unmapped-title" class="text-lg font-semibold">
@@ -779,7 +616,9 @@
 					<section aria-labelledby="mapping-title">
 						<div class="flex flex-wrap items-end justify-between gap-3">
 							<div>
-								<h2 id="mapping-title" class="text-xl font-semibold">Values and domains</h2>
+								<h2 id="mapping-title" class="flex items-center gap-2 text-xl font-semibold">
+									<Icon name={ICONS.values} class="size-5 text-muted" /> Values and domains
+								</h2>
 								<p class="mt-1 text-sm text-muted">
 									Each value shows under one domain on every classroom's dashboard.
 								</p>
@@ -848,8 +687,10 @@
 				</div>
 			{:else}
 				<!-- Change log -->
-				<div role="tabpanel" id="panel-log" tabindex="-1" aria-labelledby="log-title">
-					<h2 id="log-title" class="text-xl font-semibold">Change log</h2>
+				<div>
+					<h2 class="flex items-center gap-2 text-xl font-semibold">
+						<Icon name={ICONS.log} class="size-5 text-muted" /> Change log
+					</h2>
 					{#if data.changes.length}
 						<ol class="card mt-4 divide-y divide-line p-0">
 							{#each data.changes.slice(0, 30) as change (change.id)}
@@ -866,30 +707,222 @@
 					{/if}
 				</div>
 			{/if}
-		</div>
+		</VerticalTabs>
 	</div>
 
-	<dialog
-		bind:this={dialog}
-		class="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-md border border-line-strong bg-raised p-0 text-text shadow-2xl backdrop:bg-black/70"
-		aria-labelledby="new-domain-title"
+	<Modal
+		bind:open={typeOpen}
+		wide
+		eyebrow="Device types"
+		title={editingType ? `Edit ${typeLabel || 'device type'}` : 'Register a device type'}
+	>
+		<Wizard
+			steps={TYPE_STEPS}
+			bind:current={typeStep}
+			check={checkTypeStep}
+			onsubmit={saveType}
+			submitLabel={editingType ? 'Save device type' : 'Register device type'}
+			busy={savingType}
+			label={editingType ? `Edit ${typeLabel || 'device type'}` : 'Register a device type'}
+		>
+			{#snippet extra()}
+				<button type="button" class="btn btn-ghost" onclick={() => (typeOpen = false)}
+					>Cancel</button
+				>
+			{/snippet}
+			{#if typeStep === 0}
+				<div class="grid gap-3 sm:grid-cols-2">
+					<div>
+						<label class="label" for="type-label">Name</label>
+						<input
+							id="type-label"
+							class={['input', typeErrors.label && 'input-error']}
+							placeholder="Soil probe"
+							bind:value={typeLabel}
+						/>
+						{#if typeErrors.label}<p class="field-error">{typeErrors.label}</p>{/if}
+					</div>
+					<div>
+						<label class="label" for="type-description">Description</label>
+						<input
+							id="type-description"
+							class="input"
+							placeholder="What it is and where it goes."
+							bind:value={typeDescription}
+						/>
+					</div>
+				</div>
+				<fieldset class="mt-3">
+					<legend class="label">Color on the map</legend>
+					<div class="flex flex-wrap gap-2">
+						{#each DEVICE_TYPE_PALETTE as color (color)}
+							<label class="cursor-pointer">
+								<input
+									type="radio"
+									class="peer sr-only"
+									name="type-color"
+									value={color}
+									bind:group={typeColor}
+								/>
+								<span
+									class="block size-7 rounded-full ring-offset-2 ring-offset-surface peer-checked:ring-2 peer-checked:ring-ink peer-focus-visible:ring-2 peer-focus-visible:ring-teal"
+									style:background={color}
+								></span>
+								<span class="sr-only">{color}</span>
+							</label>
+						{/each}
+					</div>
+				</fieldset>
+				<div class="mt-3">
+					<IconPicker
+						name="type-icon"
+						legend="Icon"
+						color={typeColor}
+						bind:value={typeIcon}
+						error={typeErrors.icon}
+					/>
+				</div>
+			{:else if typeStep === 1}
+				<h4 class="text-sm font-semibold text-ink">Expected values</h4>
+				<p class="text-xs text-muted">
+					Use an ID from the registry to share an existing value, or a new ID to add one. Station
+					values can't be edited here.
+				</p>
+				{#if typeErrors.values}<p class="field-error">{typeErrors.values}</p>{/if}
+				<datalist id="parameter-ids">
+					{#each parameters as parameter (parameter.id)}
+						<option value={parameter.id}>{parameter.label}</option>
+					{/each}
+				</datalist>
+				{#key pickers}
+					<ol class="mt-3 space-y-3">
+						{#each rows as row, i (row.key)}
+							{@const existing = paramsById.get(row.id.trim())}
+							{@const locked = existing && existing.source !== 'device'}
+							<li
+								class="grid gap-2 rounded-md border border-line p-3 sm:grid-cols-[1.2fr_1.2fr_5rem_6.5rem_1.2fr_auto]"
+							>
+								<div>
+									<label class="label text-xs" for="row-{row.key}-id">ID</label>
+									<input
+										id="row-{row.key}-id"
+										class={[
+											'input font-mono text-sm',
+											typeErrors[`values.${i}.id`] && 'input-error'
+										]}
+										list="parameter-ids"
+										placeholder="soil_ph"
+										value={row.id}
+										oninput={(e) => rowId(row, e.currentTarget.value)}
+									/>
+								</div>
+								<div>
+									<label class="label text-xs" for="row-{row.key}-label">Label</label>
+									<input
+										id="row-{row.key}-label"
+										class={['input text-sm', typeErrors[`values.${i}.label`] && 'input-error']}
+										placeholder="Soil pH"
+										disabled={locked}
+										bind:value={row.label}
+									/>
+								</div>
+								<div>
+									<label class="label text-xs" for="row-{row.key}-unit">Unit</label>
+									<input
+										id="row-{row.key}-unit"
+										class="input text-sm"
+										placeholder="%"
+										disabled={locked}
+										bind:value={row.unit}
+									/>
+								</div>
+								<div>
+									<label class="label text-xs" for="row-{row.key}-kind">Type</label>
+									<select
+										id="row-{row.key}-kind"
+										class="input text-sm"
+										disabled={locked}
+										bind:value={row.valueType}
+									>
+										<option value="number">Number</option>
+										<option value="text">Text</option>
+									</select>
+								</div>
+								<div>
+									<label class="label text-xs" for="row-{row.key}-domain">Domain</label>
+									<select
+										id="row-{row.key}-domain"
+										class="input text-sm"
+										onchange={(e) => rowDomain(row, e.currentTarget.value)}
+									>
+										{@render domainOptions(row.domain)}
+									</select>
+								</div>
+								<div class="flex items-end">
+									<button
+										type="button"
+										class="btn btn-ghost px-3"
+										aria-label="Remove value {i + 1}"
+										onclick={() => (rows = rows.filter((r) => r !== row))}>×</button
+									>
+								</div>
+								{#if typeErrors[`values.${i}.id`] || typeErrors[`values.${i}.label`]}
+									<p class="field-error sm:col-span-6">
+										{typeErrors[`values.${i}.id`] ?? typeErrors[`values.${i}.label`]}
+									</p>
+								{:else if existing}
+									<p class="text-xs text-muted sm:col-span-6">
+										{locked
+											? 'Shared station value: the registry keeps its label and unit.'
+											: 'Already in the registry: this type shares it.'}
+										A new domain applies everywhere this value is used.
+									</p>
+								{/if}
+							</li>
+						{/each}
+					</ol>
+				{/key}
+				<button
+					type="button"
+					class="btn btn-ghost mt-3"
+					onclick={() => (rows = [...rows, blankRow()])}>+ Add a value</button
+				>
+			{:else}
+				{@render typeReview()}
+			{/if}
+		</Wizard>
+	</Modal>
+
+	<Modal
+		bind:open={domainOpen}
+		eyebrow="Domains"
+		title={editingDomain ? `Edit ${domainForm.label || 'domain'}` : 'New domain'}
 		onclose={() => {
 			afterCreate = null;
 			pickers++;
 		}}
 	>
-		<form class="p-6" onsubmit={submitDialog} novalidate>
-			<h2 id="new-domain-title" class="text-lg font-semibold">New domain</h2>
-			<p class="mb-4 text-sm text-muted">
-				It is added for every classroom, then used for this value.
-			</p>
-			{@render domainFields(dialogForm, false, 'dialog')}
-			<div class="mt-5 flex justify-end gap-2">
-				<button type="button" class="btn btn-ghost" onclick={() => dialog?.close()}>Cancel</button>
-				<button class="btn btn-primary" disabled={savingDomain}>
-					{savingDomain ? 'Adding…' : 'Add and use'}
-				</button>
-			</div>
+		<form id="domain-form" onsubmit={submitDomain} novalidate>
+			{#if afterCreate}
+				<p class="mb-4 text-sm text-muted">
+					It is added for every classroom, then used for this value.
+				</p>
+			{/if}
+			{@render domainFields(domainForm, !!editingDomain, 'domain')}
 		</form>
-	</dialog>
+		{#snippet footer()}
+			<button type="button" class="btn btn-ghost" onclick={() => (domainOpen = false)}
+				>Cancel</button
+			>
+			<button form="domain-form" class="btn btn-primary" disabled={savingDomain}>
+				{savingDomain
+					? 'Saving…'
+					: editingDomain
+						? 'Save domain'
+						: afterCreate
+							? 'Add and use'
+							: 'Add domain'}
+			</button>
+		{/snippet}
+	</Modal>
 {/if}
