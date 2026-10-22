@@ -1,4 +1,4 @@
-import type { DeviceType, Parameter, Reading } from '#lib/domain/types.ts';
+import type { DeviceType, Parameter, Reading, ValueType } from '#lib/domain/types.ts';
 
 interface KeyParameter {
 	id: string;
@@ -39,13 +39,25 @@ export interface KeyValue {
 	id: string;
 	label: string;
 	unit: string;
+	valueType: ValueType;
 	value: number | string;
 }
 
-/** A value with its unit, rounded for reading at a glance. Missing values show a dash. */
-export function formatValue(value: number | string | undefined, unit = '') {
+// The browser's own language and time zone.
+const moment = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
+/**
+ * A value with its unit, rounded for reading at a glance. A time (Unix seconds) shows as a date
+ * in the reader's language and time zone. Missing values show a dash.
+ */
+export function formatValue(
+	value: number | string | undefined,
+	unit = '',
+	valueType: ValueType = 'number'
+) {
 	if (value === undefined) return '—';
 	if (typeof value === 'string') return value;
+	if (valueType === 'time') return moment.format(new Date(value * 1000));
 	const rounded = Math.abs(value) >= 100 ? Math.round(value) : Math.round(value * 10) / 10;
 	return `${rounded}${unit && !unit.startsWith('°') ? ' ' : ''}${unit}`;
 }
@@ -72,6 +84,7 @@ export function keyValues(
 		id: k.id,
 		label: k.label,
 		unit: parameters.get(k.id)?.unit ?? k.unit ?? '',
+		valueType: parameters.get(k.id)?.valueType ?? 'number',
 		value: values[k.id]
 	}));
 }
@@ -84,16 +97,39 @@ export function keySummary(
 	max = 3
 ) {
 	return keyValues(type, values, parameters, max)
-		.map((v) => `${v.label} ${formatValue(v.value, v.unit)}`)
+		.map((v) => `${v.label} ${formatValue(v.value, v.unit, v.valueType)}`)
 		.join(' · ');
 }
 
 /** A parameter's label and unit: from the registry, else from the key values above. */
 export function describeParameter(id: string, parameters: ReadonlyMap<string, Parameter>) {
 	const registered = parameters.get(id);
-	if (registered) return { label: registered.label, unit: registered.unit };
+	if (registered) {
+		const { label, unit, valueType = 'number' } = registered;
+		return { label, unit, valueType };
+	}
 	const key = Object.values(KEY_PARAMETERS)
 		.flatMap((keys) => keys ?? [])
 		.find((k) => k.id === id);
-	return { label: key?.label ?? fallbackLabel(id), unit: key?.unit ?? '' };
+	return {
+		label: key?.label ?? fallbackLabel(id),
+		unit: key?.unit ?? '',
+		valueType: 'number' as ValueType
+	};
+}
+
+const relative = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+
+/** `3 hours ago`, `yesterday`: how long before `now` a time (Unix seconds) was, in the reader's language. */
+export function timeAgo(seconds: number, now = Date.now()) {
+	const ms = seconds * 1000 - now;
+	const units: [number, Intl.RelativeTimeFormatUnit][] = [
+		[86_400_000, 'day'],
+		[3_600_000, 'hour'],
+		[60_000, 'minute']
+	];
+	for (const [size, unit] of units) {
+		if (Math.abs(ms) >= size) return relative.format(Math.round(ms / size), unit);
+	}
+	return relative.format(0, 'minute');
 }

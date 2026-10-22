@@ -86,7 +86,7 @@ export function effectiveRules(
 }
 
 /** Most severe first; within a level, the one that trips first. */
-function bySeverity(a: AlertRule, b: AlertRule) {
+export function bySeverity(a: AlertRule, b: AlertRule) {
 	return (
 		SEVERITY[b.level] - SEVERITY[a.level] ||
 		(a.direction === 'above' ? a.value - b.value : b.value - a.value)

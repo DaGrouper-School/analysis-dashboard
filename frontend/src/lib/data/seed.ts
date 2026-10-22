@@ -347,7 +347,12 @@ const registry: Record<EnvironmentalDomain, ParameterSeed[]> = {
 			'km',
 			'Distance to the most recent strike.'
 		],
-		['lightning_strike_last_epoch', 'Last strike time', 's', 'Unix time of the most recent strike.']
+		[
+			'lightning_strike_last_epoch',
+			'Last strike time',
+			's',
+			'When the most recent strike was, as Unix time.'
+		]
 	]
 };
 
@@ -360,7 +365,7 @@ const parameters: Parameter[] = [
 			definition,
 			domain: domain as EnvironmentalDomain,
 			source: 'weather_station',
-			valueType: id === 'pressure_trend' ? 'text' : 'number'
+			valueType: id === 'pressure_trend' ? 'text' : id.endsWith('_epoch') ? 'time' : 'number'
 		}))
 	),
 	{
@@ -479,68 +484,38 @@ export const SOURCE_CALCULATION: Record<
 };
 
 /**
- * Plain-language text for indicators (AP-07): what a value means, level words, the change a
- * sensor can wobble by, and formulas for derived values. States what is measured; no advice and
- * no cause and effect (a unit test checks).
+ * Plain-language text for indicators (AP-07): what a value means, the change a sensor can
+ * wobble by, and formulas for derived values. States what is measured; no advice and no cause
+ * and effect (a unit test checks).
  */
 const indicators: Record<
 	string,
-	Pick<Parameter, 'plain' | 'bands' | 'noise'> & { formula?: string; inputs?: string[] }
+	Pick<Parameter, 'plain' | 'noise'> & { formula?: string; inputs?: string[] }
 > = {
 	air_temperature: {
 		plain: 'How warm the air is in the shade, measured about 2 m above the ground.',
-		bands: [
-			{ upTo: 10, label: 'Cool' },
-			{ upTo: 30, label: 'Typical' },
-			{ upTo: 35, label: 'High' },
-			{ upTo: null, label: 'Very high' }
-		],
 		noise: 0.3
 	},
 	relative_humidity: {
 		plain:
 			'How much water vapour the air holds, as a share of the most it could hold at this temperature.',
-		bands: [
-			{ upTo: 30, label: 'Dry' },
-			{ upTo: 60, label: 'Moderate' },
-			{ upTo: 80, label: 'Humid' },
-			{ upTo: null, label: 'Very humid' }
-		],
 		noise: 2
 	},
 	wind_avg: {
 		plain: 'How fast the air is moving, averaged over a short period.',
-		bands: [
-			{ upTo: 1.5, label: 'Calm' },
-			{ upTo: 5.5, label: 'Light' },
-			{ upTo: 10.8, label: 'Moderate' },
-			{ upTo: 17.2, label: 'Strong' },
-			{ upTo: null, label: 'Gale' }
-		],
 		noise: 0.5
 	},
 	precip_accum_local_day: {
 		plain:
 			'How much rain has fallen since local midnight, as the depth of water it would leave on flat ground.',
-		bands: [
-			{ upTo: 0.1, label: 'None' },
-			{ upTo: 10, label: 'Light' },
-			{ upTo: 30, label: 'Moderate' },
-			{ upTo: 50, label: 'Heavy' },
-			{ upTo: null, label: 'Very heavy' }
-		],
 		noise: 0.2
 	},
 	uv: {
 		plain: "How strong the sun's ultraviolet light is. Higher numbers mean stronger light.",
-		bands: [
-			{ upTo: 3, label: 'Low' },
-			{ upTo: 6, label: 'Moderate' },
-			{ upTo: 8, label: 'High' },
-			{ upTo: 11, label: 'Very high' },
-			{ upTo: null, label: 'Extreme' }
-		],
 		noise: 0.3
+	},
+	lightning_strike_last_epoch: {
+		plain: 'When the most recent lightning strike was, in your own time zone.'
 	},
 	station_pressure: {
 		plain:
@@ -549,13 +524,6 @@ const indicators: Record<
 	},
 	heat_index: {
 		plain: 'How warm it feels to people once humidity is added to the air temperature.',
-		bands: [
-			{ upTo: 27, label: 'Typical' },
-			{ upTo: 32, label: 'Raised' },
-			{ upTo: 41, label: 'High' },
-			{ upTo: 54, label: 'Very high' },
-			{ upTo: null, label: 'Extreme' }
-		],
 		noise: 0.5,
 		formula:
 			'HI = −8.78 + 1.611·T + 2.339·RH − 0.1461·T·RH − 0.01231·T² − 0.01642·RH² + 0.002212·T²·RH + 0.000725·T·RH² − 0.000003582·T²·RH², with T in °C and RH in %. Below 27 °C the heat index equals the air temperature.',
@@ -563,12 +531,6 @@ const indicators: Record<
 	},
 	feels_like: {
 		plain: 'How warm or cold it feels to people, from the air temperature, humidity and wind.',
-		bands: [
-			{ upTo: 10, label: 'Cool' },
-			{ upTo: 30, label: 'Typical' },
-			{ upTo: 35, label: 'High' },
-			{ upTo: null, label: 'Very high' }
-		],
 		noise: 0.5,
 		formula:
 			'The heat index when the air is 27 °C or warmer, the wind chill when it is 10 °C or colder with wind over 1.3 m/s, otherwise the air temperature.',
@@ -577,12 +539,6 @@ const indicators: Record<
 	dew_point: {
 		plain:
 			'The temperature the air would have to cool to before dew forms. Higher means more moisture in the air.',
-		bands: [
-			{ upTo: 10, label: 'Low' },
-			{ upTo: 16, label: 'Moderate' },
-			{ upTo: 21, label: 'High' },
-			{ upTo: null, label: 'Very high' }
-		],
 		noise: 0.5,
 		formula:
 			'Magnus formula: γ = ln(RH/100) + 17.62·T / (243.12 + T), then Td = 243.12·γ / (17.62 − γ), with T in °C and RH in %.',
@@ -598,22 +554,10 @@ const indicators: Record<
 	rain_gauge_daily_accumulation: {
 		plain:
 			'How much rain a person read from the gauge for the day, as the depth of water collected.',
-		bands: [
-			{ upTo: 0.1, label: 'None' },
-			{ upTo: 10, label: 'Light' },
-			{ upTo: 30, label: 'Moderate' },
-			{ upTo: 50, label: 'Heavy' },
-			{ upTo: null, label: 'Very heavy' }
-		],
 		noise: 0.5
 	},
 	soil_moisture: {
 		plain: 'How much water the soil holds, as a share of its volume.',
-		bands: [
-			{ upTo: 15, label: 'Low' },
-			{ upTo: 35, label: 'Moderate' },
-			{ upTo: null, label: 'High' }
-		],
 		noise: 1
 	},
 	soil_temperature: {
@@ -627,22 +571,10 @@ const indicators: Record<
 	water_ph: {
 		plain:
 			'How acidic or alkaline the water is. 7 is neutral, lower is more acidic and higher is more alkaline.',
-		bands: [
-			{ upTo: 6.5, label: 'Acidic' },
-			{ upTo: 8.5, label: 'Near neutral' },
-			{ upTo: null, label: 'Alkaline' }
-		],
 		noise: 0.1
 	},
 	pm2_5: {
 		plain: 'How much fine dust and smoke is in the air, counting particles up to 2.5 µm across.',
-		bands: [
-			{ upTo: 12, label: 'Low' },
-			{ upTo: 35.5, label: 'Moderate' },
-			{ upTo: 55.5, label: 'High' },
-			{ upTo: 150.5, label: 'Very high' },
-			{ upTo: null, label: 'Extreme' }
-		],
 		noise: 2
 	},
 	pm10: {
@@ -767,7 +699,8 @@ const sample: Reading['values'] = {
 	lightning_strike_count_last_1hr: 0,
 	lightning_strike_count_last_3hr: 0,
 	lightning_strike_last_distance: 38,
-	lightning_strike_last_epoch: 1715421128,
+	// Unix seconds: 2026-10-20 05:47 UTC, a couple of hours before the latest reading.
+	lightning_strike_last_epoch: 1792475220,
 	precip: 0,
 	precip_accum_last_1hr: 0,
 	precip_accum_local_day: 0,

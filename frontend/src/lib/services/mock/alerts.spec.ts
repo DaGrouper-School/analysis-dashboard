@@ -149,3 +149,67 @@ describe('device alert levels (AP-08)', () => {
 		});
 	});
 });
+
+describe('platform default alert levels (AP-08)', () => {
+	it('let platform admins change them, logged, and every device without its own follows', async () => {
+		await signInAs('g-leila');
+		const defaults = await services.registry.listAlertDefaults();
+		const warning = defaults.find((r) => r.parameterId === 'uv' && r.level === 'warning')!;
+		const saved = await services.registry.saveAlertDefault(
+			{ ...uvWarning, value: 9, title: 'Extreme UV' },
+			warning.id
+		);
+		expect(saved.find((r) => r.id === warning.id)).toMatchObject({ value: 9, title: 'Extreme UV' });
+		expect((await services.registry.listChanges())[0].summary).toBe(
+			'Changed the default UV index level Warning at or above 8 (Very high UV) to Warning at or above 9 (Extreme UV).'
+		);
+		await signInAs('g-marcus');
+		const station = await services.labs.listDeviceAlerts(STATION);
+		expect(uv(station).find((r) => r.level === 'warning')).toMatchObject({
+			value: 9,
+			source: 'default'
+		});
+	});
+
+	it('leave classrooms and devices with their own levels as they were', async () => {
+		await signInAs('g-tesfaye');
+		const before = await services.labs.listDeviceAlerts(STATION);
+		await services.labs.saveAlert(STATION, 'type', uvWarning, uv(before)[0].id);
+		await signInAs('g-leila');
+		const defaults = await services.registry.listAlertDefaults();
+		for (const rule of defaults.filter((r) => r.parameterId === 'uv')) {
+			await services.registry.deleteAlertDefault(rule.id);
+		}
+		expect((await services.registry.listAlertDefaults()).some((r) => r.parameterId === 'uv')).toBe(
+			false
+		);
+		await signInAs('g-tesfaye');
+		expect(uv(await services.labs.listDeviceAlerts(STATION))[0]).toMatchObject({
+			value: 5,
+			source: 'type'
+		});
+	});
+
+	it('add, turn off and check them, for admins only', async () => {
+		await signInAs('g-tesfaye');
+		await expect(services.registry.saveAlertDefault(uvWarning)).rejects.toMatchObject({
+			code: 'forbidden'
+		});
+		await signInAs('g-leila');
+		const added = await services.registry.saveAlertDefault({
+			...uvWarning,
+			parameterId: 'wind_gust',
+			value: 20,
+			title: 'Strong gusts'
+		});
+		const gust = added.find((r) => r.parameterId === 'wind_gust' && r.value === 20)!;
+		const off = await services.registry.saveAlertDefault({ ...gust, enabled: false }, gust.id);
+		expect(off.find((r) => r.id === gust.id)?.enabled).toBe(false);
+		expect((await services.registry.listChanges())[0].summary).toBe(
+			'Turned off the default Wind gust level Warning at or above 20 m/s (Strong gusts).'
+		);
+		await expect(
+			services.registry.saveAlertDefault({ ...uvWarning, parameterId: 'pressure_trend' })
+		).rejects.toMatchObject({ code: 'invalid_input' });
+	});
+});

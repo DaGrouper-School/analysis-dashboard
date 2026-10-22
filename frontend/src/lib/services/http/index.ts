@@ -1,4 +1,5 @@
 import type {
+	AlertRule,
 	Address,
 	CalculationDetails,
 	DeviceAlerts,
@@ -192,7 +193,14 @@ export function createHttpServices(baseUrl: string): Services {
 			mapParameter: (parameterId, domain) =>
 				request<Parameter>('PATCH', `/sam/parameters/${encodeURIComponent(parameterId)}`, {
 					domain
-				})
+				}),
+			listAlertDefaults: () => request<AlertRule[]>('GET', '/sam/alert-defaults'),
+			saveAlertDefault: (input, ruleId) =>
+				ruleId
+					? request<AlertRule[]>('PUT', `/sam/alert-defaults/${encodeURIComponent(ruleId)}`, input)
+					: request<AlertRule[]>('POST', '/sam/alert-defaults', input),
+			deleteAlertDefault: (ruleId) =>
+				request<AlertRule[]>('DELETE', `/sam/alert-defaults/${encodeURIComponent(ruleId)}`)
 		}
 	};
 }

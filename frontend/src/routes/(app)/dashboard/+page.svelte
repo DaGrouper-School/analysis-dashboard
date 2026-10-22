@@ -262,7 +262,7 @@
 									{/if}
 								</dt>
 								<dd class="mt-2 text-3xl text-ink">
-									<RollingNumber value={formatValue(item.value, item.unit)} />
+									<RollingNumber value={formatValue(item.value, item.unit, item.valueType)} />
 								</dd>
 								{#if trend}
 									<dd class="mt-1 text-xs text-muted" title={trendText(trend, item.unit)}>

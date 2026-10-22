@@ -2,15 +2,9 @@ import type { Parameter, Reading } from '#lib/domain/types.ts';
 import { formatValue } from '#lib/key-values.ts';
 
 /**
- * Indicators (AP-07): where a value sits among its registry bands, and which way it is heading.
- * Each describes one value on its own; nothing here compares values or says why one changed.
+ * Indicators (AP-07): which way a value is heading. Each describes one value on its own; nothing
+ * here compares values or says why one changed.
  */
-
-/** The registry's level word for a value, or null when the parameter has no bands. */
-export function bandFor(parameter: Parameter | undefined, value: number | string | undefined) {
-	if (!parameter?.bands?.length || typeof value !== 'number') return null;
-	return parameter.bands.find((b) => b.upTo === null || value < b.upTo)?.label ?? null;
-}
 
 export type TrendDirection = 'rising' | 'steady' | 'falling';
 

@@ -279,7 +279,7 @@
 									{Object.entries(observation.values)
 										.map(
 											([id, value]) =>
-												`${paramsById.get(id)?.label ?? id} ${formatValue(value, paramsById.get(id)?.unit)}`
+												`${paramsById.get(id)?.label ?? id} ${formatValue(value, paramsById.get(id)?.unit, paramsById.get(id)?.valueType)}`
 										)
 										.join(' · ')}
 								</p>

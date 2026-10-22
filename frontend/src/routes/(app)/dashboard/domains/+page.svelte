@@ -7,8 +7,8 @@
 	import ChartAlerts from '#lib/components/ChartAlerts.svelte';
 	import { thresholdStatus, thresholdsFor } from '#lib/domain/alerts.ts';
 	import { TIME_RANGES, withinRange } from '#lib/domains.ts';
-	import { bandFor, trendOf, trendText } from '#lib/indicators.ts';
-	import { describeParameter, formatValue } from '#lib/key-values.ts';
+	import { trendOf, trendText } from '#lib/indicators.ts';
+	import { describeParameter, formatValue, timeAgo } from '#lib/key-values.ts';
 	import { deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import type { PageProps } from './$types';
@@ -186,48 +186,45 @@
 			{@const status = thresholdStatus(alertRules, id, value)}
 			{@const levels = thresholdsFor(alertRules, id)}
 			{@const registered = paramsById.get(id)}
-			{@const band = bandFor(registered, value)}
-			{@const trend = registered ? trendOf(shown, registered) : null}
+			{@const numeric = param.valueType === 'number'}
+			{@const trend = registered && numeric ? trendOf(shown, registered) : null}
 			<section class="card" aria-labelledby="param-{id}">
-				<div class="flex flex-wrap items-start justify-between gap-3">
-					<div class="min-w-0">
-						<h2 id="param-{id}" class="font-medium">{param.label}</h2>
-						<p class="text-sm text-muted">
-							{registered?.plain ?? 'No plain-language note yet.'}
-						</p>
-					</div>
-					{#if status}
+				<h2 id="param-{id}" class="font-medium">{param.label}</h2>
+				<p class="text-sm text-muted">
+					{registered?.plain ?? 'No plain-language note yet.'}
+				</p>
+				<p class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+					<span class={['text-ink', numeric ? 'text-3xl' : 'text-2xl']}>
+						{formatValue(value, param.unit, param.valueType)}
+					</span>
+					{#if param.valueType === 'time' && typeof value === 'number'}
+						<span class="text-sm text-muted">{timeAgo(value)}</span>
+					{:else if status}
 						<span
 							class={['rounded-full px-2 py-0.5 text-xs font-medium ring-1', BADGE[status.level]]}
 						>
 							{#if status.level !== 'normal'}<span aria-hidden="true">▲</span>{/if}
 							{status.title}
 						</span>
-					{:else}
-						<span class="rounded-full px-2 py-0.5 text-xs text-muted ring-1 ring-line">
-							No threshold
-						</span>
 					{/if}
-				</div>
-				<p class="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-					<span class="text-3xl text-ink">{formatValue(value, param.unit)}</span>
-					{#if band}<span class="chip" title="Level band from the SAM registry">{band}</span>{/if}
 				</p>
 				{#if trend}
 					<p class="mt-1 text-sm text-muted">{trendText(trend, param.unit)}</p>
 				{/if}
-				<div class="mt-3">
-					<ReadingChart
-						readings={shown}
-						parameterId={id}
-						label={param.label}
-						unit={param.unit}
-						height={160}
-						color={deviceTypeColor(data.deviceTypes, device.type)}
-						thresholds={levels}
-					/>
-				</div>
-				{#if data.deviceAlerts && registered && (registered.valueType ?? 'number') === 'number'}
+				{#if numeric}
+					<div class="mt-3">
+						<ReadingChart
+							readings={shown}
+							parameterId={id}
+							label={param.label}
+							unit={param.unit}
+							height={160}
+							color={deviceTypeColor(data.deviceTypes, device.type)}
+							thresholds={levels}
+						/>
+					</div>
+				{/if}
+				{#if data.deviceAlerts && registered && numeric}
 					<ChartAlerts
 						alerts={data.deviceAlerts}
 						parameter={registered}

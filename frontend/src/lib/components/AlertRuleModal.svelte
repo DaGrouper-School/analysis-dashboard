@@ -2,9 +2,8 @@
 	import type {
 		AlertDirection,
 		AlertLevel,
-		AlertScope,
-		DeviceAlerts,
-		EffectiveAlertRule,
+		AlertRule,
+		AlertRuleInput,
 		Parameter
 	} from '#lib/domain/types.ts';
 	import {
@@ -17,33 +16,37 @@
 	} from '#lib/domain/alerts.ts';
 	import Modal from '#lib/components/Modal.svelte';
 	import { rangeText, readEntries, unitsFor } from '#lib/observations.ts';
-	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
+	import { errorMessage, ServiceError } from '#lib/services/index.ts';
 
 	/**
-	 * Adds an alert level on one value of a device, or changes one (AP-08). The head picks
-	 * whether it applies to this device only or to every sensor of its type in the classroom;
-	 * facilitators set this device's. The value can be typed in any of the parameter's units and
-	 * gets the same checks as a manual observation, wrong-unit hint included.
+	 * Adds an alert level on one value, or changes one (AP-08): on a device, on every sensor of
+	 * a type in a classroom, or as a platform default. With more than one `scopes`, the person
+	 * picks where it applies. The value can be typed in any of the parameter's units and gets the
+	 * same checks as a manual observation, wrong-unit hint included.
 	 */
 	let {
 		open = $bindable(false),
-		alerts,
 		parameter,
-		typeLabel,
 		rule = null,
-		onsaved
+		scopes = [],
+		initialScope = '',
+		note,
+		save: send
 	}: {
 		open?: boolean;
-		alerts: DeviceAlerts;
 		parameter: Parameter;
-		/** e.g. `weather stations in Trinity Lab`, for the classroom-wide choice. */
-		typeLabel: string;
 		/** The rule to change, or null to add one. */
-		rule?: EffectiveAlertRule | null;
-		onsaved: (alerts: DeviceAlerts) => unknown;
+		rule?: AlertRule | null;
+		/** Where the level can apply, when there is a choice. */
+		scopes?: { id: string; label: string; hint: string }[];
+		initialScope?: string;
+		/** A line on what saving to `scope` does to the levels below it, if anything. */
+		note?: (scope: string) => string | null;
+		/** Saves the level. Resolves once the page shows it, so nothing flickers back. */
+		save: (scope: string, input: AlertRuleInput) => Promise<unknown>;
 	} = $props();
 
-	let scope = $state<AlertScope>('device');
+	let scope = $state('');
 	let direction = $state<AlertDirection>('above');
 	let level = $state<AlertLevel>('caution');
 	let value = $state('');
@@ -56,7 +59,7 @@
 	// Fill the form each time it opens, from the rule being changed or blank.
 	$effect(() => {
 		if (!open) return;
-		scope = rule?.source === 'type' && alerts.canEditType ? 'type' : 'device';
+		scope = initialScope;
 		direction = rule?.direction ?? 'above';
 		level = rule?.level ?? 'caution';
 		value = rule ? String(rule.value) : '';
@@ -97,9 +100,7 @@
 		if (Object.keys(errors).length) return;
 		saving = true;
 		try {
-			const saved = await services.labs.saveAlert(alerts.deviceId, scope, input, rule?.id);
-			// Close once the page shows the change, so nothing flickers back to the old levels.
-			await onsaved(saved);
+			await send(scope, input);
 			open = false;
 		} catch (e) {
 			if (e instanceof ServiceError) errors = e.fields;
@@ -112,15 +113,15 @@
 
 <Modal bind:open title={rule ? 'Change alert' : 'Add alert'} eyebrow={parameter.label}>
 	<form id="alert-rule" class="space-y-5" onsubmit={save} novalidate>
-		{#if alerts.canEditType}
+		{#if scopes.length > 1}
 			<fieldset>
 				<legend class="label">Applies to</legend>
 				<div class="space-y-2">
-					{#each [['device', 'This device only'], ['type', `All ${typeLabel}`]] as [option, label] (option)}
+					{#each scopes as option (option.id)}
 						<label
 							class={[
 								'flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2 text-sm transition',
-								scope === option
+								scope === option.id
 									? 'border-ink bg-ink/[0.05]'
 									: 'border-line hover:border-line-strong'
 							]}
@@ -129,16 +130,12 @@
 								type="radio"
 								name="alert-scope"
 								class="mt-0.5 border-line-strong bg-transparent text-teal checked:bg-current focus:ring-teal"
-								value={option}
+								value={option.id}
 								bind:group={scope}
 							/>
 							<span>
-								<span class="block text-ink">{label}</span>
-								<span class="block text-xs text-muted">
-									{option === 'device'
-										? 'Replaces the classroom and default levels for this value on this device.'
-										: 'A device with its own levels for this value keeps them.'}
-								</span>
+								<span class="block text-ink">{option.label}</span>
+								<span class="block text-xs text-muted">{option.hint}</span>
 							</span>
 						</label>
 					{/each}
@@ -227,17 +224,8 @@
 			{/if}
 		</div>
 
-		{#if rule && rule.source !== scope}
-			<p class="rounded-md border border-line p-3 text-sm text-muted">
-				{rule.source === 'default'
-					? 'This is a platform default.'
-					: 'This level is set for all ' + typeLabel + '.'}
-				Saving copies the {parameter.label} levels to {scope === 'device'
-					? 'this device'
-					: 'all ' + typeLabel}, with this change; the {rule.source === 'default'
-					? 'platform defaults'
-					: 'classroom levels'} stay as they are.
-			</p>
+		{#if note?.(scope)}
+			<p class="rounded-md border border-line p-3 text-sm text-muted">{note(scope)}</p>
 		{/if}
 		{#if error}<p class="field-error" role="alert">{error}</p>{/if}
 	</form>

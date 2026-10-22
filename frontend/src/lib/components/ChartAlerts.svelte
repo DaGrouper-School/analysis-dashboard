@@ -1,5 +1,11 @@
 <script lang="ts">
-	import type { DeviceAlerts, EffectiveAlertRule, Parameter } from '#lib/domain/types.ts';
+	import type {
+		AlertRuleInput,
+		AlertScope,
+		DeviceAlerts,
+		EffectiveAlertRule,
+		Parameter
+	} from '#lib/domain/types.ts';
 	import { ruleText } from '#lib/domain/alerts.ts';
 	import AlertRuleModal from '#lib/components/AlertRuleModal.svelte';
 	import Icon from '#lib/components/Icon.svelte';
@@ -90,6 +96,40 @@
 				: 'use the platform defaults for every sensor of this type';
 		if (!confirm(`Drop these ${parameter.label} levels and ${back}?`)) return;
 		run(() => services.labs.resetAlerts(alerts.deviceId, source, parameter.id));
+	}
+
+	const scopes = $derived(
+		alerts.canEditType
+			? [
+					{
+						id: 'device',
+						label: 'This device only',
+						hint: 'Replaces the classroom and default levels for this value on this device.'
+					},
+					{
+						id: 'type',
+						label: `All ${typeLabel}`,
+						hint: 'A device with its own levels for this value keeps them.'
+					}
+				]
+			: []
+	);
+
+	/** Saving a level from a layer below copies that layer's levels up; say so. */
+	function note(scope: string) {
+		if (!editRule || editRule.source === scope) return null;
+		const from =
+			editRule.source === 'default'
+				? 'This is a platform default.'
+				: `This level is set for all ${typeLabel}.`;
+		const to = scope === 'device' ? 'this device' : `all ${typeLabel}`;
+		const below = editRule.source === 'default' ? 'platform defaults' : 'classroom levels';
+		return `${from} Saving copies the ${parameter.label} levels to ${to}, with this change; the ${below} stay as they are.`;
+	}
+
+	async function save(scope: string, input: AlertRuleInput) {
+		await services.labs.saveAlert(alerts.deviceId, scope as AlertScope, input, editRule?.id);
+		await onchange?.();
 	}
 
 	const canReset = $derived(
@@ -184,10 +224,11 @@
 {#if canEdit && open}
 	<AlertRuleModal
 		bind:open
-		{alerts}
 		{parameter}
-		{typeLabel}
 		rule={editRule}
-		onsaved={() => onchange?.()}
+		{scopes}
+		initialScope={editRule ? scopeFor(editRule) : 'device'}
+		{note}
+		{save}
 	/>
 {/if}
