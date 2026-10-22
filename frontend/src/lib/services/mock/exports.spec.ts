@@ -74,7 +74,14 @@ describe('raw data export', () => {
 		const query = { classroomId: 'cls_nassau', parameterId: 'air_temperature' };
 		const page = await services.exports.rawValues(query);
 		const file = await services.exports.rawCsv(query);
-		expect(file.filename).toBe('dagrouper-bay-street-classroom-raw-2026-10-22.csv');
+		expect(file.filename).toMatch(
+			/^dagrouper-bay-street-classroom-all-sources-20261022-0900-[a-z0-9]{6}\.csv$/
+		);
+		const again = await services.exports.rawCsv(query);
+		expect(again.filename).not.toBe(file.filename);
+		const [source] = page.options.sources.filter((s) => s.kind === 'device');
+		const one = await services.exports.rawCsv({ ...query, sourceId: source.id });
+		expect(one.filename).toContain(`-${source.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-`);
 		expect(file.rows).toBe(page.total);
 		const lines = file.content.trimEnd().split('\r\n');
 		expect(lines[0]).toBe(CSV_COLUMNS.join(','));

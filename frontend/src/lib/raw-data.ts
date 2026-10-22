@@ -134,11 +134,27 @@ export function toCsv(
 	return [CSV_COLUMNS.join(','), ...lines].join('\r\n') + '\r\n';
 }
 
-/** `dagrouper-trinity-lab-classroom-raw-2026-10-22.csv` */
-export function csvFilename(classroomName: string, today: string): string {
-	const slug = classroomName
+const slug = (text: string) =>
+	text
 		.toLowerCase()
 		.replace(/[^a-z0-9]+/g, '-')
 		.replace(/^-|-$/g, '');
-	return `dagrouper-${slug || 'classroom'}-raw-${today}.csv`;
+
+/**
+ * `dagrouper-trinity-lab-classroom-shashamane-weather-station-20261022-0930-k3f9q2.csv`: the
+ * classroom, the source exported (or all sources), when, and the export's ID, so a new export
+ * never takes the name of an earlier one on the user's device.
+ */
+export function csvFilename(
+	classroomName: string,
+	sourceName: string | null,
+	at: Date,
+	exportId: string
+): string {
+	const stamp = at.toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '-');
+	const source = (sourceName && slug(sourceName)) || 'all-sources';
+	return `dagrouper-${slug(classroomName) || 'classroom'}-${source}-${stamp}-${exportId}.csv`;
 }
+
+/** The byte order mark that tells Excel the file is UTF-8, so `°C` is not read as `Â°C`. */
+export const UTF8_BOM = '\uFEFF';

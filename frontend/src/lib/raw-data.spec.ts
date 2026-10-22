@@ -120,8 +120,12 @@ describe('CSV', () => {
 	it('rounds positions when the terms ask, and names the file after the classroom', () => {
 		expect(coarsen({ lat: 9.5627, lng: 44.0651 }, 2)).toEqual({ lat: 9.56, lng: 44.07 });
 		expect(coarsen({ lat: 9.5627, lng: 44.0651 }, null)).toEqual({ lat: 9.5627, lng: 44.0651 });
-		expect(csvFilename('Bay Street Classroom!', '2026-10-22')).toBe(
-			'dagrouper-bay-street-classroom-raw-2026-10-22.csv'
+		const at = new Date('2026-10-22T09:30:15.000Z');
+		expect(csvFilename('Bay Street Classroom!', null, at, 'k3f9q2')).toBe(
+			'dagrouper-bay-street-classroom-all-sources-20261022-0930-k3f9q2.csv'
+		);
+		expect(csvFilename('Bay Street Classroom', 'Bay St. Rain Gauge', at, 'a1b2c3')).toBe(
+			'dagrouper-bay-street-classroom-bay-st-rain-gauge-20261022-0930-a1b2c3.csv'
 		);
 	});
 });
