@@ -2,6 +2,7 @@ import type {
 	Address,
 	AlertRuleInput,
 	ClassroomAlerts,
+	CalculationDetails,
 	ClassroomDetail,
 	ClassroomRole,
 	ClassroomSummary,
@@ -83,6 +84,8 @@ export interface RegistryService {
 	 * has none.
 	 */
 	listObservationTemplates(): Promise<ObservationTemplate[]>;
+	/** "How is this calculated?" (AP-07): formula, inputs and SAM version of one value. */
+	getCalculation(parameterId: string): Promise<CalculationDetails>;
 	/** Platform admins only. */
 	listChanges(): Promise<RegistryChange[]>;
 	createDomain(input: DomainInput): Promise<DomainDefinition>;

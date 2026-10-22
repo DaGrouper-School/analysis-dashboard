@@ -1,6 +1,7 @@
 import type {
 	AlertRule,
 	AltUnit,
+	Calculation,
 	DeviceTypeDefinition,
 	DomainDefinition,
 	EnvironmentalDomain,
@@ -461,6 +462,205 @@ const checks: Record<string, Pick<Parameter, 'min' | 'max' | 'altUnits'>> = {
 };
 for (const parameter of parameters) Object.assign(parameter, checks[parameter.id]);
 
+/** The SAM registry release the mock serves. Calculations cite it. */
+const registryVersion: MockDbState['registryVersion'] = {
+	version: 'SAM v1.4',
+	publishedAt: '2026-10-01'
+};
+
+/** How SAM gets a value with no formula of its own, by where the value comes from. */
+export const SOURCE_CALCULATION: Record<
+	Parameter['source'],
+	Pick<Calculation, 'method' | 'formula'>
+> = {
+	weather_station: { method: 'measured', formula: 'Measured directly by the weather station.' },
+	device: { method: 'measured', formula: 'Measured directly by the sensor.' },
+	manual: { method: 'manual', formula: 'Read by a person and entered on a guided form.' }
+};
+
+/**
+ * Plain-language text for indicators (AP-07): what a value means, level words, the change a
+ * sensor can wobble by, and formulas for derived values. States what is measured; no advice and
+ * no cause and effect (a unit test checks).
+ */
+const indicators: Record<
+	string,
+	Pick<Parameter, 'plain' | 'bands' | 'noise'> & { formula?: string; inputs?: string[] }
+> = {
+	air_temperature: {
+		plain: 'How warm the air is in the shade, measured about 2 m above the ground.',
+		bands: [
+			{ upTo: 10, label: 'Cool' },
+			{ upTo: 30, label: 'Typical' },
+			{ upTo: 35, label: 'High' },
+			{ upTo: null, label: 'Very high' }
+		],
+		noise: 0.3
+	},
+	relative_humidity: {
+		plain:
+			'How much water vapour the air holds, as a share of the most it could hold at this temperature.',
+		bands: [
+			{ upTo: 30, label: 'Dry' },
+			{ upTo: 60, label: 'Moderate' },
+			{ upTo: 80, label: 'Humid' },
+			{ upTo: null, label: 'Very humid' }
+		],
+		noise: 2
+	},
+	wind_avg: {
+		plain: 'How fast the air is moving, averaged over a short period.',
+		bands: [
+			{ upTo: 1.5, label: 'Calm' },
+			{ upTo: 5.5, label: 'Light' },
+			{ upTo: 10.8, label: 'Moderate' },
+			{ upTo: 17.2, label: 'Strong' },
+			{ upTo: null, label: 'Gale' }
+		],
+		noise: 0.5
+	},
+	precip_accum_local_day: {
+		plain:
+			'How much rain has fallen since local midnight, as the depth of water it would leave on flat ground.',
+		bands: [
+			{ upTo: 0.1, label: 'None' },
+			{ upTo: 10, label: 'Light' },
+			{ upTo: 30, label: 'Moderate' },
+			{ upTo: 50, label: 'Heavy' },
+			{ upTo: null, label: 'Very heavy' }
+		],
+		noise: 0.2
+	},
+	uv: {
+		plain: "How strong the sun's ultraviolet light is. Higher numbers mean stronger light.",
+		bands: [
+			{ upTo: 3, label: 'Low' },
+			{ upTo: 6, label: 'Moderate' },
+			{ upTo: 8, label: 'High' },
+			{ upTo: 11, label: 'Very high' },
+			{ upTo: null, label: 'Extreme' }
+		],
+		noise: 0.3
+	},
+	station_pressure: {
+		plain:
+			'The weight of the air above the station. It is lower at higher places and changes with the weather.',
+		noise: 0.5
+	},
+	heat_index: {
+		plain: 'How warm it feels to people once humidity is added to the air temperature.',
+		bands: [
+			{ upTo: 27, label: 'Typical' },
+			{ upTo: 32, label: 'Raised' },
+			{ upTo: 41, label: 'High' },
+			{ upTo: 54, label: 'Very high' },
+			{ upTo: null, label: 'Extreme' }
+		],
+		noise: 0.5,
+		formula:
+			'HI = −8.78 + 1.611·T + 2.339·RH − 0.1461·T·RH − 0.01231·T² − 0.01642·RH² + 0.002212·T²·RH + 0.000725·T·RH² − 0.000003582·T²·RH², with T in °C and RH in %. Below 27 °C the heat index equals the air temperature.',
+		inputs: ['air_temperature', 'relative_humidity']
+	},
+	feels_like: {
+		plain: 'How warm or cold it feels to people, from the air temperature, humidity and wind.',
+		bands: [
+			{ upTo: 10, label: 'Cool' },
+			{ upTo: 30, label: 'Typical' },
+			{ upTo: 35, label: 'High' },
+			{ upTo: null, label: 'Very high' }
+		],
+		noise: 0.5,
+		formula:
+			'The heat index when the air is 27 °C or warmer, the wind chill when it is 10 °C or colder with wind over 1.3 m/s, otherwise the air temperature.',
+		inputs: ['air_temperature', 'relative_humidity', 'wind_avg']
+	},
+	dew_point: {
+		plain:
+			'The temperature the air would have to cool to before dew forms. Higher means more moisture in the air.',
+		bands: [
+			{ upTo: 10, label: 'Low' },
+			{ upTo: 16, label: 'Moderate' },
+			{ upTo: 21, label: 'High' },
+			{ upTo: null, label: 'Very high' }
+		],
+		noise: 0.5,
+		formula:
+			'Magnus formula: γ = ln(RH/100) + 17.62·T / (243.12 + T), then Td = 243.12·γ / (17.62 − γ), with T in °C and RH in %.',
+		inputs: ['air_temperature', 'relative_humidity']
+	},
+	wind_chill: {
+		plain: 'How cold it feels to people once the wind is added to the air temperature.',
+		noise: 0.5,
+		formula:
+			'WC = 13.12 + 0.6215·T − 11.37·V^0.16 + 0.3965·T·V^0.16, with T in °C and V the wind speed in km/h.',
+		inputs: ['air_temperature', 'wind_avg']
+	},
+	rain_gauge_daily_accumulation: {
+		plain:
+			'How much rain a person read from the gauge for the day, as the depth of water collected.',
+		bands: [
+			{ upTo: 0.1, label: 'None' },
+			{ upTo: 10, label: 'Light' },
+			{ upTo: 30, label: 'Moderate' },
+			{ upTo: 50, label: 'Heavy' },
+			{ upTo: null, label: 'Very heavy' }
+		],
+		noise: 0.5
+	},
+	soil_moisture: {
+		plain: 'How much water the soil holds, as a share of its volume.',
+		bands: [
+			{ upTo: 15, label: 'Low' },
+			{ upTo: 35, label: 'Moderate' },
+			{ upTo: null, label: 'High' }
+		],
+		noise: 1
+	},
+	soil_temperature: {
+		plain: 'How warm the soil is a few centimetres below the surface.',
+		noise: 0.3
+	},
+	water_temperature: {
+		plain: 'How warm the water is where the probe sits.',
+		noise: 0.2
+	},
+	water_ph: {
+		plain:
+			'How acidic or alkaline the water is. 7 is neutral, lower is more acidic and higher is more alkaline.',
+		bands: [
+			{ upTo: 6.5, label: 'Acidic' },
+			{ upTo: 8.5, label: 'Near neutral' },
+			{ upTo: null, label: 'Alkaline' }
+		],
+		noise: 0.1
+	},
+	pm2_5: {
+		plain: 'How much fine dust and smoke is in the air, counting particles up to 2.5 µm across.',
+		bands: [
+			{ upTo: 12, label: 'Low' },
+			{ upTo: 35.5, label: 'Moderate' },
+			{ upTo: 55.5, label: 'High' },
+			{ upTo: 150.5, label: 'Very high' },
+			{ upTo: null, label: 'Extreme' }
+		],
+		noise: 2
+	},
+	pm10: {
+		plain: 'How much dust is in the air, counting particles up to 10 µm across.',
+		noise: 3
+	}
+};
+for (const parameter of parameters) {
+	const { formula, inputs, ...text } = indicators[parameter.id] ?? {};
+	Object.assign(parameter, text, {
+		calculation: {
+			...(formula ? { method: 'derived' as const, formula } : SOURCE_CALCULATION[parameter.source]),
+			inputs: inputs ?? [],
+			...registryVersion
+		}
+	});
+}
+
 const labs: MockDbState['labs'] = [
 	{
 		id: 'lab_trinity',
@@ -908,6 +1108,7 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 		domains,
 		deviceTypes,
 		registryChanges: [],
+		registryVersion,
 		observationTemplates,
 		alertDefaults,
 		classroomAlerts: [],

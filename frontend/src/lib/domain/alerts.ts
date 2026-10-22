@@ -142,7 +142,7 @@ export function thresholdStatus(
 	if (typeof value !== 'number') return null;
 	if (!rules.some((r) => r.enabled && r.parameterId === parameterId)) return null;
 	const hit = tripped(rules, parameterId, value);
-	return hit ? { level: hit.level, title: hit.title } : { level: 'normal', title: 'Normal' };
+	return hit ? { level: hit.level, title: hit.title } : { level: 'normal', title: 'No alert' };
 }
 
 /** The enabled levels of one parameter, to draw on its chart. */

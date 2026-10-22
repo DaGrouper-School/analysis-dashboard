@@ -121,6 +121,7 @@ export const UI_ICONS = {
 	],
 	upload: [{ d: 'M12 16V4M7 9l5-5 5 5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4' }],
 	alert: [{ d: 'M12 3 2 20.5h20L12 3ZM12 10v4.5M12 17.5v.5' }],
+	info: [{ cx: 12, cy: 12, r: 9 }, { d: 'M12 11v5.5M12 7.5v.5' }],
 	arrow: [{ d: 'M5 12h14M13 6l6 6-6 6' }]
 } satisfies Record<string, Shape[]>;
 
