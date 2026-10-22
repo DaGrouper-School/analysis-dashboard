@@ -8,6 +8,7 @@
 		Parameter
 	} from '#lib/domain/types.ts';
 	import { validateDeviceType, validateDomain } from '#lib/domain/validation.ts';
+	import DefaultAlerts from '#lib/components/DefaultAlerts.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import Modal from '#lib/components/Modal.svelte';
 	import IconPicker from '#lib/components/IconPicker.svelte';
@@ -33,7 +34,13 @@
 	const unmapped = $derived(parameters.filter((p) => !p.domain || !domainsById.has(p.domain)));
 
 	/** Each tab's icon, also drawn by its section title. */
-	const ICONS = { domains: 'tag', types: 'layers', values: 'readings', log: 'history' };
+	const ICONS = {
+		domains: 'tag',
+		types: 'layers',
+		values: 'readings',
+		alerts: 'alert',
+		log: 'history'
+	};
 	type Tab = keyof typeof ICONS;
 	let tab = $state<Tab>();
 	const tabs = $derived<TabItem<Tab>[]>([
@@ -47,6 +54,12 @@
 			badge: unmapped.length
 				? { text: String(unmapped.length), title: `${unmapped.length} not in a domain` }
 				: undefined
+		},
+		{
+			id: 'alerts',
+			label: 'Default alerts',
+			icon: ICONS.alerts,
+			count: data.allowed ? data.alertDefaults.length : 0
 		},
 		{
 			id: 'log',
@@ -685,6 +698,14 @@
 						</div>
 					</section>
 				</div>
+			{:else if tab === 'alerts'}
+				<DefaultAlerts
+					defaults={data.alertDefaults}
+					{parameters}
+					domains={data.domains}
+					icon={ICONS.alerts}
+					onchange={() => invalidateAll()}
+				/>
 			{:else}
 				<!-- Change log -->
 				<div>
@@ -846,6 +867,7 @@
 									>
 										<option value="number">Number</option>
 										<option value="text">Text</option>
+										<option value="time">Time (Unix seconds)</option>
 									</select>
 								</div>
 								<div>

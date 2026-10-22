@@ -1,9 +1,11 @@
 import type {
+	AlertRuleInput,
 	DeviceTypeDefinition,
 	DomainDefinition,
 	ExpectedValueInput,
 	Parameter
 } from '#lib/domain/types.ts';
+import { checkAlertRule, ruleText } from '#lib/domain/alerts.ts';
 import { PARAMETER_ID, validateDeviceType, validateDomain } from '#lib/domain/validation.ts';
 import { newId, readDb, updateDb, type MockDbState } from '#lib/data/mock-db.ts';
 import { ServiceError, type RegistryService } from '../types';
@@ -317,6 +319,68 @@ export function createMockRegistry({
 				if (parameter.domain === domainId) return parameter;
 				move(state, parameter, domainId, user.fullName);
 				return parameter;
+			});
+		},
+
+		async listAlertDefaults() {
+			await delay();
+			return structuredClone(readDb().alertDefaults);
+		},
+
+		async saveAlertDefault(input, ruleId) {
+			await delay();
+			return updateDb((state) => {
+				const user = asAdmin(state);
+				const rule: AlertRuleInput = {
+					parameterId: input.parameterId,
+					direction: input.direction,
+					value: input.value,
+					level: input.level,
+					title: input.title?.trim() ?? '',
+					enabled: input.enabled !== false
+				};
+				invalid(checkAlertRule(rule, state.parameters));
+				const parameter = state.parameters.find((p) => p.id === rule.parameterId)!;
+				const what = (r: AlertRuleInput) => `${ruleText(r, parameter.unit)} (${r.title})`;
+				if (ruleId) {
+					const stored = state.alertDefaults.find((r) => r.id === ruleId);
+					if (!stored) throw new ServiceError('not_found', 'That alert no longer exists.');
+					if (stored.parameterId !== rule.parameterId) {
+						const message = 'An alert stays on its value. Add a new one for another value.';
+						throw new ServiceError('invalid_input', message, { parameterId: message });
+					}
+					const before = what(stored);
+					const toggled = stored.enabled !== rule.enabled;
+					Object.assign(stored, rule);
+					log(
+						state,
+						user.fullName,
+						toggled && before === what(rule)
+							? `Turned ${rule.enabled ? 'on' : 'off'} the default ${parameter.label} level ${before}.`
+							: `Changed the default ${parameter.label} level ${before} to ${what(rule)}.`
+					);
+				} else {
+					state.alertDefaults.push({ ...rule, id: newId('alr') });
+					log(state, user.fullName, `Added the default ${parameter.label} level ${what(rule)}.`);
+				}
+				return structuredClone(state.alertDefaults);
+			});
+		},
+
+		async deleteAlertDefault(ruleId) {
+			await delay();
+			return updateDb((state) => {
+				const user = asAdmin(state);
+				const stored = state.alertDefaults.find((r) => r.id === ruleId);
+				if (!stored) throw new ServiceError('not_found', 'That alert no longer exists.');
+				const parameter = state.parameters.find((p) => p.id === stored.parameterId);
+				state.alertDefaults = state.alertDefaults.filter((r) => r !== stored);
+				log(
+					state,
+					user.fullName,
+					`Removed the default ${parameter?.label ?? stored.parameterId} level ${ruleText(stored, parameter?.unit ?? '')} (${stored.title}).`
+				);
+				return structuredClone(state.alertDefaults);
 			});
 		}
 	};

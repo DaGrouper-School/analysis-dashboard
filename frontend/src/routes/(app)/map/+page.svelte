@@ -278,7 +278,7 @@
 						<div class="accent-tile p-3">
 							<dt class="text-xs text-muted">{item.label}</dt>
 							<dd class="mt-1 text-2xl text-ink">
-								<RollingNumber value={formatValue(item.value, item.unit)} />
+								<RollingNumber value={formatValue(item.value, item.unit, item.valueType)} />
 							</dd>
 						</div>
 					{/each}

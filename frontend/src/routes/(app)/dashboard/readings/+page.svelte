@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
 	import { formatPoint } from '#lib/geo.ts';
-	import { describeParameter, keySummary } from '#lib/key-values.ts';
+	import { describeParameter, formatValue, keySummary } from '#lib/key-values.ts';
 	import { deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import type { PageProps } from './$types';
@@ -126,6 +126,11 @@
 												<td class="py-1 pr-4 font-mono text-muted">{id}</td>
 												<td class="py-1 text-right font-mono tabular-nums">
 													{value}{param.unit ? ` ${param.unit}` : ''}
+													{#if param.valueType === 'time'}
+														<span class="block font-sans text-muted">
+															{formatValue(value, param.unit, param.valueType)}
+														</span>
+													{/if}
 												</td>
 											</tr>
 										{/each}

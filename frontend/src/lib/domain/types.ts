@@ -177,7 +177,7 @@ export interface Parameter {
 	/** The domain this value shows under. Null until a platform admin maps it. */
 	domain: EnvironmentalDomain | null;
 	source: 'weather_station' | 'manual' | 'device';
-	/** Numbers chart as trends; text values (e.g. a trend word) only show as they are. */
+	/** Numbers chart as trends; text values (e.g. a trend word) show as they are, times as dates. */
 	valueType?: ValueType;
 	/** Plausible range in `unit`, checked before a manual observation is sent. */
 	min?: number;
@@ -191,18 +191,10 @@ export interface Parameter {
 	 * (AP-07). States what is measured; never advice, never a cause.
 	 */
 	plain?: string;
-	/** Level words for where a value sits, lowest first. Named by level, never good or bad. */
-	bands?: ParameterBand[];
 	/** Changes smaller than this, in `unit`, read as steady: the sensor's own wobble. */
 	noise?: number;
 	/** How SAM gets the value: measured, derived from other values, or entered by hand. */
 	calculation?: Calculation;
-}
-
-/** One level band: values below `upTo` (or any value, for the last band) get `label`. */
-export interface ParameterBand {
-	upTo: number | null;
-	label: string;
 }
 
 export interface Calculation {
@@ -222,7 +214,8 @@ export interface CalculationDetails extends Calculation {
 	inputDetails: Pick<Parameter, 'id' | 'label' | 'unit'>[];
 }
 
-export type ValueType = 'number' | 'text';
+/** `time` is a moment as Unix seconds: shown as a local date, never charted. */
+export type ValueType = 'number' | 'text' | 'time';
 
 /** Another unit for a value: `value * factor + offset` gives it in the parameter's own unit. */
 export interface AltUnit {

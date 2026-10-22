@@ -260,7 +260,9 @@
 		{#each Object.entries(checked.values) as [id, value] (id)}
 			<div class="bg-surface p-3">
 				<dt class="text-xs text-muted">{labelFor(paramsById.get(id), id)}</dt>
-				<dd class="mt-1 text-lg text-ink">{formatValue(value, paramsById.get(id)?.unit)}</dd>
+				<dd class="mt-1 text-lg text-ink">
+					{formatValue(value, paramsById.get(id)?.unit, paramsById.get(id)?.valueType)}
+				</dd>
 			</div>
 		{/each}
 		<div class="bg-surface p-3">
@@ -313,7 +315,9 @@
 				{#each Object.entries(sent.values) as [id, value] (id)}
 					<div class="bg-surface p-3">
 						<dt class="text-xs text-muted">{labelFor(paramsById.get(id), id)}</dt>
-						<dd class="mt-1 text-lg text-ink">{formatValue(value, paramsById.get(id)?.unit)}</dd>
+						<dd class="mt-1 text-lg text-ink">
+							{formatValue(value, paramsById.get(id)?.unit, paramsById.get(id)?.valueType)}
+						</dd>
 					</div>
 				{/each}
 			</dl>
