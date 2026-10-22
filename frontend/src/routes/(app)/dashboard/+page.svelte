@@ -7,12 +7,14 @@
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
 	import ReadingChart from '#lib/components/ReadingChart.svelte';
+	import CalculationPanel from '#lib/components/CalculationPanel.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import SyncModal from '#lib/components/SyncModal.svelte';
 	import RollingNumber from '#lib/components/RollingNumber.svelte';
 	import ThresholdSource from '#lib/components/ThresholdSource.svelte';
 	import { thresholdsFor } from '#lib/domain/alerts.ts';
 	import { formatValue, keySummary, keyValues } from '#lib/key-values.ts';
+	import { TREND_LABELS, trendOf, trendText } from '#lib/indicators.ts';
 	import { reveal } from '#lib/reveal.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import {
@@ -77,6 +79,20 @@
 	let conditions = $state<HTMLElement>();
 
 	let syncing = $state(false);
+
+	let calculating = $state(false);
+	let calculationId = $state('');
+
+	function explain(id: string) {
+		calculationId = id;
+		calculating = true;
+	}
+
+	/** Which way a tile's value is heading over the readings on the chart. */
+	function tileTrend(id: string) {
+		const parameter = paramsById.get(id);
+		return parameter ? trendOf(data.readings, parameter) : null;
+	}
 
 	function lastGps() {
 		return data.readings.find((r) => r.locationSource === 'device')?.location ?? null;
@@ -232,11 +248,28 @@
 					>
 						<!-- Keyed by position, so switching sensors rolls the numbers in place. -->
 						{#each tiles as item, i (i)}
+							{@const trend = tileTrend(item.id)}
 							<div class="accent-tile p-4">
-								<dt class="text-xs text-muted">{item.label}</dt>
+								<dt class="flex items-center justify-between gap-2 text-xs text-muted">
+									{item.label}
+									{#if paramsById.has(item.id)}
+										<button
+											type="button"
+											class="-m-1.5 grid size-7 place-items-center rounded-full hover:text-ink focus-visible:ring-2 focus-visible:ring-teal focus-visible:outline-none"
+											aria-label="What {item.label.toLowerCase()} means and how it is calculated"
+											aria-haspopup="dialog"
+											onclick={() => explain(item.id)}><Icon name="info" class="size-4" /></button
+										>
+									{/if}
+								</dt>
 								<dd class="mt-2 text-3xl text-ink">
 									<RollingNumber value={formatValue(item.value, item.unit)} />
 								</dd>
+								{#if trend}
+									<dd class="mt-1 text-xs text-muted" title={trendText(trend, item.unit)}>
+										{TREND_LABELS[trend.direction]}
+									</dd>
+								{/if}
 							</div>
 						{/each}
 					</dl>
@@ -447,3 +480,9 @@
 		</ul>
 	</section>
 {/if}
+
+<CalculationPanel
+	bind:open={calculating}
+	parameterId={calculationId}
+	onpick={(id) => (calculationId = id)}
+/>

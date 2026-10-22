@@ -1,5 +1,6 @@
 import type {
 	Address,
+	CalculationDetails,
 	ClassroomAlerts,
 	ClassroomDetail,
 	ClassroomSummary,
@@ -174,6 +175,8 @@ export function createHttpServices(baseUrl: string): Services {
 			listDeviceTypes: () => request<DeviceTypeDefinition[]>('GET', '/sam/device-types'),
 			listObservationTemplates: () =>
 				request<ObservationTemplate[]>('GET', '/sam/observation-templates'),
+			getCalculation: (id) =>
+				request<CalculationDetails>('GET', `/sam/parameters/${encodeURIComponent(id)}/calculation`),
 			listChanges: () => request<RegistryChange[]>('GET', '/sam/changes'),
 			createDomain: (input) => request<DomainDefinition>('POST', '/sam/domains', input),
 			updateDomain: (id, input) =>

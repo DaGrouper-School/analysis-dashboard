@@ -96,6 +96,8 @@ export interface MockDbState {
 	parameters: Parameter[];
 	domains: DomainDefinition[];
 	deviceTypes: DeviceTypeDefinition[];
+	/** The SAM registry release being served; calculations cite it. */
+	registryVersion: { version: string; publishedAt: string };
 	/** Registry changes, newest first. */
 	registryChanges: RegistryChange[];
 	observationTemplates: ObservationTemplate[];
@@ -120,7 +122,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 14;
+const VERSION = 15;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;

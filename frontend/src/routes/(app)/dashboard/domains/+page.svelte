@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import CalculationPanel from '#lib/components/CalculationPanel.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import ReadingChart from '#lib/components/ReadingChart.svelte';
 	import ThresholdSource from '#lib/components/ThresholdSource.svelte';
 	import { thresholdStatus, thresholdsFor } from '#lib/domain/alerts.ts';
 	import { TIME_RANGES, withinRange } from '#lib/domains.ts';
+	import { bandFor, trendOf, trendText } from '#lib/indicators.ts';
 	import { describeParameter, formatValue } from '#lib/key-values.ts';
 	import { deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
@@ -17,6 +19,14 @@
 	const paramsById = $derived(new Map(data.parameters.map((p) => [p.id, p])));
 	const latest = $derived(data.readings[0] ?? null);
 	const shown = $derived(withinRange(data.readings, data.range));
+	let calculating = $state(false);
+	let calculationId = $state('');
+
+	function explain(id: string) {
+		calculationId = id;
+		calculating = true;
+	}
+
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
 	const BADGE = {
@@ -157,6 +167,12 @@
 		)!.label} of data{#if latest}, up to {dateTime.format(new Date(latest.observedAt))}{/if}.
 	</p>
 
+	{#if data.tab.parameterIds.length > 1}
+		<p class="mt-2 text-xs text-muted">
+			Shown together for comparison. One does not cause the other.
+		</p>
+	{/if}
+
 	<div
 		id="domain-panel"
 		role="tabpanel"
@@ -168,13 +184,16 @@
 			{@const value = latest?.values[id]}
 			{@const status = thresholdStatus(data.alertRules, id, value)}
 			{@const levels = thresholdsFor(data.alertRules, id)}
+			{@const registered = paramsById.get(id)}
+			{@const band = bandFor(registered, value)}
+			{@const trend = registered ? trendOf(shown, registered) : null}
 			<section class="card" aria-labelledby="param-{id}">
 				<div class="flex flex-wrap items-start justify-between gap-3">
 					<div class="min-w-0">
 						<h2 id="param-{id}" class="font-medium">{param.label}</h2>
-						{#if paramsById.get(id)?.definition}
-							<p class="text-xs text-muted">{paramsById.get(id)?.definition}</p>
-						{/if}
+						<p class="text-sm text-muted">
+							{registered?.plain ?? 'No plain-language note yet.'}
+						</p>
 					</div>
 					{#if status}
 						<span
@@ -189,7 +208,13 @@
 						</span>
 					{/if}
 				</div>
-				<p class="mt-3 text-3xl text-ink">{formatValue(value, param.unit)}</p>
+				<p class="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+					<span class="text-3xl text-ink">{formatValue(value, param.unit)}</span>
+					{#if band}<span class="chip" title="Level band from the SAM registry">{band}</span>{/if}
+				</p>
+				{#if trend}
+					<p class="mt-1 text-sm text-muted">{trendText(trend, param.unit)}</p>
+				{/if}
 				<div class="mt-3">
 					<ReadingChart
 						readings={shown}
@@ -204,7 +229,21 @@
 				{#if data.classroom && levels.length}
 					<ThresholdSource classroomId={data.classroom.id} rules={levels} />
 				{/if}
+				{#if registered}
+					<button
+						type="button"
+						class="mt-3 text-sm text-muted underline hover:text-ink"
+						aria-haspopup="dialog"
+						onclick={() => explain(id)}>How is {param.label.toLowerCase()} calculated?</button
+					>
+				{/if}
 			</section>
 		{/each}
 	</div>
 {/if}
+
+<CalculationPanel
+	bind:open={calculating}
+	parameterId={calculationId}
+	onpick={(id) => (calculationId = id)}
+/>

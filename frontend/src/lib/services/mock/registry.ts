@@ -11,6 +11,7 @@ import { currentUser } from './classrooms';
 import { DEVICE_TYPE_PALETTE } from '#lib/labels.ts';
 import { FALLBACK_DOMAIN_ICON, FALLBACK_TYPE_ICON } from '#lib/icons.ts';
 import { withDeviceTemplates } from '#lib/observations.ts';
+import { SOURCE_CALCULATION } from '#lib/data/seed.ts';
 
 /**
  * The shared registry. Reading it needs a signed-in user; changing it needs a platform admin,
@@ -74,7 +75,8 @@ export function createMockRegistry({
 				definition: '',
 				domain: value.domain,
 				source: 'device',
-				valueType: value.valueType
+				valueType: value.valueType,
+				calculation: { ...SOURCE_CALCULATION.device, inputs: [], ...state.registryVersion }
 			});
 			added.push(id);
 		}
@@ -139,6 +141,28 @@ export function createMockRegistry({
 			return structuredClone(
 				withDeviceTemplates(state.observationTemplates, state.deviceTypes, state.parameters)
 			);
+		},
+
+		async getCalculation(parameterId) {
+			const state = readDb();
+			currentUser(state);
+			const parameter = state.parameters.find((p) => p.id === parameterId);
+			if (!parameter) throw new ServiceError('not_found', 'That value is not in the registry.');
+			const calculation = parameter.calculation ?? {
+				...SOURCE_CALCULATION[parameter.source],
+				inputs: [],
+				...state.registryVersion
+			};
+			const inputDetails = calculation.inputs.map((id) => {
+				const input = state.parameters.find((p) => p.id === id);
+				return { id, label: input?.label ?? id, unit: input?.unit ?? '' };
+			});
+			const { id, label, unit, source, plain } = parameter;
+			return structuredClone({
+				...calculation,
+				parameter: { id, label, unit, source, plain },
+				inputDetails
+			});
 		},
 
 		async listChanges() {

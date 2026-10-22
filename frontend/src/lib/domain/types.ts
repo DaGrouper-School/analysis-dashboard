@@ -188,6 +188,40 @@ export interface Parameter {
 	altUnits?: AltUnit[];
 	/** For text values: the answers to pick from. */
 	options?: string[];
+	/**
+	 * What the value means, in one plain sentence for someone without a science background
+	 * (AP-07). States what is measured; never advice, never a cause.
+	 */
+	plain?: string;
+	/** Level words for where a value sits, lowest first. Named by level, never good or bad. */
+	bands?: ParameterBand[];
+	/** Changes smaller than this, in `unit`, read as steady: the sensor's own wobble. */
+	noise?: number;
+	/** How SAM gets the value: measured, derived from other values, or entered by hand. */
+	calculation?: Calculation;
+}
+
+/** One level band: values below `upTo` (or any value, for the last band) get `label`. */
+export interface ParameterBand {
+	upTo: number | null;
+	label: string;
+}
+
+export interface Calculation {
+	method: 'measured' | 'derived' | 'manual';
+	/** The formula for a derived value, or how a measured one is taken. */
+	formula: string;
+	/** Registry IDs of the values the formula uses. */
+	inputs: string[];
+	/** The SAM registry version that defines it, and when that version was published. */
+	version: string;
+	publishedAt: string;
+}
+
+/** What "How is this calculated?" shows: the calculation with its inputs named. */
+export interface CalculationDetails extends Calculation {
+	parameter: Pick<Parameter, 'id' | 'label' | 'unit' | 'source' | 'plain'>;
+	inputDetails: Pick<Parameter, 'id' | 'label' | 'unit'>[];
 }
 
 export type ValueType = 'number' | 'text';

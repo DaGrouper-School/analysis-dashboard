@@ -60,7 +60,7 @@ describe('platform default levels', () => {
 			level: 'warning',
 			title: 'Very high UV'
 		});
-		expect(thresholdStatus(platform, 'uv', 3)).toEqual({ level: 'normal', title: 'Normal' });
+		expect(thresholdStatus(platform, 'uv', 3)).toEqual({ level: 'normal', title: 'No alert' });
 		expect(thresholdStatus(platform, 'relative_humidity', 60)).toBeNull();
 		expect(thresholdStatus(platform, 'uv', undefined)).toBeNull();
 	});
