@@ -300,3 +300,40 @@ describe('registry changes (SAM-23)', () => {
 		});
 	});
 });
+
+describe('value explanations', () => {
+	const signInAs = (sub: string) => services.auth.signInWithGoogle(sub);
+	const input = {
+		plain: 'How warm the air is in the shade.',
+		method: 'derived' as const,
+		formula: 'feels_like = f(air_temperature, relative_humidity)',
+		inputs: ['air_temperature', ' relative_humidity ', 'air_temperature']
+	};
+
+	it('only lets platform admins set what a value means', async () => {
+		await signInAs('g-tesfaye');
+		await expect(services.registry.explainParameter('heat_index', input)).rejects.toMatchObject({
+			code: 'forbidden'
+		});
+	});
+
+	it('saves the meaning and calculation, and logs the change', async () => {
+		await signInAs('g-leila');
+		const target = (await services.registry.listParameters()).find(
+			(p) => p.id !== 'air_temperature' && p.id !== 'relative_humidity'
+		)!;
+		const saved = await services.registry.explainParameter(target.id, input);
+		expect(saved.plain).toBe(input.plain);
+		expect(saved.calculation).toMatchObject({
+			method: 'derived',
+			inputs: ['air_temperature', 'relative_humidity']
+		});
+		const changes = await services.registry.listChanges();
+		expect(changes.map((c) => c.summary)).toContain(
+			`Edited what ${target.label} means and how it is calculated.`
+		);
+		await expect(
+			services.registry.explainParameter(target.id, { ...input, inputs: [target.id] })
+		).rejects.toMatchObject({ code: 'invalid_input', fields: { inputs: expect.any(String) } });
+	});
+});

@@ -1,10 +1,14 @@
-import type { DeviceType, Reading } from '#lib/domain/types.ts';
+import type { DeviceType, Parameter, Reading } from '#lib/domain/types.ts';
 
 /**
  * Plausible values for a simulated device upload. Real readings come from the device itself;
  * this only exists so the mock can demonstrate connecting one.
  */
-export function sampleValues(type: DeviceType, parameterIds: string[] = []): Reading['values'] {
+export function sampleValues(
+	type: DeviceType,
+	parameterIds: string[] = [],
+	parameters: Pick<Parameter, 'id' | 'valueType' | 'options'>[] = []
+): Reading['values'] {
 	const jitter = (base: number, spread: number) =>
 		Math.round((base + (Math.random() - 0.5) * spread) * 10) / 10;
 	switch (type) {
@@ -27,7 +31,18 @@ export function sampleValues(type: DeviceType, parameterIds: string[] = []): Rea
 		default:
 			// A type a platform admin registered: something for each value it is expected to send.
 			return parameterIds.length
-				? Object.fromEntries(parameterIds.map((id, i) => [id, jitter(10 + i * 5, 6)]))
+				? Object.fromEntries(
+						parameterIds.map((id, i) => {
+							// Each value as the registry has it: an answer for text, now for a time.
+							const p = parameters.find((q) => q.id === id);
+							if (p?.valueType === 'text') {
+								const options = p.options ?? [];
+								return [id, options[Math.floor(Math.random() * options.length)] ?? 'Seen'];
+							}
+							if (p?.valueType === 'time') return [id, Math.round(Date.now() / 1000)];
+							return [id, jitter(10 + i * 5, 6)];
+						})
+					)
 				: { value: jitter(1, 1) };
 	}
 }

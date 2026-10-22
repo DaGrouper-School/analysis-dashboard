@@ -9,6 +9,7 @@
 	} from '#lib/domain/types.ts';
 	import { validateDeviceType, validateDomain } from '#lib/domain/validation.ts';
 	import DefaultAlerts from '#lib/components/DefaultAlerts.svelte';
+	import ExplanationModal from '#lib/components/ExplanationModal.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import Modal from '#lib/components/Modal.svelte';
 	import IconPicker from '#lib/components/IconPicker.svelte';
@@ -45,7 +46,7 @@
 	let tab = $state<Tab>();
 	const tabs = $derived<TabItem<Tab>[]>([
 		{ id: 'domains', label: 'Domains', icon: ICONS.domains, count: data.domains.length },
-		{ id: 'types', label: 'Device types', icon: ICONS.types, count: data.deviceTypes.length },
+		{ id: 'types', label: 'Measurement types', icon: ICONS.types, count: data.deviceTypes.length },
 		{
 			id: 'values',
 			label: 'Values & domains',
@@ -68,6 +69,10 @@
 			count: data.allowed ? data.changes.length : 0
 		}
 	]);
+
+	let explaining = $state(false);
+	let explainId = $state('');
+	const explained = $derived(paramsById.get(explainId) ?? null);
 
 	let notice = $state('');
 	let actionError = $state('');
@@ -195,6 +200,7 @@
 	let typeDescription = $state('');
 	let typeColor = $state(DEVICE_TYPE_PALETTE[5]);
 	let typeIcon = $state<string>(FALLBACK_TYPE_ICON);
+	let typeManual = $state(false);
 	let rows = $state<ValueRow[]>([blankRow()]);
 	let typeErrors = $state<Record<string, string>>({});
 	let savingType = $state(false);
@@ -213,6 +219,7 @@
 		typeLabel = typeDescription = '';
 		typeColor = DEVICE_TYPE_PALETTE[5];
 		typeIcon = FALLBACK_TYPE_ICON;
+		typeManual = false;
 		rows = [blankRow()];
 		typeErrors = {};
 		typeStep = 0;
@@ -229,6 +236,7 @@
 		typeDescription = type.description;
 		typeColor = type.color;
 		typeIcon = type.icon;
+		typeManual = type.manual === true;
 		rows = type.parameterIds.map((id) => {
 			const p = paramsById.get(id);
 			return {
@@ -275,6 +283,7 @@
 			description: typeDescription,
 			color: typeColor,
 			icon: typeIcon,
+			manual: typeManual,
 			values: filled.map((r) => ({
 				id: r.id,
 				label: r.label,
@@ -309,8 +318,8 @@
 				: await services.registry.createDeviceType(input);
 			await invalidateAll();
 			notice = editingType
-				? `Saved the ${type.label} device type.`
-				: `Registered the ${type.label} device type. Every classroom can now register one.`;
+				? `Saved the ${type.label} measurement type.`
+				: `Registered the ${type.label} measurement type. Every classroom can now add one.`;
 			resetType();
 			typeOpen = false;
 		} catch (e) {
@@ -349,7 +358,7 @@
 {#snippet typeReview()}
 	<h4 class="text-sm font-semibold text-ink">Check and save</h4>
 	<dl class="mt-3 grid gap-4 text-sm sm:grid-cols-[10rem_1fr]">
-		<dt class="text-muted">Device type</dt>
+		<dt class="text-muted">Measurement type</dt>
 		<dd class="flex items-center gap-2 text-ink">
 			<span
 				class="grid size-8 place-items-center rounded-md"
@@ -429,17 +438,17 @@
 <p class="eyebrow">Platform admin</p>
 <h1 class="mt-1 font-display text-3xl sm:text-4xl">Registry</h1>
 <p class="mt-2 max-w-2xl text-muted">
-	Device types, the values they send, and the environmental domains those values show under. They
-	are shared by every classroom: register a type here and any classroom can register a device of
-	that type and see its domains. Every change is logged.
+	Measurement types, the values they send, and the environmental domains those values show under.
+	They are shared by every classroom: register a type here and any classroom can add a measurement
+	of that type and see its domains. Every change is logged.
 </p>
 
 {#if !data.allowed}
 	<div class="card mt-8">
 		<h2 class="text-xl font-semibold">Platform admins only</h2>
 		<p class="mt-2 text-sm text-muted">
-			Only a platform admin can change device types and domains. Ask one if a sensor's values show
-			up under the wrong domain.
+			Only a platform admin can change measurement types and domains. Ask one if a measurement's
+			values show up under the wrong domain.
 		</p>
 	</div>
 {:else}
@@ -526,14 +535,14 @@
 					<div class="flex flex-wrap items-start justify-between gap-3">
 						<div>
 							<h2 class="flex items-center gap-2 text-xl font-semibold">
-								<Icon name={ICONS.types} class="size-5 text-muted" /> Device types
+								<Icon name={ICONS.types} class="size-5 text-muted" /> Measurement types
 							</h2>
 							<p class="mt-1 text-sm text-muted">
 								What a classroom can register, and the values each type is expected to send.
 							</p>
 						</div>
 						<button type="button" class="btn btn-primary" aria-haspopup="dialog" onclick={newType}
-							><Icon name="plus" class="size-4" /> Register device type</button
+							><Icon name="plus" class="size-4" /> Register measurement type</button
 						>
 					</div>
 					<ul class="mt-4 grid gap-3 lg:grid-cols-2">
@@ -551,6 +560,7 @@
 												<Icon name={type.icon} />
 											</span>
 											{type.label}
+											{#if type.manual}<span class="chip py-0 text-[11px]">Manual</span>{/if}
 										</p>
 										<p class="text-sm text-muted">{type.description}</p>
 									</div>
@@ -642,7 +652,7 @@
 									id="value-search"
 									class="input"
 									type="search"
-									placeholder="Value or device type"
+									placeholder="Value or measurement type"
 									bind:value={query}
 								/>
 							</div>
@@ -654,6 +664,7 @@
 										<th class="px-4 py-3 font-medium">Value</th>
 										<th class="px-4 py-3 font-medium">Sent by</th>
 										<th class="px-4 py-3 font-medium">Domain</th>
+										<th class="px-4 py-3 font-medium"><span class="sr-only">Meaning</span></th>
 									</tr>
 								</thead>
 								{#key pickers}
@@ -684,10 +695,25 @@
 														{@render domainOptions(loose ? null : parameter.domain)}
 													</select>
 												</td>
+												<td class="px-4 py-2 text-right">
+													<button
+														type="button"
+														class={[
+															'btn btn-ghost px-2.5 py-1 text-xs',
+															!parameter.plain && 'border-orange'
+														]}
+														aria-haspopup="dialog"
+														title={parameter.plain ?? 'No plain-language note yet'}
+														onclick={() => {
+															explainId = parameter.id;
+															explaining = true;
+														}}>Meaning<span class="sr-only"> of {parameter.label}</span></button
+													>
+												</td>
 											</tr>
 										{:else}
 											<tr
-												><td colspan="3" class="px-4 py-6 text-center text-muted"
+												><td colspan="4" class="px-4 py-6 text-center text-muted"
 													>No values match.</td
 												></tr
 											>
@@ -702,6 +728,7 @@
 				<DefaultAlerts
 					defaults={data.alertDefaults}
 					{parameters}
+					deviceTypes={data.deviceTypes}
 					domains={data.domains}
 					icon={ICONS.alerts}
 					onchange={() => invalidateAll()}
@@ -734,17 +761,19 @@
 	<Modal
 		bind:open={typeOpen}
 		wide
-		eyebrow="Device types"
-		title={editingType ? `Edit ${typeLabel || 'device type'}` : 'Register a device type'}
+		eyebrow="Measurement types"
+		title={editingType ? `Edit ${typeLabel || 'measurement type'}` : 'Register a measurement type'}
 	>
 		<Wizard
 			steps={TYPE_STEPS}
 			bind:current={typeStep}
 			check={checkTypeStep}
 			onsubmit={saveType}
-			submitLabel={editingType ? 'Save device type' : 'Register device type'}
+			submitLabel={editingType ? 'Save measurement type' : 'Register measurement type'}
 			busy={savingType}
-			label={editingType ? `Edit ${typeLabel || 'device type'}` : 'Register a device type'}
+			label={editingType
+				? `Edit ${typeLabel || 'measurement type'}`
+				: 'Register a measurement type'}
 		>
 			{#snippet extra()}
 				<button type="button" class="btn btn-ghost" onclick={() => (typeOpen = false)}
@@ -773,6 +802,20 @@
 						/>
 					</div>
 				</div>
+				<label class="mt-3 flex items-start gap-3 rounded-md border border-line p-3 text-sm">
+					<input
+						type="checkbox"
+						class="mt-0.5 rounded border-line-strong bg-transparent text-teal focus:ring-teal"
+						bind:checked={typeManual}
+					/>
+					<span>
+						<span class="block text-ink">Manual measurement</span>
+						<span class="block text-xs text-muted">
+							Entered by hand, with no sensor: added to a lab without pairing, with a generated
+							identifier, and recorded with “Enter measurement” instead of a sync.
+						</span>
+					</span>
+				</label>
 				<fieldset class="mt-3">
 					<legend class="label">Color on the map</legend>
 					<div class="flex flex-wrap gap-2">
@@ -947,4 +990,13 @@
 			</button>
 		{/snippet}
 	</Modal>
+{/if}
+
+{#if explaining && explained}
+	<ExplanationModal
+		bind:open={explaining}
+		parameter={explained}
+		{parameters}
+		onsaved={() => invalidateAll()}
+	/>
 {/if}

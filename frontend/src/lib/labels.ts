@@ -57,3 +57,8 @@ export function deviceTypeColor(types: DeviceTypeDefinition[], id: DeviceType) {
 export function deviceTypeIcon(types: DeviceTypeDefinition[], id: DeviceType) {
 	return types.find((t) => t.id === id)?.icon ?? FALLBACK_TYPE_ICON;
 }
+
+/** Whether a type is entered by hand, with no sensor to pair or sync. */
+export function isManualType(types: DeviceTypeDefinition[], id: DeviceType) {
+	return types.find((t) => t.id === id)?.manual === true;
+}

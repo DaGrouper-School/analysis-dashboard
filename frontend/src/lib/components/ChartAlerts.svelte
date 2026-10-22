@@ -93,7 +93,7 @@
 		const back =
 			source === 'device'
 				? `use the levels for all ${typeLabel}`
-				: 'use the platform defaults for every sensor of this type';
+				: 'use the platform defaults for every measurement of this type';
 		if (!confirm(`Drop these ${parameter.label} levels and ${back}?`)) return;
 		run(() => services.labs.resetAlerts(alerts.deviceId, source, parameter.id));
 	}
@@ -225,6 +225,7 @@
 	<AlertRuleModal
 		bind:open
 		{parameter}
+		source={alerts.deviceName}
 		rule={editRule}
 		{scopes}
 		initialScope={editRule ? scopeFor(editRule) : 'device'}

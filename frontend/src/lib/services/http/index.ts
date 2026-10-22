@@ -194,6 +194,12 @@ export function createHttpServices(baseUrl: string): Services {
 				request<Parameter>('PATCH', `/sam/parameters/${encodeURIComponent(parameterId)}`, {
 					domain
 				}),
+			explainParameter: (parameterId, input) =>
+				request<Parameter>(
+					'PUT',
+					`/sam/parameters/${encodeURIComponent(parameterId)}/explanation`,
+					input
+				),
 			listAlertDefaults: () => request<AlertRule[]>('GET', '/sam/alert-defaults'),
 			saveAlertDefault: (input, ruleId) =>
 				ruleId

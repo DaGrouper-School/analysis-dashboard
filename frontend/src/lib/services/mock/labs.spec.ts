@@ -97,6 +97,22 @@ describe('labs (AP-05)', () => {
 		});
 	});
 
+	it('adds a manual measurement with a generated identifier and no pairing', async () => {
+		await signInAs('g-tesfaye');
+		const gauge = { name: 'Yard Rain Gauge', type: 'rain_gauge', identifier: '' };
+		const first = await services.labs.registerDevice('lab_trinity', gauge);
+		const second = await services.labs.registerDevice('lab_trinity', {
+			...gauge,
+			name: 'Roof Rain Gauge'
+		});
+		expect(first.identifier).toMatch(/^MAN-\d{4}$/);
+		expect(second.identifier).toMatch(/^MAN-\d{4}$/);
+		expect(second.identifier).not.toBe(first.identifier);
+		await expect(
+			services.labs.registerDevice('lab_trinity', { ...deviceInput, identifier: '' })
+		).rejects.toMatchObject({ code: 'invalid_input', fields: { identifier: expect.any(String) } });
+	});
+
 	it('tags uploaded readings with the classroom and keeps GPS per reading', async () => {
 		await signInAs('g-tesfaye');
 		const device = await services.labs.registerDevice('lab_trinity', deviceInput);

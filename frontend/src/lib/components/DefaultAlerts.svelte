@@ -2,6 +2,7 @@
 	import type {
 		AlertRule,
 		AlertRuleInput,
+		DeviceTypeDefinition,
 		DomainDefinition,
 		Parameter
 	} from '#lib/domain/types.ts';
@@ -11,19 +12,22 @@
 	import { errorMessage, services } from '#lib/services/index.ts';
 
 	/**
-	 * The platform default alert levels (AP-08), for platform admins: each value's defaults, with
-	 * controls to add, change, turn off and delete them. A default is in force on every device
-	 * whose classroom and device have no levels of their own for that value.
+	 * The platform default alert levels (AP-08), for platform admins: pick a device type, then
+	 * add, change, turn off and delete the defaults on each of its values. Values only people
+	 * record sit under "Field observations". A default is in force on every device whose
+	 * classroom and device have no levels of their own for that value.
 	 */
 	let {
 		defaults,
 		parameters,
+		deviceTypes,
 		domains,
 		icon,
 		onchange
 	}: {
 		defaults: AlertRule[];
 		parameters: Parameter[];
+		deviceTypes: DeviceTypeDefinition[];
 		domains: DomainDefinition[];
 		/** The section title's icon, as on its tab. */
 		icon: string;
@@ -33,27 +37,32 @@
 	const numeric = $derived(parameters.filter((p) => (p.valueType ?? 'number') === 'number'));
 	const byId = $derived(new Map(numeric.map((p) => [p.id, p])));
 	const domainLabel = (id: string | null) => domains.find((d) => d.id === id)?.label ?? 'No domain';
-	/** Values with defaults, by domain then label. */
-	const groups = $derived(
-		[...new Set(defaults.map((r) => r.parameterId))]
-			.map((id) => byId.get(id))
-			.filter((p): p is Parameter => !!p)
-			.sort(
-				(a, b) =>
-					domainLabel(a.domain).localeCompare(domainLabel(b.domain)) ||
-					a.label.localeCompare(b.label)
-			)
-	);
-	const withoutDefaults = $derived(
-		numeric
-			.filter((p) => !defaults.some((r) => r.parameterId === p.id))
-			.sort((a, b) => a.label.localeCompare(b.label))
-	);
+	const FIELD = '__field__';
+	/** Device types with a number value, then field observations: values no device type sends. */
+	const groups = $derived([
+		...deviceTypes
+			.map((t) => ({
+				id: t.id as string,
+				label: t.label,
+				icon: t.icon,
+				values: t.parameterIds.map((id) => byId.get(id)).filter((p): p is Parameter => !!p)
+			}))
+			.filter((g) => g.values.length),
+		{
+			id: FIELD,
+			label: 'Field observations',
+			icon: 'clipboard',
+			values: numeric.filter((p) => !deviceTypes.some((t) => t.parameterIds.includes(p.id)))
+		}
+	]);
+	const count = (values: Parameter[]) =>
+		defaults.filter((r) => values.some((p) => p.id === r.parameterId)).length;
+	let groupId = $state('');
+	const group = $derived(groups.find((g) => g.id === groupId) ?? groups[0]);
 
 	let open = $state(false);
 	let parameter = $state<Parameter | null>(null);
 	let editRule = $state<AlertRule | null>(null);
-	let pick = $state('');
 	let error = $state('');
 
 	function edit(target: Parameter, rule: AlertRule | null) {
@@ -96,12 +105,6 @@
 			return;
 		run(() => services.registry.deleteAlertDefault(rule.id));
 	}
-
-	function addFor(event: Event) {
-		const target = byId.get((event.currentTarget as HTMLSelectElement).value);
-		pick = '';
-		if (target) edit(target, null);
-	}
 </script>
 
 <div>
@@ -113,20 +116,31 @@
 		value. Classrooms that already set their own levels keep them.
 	</p>
 
-	<div class="mt-4 max-w-sm">
-		<label class="label" for="default-alert-value">Add a default for another value</label>
-		<select id="default-alert-value" class="input" bind:value={pick} onchange={addFor}>
-			<option value="" disabled>Pick a value…</option>
-			{#each withoutDefaults as option (option.id)}
-				<option value={option.id}>{option.label}{option.unit ? ` (${option.unit})` : ''}</option>
-			{/each}
-		</select>
+	<div class="mt-4 flex flex-wrap gap-2" role="group" aria-label="Measurement type">
+		{#each groups as option (option.id)}
+			{@const n = count(option.values)}
+			<button
+				type="button"
+				class={[
+					'flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition',
+					option.id === group.id
+						? 'border-ink bg-ink text-canvas'
+						: 'border-line text-muted hover:border-line-strong hover:text-ink'
+				]}
+				aria-pressed={option.id === group.id}
+				onclick={() => (groupId = option.id)}
+			>
+				<Icon name={option.icon} fallback="sensor" class="size-4" />
+				{option.label}
+				{#if n}<span class="text-xs opacity-70">{n}</span>{/if}
+			</button>
+		{/each}
 	</div>
 	{#if error}<p class="field-error mt-3" role="alert">{error}</p>{/if}
 
-	{#if groups.length}
-		<ul class="mt-4 space-y-3">
-			{#each groups as target (target.id)}
+	{#if group.values.length}
+		<ul class="mt-4 space-y-3" aria-label="{group.label} values">
+			{#each group.values as target (target.id)}
 				{@const rules = defaults.filter((r) => r.parameterId === target.id).sort(bySeverity)}
 				<li class="card" aria-label="{target.label} default alerts">
 					<div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -144,6 +158,9 @@
 							></button
 						>
 					</div>
+					{#if !rules.length}
+						<p class="mt-1 text-xs text-muted">No default levels.</p>
+					{/if}
 					<ul class="mt-2 space-y-1.5">
 						{#each rules as rule (rule.id)}
 							<li class="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -190,7 +207,7 @@
 			{/each}
 		</ul>
 	{:else}
-		<p class="mt-4 text-sm text-muted">No default alert levels yet.</p>
+		<p class="mt-4 text-sm text-muted">{group.label} has no number values to set levels on.</p>
 	{/if}
 </div>
 

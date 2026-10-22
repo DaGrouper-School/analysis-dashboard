@@ -1,43 +1,61 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
+	import Icon from '#lib/components/Icon.svelte';
+	import type { ClassroomSummary, InvitationPreview } from '#lib/domain/types.ts';
 	import { CLASSROOM_ROLE_LABELS } from '#lib/labels.ts';
-	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	/**
+	 * The classrooms someone belongs to (every classroom, for a platform admin), with their
+	 * pending invitations. Each opens its classroom page, where labs are added.
+	 */
+	let {
+		classrooms,
+		invitations,
+		canCreate,
+		platformAdmin,
+		icon
+	}: {
+		classrooms: ClassroomSummary[];
+		invitations: InvitationPreview[];
+		canCreate: boolean;
+		platformAdmin: boolean;
+		/** The section title's icon, as on its tab. */
+		icon: string;
+	} = $props();
 </script>
-
-<svelte:head><title>Classrooms · DaGrouper Analysis</title></svelte:head>
 
 <div class="flex flex-wrap items-end justify-between gap-4">
 	<div>
-		<h1 class="font-display text-3xl sm:text-4xl">Classrooms</h1>
-		<p class="mt-1 text-muted">
-			{data.user.platformAdmin
+		<h2 class="flex items-center gap-2 text-xl font-semibold">
+			<Icon name={icon} class="size-5 text-muted" /> Classrooms
+		</h2>
+		<p class="mt-1 text-sm text-muted">
+			{platformAdmin
 				? 'Every classroom on the platform.'
-				: 'The global classrooms you belong to.'}
+				: 'The global classrooms you belong to. Open one to add labs and invite people.'}
 		</p>
 	</div>
-	{#if data.canCreate}
+	{#if canCreate}
 		<a href={resolve('/(app)/classrooms/new')} class="btn btn-primary">New classroom</a>
 	{/if}
 </div>
 
-{#if data.invitations.length}
-	<div class="mt-8"><PendingInvitations invitations={data.invitations} /></div>
+{#if invitations.length}
+	<div class="mt-6"><PendingInvitations {invitations} /></div>
 {/if}
 
-{#if data.classrooms.length}
-	<ul class="mt-8 grid gap-4 md:grid-cols-2">
-		{#each data.classrooms as classroom (classroom.id)}
+{#if classrooms.length}
+	<ul class="mt-6 grid gap-4 md:grid-cols-2">
+		{#each classrooms as classroom (classroom.id)}
 			<li>
 				<a
 					href={resolve('/(app)/classrooms/[id]', { id: classroom.id })}
 					class="card block transition hover:border-line-strong"
 				>
 					<div class="flex items-start justify-between gap-3">
-						<div>
-							<h2 class="text-lg font-semibold">{classroom.name}</h2>
+						<div class="min-w-0">
+							<h3 class="text-lg font-semibold break-words">{classroom.name}</h3>
 							<p class="text-sm text-muted">{classroom.institutionName}</p>
 						</div>
 						{#if classroom.myRole}
@@ -58,12 +76,12 @@
 		{/each}
 	</ul>
 {:else}
-	<div class="card mt-8 text-center">
-		<h2 class="font-semibold">You're not in a classroom yet</h2>
+	<div class="card mt-6 text-center">
+		<h3 class="font-semibold">You're not in a classroom yet</h3>
 		<p class="mx-auto mt-2 max-w-md text-sm text-muted">
-			{data.canCreate
+			{canCreate
 				? 'Create one to get a global classroom code and invite your facilitators and community scientists.'
-				: data.invitations.length
+				: invitations.length
 					? 'Join from the invitation above.'
 					: 'Ask your facilitator or institution head for an invitation. It arrives by email.'}
 		</p>

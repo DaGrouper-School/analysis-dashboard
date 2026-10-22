@@ -28,6 +28,9 @@ export const load: PageLoad = async ({ url, parent }) => {
 		deviceAlerts,
 		tabs,
 		tab: tabs.find((t) => t.id === url.searchParams.get('domain')) ?? tabs[0] ?? null,
-		range: isTimeRange(asked) ? asked : '7d'
+		range: isTimeRange(asked) ? asked : '7d',
+		// Value search, e.g. from an active alert, and whether to show only values in alert.
+		search: url.searchParams.get('q') ?? '',
+		alertsOnly: url.searchParams.get('show') === 'alerts'
 	};
 };

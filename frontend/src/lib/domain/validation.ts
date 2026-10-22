@@ -3,7 +3,9 @@ import type {
 	CreateLabInput,
 	DeviceTypeInput,
 	DomainInput,
+	ExplanationInput,
 	GeoPoint,
+	Parameter,
 	ProfileInput,
 	ReadingInput,
 	RegisterDeviceInput,
@@ -68,10 +70,11 @@ export function validateLab(input: CreateLabInput): Record<string, string> {
 	return errors;
 }
 
-export function validateDevice(input: RegisterDeviceInput): Record<string, string> {
+/** A manual measurement has no sensor, so its identifier is generated and not checked here. */
+export function validateDevice(input: RegisterDeviceInput, manual = false): Record<string, string> {
 	const errors: Record<string, string> = {};
-	if (input.name.trim().length < 3) errors.name = 'Enter a device name.';
-	if (!/^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$/.test(input.identifier.trim())) {
+	if (input.name.trim().length < 3) errors.name = 'Enter a name.';
+	if (!manual && !/^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$/.test(input.identifier.trim())) {
 		errors.identifier = 'Use 3 to 64 letters, digits, dots, dashes or underscores.';
 	}
 	return errors;
@@ -134,5 +137,31 @@ export function validateDeviceType(input: DeviceTypeInput): Record<string, strin
 		}
 		if (value.label.trim().length < 2) errors[`values.${i}.label`] = 'Enter a label.';
 	});
+	return errors;
+}
+
+export const PLAIN_MAX = 240;
+
+/** Checks a value's explanation against the registry. Errors are keyed by field. */
+export function checkExplanation(
+	input: ExplanationInput,
+	parameterId: string,
+	parameters: Pick<Parameter, 'id'>[]
+): Record<string, string> {
+	const errors: Record<string, string> = {};
+	if (input.plain.trim().length > PLAIN_MAX) {
+		errors.plain = `Keep it to ${PLAIN_MAX} characters: one plain sentence.`;
+	}
+	if (!['measured', 'derived', 'manual'].includes(input.method)) errors.method = 'Pick a method.';
+	if (!input.formula.trim()) {
+		errors.formula =
+			input.method === 'derived' ? 'Enter the formula.' : 'Say how the value is taken.';
+	}
+	const unknown = input.inputs.filter((id) => !parameters.some((p) => p.id === id));
+	if (unknown.length) errors.inputs = `Not in the registry: ${unknown.join(', ')}.`;
+	else if (input.inputs.includes(parameterId)) errors.inputs = 'A value cannot be its own input.';
+	else if (input.method === 'derived' && !input.inputs.length) {
+		errors.inputs = 'A calculated value needs at least one input.';
+	}
 	return errors;
 }

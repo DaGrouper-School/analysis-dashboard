@@ -28,14 +28,14 @@
 	}
 </script>
 
-<svelte:head><title>Raw sensor readings · DaGrouper Analysis</title></svelte:head>
+<svelte:head><title>Raw measurements · DaGrouper Analysis</title></svelte:head>
 
 <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 <a href={back} class="text-sm text-muted hover:text-ink">← Dashboard</a>
 
 <div class="mt-4 flex flex-wrap items-end justify-between gap-4">
 	<div>
-		<h1 class="font-display text-3xl sm:text-4xl">Raw sensor readings</h1>
+		<h1 class="font-display text-3xl sm:text-4xl">Raw measurements</h1>
 		{#if device && data.classroom}
 			<p class="mt-1 flex flex-wrap items-center gap-x-1.5 text-muted">
 				<span class="inline-flex" style:color={deviceTypeColor(data.deviceTypes, device.type)}
@@ -47,7 +47,7 @@
 	</div>
 	{#if data.classroom && data.devices.length > 1}
 		<div class="w-full sm:w-72">
-			<label class="label" for="raw-device">Sensor</label>
+			<label class="label" for="raw-device">Measurement</label>
 			<select
 				id="raw-device"
 				class="input"
@@ -64,7 +64,7 @@
 
 {#if !device}
 	<div class="card mt-8">
-		<h2 class="text-xl font-semibold">No sensor to show</h2>
+		<h2 class="text-xl font-semibold">Nothing to show</h2>
 		<p class="mt-2 text-sm text-muted">
 			Readings come only from devices in your classrooms' labs. Join a classroom, or ask your
 			facilitator to register a device.

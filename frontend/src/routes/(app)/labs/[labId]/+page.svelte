@@ -14,6 +14,7 @@
 		deviceTypeColor,
 		deviceTypeIcon,
 		deviceTypeLabel,
+		isManualType,
 		SITE_SETTING_LABELS
 	} from '#lib/labels.ts';
 	import { formatValue } from '#lib/key-values.ts';
@@ -42,7 +43,7 @@
 	type Tab = keyof typeof ICONS;
 	let tab = $state<Tab>();
 	const tabs = $derived<TabItem<Tab>[]>([
-		{ id: 'devices', label: 'Devices', icon: ICONS.devices, count: devices.length },
+		{ id: 'devices', label: 'Measurements', icon: ICONS.devices, count: devices.length },
 		{ id: 'site', label: 'Site profile', icon: ICONS.site },
 		...(data.detail.canRecord || data.detail.observations.length
 			? [
@@ -119,7 +120,7 @@
 			<section class="card">
 				<div class="flex flex-wrap items-center justify-between gap-3">
 					<h2 class="flex items-center gap-2 text-lg font-semibold">
-						<Icon name={ICONS.devices} class="size-5 text-muted" /> Devices
+						<Icon name={ICONS.devices} class="size-5 text-muted" /> Measurements
 						<span class="text-muted">{devices.length}</span>
 					</h2>
 					{#if data.detail.canManage}
@@ -129,18 +130,18 @@
 							aria-haspopup="dialog"
 							onclick={() => (registering = true)}
 						>
-							<Icon name="plus" class="size-4" /> Register a sensor
+							<Icon name="plus" class="size-4" /> Add measurement
 						</button>
 					{/if}
 				</div>
 				<p class="mt-1 text-sm text-muted">
-					Each device is registered in SAM as a source for this lab. Location comes with each
-					reading, so a device can report from different places over time.
+					Each sensor or manual measurement is registered in SAM as a source for this lab. Location
+					comes with each reading, so a sensor can report from different places over time.
 				</p>
 				{#if actionError}<p class="field-error" role="alert">{actionError}</p>{/if}
 				{#if justAdded}
 					<p class="mt-3 rounded-md bg-lime/25 p-3 text-sm" role="status">
-						{justAdded} is registered. Add another, or
+						{justAdded} is added. Add another, or
 						<a class="link" href={resolve('/(app)/classrooms/[id]', { id: lab.classroomId })}
 							>finish setup</a
 						>.
@@ -208,7 +209,15 @@
 							{/if}
 							{#if data.detail.canRecord || data.detail.canManage}
 								<div class="mt-3 flex flex-wrap items-center gap-3">
-									{#if data.detail.canRecord}
+									{#if data.detail.canRecord && isManualType(data.deviceTypes, device.type)}
+										<!-- eslint-disable svelte/no-navigation-without-resolve -->
+										<a
+											class="btn btn-ghost px-3 py-1.5"
+											href={resolve('/(app)/observe') + `?lab=${lab.id}&device=${device.id}`}
+											><Icon name="plus" class="size-4" /> Enter measurement</a
+										>
+										<!-- eslint-enable svelte/no-navigation-without-resolve -->
+									{:else if data.detail.canRecord}
 										<button
 											type="button"
 											class="btn btn-ghost px-3 py-1.5"
@@ -222,14 +231,14 @@
 										<button
 											type="button"
 											class="text-xs font-medium text-muted hover:text-danger"
-											onclick={() => remove(device.id, device.name)}>Remove device</button
+											onclick={() => remove(device.id, device.name)}>Remove</button
 										>
 									{/if}
 								</div>
 							{/if}
 						</li>
 					{:else}
-						<li class="py-3 text-sm text-muted">No devices registered yet.</li>
+						<li class="py-3 text-sm text-muted">No measurements added yet.</li>
 					{/each}
 				</ul>
 			</section>

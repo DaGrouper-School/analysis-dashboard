@@ -143,7 +143,7 @@
 				const input: ReadingInput = {
 					// Buffered readings, ten minutes apart, oldest first.
 					observedAt: new Date(now - (COUNT - 1 - i) * 10 * 60_000).toISOString(),
-					values: sampleValues(target.type, expected),
+					values: sampleValues(target.type, expected, parameters),
 					location: NO_FIX.has(i) ? null : points[i]
 				};
 				const [reading] = await services.labs.uploadReadings(target.id, [input], { credit });

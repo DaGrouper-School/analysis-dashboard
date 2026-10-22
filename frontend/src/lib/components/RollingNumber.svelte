@@ -7,27 +7,35 @@
 	let { value }: { value: string } = $props();
 
 	// Keyed from the right, so the units and the last digits keep their wheels when the
-	// number grows a digit, and only the new leading digit appears.
-	const chars = $derived(
-		[...value].map((char, i, all) => ({ char, key: all.length - i, digit: /\d/.test(char) }))
-	);
+	// number grows a digit, and only the new leading digit appears. Grouped by word, so a long
+	// value wraps between the number and its unit rather than running out of its box.
+	const words = $derived.by(() => {
+		let key = value.length;
+		return value.split(' ').map((word) => ({
+			key: key + 1000,
+			chars: [...word].map((char) => ({ char, key: key--, digit: /\d/.test(char) }))
+		}));
+	});
 </script>
 
 <span class="tabular-nums">
 	<span class="sr-only">{value}</span>
-	<span class="inline-flex" aria-hidden="true">
-		{#each chars as item (item.key)}
-			{#if item.digit}
-				<span class="wheel">
-					<span class="reel" style:--digit={Number(item.char)}>
-						{#each [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as n (n)}<span>{n}</span>{/each}
-					</span>
-				</span>
-			{:else}
-				<span class="whitespace-pre">{item.char}</span>
-			{/if}
-		{/each}
-	</span>
+	<span aria-hidden="true"
+		>{#each words as word, w (word.key)}{#if w}<span class="whitespace-pre"> </span><wbr
+				/>{/if}<span class="inline-flex"
+				>{#each word.chars as item (item.key)}
+					{#if item.digit}
+						<span class="wheel">
+							<span class="reel" style:--digit={Number(item.char)}>
+								{#each [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as n (n)}<span>{n}</span>{/each}
+							</span>
+						</span>
+					{:else}
+						<span class="whitespace-pre">{item.char}</span>
+					{/if}
+				{/each}</span
+			>{/each}</span
+	>
 </span>
 
 <style>
