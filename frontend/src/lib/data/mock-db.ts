@@ -1,6 +1,7 @@
 import type {
 	AlertRule,
 	DataTerms,
+	SiteContent,
 	DeviceTypeDefinition,
 	DomainDefinition,
 	RegistryChange,
@@ -14,6 +15,7 @@ import type {
 	User
 } from '#lib/domain/types.ts';
 import type { StoredAlertRule } from '#lib/domain/alerts.ts';
+import type { CoreParameters } from '#lib/core-readings.ts';
 import { createSeed } from './seed';
 
 /**
@@ -42,6 +44,10 @@ export interface StoredClassroom {
 	createdAt: string;
 	/** Licence, credit and restrictions every export of its data carries (AP-14). */
 	terms: DataTerms;
+	/** Its stage in `siteContent.stages`, shown on the public network map (AP-20). */
+	stageId: string;
+	/** Readings observed up to here are released to the public; null while none are. */
+	releasedThrough: string | null;
 }
 
 export interface StoredMembership {
@@ -116,6 +122,10 @@ export interface MockDbState {
 	/** Field observations: no device, sent to SAM under the classroom's source. */
 	observations: (Omit<StoredRecord, 'deviceId'> & { deviceId: null; templateId: string })[];
 	classrooms: StoredClassroom[];
+	/** The public site's words and structure (AP-20). */
+	siteContent: SiteContent;
+	/** Which values feed the public core readings strip. */
+	coreParameters: CoreParameters;
 	/** New classrooms start with these; `{classroom}` and `{institution}` are filled in. */
 	defaultDataTerms: DataTerms;
 	memberships: StoredMembership[];
@@ -127,7 +137,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 19;
+const VERSION = 20;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;

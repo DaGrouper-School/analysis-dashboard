@@ -17,6 +17,7 @@ import { createMockClassrooms } from './classrooms';
 import { createMockExports } from './exports';
 import { createMockLabs } from './labs';
 import { createMockPlaces } from './places';
+import { createMockPublic } from './public';
 import { createMockRegistry } from './registry';
 
 const RESEND_AFTER_MS = 30_000;
@@ -284,6 +285,8 @@ export function createMockServices({ latency = 250, now = Date.now }: MockOption
 		labs: createMockLabs({ delay, now }),
 
 		exports: createMockExports({ delay, now }),
+
+		publicSite: createMockPublic(delay),
 
 		places: createMockPlaces(delay),
 

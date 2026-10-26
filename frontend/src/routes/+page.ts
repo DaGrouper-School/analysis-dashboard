@@ -1,9 +1,8 @@
-import { resolve } from '$app/paths';
-import { redirect } from '@sveltejs/kit';
-import { nextRoute } from '#lib/routing.ts';
+import { services } from '#lib/services/index.ts';
 import type { PageLoad } from './$types';
 
+/** The public home page (AP-20): open to everyone, signed in or not. */
 export const load: PageLoad = async ({ parent }) => {
-	const { user } = await parent();
-	redirect(307, resolve(nextRoute(user)));
+	const [{ user }, home] = await Promise.all([parent(), services.publicSite.home()]);
+	return { user, ...home };
 };

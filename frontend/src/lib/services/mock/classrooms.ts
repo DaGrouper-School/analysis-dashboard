@@ -262,7 +262,10 @@ export function createMockClassrooms({
 					setup: 'admin_assisted',
 					createdBy: user.id,
 					createdAt: iso(),
-					terms: termsFor(state, input.name.trim(), input.institutionName.trim())
+					terms: termsFor(state, input.name.trim(), input.institutionName.trim()),
+					// A new classroom starts at the first stage, with nothing released yet.
+					stageId: state.siteContent.stages[0].id,
+					releasedThrough: null
 				};
 				state.classrooms.push(classroom);
 				// The real backend registers the code with SAM so sources can report against it.
