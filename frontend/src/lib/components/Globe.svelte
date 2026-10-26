@@ -43,6 +43,7 @@
 			rim: 'rgba(47,204,169,0.35)',
 			land: '47,204,169',
 			landAlpha: [0.25, 0.65],
+			dotScale: 1,
 			halo: '88',
 			hollowFill: '#000000',
 			markerEdge: null,
@@ -51,10 +52,13 @@
 		light: {
 			stars: false,
 			glow: ['rgba(15,138,112,0.22)', 'rgba(0,123,179,0.07)', 'rgba(0,123,179,0)'],
-			sphere: ['#ffffff', '#dfe9e6'],
-			rim: 'rgba(15,138,112,0.45)',
-			land: '15,138,112',
-			landAlpha: [0.2, 0.6],
+			// Deep teal dots, nearly solid facing the viewer, on a lightly tinted sphere: the land
+			// has to read against a near-white page.
+			sphere: ['#f2f7f5', '#d3e3de'],
+			rim: 'rgba(15,138,112,0.75)',
+			land: '8,98,79',
+			landAlpha: [0.55, 0.45],
+			dotScale: 1.7,
 			halo: '55',
 			hollowFill: '#ffffff',
 			markerEdge: 'rgba(11,18,21,0.55)',
@@ -168,7 +172,7 @@
 		ctx.stroke();
 
 		// Land dots, dimmer toward the edge of the disc.
-		const dot = Math.max(0.9, Math.min(2.2, r / 260));
+		const dot = Math.max(0.9, Math.min(2.2, r / 260)) * pal.dotScale;
 		for (let i = 0; i < landDots.length; i += 2) {
 			const p = project(landDots[i], landDots[i + 1]);
 			if (!p || p.x < -4 || p.y < -4 || p.x > w + 4 || p.y > h + 4) continue;
