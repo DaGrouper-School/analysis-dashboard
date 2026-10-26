@@ -17,6 +17,8 @@ import type {
 	ProfileInput,
 	CurrentConditions,
 	CsvExport,
+	PublicHome,
+	SiteContent,
 	RawPage,
 	Device,
 	Lab,
@@ -118,6 +120,11 @@ export function createHttpServices(baseUrl: string): Services {
 			rawValues: (query, limit = 200) =>
 				request<RawPage>('POST', '/sam/exports/raw', { ...query, limit }),
 			rawCsv: (query) => request<CsvExport>('POST', '/sam/exports/raw.csv', query)
+		},
+		// Open to visitors: the backend serves these without a session, released data only.
+		publicSite: {
+			home: () => request<PublicHome>('GET', '/public/home'),
+			content: () => request<SiteContent>('GET', '/public/content')
 		},
 		labs: {
 			listForClassroom: (classroomId) =>

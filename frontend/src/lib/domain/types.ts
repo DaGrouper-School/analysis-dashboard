@@ -599,3 +599,74 @@ export interface CsvExport {
 	content: string;
 	rows: number;
 }
+
+/** A top-level section of the public site (AP-20). `href` is null until it is built. */
+export interface SiteSection {
+	id: string;
+	label: string;
+	description: string;
+	href: string | null;
+}
+
+/** A Global Classroom's stage on the way to operating, e.g. pilot. */
+export interface ClassroomStage {
+	id: string;
+	label: string;
+	description: string;
+	/** Marker and badge color, as a CSS color. */
+	color: string;
+}
+
+/** The public site's words and structure, edited as content rather than code. */
+export interface SiteContent {
+	hero: { eyebrow: string; title: string; body: string };
+	/** The UN Ocean Decade endorsement line. */
+	oceanDecade: string;
+	/** Footer line naming the programme. */
+	programme: string;
+	sections: SiteSection[];
+	/** Footer links: data terms, privacy and consent, safeguarding. */
+	policies: SiteSection[];
+	stages: ClassroomStage[];
+	languages: { code: string; label: string; ready: boolean }[];
+}
+
+/** Where a classroom's released data stands. */
+export type ReviewState = 'released' | 'in_review' | 'not_released';
+
+/**
+ * The shared core readings of one classroom (AP-20), from released data only. Null means no
+ * released data for it: shown as "no data", never as zero.
+ */
+export interface CoreReadings {
+	/** The day the rain values count, `YYYY-MM-DD` in UTC: the latest released reading's day. */
+	day: string | null;
+	rainToday: number | null;
+	rainLast7Days: number | null;
+	/** Days of the seven with a rain total; under 7 means the total is partial. */
+	rainDays: number;
+	airTemperature: number | null;
+	/** When the latest released reading reached the platform. */
+	lastSync: string | null;
+	review: ReviewState;
+}
+
+/** A classroom as the public sees it: no code, no members, positions rounded. */
+export interface PublicClassroom {
+	id: string;
+	name: string;
+	institutionName: string;
+	/** Where its first lab is, rounded; null before it has a lab. */
+	placeName: string | null;
+	country: string | null;
+	location: GeoPoint | null;
+	stageId: string;
+	core: CoreReadings;
+}
+
+export interface PublicHome {
+	content: SiteContent;
+	classrooms: PublicClassroom[];
+	/** Units of the core readings, from the registry. */
+	units: { rain: string; temperature: string };
+}

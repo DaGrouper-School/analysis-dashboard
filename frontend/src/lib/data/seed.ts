@@ -129,6 +129,95 @@ const users: User[] = [
 	}
 ];
 
+/**
+ * The public site's words (AP-20). Draft copy for the content team to replace; pages read it
+ * from here, never from their own markup.
+ */
+const siteContent: MockDbState['siteContent'] = {
+	hero: {
+		eyebrow: 'Da Grouper School',
+		title: 'Classrooms that measure the world around them',
+		body: 'Global Classrooms run a Lab in a Bag: weather, rain, soil and reef measurements taken by students and community scientists, checked, and shared openly with researchers.'
+	},
+	oceanDecade: 'Part of the UN Decade of Ocean Science for Sustainable Development (2021–2030).',
+	programme: 'Da Grouper School · Global Classrooms programme',
+	sections: [
+		{
+			id: 'explore',
+			label: 'Explore data',
+			description: 'Maps and stations open to everyone.',
+			href: null
+		},
+		{
+			id: 'classrooms',
+			label: 'Global Classrooms',
+			description: 'Who measures where, and how to host one.',
+			href: null
+		},
+		{ id: 'learn', label: 'Learn', description: 'What the measurements mean.', href: null },
+		{
+			id: 'train',
+			label: 'Train',
+			description: 'Courses for taking good measurements.',
+			href: null
+		},
+		{
+			id: 'cop32',
+			label: 'COP32 Addis',
+			description: 'The network on its way to COP32 in Addis Ababa.',
+			href: null
+		},
+		{ id: 'give', label: 'Give', description: 'Fund a Lab in a Bag for a classroom.', href: null }
+	],
+	policies: [
+		{ id: 'data-terms', label: 'Data terms', description: 'How the data may be used.', href: null },
+		{
+			id: 'privacy',
+			label: 'Privacy and consent',
+			description: 'What we keep about people, and how consent works.',
+			href: null
+		},
+		{
+			id: 'safeguarding',
+			label: 'Safeguarding',
+			description: 'How young contributors are kept safe.',
+			href: null
+		}
+	],
+	stages: [
+		{
+			id: 'preparing',
+			label: 'Preparing',
+			description: 'Setting up the lab and training people.',
+			color: '#f6921e'
+		},
+		{
+			id: 'pilot',
+			label: 'Pilot',
+			description: 'Measuring, with the first data in review.',
+			color: '#00bdff'
+		},
+		{
+			id: 'operating',
+			label: 'Operating',
+			description: 'Measuring and releasing data regularly.',
+			color: '#3cc04b'
+		}
+	],
+	languages: [
+		{ code: 'en', label: 'English', ready: true },
+		{ code: 'am', label: 'አማርኛ', ready: false },
+		{ code: 'so', label: 'Soomaali', ready: false },
+		{ code: 'fr', label: 'Français', ready: false }
+	]
+};
+
+/** The values the public core readings strip is made of. */
+const coreParameters: MockDbState['coreParameters'] = {
+	rainDaily: ['precip_accum_local_day', 'rain_gauge_daily_accumulation'],
+	airTemperature: ['air_temperature']
+};
+
 /** The terms a new classroom's data starts with, until its head changes them. */
 const defaultDataTerms: MockDbState['defaultDataTerms'] = {
 	licence: 'CC BY 4.0',
@@ -147,6 +236,8 @@ const classrooms: MockDbState['classrooms'] = [
 		setup: 'admin_assisted',
 		createdBy: 'usr_leila',
 		createdAt: SEEDED_AT,
+		stageId: 'operating',
+		releasedThrough: '2026-10-20T06:00:00.000Z',
 		terms: {
 			licence: 'CC BY 4.0',
 			licenceUrl: 'https://creativecommons.org/licenses/by/4.0/',
@@ -164,6 +255,8 @@ const classrooms: MockDbState['classrooms'] = [
 		setup: 'admin_assisted',
 		createdBy: 'usr_leila',
 		createdAt: SEEDED_AT,
+		stageId: 'pilot',
+		releasedThrough: '2026-10-20T08:00:00.000Z',
 		terms: {
 			licence: 'CC BY-NC 4.0',
 			licenceUrl: 'https://creativecommons.org/licenses/by-nc/4.0/',
@@ -180,6 +273,8 @@ const classrooms: MockDbState['classrooms'] = [
 		setup: 'admin_assisted',
 		createdBy: 'usr_leila',
 		createdAt: SEEDED_AT,
+		stageId: 'preparing',
+		releasedThrough: null,
 		terms: {
 			licence: 'CC BY 4.0',
 			licenceUrl: 'https://creativecommons.org/licenses/by/4.0/',
@@ -1083,6 +1178,8 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 		observations: [],
 		classrooms,
 		defaultDataTerms,
+		siteContent,
+		coreParameters,
 		memberships,
 		invitations,
 		labs,

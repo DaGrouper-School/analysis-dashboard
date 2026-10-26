@@ -24,6 +24,8 @@ import type {
 	ProfileInput,
 	CreateLabInput,
 	CsvExport,
+	PublicHome,
+	SiteContent,
 	RawPage,
 	RawQuery,
 	CurrentConditions,
@@ -215,12 +217,21 @@ export interface ExportService {
 	rawCsv(query: RawQuery): Promise<CsvExport>;
 }
 
+/** The public site (AP-20): open to visitors, no sign-in. Released data only. */
+export interface PublicService {
+	/** The home page: content, and every classroom with its stage and core readings. */
+	home(): Promise<PublicHome>;
+	/** The site's content alone, for pages that only need the sections and policies. */
+	content(): Promise<SiteContent>;
+}
+
 export interface Services {
 	auth: AuthService;
 	profile: ProfileService;
 	classrooms: ClassroomService;
 	labs: LabService;
 	exports: ExportService;
+	publicSite: PublicService;
 	places: PlacesService;
 	registry: RegistryService;
 }
