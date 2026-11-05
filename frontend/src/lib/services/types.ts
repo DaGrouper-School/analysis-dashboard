@@ -39,6 +39,8 @@ import type {
 	Reading,
 	ReadingInput,
 	RecordOptions,
+	SyncBatch,
+	SyncBatchResult,
 	RegisterDeviceInput,
 	UpdateClassroomInput,
 	User
@@ -184,6 +186,13 @@ export interface LabService {
 	 * reading, under the classroom for a field observation. No GPS: the lab's location, flagged.
 	 */
 	submitObservation(input: ObservationInput, options?: RecordOptions): Promise<Observation>;
+	/**
+	 * Observations saved on the device while offline (AP-16), sent as one batch to the backend's
+	 * batch endpoint, which forwards them to SAM. Each record gets its own result. A record whose
+	 * `clientId` was stored before comes back as a duplicate, so retries never store twice. The
+	 * device clock is checked against `sentAt`; problems are flagged, not refused.
+	 */
+	syncObservations(batch: SyncBatch): Promise<SyncBatchResult>;
 	/**
 	 * The alert levels in force for a device (AP-08), each with its layer: the device's own, its
 	 * classroom's for its sensor type, or the platform default. Anyone who can view the device.

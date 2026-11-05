@@ -213,7 +213,7 @@
 				<label class="mt-4 flex items-start gap-2 text-sm">
 					<input
 						type="checkbox"
-						class="mt-0.5 rounded-sm border-line-strong bg-transparent text-teal focus:ring-teal"
+						class="mt-0.5 rounded-sm border-line-strong bg-transparent text-teal checked:bg-current focus:ring-teal"
 						bind:checked={credit}
 					/>
 					<span>

@@ -2,9 +2,12 @@ import type {
 	CreateLabInput,
 	CurrentConditions,
 	Device,
+	ClockFlag,
 	Lab,
 	Observation,
-	Reading
+	ObservationInput,
+	Reading,
+	SyncRecordResult
 } from '#lib/domain/types.ts';
 import { alertsFor } from '#lib/domain/alerts.ts';
 import {
@@ -59,6 +62,8 @@ function toReading(state: MockDbState, stored: MockDbState['readings'][number]):
 	const reading: Partial<MockDbState['readings'][number]> = structuredClone(stored);
 	delete reading.samSourceId;
 	delete reading.creditedToUserId;
+	delete reading.clientId;
+	delete reading.clockFlags;
 	const credited = stored.creditedToUserId;
 	const creditedTo = credited
 		? (state.users.find((u) => u.id === credited)?.fullName ?? null)
@@ -86,6 +91,11 @@ function toObservation(
 		creditedTo: credited ? (state.users.find((u) => u.id === credited)?.fullName ?? null) : null
 	};
 }
+
+/** How far the device clock may be off the server's before it is flagged. */
+const CLOCK_TOLERANCE_MS = 5 * 60_000;
+/** The most observations one sync batch may carry. */
+export const SYNC_BATCH_LIMIT = 100;
 
 function newestFirst(a: { observedAt: string }, b: { observedAt: string }) {
 	return b.observedAt.localeCompare(a.observedAt);
@@ -152,6 +162,77 @@ export function createMockLabs({
 	now: () => number;
 }): LabService {
 	const iso = () => new Date(now()).toISOString();
+
+	/**
+	 * Checks a manual observation and stores it (AP-16). The backend runs the template's checks
+	 * again, tags it with the classroom and sends it to SAM: under the device for a device
+	 * reading, under the classroom for a field observation. `errors` holds any found already.
+	 * Throws a `ServiceError` before storing anything when it is refused.
+	 */
+	function recordObservation(
+		state: MockDbState,
+		input: ObservationInput,
+		credit: boolean,
+		errors: Record<string, string>,
+		sync: { clientId: string; clockFlags: ClockFlag[] } | null = null
+	): { observation: Observation } {
+		if (input.location && !isValidGeoPoint(input.location)) {
+			errors.location = 'That GPS position is not valid.';
+		}
+		const { user, lab, can } = accessLab(state, input.labId);
+		if (!can.recordReadings) {
+			throw new ServiceError(
+				'forbidden',
+				'You can read this classroom’s data but not record observations.'
+			);
+		}
+		const templates = withDeviceTemplates(
+			state.observationTemplates,
+			state.deviceTypes,
+			state.parameters
+		);
+		const template = templates.find((t) => t.id === input.templateId);
+		if (!template) throw new ServiceError('not_found', 'That observation form no longer exists.');
+		Object.assign(errors, checkObservation(template, state.parameters, input.values));
+		// A device reading needs one of the lab's registered devices of that type. Devices are
+		// never added from here: registering one is for facilitators, on the lab page.
+		const device = template.deviceType
+			? state.devices.find((d) => d.id === input.deviceId && d.labId === lab.id)
+			: null;
+		if (template.deviceType && device?.type !== template.deviceType) {
+			errors.deviceId = 'Choose one of this lab’s registered devices of that type.';
+		}
+		if (!template.deviceType && input.deviceId) {
+			errors.deviceId = 'A field observation is not read off a device.';
+		}
+		if (Object.keys(errors).length) {
+			throw new ServiceError('invalid_input', 'Check the highlighted fields.', errors);
+		}
+		const base = {
+			id: newId('obs'),
+			labId: lab.id,
+			classroomId: lab.classroomId,
+			observedAt: new Date(input.observedAt).toISOString(),
+			receivedAt: iso(),
+			values: { ...input.values },
+			// No GPS: stand in with the lab's location, and say so.
+			location: { ...(input.location ?? lab.location) },
+			locationSource: input.location ? ('device' as const) : ('lab' as const),
+			creditedToUserId: credit ? user.id : null,
+			templateId: template.id,
+			...(sync && { clientId: sync.clientId, clockFlags: sync.clockFlags })
+		};
+		if (device) {
+			// A device reading joins the device's readings and its SAM source.
+			const stored = { ...base, deviceId: device.id, samSourceId: sourceIdFor(state, device) };
+			state.readings.push(stored);
+			return { observation: { ...toReading(state, stored), templateId: template.id } };
+		}
+		// A field observation goes to SAM under the classroom's own source.
+		const stored = { ...base, deviceId: null, samSourceId: classroomOf(state, lab).code };
+		state.observations.push(stored);
+		return { observation: toObservation(state, stored) };
+	}
 
 	return {
 		async listForClassroom(classroomId) {
@@ -405,68 +486,84 @@ export function createMockLabs({
 			const errors: Record<string, string> = {};
 			const at = Date.parse(input.observedAt);
 			if (Number.isNaN(at)) errors.observedAt = 'Enter when you observed it.';
-			else if (at > now() + 5 * 60_000) errors.observedAt = 'That time is in the future.';
-			if (input.location && !isValidGeoPoint(input.location)) {
-				errors.location = 'That GPS position is not valid.';
-			}
-			return updateDb((state) => {
-				const { user, lab, can } = accessLab(state, input.labId);
-				if (!can.recordReadings) {
-					throw new ServiceError(
-						'forbidden',
-						'You can read this classroom’s data but not record observations.'
-					);
-				}
-				const templates = withDeviceTemplates(
-					state.observationTemplates,
-					state.deviceTypes,
-					state.parameters
+			else if (at > now() + CLOCK_TOLERANCE_MS) errors.observedAt = 'That time is in the future.';
+			return updateDb(
+				(state) => recordObservation(state, input, options.credit, errors).observation
+			);
+		},
+
+		async syncObservations(batch) {
+			await delay();
+			if (batch.records.length > SYNC_BATCH_LIMIT) {
+				throw new ServiceError(
+					'invalid_input',
+					`Send at most ${SYNC_BATCH_LIMIT} observations at a time.`
 				);
-				const template = templates.find((t) => t.id === input.templateId);
-				if (!template)
-					throw new ServiceError('not_found', 'That observation form no longer exists.');
-				Object.assign(errors, checkObservation(template, state.parameters, input.values));
-				// A device reading needs one of the lab's registered devices of that type. Devices are
-				// never added from here: registering one is for facilitators, on the lab page.
-				const device = template.deviceType
-					? state.devices.find((d) => d.id === input.deviceId && d.labId === lab.id)
-					: null;
-				if (template.deviceType && device?.type !== template.deviceType) {
-					errors.deviceId = 'Choose one of this lab’s registered devices of that type.';
-				}
-				if (!template.deviceType && input.deviceId) {
-					errors.deviceId = 'A field observation is not read off a device.';
-				}
-				if (Object.keys(errors).length) {
-					throw new ServiceError('invalid_input', 'Check the highlighted fields.', errors);
-				}
-				const base = {
-					id: newId('obs'),
-					labId: lab.id,
-					classroomId: lab.classroomId,
-					observedAt: new Date(at).toISOString(),
-					receivedAt: iso(),
-					values: { ...input.values },
-					// No GPS: stand in with the lab's location, and say so.
-					location: { ...(input.location ?? lab.location) },
-					locationSource: input.location ? ('device' as const) : ('lab' as const),
-					creditedToUserId: options.credit ? user.id : null,
-					templateId: template.id
-				};
-				if (device) {
-					// A device reading joins the device's readings and its SAM source.
-					const stored = { ...base, deviceId: device.id, samSourceId: sourceIdFor(state, device) };
-					state.readings.push(stored);
-					return { ...toReading(state, stored), templateId: template.id };
-				}
-				// A field observation goes to SAM under the classroom's own source.
-				const stored = {
-					...base,
-					deviceId: null,
-					samSourceId: classroomOf(state, lab).code
-				};
-				state.observations.push(stored);
-				return toObservation(state, stored);
+			}
+			const receivedAt = now();
+			const sentAt = Date.parse(batch.sentAt);
+			const clockOffsetMs = Number.isNaN(sentAt) ? 0 : receivedAt - sentAt;
+			const clockOff = Number.isNaN(sentAt) || Math.abs(clockOffsetMs) > CLOCK_TOLERANCE_MS;
+			return updateDb((state) => {
+				currentUser(state);
+				const results = batch.records.map((record): SyncRecordResult => {
+					// A retry of a record already stored gets that record back, never a second copy.
+					const existing =
+						state.readings.find((r) => r.clientId === record.clientId) ??
+						state.observations.find((o) => o.clientId === record.clientId);
+					if (existing) {
+						return {
+							clientId: record.clientId,
+							outcome: 'duplicate',
+							observation:
+								existing.deviceId === null
+									? toObservation(state, existing as MockDbState['observations'][number])
+									: { ...toReading(state, existing), templateId: existing.templateId ?? '' },
+							error: null,
+							fields: {},
+							clockFlags: existing.clockFlags ?? []
+						};
+					}
+					// Saved offline, so the time is the device's: flag a wrong clock rather than
+					// refuse the observation.
+					const errors: Record<string, string> = {};
+					const at = Date.parse(record.observation.observedAt);
+					if (Number.isNaN(at)) errors.observedAt = 'Enter when you observed it.';
+					const clockFlags: ClockFlag[] = [
+						...(clockOff ? (['device_clock_off'] as const) : []),
+						...(!Number.isNaN(sentAt) && at > sentAt + CLOCK_TOLERANCE_MS
+							? (['observed_after_sent'] as const)
+							: [])
+					];
+					try {
+						const { observation } = recordObservation(
+							state,
+							record.observation,
+							record.credit,
+							errors,
+							{ clientId: record.clientId, clockFlags }
+						);
+						return {
+							clientId: record.clientId,
+							outcome: 'stored',
+							observation,
+							error: null,
+							fields: {},
+							clockFlags
+						};
+					} catch (e) {
+						if (!(e instanceof ServiceError) || e.code === 'unauthenticated') throw e;
+						return {
+							clientId: record.clientId,
+							outcome: 'rejected',
+							observation: null,
+							error: e.message,
+							fields: e.fields,
+							clockFlags
+						};
+					}
+				});
+				return { receivedAt: iso(), clockOffsetMs, results };
 			});
 		},
 

@@ -424,6 +424,51 @@ export interface Observation extends Omit<Reading, 'deviceId'> {
 	deviceId: string | null;
 }
 
+/**
+ * Something wrong with the device's clock, found when a batch is synced: the clock was more than
+ * a few minutes off the server's, or the observation is dated after the device sent it.
+ */
+export type ClockFlag = 'device_clock_off' | 'observed_after_sent';
+
+/** One observation saved on the device, sent in a sync batch. */
+export interface SyncRecord {
+	/** Made on the device when the observation was saved; a retry sends the same one. */
+	clientId: string;
+	observation: ObservationInput;
+	credit: boolean;
+}
+
+/** Observations saved offline, sent together once the device is back online. */
+export interface SyncBatch {
+	/** The device clock when the batch was sent, so the server can check it. */
+	sentAt: string;
+	records: SyncRecord[];
+}
+
+/**
+ * `stored`: new. `duplicate`: already stored from an earlier attempt, returned as it was.
+ * `rejected`: not stored; `error` says why.
+ */
+export type SyncOutcome = 'stored' | 'duplicate' | 'rejected';
+
+export interface SyncRecordResult {
+	clientId: string;
+	outcome: SyncOutcome;
+	observation: Observation | null;
+	error: string | null;
+	/** Field-level messages when rejected, keyed by input name. */
+	fields: Record<string, string>;
+	clockFlags: ClockFlag[];
+}
+
+export interface SyncBatchResult {
+	receivedAt: string;
+	/** Server clock minus the device clock when the batch arrived, in ms. */
+	clockOffsetMs: number;
+	/** One per record, in the batch's order. */
+	results: SyncRecordResult[];
+}
+
 /** A lab the user may record in, with its registered devices. */
 export interface ObservationTarget {
 	lab: Lab;
