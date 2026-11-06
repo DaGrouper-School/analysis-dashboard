@@ -24,6 +24,7 @@ import type {
 	Lab,
 	LabDetail,
 	Observation,
+	SyncBatchResult,
 	ObservationTarget,
 	ObservationTemplate,
 	Reading,
@@ -159,6 +160,8 @@ export function createHttpServices(baseUrl: string): Services {
 					...input,
 					credit: options.credit
 				}),
+			// The backend stores what is new, matches retries by `clientId`, and forwards to SAM.
+			syncObservations: (batch) => request<SyncBatchResult>('POST', '/observations/batch', batch),
 			listDeviceAlerts: (deviceId) =>
 				request<DeviceAlerts>('GET', `/devices/${encodeURIComponent(deviceId)}/alerts`),
 			// `scope=type` writes the classroom's levels for the device's sensor type.

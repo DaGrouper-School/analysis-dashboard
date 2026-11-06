@@ -805,7 +805,7 @@
 				<label class="mt-3 flex items-start gap-3 rounded-md border border-line p-3 text-sm">
 					<input
 						type="checkbox"
-						class="mt-0.5 rounded border-line-strong bg-transparent text-teal focus:ring-teal"
+						class="mt-0.5 rounded border-line-strong bg-transparent text-teal checked:bg-current focus:ring-teal"
 						bind:checked={typeManual}
 					/>
 					<span>

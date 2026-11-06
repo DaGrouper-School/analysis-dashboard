@@ -1,14 +1,17 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import type { GeoPoint, Observation, ObservationTemplate, Parameter } from '#lib/domain/types.ts';
+	import type { GeoPoint, ObservationTemplate, Parameter } from '#lib/domain/types.ts';
 	import { formatPoint } from '#lib/geo.ts';
 	import { formatValue } from '#lib/key-values.ts';
 	import Icon from '#lib/components/Icon.svelte';
+	import SyncStatus from '#lib/components/SyncStatus.svelte';
 	import Wizard from '#lib/components/Wizard.svelte';
 	import { FALLBACK_DOMAIN_ICON } from '#lib/icons.ts';
 	import { deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
 	import { rangeText, readEntries, unitsFor, type FieldEntry } from '#lib/observations.ts';
-	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
+	import { outbox } from '#lib/outbox.svelte.ts';
+	import { clockMessage, type OutboxEntry } from '#lib/outbox.ts';
+	import { errorMessage } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -90,7 +93,8 @@
 	let sending = $state(false);
 	let serverErrors = $state<Record<string, string>>({});
 	let formError = $state('');
-	let sent = $state<Observation | null>(null);
+	/** The observation just saved: synced, or waiting on this device. */
+	let sent = $state<OutboxEntry | null>(null);
 
 	/** A fresh form for the picked template: empty values, each in its own unit. */
 	function reset(next: ObservationTemplate | null) {
@@ -212,7 +216,8 @@
 		formError = '';
 		sending = true;
 		try {
-			sent = await services.labs.submitObservation(
+			// Saved on the device first, then sent; offline it waits there and syncs later.
+			const entry = await outbox.save(
 				{
 					templateId: template.id,
 					labId: target.lab.id,
@@ -221,13 +226,20 @@
 					values: checked.values,
 					location
 				},
-				{ credit }
+				credit
 			);
-		} catch (e) {
-			if (e instanceof ServiceError && Object.keys(e.fields).length) {
-				serverErrors = e.fields;
-				step = stepIds.indexOf('values');
+			if (entry.status === 'failed') {
+				// Refused while the person is still here: fix it in the form, not in the outbox.
+				outbox.discard(entry.clientId);
+				if (Object.keys(entry.fields).length) {
+					serverErrors = entry.fields;
+					step = stepIds.indexOf('values');
+				}
+				formError = entry.error ?? 'Not accepted.';
+			} else {
+				sent = entry;
 			}
+		} catch (e) {
 			formError = errorMessage(e);
 		} finally {
 			sending = false;
@@ -242,7 +254,13 @@
 		step = locked ? 0 : 1;
 	}
 
-	const sentDevice = $derived(target?.devices.find((d) => d.id === sent?.deviceId) ?? null);
+	const sentDevice = $derived(
+		target?.devices.find((d) => d.id === sent?.observation.deviceId) ?? null
+	);
+	/** The live entry, so a saved one flips to synced when the connection comes back. */
+	const sentEntry = $derived(
+		sent ? (outbox.mine.find((e) => e.clientId === sent!.clientId) ?? sent) : null
+	);
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 	const labelFor = (p: Parameter | undefined, id: string) => p?.label ?? id;
 </script>
@@ -307,6 +325,13 @@
 		then tags them with your classroom and sends them on to SAM.
 	</p>
 
+	{#if !outbox.online && data.targets.length}
+		<p class="mt-6 rounded-md border border-orange/50 px-4 py-3 text-sm text-ink" role="status">
+			You are offline. You can keep recording: observations are saved on this device and sync when
+			you are back online.
+		</p>
+	{/if}
+
 	{#if !data.targets.length}
 		<div class="card mt-8">
 			<h2 class="text-xl font-semibold">You can't record observations yet</h2>
@@ -316,18 +341,28 @@
 			</p>
 			<a class="btn btn-ghost mt-4" href={resolve('/(app)/classrooms')}>Your classrooms</a>
 		</div>
-	{:else if sent && template && target}
+	{:else if sentEntry && template && target}
+		{@const stored = sentEntry.stored}
+		{@const values = stored?.values ?? sentEntry.observation.values}
 		<section class="card mt-8" aria-labelledby="sent-heading">
-			<p class="text-sm text-lime" role="status">Sent</p>
-			<h2 id="sent-heading" class="mt-1 text-xl font-semibold">{template.label} recorded</h2>
+			{#if stored}
+				<p class="text-sm text-lime" role="status">Sent</p>
+				<h2 id="sent-heading" class="mt-1 text-xl font-semibold">{template.label} recorded</h2>
+			{:else}
+				<p class="text-sm text-orange" role="status">Saved on this device</p>
+				<h2 id="sent-heading" class="mt-1 text-xl font-semibold">
+					{template.label} waiting to sync
+				</h2>
+			{/if}
 			<p class="mt-1 text-sm text-muted">
-				{dateTime.format(new Date(sent.observedAt))} · {target.classroomName} · {target.lab.name}
+				{dateTime.format(new Date(sentEntry.observation.observedAt))} · {target.classroomName} · {target
+					.lab.name}
 				{#if sentDevice}· {sentDevice.name}{/if}
 			</p>
 			<dl
 				class="mt-5 grid gap-px border border-line bg-line sm:grid-cols-2 sm:[&>:last-child:nth-child(odd)]:col-span-2"
 			>
-				{#each Object.entries(sent.values) as [id, value] (id)}
+				{#each Object.entries(values) as [id, value] (id)}
 					<div class="bg-surface p-3">
 						<dt class="text-xs text-muted">{labelFor(paramsById.get(id), id)}</dt>
 						<dd class="mt-1 text-lg text-ink">
@@ -336,27 +371,42 @@
 					</div>
 				{/each}
 			</dl>
+			{#each sentEntry.clockFlags as flag (flag)}
+				<p class="mt-4 text-sm text-orange">{clockMessage(flag, sentEntry.clockOffsetMs)}</p>
+			{/each}
 			<ul class="mt-4 space-y-1 text-sm">
-				<li>
-					Tagged with {target.classroomName}{sentDevice
-						? `, as a reading from ${sentDevice.name}`
-						: ', as a field observation'}.
-				</li>
-				<li>
-					{formatPoint(sent.location)}
-					{#if sent.locationSource === 'device'}
-						<span class="text-muted">· your GPS</span>
-					{:else}
-						<span class="rounded-full bg-raised px-2 py-0.5 text-xs font-medium ring-1 ring-line"
-							>No GPS: lab location, not from the device</span
-						>
-					{/if}
-				</li>
-				<li class="text-muted">
-					{sent.creditedTo
-						? `Credited to ${sent.creditedTo}`
-						: 'Not credited to anyone: public outputs show it without a name.'}
-				</li>
+				{#if stored}
+					<li>
+						Tagged with {target.classroomName}{sentDevice
+							? `, as a reading from ${sentDevice.name}`
+							: ', as a field observation'}.
+					</li>
+					<li>
+						{formatPoint(stored.location)}
+						{#if stored.locationSource === 'device'}
+							<span class="text-muted">· your GPS</span>
+						{:else}
+							<span class="rounded-full bg-raised px-2 py-0.5 text-xs font-medium ring-1 ring-line"
+								>No GPS: lab location, not from the device</span
+							>
+						{/if}
+					</li>
+					<li class="text-muted">
+						{stored.creditedTo
+							? `Credited to ${stored.creditedTo}`
+							: 'Not credited to anyone: public outputs show it without a name.'}
+					</li>
+				{:else}
+					<li>
+						{sentEntry.error ??
+							'It is sent with the others when you are back online. You can keep recording.'}
+					</li>
+					<li class="text-muted">
+						{sentEntry.credit
+							? 'It will be credited to you.'
+							: 'Not credited to anyone: public outputs show it without a name.'}
+					</li>
+				{/if}
 			</ul>
 			<div class="mt-6 flex flex-wrap gap-2">
 				<button type="button" class="btn btn-primary" onclick={another}>Record another</button>
@@ -626,7 +676,7 @@
 							<input
 								id="observe-credit"
 								type="checkbox"
-								class="mt-0.5 rounded-sm border-line-strong bg-transparent text-teal focus:ring-teal"
+								class="mt-0.5 rounded-sm border-line-strong bg-transparent text-teal checked:bg-current focus:ring-teal"
 								bind:checked={credit}
 							/>
 							<span>
@@ -643,5 +693,8 @@
 				{/if}
 			</Wizard>
 		</div>
+	{/if}
+	{#if data.targets.length}
+		<SyncStatus templates={data.templates} targets={data.targets} />
 	{/if}
 </div>

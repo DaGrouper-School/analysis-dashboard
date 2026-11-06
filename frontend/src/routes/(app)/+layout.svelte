@@ -6,9 +6,18 @@
 	import Avatar from '#lib/components/Avatar.svelte';
 	import Logo from '#lib/components/Logo.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
+	import { outbox } from '#lib/outbox.svelte.ts';
 	import { isMockDataSource } from '#lib/services/index.ts';
 
 	let { data, children } = $props();
+
+	// Observations saved on this device sync when the app opens and when the connection is back.
+	$effect(() => outbox.start(data.user.id));
+	const syncNote = $derived(
+		[!outbox.online && 'Offline', outbox.waiting && `${outbox.waiting} not synced`]
+			.filter(Boolean)
+			.join(' · ')
+	);
 
 	// Platform admins also manage the shared registry of measurement types and domains.
 	const nav = $derived([
@@ -90,6 +99,21 @@
 					>
 				{/each}
 			</nav>
+			{#if syncNote}
+				<a
+					href="{resolve('/(app)/observe')}#sync"
+					class={[
+						'chip hidden shrink-0 gap-1.5 text-xs sm:inline-flex',
+						outbox.online ? 'border-orange/50 text-orange' : 'text-muted'
+					]}
+				>
+					<span
+						class={['size-2 rounded-full', outbox.online ? 'bg-orange' : 'bg-muted']}
+						aria-hidden="true"
+					></span>
+					{syncNote}
+				</a>
+			{/if}
 			<ThemeToggle />
 			<a href={resolve('/(app)/settings')} class="hidden sm:block" aria-label="Settings">
 				<Avatar name={data.user.fullName} src={data.user.avatarUrl} />
@@ -97,6 +121,15 @@
 		</div>
 		{#if data.memberClassrooms.length}
 			<div class="mx-auto max-w-6xl px-3 pb-3 md:hidden">{@render classroomPicker('')}</div>
+		{/if}
+		{#if syncNote}
+			<a
+				href="{resolve('/(app)/observe')}#sync"
+				class={[
+					'block border-b border-line py-1 text-center text-xs sm:hidden',
+					outbox.online ? 'text-orange' : 'text-muted'
+				]}>{syncNote}</a
+			>
 		{/if}
 		{#if isMockDataSource}
 			<p class="border-b border-line bg-raised py-1 text-center text-xs text-muted">

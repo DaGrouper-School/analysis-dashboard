@@ -1,4 +1,5 @@
 import type {
+	ClockFlag,
 	AlertRule,
 	DataTerms,
 	SiteContent,
@@ -90,6 +91,9 @@ type StoredRecord = Omit<Reading, 'creditedTo'> & {
 	samSourceId: string;
 	/** Who recorded it, when they opted in to credit. Resolved to their current name on read. */
 	creditedToUserId: string | null;
+	/** The device's ID for a record synced from its outbox; a retry finds it again. */
+	clientId?: string;
+	clockFlags?: ClockFlag[];
 };
 
 export interface MockDbState {
