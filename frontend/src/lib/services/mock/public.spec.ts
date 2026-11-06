@@ -85,3 +85,78 @@ describe('Explore data (AP-21)', () => {
 		expect((await services.publicSite.station('cls_nassau')).member).toBe(false);
 	});
 });
+
+describe('Classroom profile (AP-29)', () => {
+	const signIn = async (phone: string) => {
+		const challenge = await services.auth.requestPhoneCode(phone);
+		await services.auth.verifyPhoneCode(challenge.requestId, challenge.devCode!);
+	};
+
+	it('shows who the classroom is, its projects, kit and next sessions to visitors', async () => {
+		await services.auth.signOut();
+		const page = await services.publicSite.profile('cls_trinity');
+		expect(page.profile).toMatchObject({ areaCode: 'ET-AA', language: 'Amharic and English' });
+		expect(page.classroom.institutionName).toBe('Trinity School, Addis Ababa');
+		expect(page.projects[0].sites[0]).toMatchObject({ code: 'TRN-S1', frequency: 'Daily' });
+		// Readings are shown by their registry labels, not IDs.
+		expect(page.projects[0].sites[0].readings).not.toContain('air_temperature');
+		expect(page.kit.map((k) => k.deviceType.id).sort()).toEqual(
+			['rain_gauge', 'soil_sensor', 'weather_station'].sort()
+		);
+		// Serials and who looks after the kit are for members only.
+		expect(page.kit.every((k) => k.serials.length === 0)).toBe(true);
+		expect(page.custodianRole).toBeNull();
+		expect(page.member).toBe(false);
+		expect(page.canManage).toBe(false);
+		const now = new Date().toISOString();
+		expect(page.sessions.every((s) => s.startsAt >= now)).toBe(true);
+		const text = JSON.stringify(page);
+		expect(text).not.toContain('DGC-');
+		expect(text).not.toContain('usr_');
+	});
+
+	it('names only people who took credit and counts the rest', async () => {
+		const page = await services.publicSite.profile('cls_trinity');
+		expect(page.contributors).toEqual({ named: ['Abebe T.'], anonymous: 1 });
+	});
+
+	it('never names a minor, even one who asked for credit', async () => {
+		const { readDb, writeDb } = await import('#lib/data/mock-db.ts');
+		const state = readDb();
+		state.observations.push({
+			...state.observations[0],
+			id: 'obs_liya',
+			creditedToUserId: 'usr_liya',
+			recordedByUserId: 'usr_liya'
+		});
+		writeDb(state);
+		const page = await services.publicSite.profile('cls_trinity');
+		expect(page.contributors.named).not.toContain('Liya A.');
+		expect(page.contributors.anonymous).toBe(2);
+	});
+
+	it('hides the host institution until a host agreement is signed', async () => {
+		const page = await services.publicSite.profile('cls_hargeisa');
+		expect(page.classroom.institutionName).toBeNull();
+		const home = await services.publicSite.home();
+		expect(home.classrooms.find((c) => c.id === 'cls_hargeisa')!.institutionName).toBeNull();
+	});
+
+	it('shows members the kit serials, and people with rights a way to manage it', async () => {
+		await signIn('+251911000001');
+		const member = await services.publicSite.profile('cls_trinity');
+		expect(member.member).toBe(true);
+		expect(member.kit.some((k) => k.serials.includes('TWS-2041-SH'))).toBe(true);
+		expect(member.custodianRole).toBe('facilitator');
+		expect(member.canManage).toBe(false);
+		await services.auth.signOut();
+		await signIn('+251911000002');
+		expect((await services.publicSite.profile('cls_trinity')).canManage).toBe(true);
+	});
+
+	it('says when a classroom does not exist', async () => {
+		await expect(services.publicSite.profile('cls_nope')).rejects.toMatchObject({
+			code: 'not_found'
+		});
+	});
+});

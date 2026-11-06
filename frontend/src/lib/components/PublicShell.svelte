@@ -91,8 +91,10 @@
 		>
 			<div class="max-w-md space-y-1">
 				<p class="text-ink">{content.programme}</p>
-				<p class="text-muted">{content.oceanDecade}</p>
 			</div>
+			<p class="text-xs text-muted sm:order-last">
+				Version {__APP_VERSION__}{isMockDataSource ? ' · mock data' : ''}
+			</p>
 			<nav aria-label="Policies" class="flex flex-wrap gap-x-5 gap-y-2">
 				{#each content.policies as policy (policy.id)}
 					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->

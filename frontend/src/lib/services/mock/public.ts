@@ -2,12 +2,14 @@ import { coreReadings } from '#lib/core-readings.ts';
 import { readDb, type MockDbState, type StoredClassroom } from '#lib/data/mock-db.ts';
 import type {
 	PublicClassroom,
+	PublicClassroomProfile,
 	PublicDomainCard,
 	PublicSource,
 	PublicValue
 } from '#lib/domain/types.ts';
 import { coarsen, FIELD_SOURCE } from '#lib/raw-data.ts';
 import { ServiceError, type PublicService } from '../types';
+import { permissionsFor, roleIn } from './classrooms';
 
 /** Public positions are never finer than this, whatever a classroom's terms allow. */
 const PUBLIC_DECIMALS = 2;
@@ -49,7 +51,8 @@ function toPublicClassroom(state: MockDbState, classroom: StoredClassroom): Publ
 	return {
 		id: classroom.id,
 		name: classroom.name,
-		institutionName: classroom.institutionName,
+		// The host is named only once it has signed the host agreement.
+		institutionName: classroom.profile.hostAgreementSigned ? classroom.institutionName : null,
 		placeName: lab?.placeName ?? null,
 		country: lab?.country ?? null,
 		location: lab ? coarsen(lab.location, decimals) : null,
@@ -158,6 +161,85 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 				domains: structuredClone(cards),
 				member: isMember(state, classroom.id)
 			};
+		},
+
+		async profile(classroomId) {
+			await delay();
+			const state = readDb();
+			const classroom = findClassroom(state, classroomId);
+			const member = isMember(state, classroom.id);
+			const user = state.session && state.users.find((u) => u.id === state.session?.userId);
+			const can = user ? permissionsFor(user, roleIn(state, classroom.id, user.id)) : null;
+			const { labs, released: records } = released(state, classroom);
+			const labelOf = (id: string) => state.parameters.find((p) => p.id === id)?.label ?? id;
+
+			// The Lab in a Bag, read from the devices registered to the classroom's labs.
+			const labIds = new Set(labs.map((l) => l.id));
+			const devices = state.devices.filter((d) => labIds.has(d.labId));
+			const kit = state.deviceTypes
+				.map((type) => ({ type, devices: devices.filter((d) => d.type === type.id) }))
+				.filter((k) => k.devices.length)
+				.map(({ type, devices }) => {
+					// What it measures, by domain: a station sends dozens of values. Values with no
+					// domain yet are named one by one.
+					const domains = state.domains
+						.filter((d) => type.parameterIds.some((id) => domainOf(state, id)?.id === d.id))
+						.map((d) => d.label);
+					const loose = type.parameterIds.filter((id) => !domainOf(state, id)).map(labelOf);
+					return {
+						deviceType: { id: type.id, label: type.label, icon: type.icon },
+						count: devices.length,
+						measures: [...domains, ...loose],
+						serials: member ? devices.map((d) => d.identifier) : []
+					};
+				});
+
+			// Everyone who recorded released data. Only those who took credit are named; a minor
+			// never takes credit, so is only ever counted.
+			const recorders = new Set<string>();
+			const named = new Set<string>();
+			for (const { record } of records) {
+				if (record.recordedByUserId) recorders.add(record.recordedByUserId);
+				if (record.creditedToUserId) named.add(record.creditedToUserId);
+			}
+			const shown = [...named]
+				.map((id) => state.users.find((u) => u.id === id))
+				.filter((u) => !!u && !u.minor);
+			const shownIds = new Set(shown.map((u) => u!.id));
+			const names = shown.map((u) => u!.fullName).sort((a, b) => a.localeCompare(b));
+			const anonymous = [...recorders].filter((id) => !shownIds.has(id)).length;
+
+			const now = new Date().toISOString();
+			const { profile } = classroom;
+			const result: PublicClassroomProfile = {
+				content: structuredClone(state.siteContent),
+				classroom: toPublicClassroom(state, classroom),
+				profile: {
+					areaCode: profile.areaCode,
+					language: profile.language,
+					description: profile.description,
+					ecosystems: [...profile.ecosystems]
+				},
+				projects: profile.projects.map((project) => ({
+					id: project.id,
+					title: project.title,
+					question: project.question,
+					sites: project.sites.map(({ parameterIds, ...site }) => ({
+						...site,
+						readings: parameterIds.map(labelOf)
+					}))
+				})),
+				kit,
+				custodianRole: member ? profile.custodianRole : null,
+				sessions: profile.sessions
+					.filter((s) => s.startsAt >= now)
+					.sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+					.map((s) => ({ ...s })),
+				contributors: { named: names, anonymous },
+				member,
+				canManage: !!can && (can.manageMembers || can.invite.length > 0)
+			};
+			return result;
 		},
 
 		async parameter(classroomId, parameterId) {

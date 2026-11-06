@@ -173,9 +173,13 @@ const siteContent: MockDbState['siteContent'] = {
 		title: 'Classrooms that measure the world around them',
 		body: 'Global Classrooms run a Lab in a Bag: weather, rain, soil and reef measurements taken by students and community scientists, checked, and shared openly with researchers.'
 	},
-	oceanDecade: 'Part of the UN Decade of Ocean Science for Sustainable Development (2021–2030).',
 	programme: 'Da Grouper School · Global Classrooms programme',
 	sampleData: true,
+	joinClassroom: {
+		title: 'Join this classroom',
+		body: 'People join a classroom by invitation from its facilitators. Sign in with the email your invitation was sent to.',
+		action: 'Sign in to join'
+	},
 	sections: [
 		{
 			id: 'explore',
@@ -278,6 +282,79 @@ const classrooms: MockDbState['classrooms'] = [
 		stageId: 'operating',
 		regionId: 'east_africa',
 		releasedThrough: '2026-10-20T06:00:00.000Z',
+		profile: {
+			areaCode: 'ET-AA',
+			language: 'Amharic and English',
+			description:
+				'Grade 9 to 11 students and community scientists from Addis Ababa and Shashamane, studying rain-fed farmland and the school garden.',
+			ecosystems: ['Highland farmland', 'School garden'],
+			hostAgreementSigned: true,
+			projects: [
+				{
+					id: 'prj_trinity_rain',
+					title: 'Two towns, one rainy season',
+					question: 'How does rainfall in Shashamane compare with Addis Ababa through the season?',
+					sites: [
+						{
+							code: 'TRN-S1',
+							name: 'Shashamane farm plot',
+							ecosystem: 'Highland farmland',
+							parameterIds: [
+								'precip_accum_local_day',
+								'rain_gauge_daily_accumulation',
+								'air_temperature'
+							],
+							frequency: 'Daily',
+							yearsPlanned: 3
+						},
+						{
+							code: 'TRN-S2',
+							name: 'Trinity School roof',
+							ecosystem: 'City',
+							parameterIds: ['air_temperature', 'relative_humidity'],
+							frequency: 'Daily',
+							yearsPlanned: 3
+						}
+					]
+				},
+				{
+					id: 'prj_trinity_soil',
+					title: 'When to plant',
+					question: 'When is soil moisture high enough for planting in the school garden?',
+					sites: [
+						{
+							code: 'TRN-S3',
+							name: 'School garden',
+							ecosystem: 'School garden',
+							parameterIds: ['soil_moisture', 'soil_temperature'],
+							frequency: 'Weekly',
+							yearsPlanned: 2
+						}
+					]
+				}
+			],
+			sessions: [
+				{
+					id: 'ses_trinity_1',
+					title: 'Rain gauge check and data review',
+					startsAt: '2026-10-28T07:00:00.000Z',
+					place: 'Trinity School lab'
+				},
+				{
+					id: 'ses_trinity_2',
+					title: 'Soil moisture survey in the garden',
+					startsAt: '2026-11-18T07:00:00.000Z',
+					place: 'School garden'
+				},
+				{
+					id: 'ses_trinity_3',
+					title: 'Season review with Shashamane',
+					startsAt: '2026-12-09T08:00:00.000Z',
+					place: 'Online'
+				}
+			],
+			custodianRole: 'facilitator'
+		},
 		terms: {
 			licence: 'CC BY 4.0',
 			licenceUrl: 'https://creativecommons.org/licenses/by/4.0/',
@@ -298,6 +375,40 @@ const classrooms: MockDbState['classrooms'] = [
 		stageId: 'pilot',
 		regionId: 'caribbean',
 		releasedThrough: '2026-10-20T08:00:00.000Z',
+		profile: {
+			areaCode: 'BS-NP',
+			language: 'English',
+			description:
+				'Secondary students on the Nassau harbour front, studying the shoreline and nearby reef through the storm season.',
+			ecosystems: ['Shoreline', 'Coral reef'],
+			hostAgreementSigned: true,
+			projects: [
+				{
+					id: 'prj_nassau_storm',
+					title: 'Heat on the shore',
+					question: 'How do storm-season winds change heat stress on the shore?',
+					sites: [
+						{
+							code: 'BSC-S1',
+							name: 'Harbour front',
+							ecosystem: 'Shoreline',
+							parameterIds: ['wind_avg', 'wind_gust', 'air_temperature', 'uv'],
+							frequency: 'Hourly',
+							yearsPlanned: 2
+						}
+					]
+				}
+			],
+			sessions: [
+				{
+					id: 'ses_nassau_1',
+					title: 'Weather station cleaning',
+					startsAt: '2026-11-21T14:00:00.000Z',
+					place: 'Bay Street School'
+				}
+			],
+			custodianRole: 'facilitator'
+		},
 		terms: {
 			licence: 'CC BY-NC 4.0',
 			licenceUrl: 'https://creativecommons.org/licenses/by-nc/4.0/',
@@ -317,6 +428,32 @@ const classrooms: MockDbState['classrooms'] = [
 		stageId: 'preparing',
 		regionId: 'east_africa',
 		releasedThrough: null,
+		profile: {
+			areaCode: 'SO-WO',
+			language: 'Somali and English',
+			description: 'A school science club studying dry-season heat and dust in the highlands.',
+			ecosystems: ['Dry highland'],
+			hostAgreementSigned: false,
+			projects: [
+				{
+					id: 'prj_hargeisa_uv',
+					title: 'Dry-season sun',
+					question: 'How high does UV exposure get during the dry season?',
+					sites: [
+						{
+							code: 'HSC-S1',
+							name: 'School grounds',
+							ecosystem: 'Dry highland',
+							parameterIds: ['uv', 'air_temperature'],
+							frequency: 'Daily',
+							yearsPlanned: 1
+						}
+					]
+				}
+			],
+			sessions: [],
+			custodianRole: 'institution_head'
+		},
 		terms: {
 			licence: 'CC BY 4.0',
 			licenceUrl: 'https://creativecommons.org/licenses/by/4.0/',
@@ -805,7 +942,7 @@ const labs: MockDbState['labs'] = [
 		id: 'lab_hargeisa',
 		classroomId: 'cls_hargeisa',
 		name: 'Hargeisa School Lab',
-		placeName: 'Hargeisa Secondary School',
+		placeName: 'Hargeisa',
 		country: 'Somalia',
 		location: { lat: 9.56, lng: 44.065 },
 		siteProfile: {
@@ -930,7 +1067,8 @@ function reading(
 		location: gps ?? { ...lab.location },
 		locationSource: gps ? 'device' : 'lab',
 		samSourceId: `${classroom.code}:${device.identifier}`,
-		creditedToUserId: null
+		creditedToUserId: null,
+		recordedByUserId: null
 	};
 }
 
@@ -1120,6 +1258,60 @@ const alertDefaults: AlertRule[] = (
 	enabled: true
 }));
 
+/** A field observation recorded by a person, before the release date so the public sees it. */
+function fieldObservation(
+	id: string,
+	labId: string,
+	userId: string,
+	credit: boolean,
+	observedAt: string,
+	values: Reading['values']
+): MockDbState['observations'][number] {
+	const lab = labs.find((l) => l.id === labId)!;
+	const classroom = classrooms.find((c) => c.id === lab.classroomId)!;
+	return {
+		id,
+		templateId: 'tpl_species_sighting',
+		deviceId: null,
+		labId,
+		classroomId: classroom.id,
+		observedAt,
+		receivedAt: observedAt,
+		values,
+		location: { ...lab.location },
+		locationSource: 'lab',
+		samSourceId: classroom.code,
+		creditedToUserId: credit ? userId : null,
+		recordedByUserId: userId
+	};
+}
+
+// Abebe takes credit; Tesfaye does not, so the profile counts him without naming him.
+const observations: MockDbState['observations'] = [
+	fieldObservation(
+		'obs_trinity_kites',
+		'lab_trinity',
+		'usr_abebe',
+		true,
+		'2026-10-12T07:30:00.000Z',
+		{
+			species_name: 'Black kite',
+			species_count: 4
+		}
+	),
+	fieldObservation(
+		'obs_trinity_ibis',
+		'lab_trinity',
+		'usr_tesfaye',
+		false,
+		'2026-10-14T06:45:00.000Z',
+		{
+			species_name: 'Hadada ibis',
+			species_count: 2
+		}
+	)
+];
+
 /** Guided forms for manual observations (AP-16). Device types without one get a plain form. */
 const observationTemplates: ObservationTemplate[] = [
 	{
@@ -1223,7 +1415,7 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 		alertDefaults,
 		alertRules: [],
 		readings,
-		observations: [],
+		observations,
 		classrooms,
 		defaultDataTerms,
 		siteContent,

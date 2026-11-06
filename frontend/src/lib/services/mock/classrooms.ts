@@ -266,7 +266,18 @@ export function createMockClassrooms({
 					// A new classroom starts at the first stage, with nothing released yet.
 					stageId: state.siteContent.stages[0].id,
 					regionId: null,
-					releasedThrough: null
+					releasedThrough: null,
+					// The profile fills in as the classroom describes itself; no host agreement yet.
+					profile: {
+						areaCode: '',
+						language: '',
+						description: '',
+						ecosystems: [],
+						hostAgreementSigned: false,
+						projects: [],
+						sessions: [],
+						custodianRole: 'institution_head'
+					}
 				};
 				state.classrooms.push(classroom);
 				// The real backend registers the code with SAM so sources can report against it.

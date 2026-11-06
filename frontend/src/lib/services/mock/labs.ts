@@ -66,6 +66,7 @@ function toReading(state: MockDbState, stored: MockDbState['readings'][number]):
 	const reading: Partial<MockDbState['readings'][number]> = structuredClone(stored);
 	delete reading.samSourceId;
 	delete reading.creditedToUserId;
+	delete reading.recordedByUserId;
 	delete reading.clientId;
 	delete reading.clockFlags;
 	const credited = stored.creditedToUserId;
@@ -235,6 +236,7 @@ export function createMockLabs({
 			location: input.location ? minorSafe(state, user, input.location) : { ...lab.location },
 			locationSource: input.location ? ('device' as const) : ('lab' as const),
 			creditedToUserId: credit && !user.minor ? user.id : null,
+			recordedByUserId: user.id,
 			templateId: template.id,
 			...(sync && { clientId: sync.clientId, clockFlags: sync.clockFlags })
 		};
@@ -423,7 +425,8 @@ export function createMockLabs({
 					samSourceId,
 					// Credit goes to the person who recorded, and only if they asked for it. Never
 					// to a minor: their name is not shown with their data.
-					creditedToUserId: options.credit && !user.minor ? user.id : null
+					creditedToUserId: options.credit && !user.minor ? user.id : null,
+					recordedByUserId: user.id
 				}));
 				// Stand-in for forwarding to SAM: the reading is stored under the device's source.
 				state.readings.push(...stored);

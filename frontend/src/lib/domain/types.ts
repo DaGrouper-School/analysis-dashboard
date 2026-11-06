@@ -703,8 +703,6 @@ export interface ClassroomStage {
 /** The public site's words and structure, edited as content rather than code. */
 export interface SiteContent {
 	hero: { eyebrow: string; title: string; body: string };
-	/** The UN Ocean Decade endorsement line. */
-	oceanDecade: string;
 	/** Footer line naming the programme. */
 	programme: string;
 	sections: SiteSection[];
@@ -716,6 +714,8 @@ export interface SiteContent {
 	languages: { code: string; label: string; ready: boolean }[];
 	/** True while the data shown is sample data: every page that shows it says so. */
 	sampleData: boolean;
+	/** The "Join this classroom" box on a classroom profile (AP-29). */
+	joinClassroom: { title: string; body: string; action: string };
 }
 
 /** Where a classroom's released data stands. */
@@ -742,7 +742,8 @@ export interface CoreReadings {
 export interface PublicClassroom {
 	id: string;
 	name: string;
-	institutionName: string;
+	/** The host institution: null until a signed host agreement exists. */
+	institutionName: string | null;
 	/** Where its first lab is, rounded; null before it has a lab. */
 	placeName: string | null;
 	country: string | null;
@@ -798,6 +799,79 @@ export interface PublicParameterPage {
 	/** One series per source, oldest first. */
 	series: { source: PublicSource; points: { observedAt: string; value: number | string }[] }[];
 	member: boolean;
+}
+
+/** A site where a research project measures (from LP-14 proposals). */
+export interface ProjectSite {
+	code: string;
+	name: string;
+	ecosystem: string;
+	/** Registry parameters measured there. */
+	parameterIds: string[];
+	/** How often, e.g. "Daily". */
+	frequency: string;
+	yearsPlanned: number;
+}
+
+export interface ResearchProject {
+	id: string;
+	title: string;
+	question: string;
+	sites: ProjectSite[];
+}
+
+/** A session on the classroom's calendar (LP-06). */
+export interface ClassroomSession {
+	id: string;
+	title: string;
+	startsAt: string;
+	place: string;
+}
+
+/** What a classroom says about itself on its public profile (AP-29). */
+export interface ClassroomProfile {
+	/** Country or area code, e.g. `ET-AA`. */
+	areaCode: string;
+	language: string;
+	/** Who the learners are and which ecosystems they study. */
+	description: string;
+	ecosystems: string[];
+	hostAgreementSigned: boolean;
+	projects: ResearchProject[];
+	sessions: ClassroomSession[];
+	/** Who looks after the Lab in a Bag. Shown to members only. */
+	custodianRole: ClassroomRole;
+}
+
+/** One kind of device in a classroom's Lab in a Bag, from its registered devices. */
+export interface KitItem {
+	deviceType: Pick<DeviceTypeDefinition, 'id' | 'label' | 'icon'>;
+	count: number;
+	/** What it measures: its domains by label, then any values with no domain yet. */
+	measures: string[];
+	/** Serials of the devices. Members only: empty for everyone else. */
+	serials: string[];
+}
+
+/** A classroom's public profile (AP-29). */
+export interface PublicClassroomProfile {
+	content: SiteContent;
+	classroom: PublicClassroom;
+	profile: Pick<ClassroomProfile, 'areaCode' | 'language' | 'description' | 'ecosystems'>;
+	/** Projects with each site's readings as registry labels. */
+	projects: (Omit<ResearchProject, 'sites'> & {
+		sites: (Omit<ProjectSite, 'parameterIds'> & { readings: string[] })[];
+	})[];
+	kit: KitItem[];
+	/** Members only; null for everyone else. */
+	custodianRole: ClassroomRole | null;
+	/** Upcoming sessions, soonest first. */
+	sessions: ClassroomSession[];
+	/** People who opted in to credit, by name; everyone else only counted. Minors are never named. */
+	contributors: { named: string[]; anonymous: number };
+	member: boolean;
+	/** The viewer can manage the classroom: show "Manage classroom". */
+	canManage: boolean;
 }
 
 export interface PublicHome {

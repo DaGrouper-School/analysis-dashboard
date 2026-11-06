@@ -28,6 +28,7 @@ import type {
 	GuardianConsent,
 	GuardianInput,
 	PublicHome,
+	PublicClassroomProfile,
 	PublicParameterPage,
 	PublicStation,
 	SiteContent,
@@ -258,6 +259,8 @@ export interface PublicService {
 	station(classroomId: string): Promise<PublicStation>;
 	/** One parameter of a classroom: its registry entry and released values over time. */
 	parameter(classroomId: string, parameterId: string): Promise<PublicParameterPage>;
+	/** A classroom's public profile (AP-29): who they are, what they study, their kit. */
+	profile(classroomId: string): Promise<PublicClassroomProfile>;
 }
 
 export interface Services {

@@ -48,7 +48,8 @@ describe('raw data export', () => {
 			classroomId: 'cls_trinity',
 			sourceId: 'field'
 		});
-		expect(page.rows.map((r) => [r.parameterId, r.value, r.sourceName])).toEqual([
+		const mine = page.rows.filter((r) => r.observedAt === '2026-10-20T07:00:00.000Z');
+		expect(mine.map((r) => [r.parameterId, r.value, r.sourceName])).toEqual([
 			['species_count', 3, 'Field observation'],
 			['species_name', 'Hooded vulture', 'Field observation']
 		]);
