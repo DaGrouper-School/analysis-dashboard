@@ -187,7 +187,7 @@ const siteContent: MockDbState['siteContent'] = {
 			id: 'classrooms',
 			label: 'Global Classrooms',
 			description: 'Who measures where, and how to host one.',
-			href: null
+			href: '/global-classrooms'
 		},
 		{ id: 'learn', label: 'Learn', description: 'What the measurements mean.', href: null },
 		{
@@ -239,6 +239,10 @@ const siteContent: MockDbState['siteContent'] = {
 			color: '#3cc04b'
 		}
 	],
+	regions: [
+		{ id: 'caribbean', label: 'Caribbean' },
+		{ id: 'east_africa', label: 'East Africa' }
+	],
 	languages: [
 		{ code: 'en', label: 'English', ready: true },
 		{ code: 'am', label: 'አማርኛ', ready: false },
@@ -272,6 +276,7 @@ const classrooms: MockDbState['classrooms'] = [
 		createdBy: 'usr_leila',
 		createdAt: SEEDED_AT,
 		stageId: 'operating',
+		regionId: 'east_africa',
 		releasedThrough: '2026-10-20T06:00:00.000Z',
 		terms: {
 			licence: 'CC BY 4.0',
@@ -291,6 +296,7 @@ const classrooms: MockDbState['classrooms'] = [
 		createdBy: 'usr_leila',
 		createdAt: SEEDED_AT,
 		stageId: 'pilot',
+		regionId: 'caribbean',
 		releasedThrough: '2026-10-20T08:00:00.000Z',
 		terms: {
 			licence: 'CC BY-NC 4.0',
@@ -309,6 +315,7 @@ const classrooms: MockDbState['classrooms'] = [
 		createdBy: 'usr_leila',
 		createdAt: SEEDED_AT,
 		stageId: 'preparing',
+		regionId: 'east_africa',
 		releasedThrough: null,
 		terms: {
 			licence: 'CC BY 4.0',

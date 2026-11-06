@@ -54,6 +54,8 @@ function toPublicClassroom(state: MockDbState, classroom: StoredClassroom): Publ
 		country: lab?.country ?? null,
 		location: lab ? coarsen(lab.location, decimals) : null,
 		stageId: classroom.stageId,
+		regionId: classroom.regionId,
+		themes: labs.flatMap((l) => l.siteProfile.researchQuestions),
 		core: coreReadings(
 			all.map((r) => r.record),
 			classroom.releasedThrough,

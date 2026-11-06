@@ -711,6 +711,8 @@ export interface SiteContent {
 	/** Footer links: data terms, privacy and consent, safeguarding. */
 	policies: SiteSection[];
 	stages: ClassroomStage[];
+	/** The regions classrooms are grouped by in the directory (AP-28), in display order. */
+	regions: { id: string; label: string }[];
 	languages: { code: string; label: string; ready: boolean }[];
 	/** True while the data shown is sample data: every page that shows it says so. */
 	sampleData: boolean;
@@ -746,6 +748,10 @@ export interface PublicClassroom {
 	country: string | null;
 	location: GeoPoint | null;
 	stageId: string;
+	/** Its region in `SiteContent.regions`; null until one is set. */
+	regionId: string | null;
+	/** What it studies: its labs' research questions. */
+	themes: string[];
 	core: CoreReadings;
 }
 
