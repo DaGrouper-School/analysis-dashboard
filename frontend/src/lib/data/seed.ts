@@ -39,6 +39,8 @@ const users: User[] = [
 			country: 'Bahamas'
 		},
 		onboardingCompleted: true,
+		minor: false,
+		consent: 'not_needed',
 		createdAt: SEEDED_AT,
 		updatedAt: SEEDED_AT
 	},
@@ -60,6 +62,8 @@ const users: User[] = [
 			country: 'Ethiopia'
 		},
 		onboardingCompleted: true,
+		minor: false,
+		consent: 'not_needed',
 		createdAt: SEEDED_AT,
 		updatedAt: SEEDED_AT
 	},
@@ -81,6 +85,8 @@ const users: User[] = [
 			country: 'United States'
 		},
 		onboardingCompleted: true,
+		minor: false,
+		consent: 'not_needed',
 		createdAt: SEEDED_AT,
 		updatedAt: SEEDED_AT
 	},
@@ -103,6 +109,8 @@ const users: User[] = [
 			country: 'United States'
 		},
 		onboardingCompleted: true,
+		minor: false,
+		consent: 'not_needed',
 		createdAt: SEEDED_AT,
 		updatedAt: SEEDED_AT
 	},
@@ -124,6 +132,32 @@ const users: User[] = [
 			country: 'Ethiopia'
 		},
 		onboardingCompleted: true,
+		minor: false,
+		consent: 'not_needed',
+		createdAt: SEEDED_AT,
+		updatedAt: SEEDED_AT
+	},
+	{
+		// A student under 18: their guardian has not answered the consent link yet.
+		id: 'usr_liya',
+		authProvider: 'phone',
+		fullName: 'Liya A.',
+		email: 'liya.a@example.org',
+		phone: '+251911000003',
+		phoneVerified: true,
+		avatarUrl: null,
+		role: 'community_scientist',
+		platformAdmin: false,
+		address: {
+			street: 'Kebele 04',
+			city: 'Shashamane',
+			state: 'Oromia',
+			zip: '',
+			country: 'Ethiopia'
+		},
+		onboardingCompleted: true,
+		minor: true,
+		consent: 'pending',
 		createdAt: SEEDED_AT,
 		updatedAt: SEEDED_AT
 	}
@@ -297,6 +331,12 @@ const memberships: MockDbState['memberships'] = [
 	{
 		classroomId: 'cls_trinity',
 		userId: 'usr_abebe',
+		role: 'community_scientist',
+		joinedAt: SEEDED_AT
+	},
+	{
+		classroomId: 'cls_trinity',
+		userId: 'usr_liya',
 		role: 'community_scientist',
 		joinedAt: SEEDED_AT
 	},
@@ -1184,6 +1224,19 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 		invitations,
 		labs,
 		devices,
+		guardianConsents: [
+			{
+				userId: 'usr_liya',
+				token: 'consent_liya_demo',
+				guardianName: 'Almaz A.',
+				guardianContact: '+251911000004',
+				status: 'pending' as const,
+				requestedAt: SEEDED_AT,
+				decidedAt: null
+			}
+		],
+		samAssertions: [],
+		privacy: { minorCoordinateDecimals: 2 },
 		samSources: [
 			...classrooms.map((c) => ({
 				sourceId: c.code,

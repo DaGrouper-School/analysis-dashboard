@@ -5,6 +5,7 @@
 	import PhoneInput from '#lib/components/PhoneInput.svelte';
 	import type { PhoneChallenge } from '#lib/domain/types.ts';
 	import { validateProfile } from '#lib/domain/validation.ts';
+	import { validateGuardian } from '#lib/domain/consent.ts';
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
 
@@ -17,6 +18,10 @@
 	// svelte-ignore state_referenced_locally
 	let email = $state(data.user.email ?? '');
 	let phone = $state('');
+	// Under 18: a guardian is asked for consent before any observation is sent (AP-04).
+	let under18 = $state(false);
+	let guardianName = $state('');
+	let guardianContact = $state('');
 
 	let errors = $state<Record<string, string>>({});
 	let formError = $state('');
@@ -47,6 +52,9 @@
 		event.preventDefault();
 		formError = '';
 		errors = validateProfile({ fullName, email });
+		if (under18 && !user.minor) {
+			Object.assign(errors, validateGuardian({ guardianName, guardianContact }));
+		}
 		if (!user.phoneVerified) {
 			formError = 'Verify your phone number to continue.';
 		}
@@ -54,6 +62,9 @@
 		saving = true;
 		try {
 			await services.profile.updateProfile({ fullName, email });
+			if (under18 && !user.minor) {
+				await services.profile.requestGuardianConsent({ guardianName, guardianContact });
+			}
 			await invalidate('app:session');
 			await goto(resolve('/onboarding/address'));
 		} catch (e) {
@@ -139,6 +150,53 @@
 			</button>
 		{/if}
 	</div>
+
+	{#if user.minor}
+		<p class="rounded-md border border-line bg-raised p-4 text-sm">
+			We asked your guardian for consent. You can look around now, and send observations once they
+			give it.
+		</p>
+	{:else}
+		<fieldset class="space-y-4">
+			<label class="flex items-start gap-2 text-sm">
+				<input
+					type="checkbox"
+					class="mt-0.5 rounded-sm border-line-strong bg-transparent text-teal checked:bg-current focus:ring-teal"
+					bind:checked={under18}
+				/>
+				<span>
+					I am under 18
+					<span class="block text-xs text-muted"
+						>We send your parent or guardian a link to give consent before you send observations.</span
+					>
+				</span>
+			</label>
+			{#if under18}
+				<div class="grid gap-4 sm:grid-cols-2">
+					<div>
+						<label class="label" for="guardianName">Guardian's name</label>
+						<input
+							id="guardianName"
+							class={['input', errors.guardianName && 'input-error']}
+							bind:value={guardianName}
+							aria-invalid={Boolean(errors.guardianName)}
+						/>
+						{#if errors.guardianName}<p class="field-error">{errors.guardianName}</p>{/if}
+					</div>
+					<div>
+						<label class="label" for="guardianContact">Their email or phone</label>
+						<input
+							id="guardianContact"
+							class={['input', errors.guardianContact && 'input-error']}
+							bind:value={guardianContact}
+							aria-invalid={Boolean(errors.guardianContact)}
+						/>
+						{#if errors.guardianContact}<p class="field-error">{errors.guardianContact}</p>{/if}
+					</div>
+				</div>
+			{/if}
+		</fieldset>
+	{/if}
 
 	{#if formError}<p class="field-error" role="alert">{formError}</p>{/if}
 

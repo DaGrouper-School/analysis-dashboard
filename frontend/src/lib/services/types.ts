@@ -24,6 +24,9 @@ import type {
 	ProfileInput,
 	CreateLabInput,
 	CsvExport,
+	ConsentRequest,
+	GuardianConsent,
+	GuardianInput,
 	PublicHome,
 	SiteContent,
 	RawPage,
@@ -74,6 +77,23 @@ export interface ProfileService {
 	updateAddress(address: Address): Promise<User>;
 	/** Checks required fields and sets `onboardingCompleted`. */
 	completeOnboarding(): Promise<User>;
+	/**
+	 * Marks the user as under 18 and sends their guardian a consent link (AP-04). Asking again
+	 * sends a new link; the old one stops working and consent is pending until answered.
+	 */
+	requestGuardianConsent(input: GuardianInput): Promise<GuardianConsent>;
+	/** The signed-in user's consent request, or null when they never needed one. */
+	getGuardianConsent(): Promise<GuardianConsent | null>;
+}
+
+/**
+ * The guardian's side of consent (AP-04), reached from the link they were sent. No sign-in. Each
+ * change is sent to SAM as a `consent` attribute assertion, and SAM enforces it.
+ */
+export interface ConsentService {
+	get(token: string): Promise<ConsentRequest>;
+	/** Gives consent, or withdraws it. */
+	decide(token: string, give: boolean): Promise<ConsentRequest>;
 }
 
 export interface PlacesService {
@@ -241,6 +261,7 @@ export interface Services {
 	labs: LabService;
 	exports: ExportService;
 	publicSite: PublicService;
+	consent: ConsentService;
 	places: PlacesService;
 	registry: RegistryService;
 }

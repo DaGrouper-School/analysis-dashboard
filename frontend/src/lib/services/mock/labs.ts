@@ -3,11 +3,13 @@ import type {
 	CurrentConditions,
 	Device,
 	ClockFlag,
+	GeoPoint,
 	Lab,
 	Observation,
 	ObservationInput,
 	Reading,
-	SyncRecordResult
+	SyncRecordResult,
+	User
 } from '#lib/domain/types.ts';
 import { alertsFor } from '#lib/domain/alerts.ts';
 import {
@@ -17,6 +19,8 @@ import {
 	validateReading
 } from '#lib/domain/validation.ts';
 import { checkObservation, withDeviceTemplates } from '#lib/observations.ts';
+import { contributionBlock } from '#lib/domain/consent.ts';
+import { coarsen } from '#lib/raw-data.ts';
 import { newId, readDb, updateDb, type MockDbState, type StoredDevice } from '#lib/data/mock-db.ts';
 import { ServiceError, type LabService } from '../types';
 import { currentUser, permissionsFor, roleIn } from './classrooms';
@@ -90,6 +94,17 @@ function toObservation(
 		locationSource: stored.locationSource,
 		creditedTo: credited ? (state.users.find((u) => u.id === credited)?.fullName ?? null) : null
 	};
+}
+
+/** A minor sends nothing without a guardian's consent (AP-04). */
+function checkConsent(user: User) {
+	const blocked = contributionBlock(user);
+	if (blocked) throw new ServiceError('forbidden', blocked);
+}
+
+/** A minor's own position is stored rounded, so it never pins down where they were. */
+function minorSafe(state: MockDbState, user: User, point: GeoPoint): GeoPoint {
+	return user.minor ? coarsen(point, state.privacy.minorCoordinateDecimals) : { ...point };
 }
 
 /** How far the device clock may be off the server's before it is flagged. */
@@ -186,6 +201,7 @@ export function createMockLabs({
 				'You can read this classroom’s data but not record observations.'
 			);
 		}
+		checkConsent(user);
 		const templates = withDeviceTemplates(
 			state.observationTemplates,
 			state.deviceTypes,
@@ -216,9 +232,9 @@ export function createMockLabs({
 			receivedAt: iso(),
 			values: { ...input.values },
 			// No GPS: stand in with the lab's location, and say so.
-			location: { ...(input.location ?? lab.location) },
+			location: input.location ? minorSafe(state, user, input.location) : { ...lab.location },
 			locationSource: input.location ? ('device' as const) : ('lab' as const),
-			creditedToUserId: credit ? user.id : null,
+			creditedToUserId: credit && !user.minor ? user.id : null,
 			templateId: template.id,
 			...(sync && { clientId: sync.clientId, clockFlags: sync.clockFlags })
 		};
@@ -390,6 +406,7 @@ export function createMockLabs({
 						'You can read this classroom’s data but not record readings.'
 					);
 				}
+				checkConsent(user);
 				const samSourceId = sourceIdFor(state, device);
 				const receivedAt = iso();
 				const stored = inputs.map((input) => ({
@@ -401,11 +418,12 @@ export function createMockLabs({
 					receivedAt,
 					values: { ...input.values },
 					// No GPS from the device: stand in with the lab's location, and say so.
-					location: { ...(input.location ?? lab.location) },
+					location: input.location ? minorSafe(state, user, input.location) : { ...lab.location },
 					locationSource: input.location ? ('device' as const) : ('lab' as const),
 					samSourceId,
-					// Credit goes to the person who recorded, and only if they asked for it.
-					creditedToUserId: options.credit ? user.id : null
+					// Credit goes to the person who recorded, and only if they asked for it. Never
+					// to a minor: their name is not shown with their data.
+					creditedToUserId: options.credit && !user.minor ? user.id : null
 				}));
 				// Stand-in for forwarding to SAM: the reading is stored under the device's source.
 				state.readings.push(...stored);

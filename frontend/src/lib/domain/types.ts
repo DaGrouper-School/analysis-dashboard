@@ -34,8 +34,46 @@ export interface User {
 	platformAdmin: boolean;
 	address: Address | null;
 	onboardingCompleted: boolean;
+	/** Under 18 (AP-04): contributes only while a guardian's consent is recorded. */
+	minor: boolean;
+	consent: ConsentStatus;
 	createdAt: string;
 	updatedAt: string;
+}
+
+/**
+ * A guardian's consent for a minor (AP-04). `not_needed` for adults; a minor starts at
+ * `pending` and can send observations only while it is `given`.
+ */
+export type ConsentStatus = 'not_needed' | 'pending' | 'given' | 'withdrawn';
+
+/** Who to ask for consent: a name, and an email address or phone number. */
+export interface GuardianInput {
+	guardianName: string;
+	guardianContact: string;
+}
+
+/** The signed-in minor's consent request, as they see it. */
+export interface GuardianConsent {
+	status: ConsentStatus;
+	guardianName: string;
+	guardianContact: string;
+	requestedAt: string;
+	decidedAt: string | null;
+	/** Mock only: the link the guardian would receive. The real backend never returns it. */
+	devToken: string | null;
+}
+
+/** What the guardian sees when they open their link. No sign-in. */
+export interface ConsentRequest {
+	/** The contributor's first name only. */
+	contributorName: string;
+	guardianName: string;
+	classroomNames: string[];
+	status: ConsentStatus;
+	decidedAt: string | null;
+	/** Positions from the contributor's phone are rounded to this many decimal places. */
+	coordinateDecimals: number;
 }
 
 export interface AuthResult {

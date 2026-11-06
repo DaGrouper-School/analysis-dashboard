@@ -1,4 +1,6 @@
 import type {
+	ConsentRequest,
+	GuardianConsent,
 	AlertRule,
 	Address,
 	CalculationDetails,
@@ -81,7 +83,11 @@ export function createHttpServices(baseUrl: string): Services {
 			confirmPhoneVerification: (requestId, code) =>
 				request<User>('POST', '/me/phone/verify', { requestId, code }),
 			updateAddress: (address: Address) => request<User>('PUT', '/me/address', address),
-			completeOnboarding: () => request<User>('POST', '/me/onboarding/complete')
+			completeOnboarding: () => request<User>('POST', '/me/onboarding/complete'),
+			// The backend sends the guardian their link; it is never returned to the minor.
+			requestGuardianConsent: (input) =>
+				request<GuardianConsent>('POST', '/me/guardian-consent', input),
+			getGuardianConsent: () => request<GuardianConsent | null>('GET', '/me/guardian-consent')
 		},
 		classrooms: {
 			listMine: () => request<ClassroomSummary[]>('GET', '/classrooms'),
@@ -123,6 +129,13 @@ export function createHttpServices(baseUrl: string): Services {
 			rawCsv: (query) => request<CsvExport>('POST', '/sam/exports/raw.csv', query)
 		},
 		// Open to visitors: the backend serves these without a session, released data only.
+		// Public: the guardian's link. Each decision is asserted to SAM as `consent`.
+		consent: {
+			get: (token) => request<ConsentRequest>('GET', `/consent/${encodeURIComponent(token)}`),
+			decide: (token, give) =>
+				request<ConsentRequest>('POST', `/consent/${encodeURIComponent(token)}`, { give })
+		},
+
 		publicSite: {
 			home: () => request<PublicHome>('GET', '/public/home'),
 			content: () => request<SiteContent>('GET', '/public/content')
