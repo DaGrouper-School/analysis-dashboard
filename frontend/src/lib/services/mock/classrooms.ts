@@ -265,6 +265,7 @@ export function createMockClassrooms({
 					terms: termsFor(state, input.name.trim(), input.institutionName.trim()),
 					// A new classroom starts at the first stage, with nothing released yet.
 					stageId: state.siteContent.stages[0].id,
+					regionId: null,
 					releasedThrough: null
 				};
 				state.classrooms.push(classroom);

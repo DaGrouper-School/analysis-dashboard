@@ -48,6 +48,8 @@ export interface StoredClassroom {
 	terms: DataTerms;
 	/** Its stage in `siteContent.stages`, shown on the public network map (AP-20). */
 	stageId: string;
+	/** Its region in `siteContent.regions`, for the public directory (AP-28); null until set. */
+	regionId: string | null;
 	/** Readings observed up to here are released to the public; null while none are. */
 	releasedThrough: string | null;
 }
@@ -165,7 +167,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 22;
+const VERSION = 23;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;
