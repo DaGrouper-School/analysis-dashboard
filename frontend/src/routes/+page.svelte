@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import CoreReadingsTable from '#lib/components/CoreReadingsTable.svelte';
 	import Globe from '#lib/components/Globe.svelte';
 	import NetworkMap from '#lib/components/NetworkMap.svelte';
@@ -10,7 +11,6 @@
 	let { data }: PageProps = $props();
 
 	const content = $derived(data.content);
-	const host = $derived(content.sections.find((s) => s.id === 'classrooms'));
 	const explore = $derived(content.sections.find((s) => s.id === 'explore'));
 </script>
 
@@ -30,10 +30,7 @@
 				<a href={explore ? sectionHref(explore) : '#network'} class="btn btn-primary"
 					>Explore the data</a
 				>
-				{#if host}
-					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-					<a href={sectionHref(host)} class="btn btn-ghost">Host a Global Classroom</a>
-				{/if}
+				<a href={resolve('/host')} class="btn btn-ghost">{content.hosting.title}</a>
 			</div>
 		</div>
 		<div class="hidden h-96 lg:block" aria-hidden="true">

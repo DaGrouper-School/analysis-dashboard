@@ -191,6 +191,8 @@ export interface CreateClassroomInput {
 	institutionName: string;
 	/** Only platform admins create classrooms. Creating one invites this person as its head. */
 	headEmail: string;
+	/** The accepted host application (AP-30) it is set up from, if any. */
+	applicationId?: string;
 }
 
 // ---- Parameter registry (SAM-01, SAM-05) -------------------------------------------
@@ -714,6 +716,8 @@ export interface SiteContent {
 	languages: { code: string; label: string; ready: boolean }[];
 	/** True while the data shown is sample data: every page that shows it says so. */
 	sampleData: boolean;
+	/** The "Host a Global Classroom" application (AP-30): its words. */
+	hosting: { title: string; intro: string; submitted: string };
 	/** The "Join this classroom" box on a classroom profile (AP-29). */
 	joinClassroom: { title: string; body: string; action: string };
 }
@@ -879,4 +883,54 @@ export interface PublicHome {
 	classrooms: PublicClassroom[];
 	/** Units of the core readings, from the registry. */
 	units: { rain: string; temperature: string };
+}
+
+// ---- Hosting a Global Classroom (AP-30) ---------------------------------------------
+
+/** A readiness question, from configuration. */
+export interface HostQuestion {
+	id: string;
+	label: string;
+	/** Shown under the question. */
+	help: string;
+	kind: 'yes_no' | 'number' | 'text';
+	required: boolean;
+}
+
+export interface HostApplicationInput {
+	institutionName: string;
+	contactName: string;
+	contactRole: string;
+	contactEmail: string;
+	/** Optional. */
+	contactPhone: string;
+	/** Answers by question ID: `yes`/`no`, a number or text, as entered. */
+	answers: Record<string, string>;
+	site: {
+		placeName: string;
+		country: string;
+		ecosystems: string[];
+		/** Who the learners would be. */
+		learners: string;
+		/** What the classroom wants to study. */
+		studyGoals: string;
+	};
+}
+
+export type HostApplicationStatus = 'submitted' | 'accepted' | 'declined';
+
+export interface HostApplication extends HostApplicationInput {
+	id: string;
+	status: HostApplicationStatus;
+	submittedAt: string;
+	decidedAt: string | null;
+	/** The classroom created from it, once there is one. */
+	classroomId: string | null;
+}
+
+/** What the applicant gets back: the application and the secret part of its status link. */
+export interface HostApplicationReceipt {
+	application: HostApplication;
+	/** The backend emails the status link; the mock returns it. */
+	token: string;
 }

@@ -19,12 +19,17 @@
 			.join(' · ')
 	);
 
-	// Platform admins also manage the shared registry of measurement types and domains.
+	// Platform admins also manage the shared registry and review host applications.
 	const nav = $derived([
 		{ href: resolve('/(app)/dashboard'), label: 'Dashboard' },
 		{ href: resolve('/(app)/map'), label: 'Map' },
 		{ href: resolve('/(app)/labs'), label: 'Labs' },
-		...(data.user.platformAdmin ? [{ href: resolve('/(app)/registry'), label: 'Registry' }] : []),
+		...(data.user.platformAdmin
+			? [
+					{ href: resolve('/(app)/registry'), label: 'Registry' },
+					{ href: resolve('/(app)/host-applications'), label: 'Applications' }
+				]
+			: []),
 		{ href: resolve('/(app)/settings'), label: 'Settings' }
 	]);
 

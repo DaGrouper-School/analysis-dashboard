@@ -1,4 +1,6 @@
 import type {
+	HostApplication,
+	HostQuestion,
 	ClockFlag,
 	ConsentStatus,
 	AlertRule,
@@ -124,6 +126,11 @@ export interface StoredAssertion {
 	assertedAt: string;
 }
 
+/** An application to host a classroom (AP-30), with its status link's token. */
+export interface StoredHostApplication extends HostApplication {
+	token: string;
+}
+
 export interface MockDbState {
 	version: number;
 	users: User[];
@@ -167,13 +174,16 @@ export interface MockDbState {
 	devices: StoredDevice[];
 	guardianConsents: StoredConsent[];
 	samAssertions: StoredAssertion[];
+	/** Readiness questions for hosting a classroom (AP-30), in order. */
+	hostQuestions: HostQuestion[];
+	hostApplications: StoredHostApplication[];
 	/** How much of a minor's position is kept: decimal places of latitude and longitude. */
 	privacy: { minorCoordinateDecimals: number };
 }
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 24;
+const VERSION = 25;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;

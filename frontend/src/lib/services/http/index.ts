@@ -1,4 +1,8 @@
 import type {
+	HostApplication,
+	HostApplicationInput,
+	HostApplicationReceipt,
+	HostQuestion,
 	ConsentRequest,
 	GuardianConsent,
 	AlertRule,
@@ -139,6 +143,21 @@ export function createHttpServices(baseUrl: string): Services {
 				request<ConsentRequest>('POST', `/consent/${encodeURIComponent(token)}`, { give })
 		},
 
+		// Applying is public; deciding is for platform admins.
+		hosting: {
+			questions: () => request<HostQuestion[]>('GET', '/host/questions'),
+			apply: (input: HostApplicationInput) =>
+				request<HostApplicationReceipt>('POST', '/host/applications', input),
+			status: (token) =>
+				request<HostApplication>('GET', `/host/status/${encodeURIComponent(token)}`),
+			list: () => request<HostApplication[]>('GET', '/admin/host-applications'),
+			decide: (id, accept) =>
+				request<HostApplication>(
+					'POST',
+					`/admin/host-applications/${encodeURIComponent(id)}/decision`,
+					{ accept }
+				)
+		},
 		publicSite: {
 			home: () => request<PublicHome>('GET', '/public/home'),
 			content: () => request<SiteContent>('GET', '/public/content'),

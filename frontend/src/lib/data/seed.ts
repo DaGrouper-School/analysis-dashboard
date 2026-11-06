@@ -175,6 +175,12 @@ const siteContent: MockDbState['siteContent'] = {
 	},
 	programme: 'Da Grouper School · Global Classrooms programme',
 	sampleData: true,
+	hosting: {
+		title: 'Host a Global Classroom',
+		intro:
+			'Tell us about your institution, how ready you are and the place you would study. We review every application before a classroom is set up.',
+		submitted: 'Your application is in. Keep this page’s link to check its status.'
+	},
 	joinClassroom: {
 		title: 'Join this classroom',
 		body: 'People join a classroom by invitation from its facilitators. Sign in with the email your invitation was sent to.',
@@ -1393,6 +1399,70 @@ const observationTemplates: ObservationTemplate[] = [
 	}
 ];
 
+/** Readiness questions for hosting a classroom (AP-30). Draft for the programme team to replace. */
+const hostQuestions: MockDbState['hostQuestions'] = [
+	{
+		id: 'storage',
+		label: 'Is there a safe, dry place to keep the Lab in a Bag?',
+		help: 'A locked cupboard or room is enough.',
+		kind: 'yes_no',
+		required: true
+	},
+	{
+		id: 'lead',
+		label: 'Is there a staff member who can lead a session each week?',
+		help: 'They would become the classroom’s facilitator.',
+		kind: 'yes_no',
+		required: true
+	},
+	{
+		id: 'connection',
+		label: 'Is there mobile data or wifi at least once a week?',
+		help: 'Observations are saved on the phone and sync when there is a connection.',
+		kind: 'yes_no',
+		required: true
+	},
+	{
+		id: 'learners',
+		label: 'About how many learners would take part?',
+		help: '',
+		kind: 'number',
+		required: true
+	},
+	{
+		id: 'notes',
+		label: 'Anything else we should know?',
+		help: '',
+		kind: 'text',
+		required: false
+	}
+];
+
+/** One application waiting for review, so the back office has something to show. */
+const hostApplications: MockDbState['hostApplications'] = [
+	{
+		id: 'happ_andros',
+		token: 'host_andros_demo',
+		institutionName: 'North Andros High School',
+		contactName: 'Renee P.',
+		contactRole: 'Science teacher',
+		contactEmail: 'renee.p@example.org',
+		contactPhone: '',
+		answers: { storage: 'yes', lead: 'yes', connection: 'no', learners: '24' },
+		site: {
+			placeName: 'Nicholls Town, Andros',
+			country: 'Bahamas',
+			ecosystems: ['Mangrove', 'Coral reef'],
+			learners: 'Grade 10 and 11 students and their families.',
+			studyGoals: 'How the mangrove shoreline changes after storms.'
+		},
+		status: 'submitted',
+		submittedAt: '2026-10-30T15:00:00.000Z',
+		decidedAt: null,
+		classroomId: null
+	}
+];
+
 export function createSeed(): Omit<MockDbState, 'version'> {
 	// Deep copy so a reset never shares objects with mutated state.
 	return structuredClone({
@@ -1437,6 +1507,8 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 		],
 		samAssertions: [],
 		privacy: { minorCoordinateDecimals: 2 },
+		hostQuestions,
+		hostApplications,
 		samSources: [
 			...classrooms.map((c) => ({
 				sourceId: c.code,

@@ -16,6 +16,7 @@ import { ServiceError, type Services } from '../types';
 import { createMockClassrooms } from './classrooms';
 import { createMockConsent, createMockGuardian } from './consent';
 import { createMockExports } from './exports';
+import { createMockHosting } from './hosting';
 import { createMockLabs } from './labs';
 import { createMockPlaces } from './places';
 import { createMockPublic } from './public';
@@ -294,6 +295,7 @@ export function createMockServices({ latency = 250, now = Date.now }: MockOption
 		publicSite: createMockPublic(delay),
 
 		consent: createMockConsent({ delay, now }),
+		hosting: createMockHosting({ delay, now }),
 
 		places: createMockPlaces(delay),
 

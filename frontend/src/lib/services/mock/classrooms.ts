@@ -254,6 +254,21 @@ export function createMockClassrooms({
 				if (!user.platformAdmin) {
 					throw new ServiceError('forbidden', 'Only platform admins can create a classroom.');
 				}
+				// Set up from a host application (AP-30): only once it is accepted, and only once.
+				const application = input.applicationId
+					? state.hostApplications.find((a) => a.id === input.applicationId)
+					: undefined;
+				if (input.applicationId && !application) {
+					throw new ServiceError('not_found', 'Host application not found.');
+				}
+				if (application && (application.status !== 'accepted' || application.classroomId)) {
+					throw new ServiceError(
+						'conflict',
+						application.classroomId
+							? 'A classroom was already created from this application.'
+							: 'Accept the application before creating its classroom.'
+					);
+				}
 				const classroom: StoredClassroom = {
 					id: newId('cls'),
 					name: input.name.trim(),
@@ -280,6 +295,7 @@ export function createMockClassrooms({
 					}
 				};
 				state.classrooms.push(classroom);
+				if (application) application.classroomId = classroom.id;
 				// The real backend registers the code with SAM so sources can report against it.
 				state.samSources.push({
 					sourceId: classroom.code,

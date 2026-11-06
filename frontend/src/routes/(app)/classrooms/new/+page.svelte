@@ -9,9 +9,12 @@
 
 	let { data }: PageProps = $props();
 
+	// From an accepted host application: its institution, and its contact as the head.
+	// svelte-ignore state_referenced_locally
+	const application = data.application;
 	let name = $state('');
-	let institutionName = $state('');
-	let headEmail = $state('');
+	let institutionName = $state(application?.institutionName ?? '');
+	let headEmail = $state(application?.contactEmail ?? '');
 	let errors = $state<Record<string, string>>({});
 	let formError = $state('');
 	let saving = $state(false);
@@ -50,7 +53,12 @@
 		formError = '';
 		saving = true;
 		try {
-			const classroom = await services.classrooms.create({ name, institutionName, headEmail });
+			const classroom = await services.classrooms.create({
+				name,
+				institutionName,
+				headEmail,
+				...(application && { applicationId: application.id })
+			});
 			// The head takes it from here: they accept, set up the lab and invite the rest.
 			await goto(resolve('/(app)/classrooms/[id]?tab=invitations', { id: classroom.id }));
 		} catch (e) {
@@ -72,6 +80,13 @@
 	The classroom gets a unique global classroom code. It is registered in SAM as the source
 	identifier for the classroom's stations and observations.
 </p>
+
+{#if application && data.user.platformAdmin}
+	<p class="mt-4 max-w-xl text-sm text-muted">
+		From the host application by {application.contactName}, {application.contactRole} at
+		{application.institutionName}.
+	</p>
+{/if}
 
 {#if !data.user.platformAdmin}
 	<div class="card mt-8 max-w-xl">
