@@ -20,6 +20,8 @@ import type {
 	CurrentConditions,
 	CsvExport,
 	PublicHome,
+	PublicParameterPage,
+	PublicStation,
 	SiteContent,
 	RawPage,
 	Device,
@@ -138,7 +140,14 @@ export function createHttpServices(baseUrl: string): Services {
 
 		publicSite: {
 			home: () => request<PublicHome>('GET', '/public/home'),
-			content: () => request<SiteContent>('GET', '/public/content')
+			content: () => request<SiteContent>('GET', '/public/content'),
+			station: (classroomId) =>
+				request<PublicStation>('GET', `/public/classrooms/${encodeURIComponent(classroomId)}`),
+			parameter: (classroomId, parameterId) =>
+				request<PublicParameterPage>(
+					'GET',
+					`/public/classrooms/${encodeURIComponent(classroomId)}/parameters/${encodeURIComponent(parameterId)}`
+				)
 		},
 		labs: {
 			listForClassroom: (classroomId) =>

@@ -175,12 +175,13 @@ const siteContent: MockDbState['siteContent'] = {
 	},
 	oceanDecade: 'Part of the UN Decade of Ocean Science for Sustainable Development (2021–2030).',
 	programme: 'Da Grouper School · Global Classrooms programme',
+	sampleData: true,
 	sections: [
 		{
 			id: 'explore',
 			label: 'Explore data',
 			description: 'Maps and stations open to everyone.',
-			href: null
+			href: '/explore'
 		},
 		{
 			id: 'classrooms',

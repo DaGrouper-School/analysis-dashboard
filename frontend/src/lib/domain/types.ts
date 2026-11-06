@@ -712,6 +712,8 @@ export interface SiteContent {
 	policies: SiteSection[];
 	stages: ClassroomStage[];
 	languages: { code: string; label: string; ready: boolean }[];
+	/** True while the data shown is sample data: every page that shows it says so. */
+	sampleData: boolean;
 }
 
 /** Where a classroom's released data stands. */
@@ -745,6 +747,51 @@ export interface PublicClassroom {
 	location: GeoPoint | null;
 	stageId: string;
 	core: CoreReadings;
+}
+
+/** Where a public value came from: a device by its name, or the classroom's field observations. */
+export interface PublicSource {
+	id: string;
+	/** The device's name; null for field observations. */
+	name: string | null;
+	kind: 'device' | 'field';
+}
+
+/** The latest released value of one parameter from one source. */
+export interface PublicValue {
+	parameterId: string;
+	value: number | string;
+	observedAt: string;
+	source: PublicSource;
+}
+
+/** One domain's card on a station overview; `domain` null for values with no domain yet. */
+export interface PublicDomainCard {
+	domain: Pick<DomainDefinition, 'id' | 'label' | 'icon' | 'description'> | null;
+	values: PublicValue[];
+}
+
+/** A classroom's station overview for visitors (AP-21): released data only. */
+export interface PublicStation {
+	content: SiteContent;
+	classroom: PublicClassroom;
+	units: PublicHome['units'];
+	/** Registry entries for every parameter shown, by ID. */
+	parameters: Parameter[];
+	domains: PublicDomainCard[];
+	/** The viewer belongs to this classroom, so their dashboard shows it with raw values too. */
+	member: boolean;
+}
+
+/** One parameter of one classroom for visitors: its meaning and released values over time. */
+export interface PublicParameterPage {
+	content: SiteContent;
+	classroom: PublicClassroom;
+	parameter: Parameter;
+	domain: Pick<DomainDefinition, 'id' | 'label' | 'icon'> | null;
+	/** One series per source, oldest first. */
+	series: { source: PublicSource; points: { observedAt: string; value: number | string }[] }[];
+	member: boolean;
 }
 
 export interface PublicHome {

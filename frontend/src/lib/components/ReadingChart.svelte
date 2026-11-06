@@ -19,7 +19,7 @@
 		thresholds = []
 	}: {
 		/** Any order; the chart sorts by time. */
-		readings: Reading[];
+		readings: Pick<Reading, 'observedAt' | 'values'>[];
 		parameterId: string;
 		label: string;
 		unit?: string;
