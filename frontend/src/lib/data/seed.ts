@@ -170,7 +170,7 @@ const users: User[] = [
 const siteContent: MockDbState['siteContent'] = {
 	hero: {
 		eyebrow: 'Da Grouper School',
-		title: 'Classrooms that measure the world around them',
+		title: 'Communities that measure the world around them',
 		body: 'Global Classrooms run a Lab in a Bag: weather, rain, soil and reef measurements taken by students and community scientists, checked, and shared openly with researchers.'
 	},
 	programme: 'Da Grouper School · Global Classrooms programme',
