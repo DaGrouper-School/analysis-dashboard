@@ -1,4 +1,8 @@
 import type {
+	HostApplication,
+	HostApplicationInput,
+	HostApplicationReceipt,
+	HostQuestion,
 	Address,
 	AlertRule,
 	AlertRuleInput,
@@ -97,6 +101,19 @@ export interface ConsentService {
 	get(token: string): Promise<ConsentRequest>;
 	/** Gives consent, or withdraws it. */
 	decide(token: string, give: boolean): Promise<ConsentRequest>;
+}
+
+/** Applying to host a Global Classroom (AP-30). Applying needs no sign-in. */
+export interface HostingService {
+	/** The readiness questions, from configuration. */
+	questions(): Promise<HostQuestion[]>;
+	apply(input: HostApplicationInput): Promise<HostApplicationReceipt>;
+	/** The applicant's view, by the token in their status link. */
+	status(token: string): Promise<HostApplication>;
+	/** Platform admins: every application, newest first. */
+	list(): Promise<HostApplication[]>;
+	/** Platform admins: accept or decline a submitted application. */
+	decide(id: string, accept: boolean): Promise<HostApplication>;
 }
 
 export interface PlacesService {
@@ -271,6 +288,7 @@ export interface Services {
 	exports: ExportService;
 	publicSite: PublicService;
 	consent: ConsentService;
+	hosting: HostingService;
 	places: PlacesService;
 	registry: RegistryService;
 }

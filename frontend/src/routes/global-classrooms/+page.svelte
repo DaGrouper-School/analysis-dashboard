@@ -62,8 +62,13 @@
 {/snippet}
 
 <PublicShell {content} user={data.user}>
-	<h1 class="font-display text-4xl">{section?.label ?? 'Global Classrooms'}</h1>
-	{#if section}<p class="mt-2 max-w-2xl text-muted">{section.description}</p>{/if}
+	<div class="flex flex-wrap items-end justify-between gap-4">
+		<div>
+			<h1 class="font-display text-4xl">{section?.label ?? 'Global Classrooms'}</h1>
+			{#if section}<p class="mt-2 max-w-2xl text-muted">{section.description}</p>{/if}
+		</div>
+		<a class="btn btn-primary" href={resolve('/host')}>{content.hosting.title}</a>
+	</div>
 
 	<form
 		class="mt-8 grid gap-4 sm:grid-cols-[repeat(3,minmax(0,1fr))_auto] sm:items-end"
