@@ -28,6 +28,8 @@ import type {
 	GuardianConsent,
 	GuardianInput,
 	PublicHome,
+	PublicParameterPage,
+	PublicStation,
 	SiteContent,
 	RawPage,
 	RawQuery,
@@ -252,6 +254,10 @@ export interface PublicService {
 	home(): Promise<PublicHome>;
 	/** The site's content alone, for pages that only need the sections and policies. */
 	content(): Promise<SiteContent>;
+	/** A classroom's station overview (AP-21): the latest released value of each parameter. */
+	station(classroomId: string): Promise<PublicStation>;
+	/** One parameter of a classroom: its registry entry and released values over time. */
+	parameter(classroomId: string, parameterId: string): Promise<PublicParameterPage>;
 }
 
 export interface Services {
