@@ -11,10 +11,14 @@
 	import { rangeText, readEntries, unitsFor, type FieldEntry } from '#lib/observations.ts';
 	import { outbox } from '#lib/outbox.svelte.ts';
 	import { clockMessage, type OutboxEntry } from '#lib/outbox.ts';
+	import { contributionBlock } from '#lib/domain/consent.ts';
 	import { errorMessage } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	// A minor without a guardian's consent cannot send anything (AP-04); the service refuses too.
+	const blocked = $derived(contributionBlock(data.user));
 
 	const paramsById = $derived(new Map(data.parameters.map((p) => [p.id, p])));
 
@@ -332,7 +336,17 @@
 		</p>
 	{/if}
 
-	{#if !data.targets.length}
+	{#if blocked && data.targets.length}
+		<div class="card mt-8">
+			<h2 class="text-xl font-semibold">Your guardian's consent is needed</h2>
+			<p class="mt-2 text-sm">{blocked}</p>
+			<p class="mt-1 text-sm text-muted">
+				You can still explore your classroom's data. Settings shows where consent stands and can
+				send your guardian a new link.
+			</p>
+			<a class="btn btn-ghost mt-4" href={resolve('/(app)/settings')}>Open settings</a>
+		</div>
+	{:else if !data.targets.length}
 		<div class="card mt-8">
 			<h2 class="text-xl font-semibold">You can't record observations yet</h2>
 			<p class="mt-2 text-sm text-muted">

@@ -4,6 +4,7 @@
 	import AddressForm from '#lib/components/AddressForm.svelte';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import ClassroomList from '#lib/components/ClassroomList.svelte';
+	import GuardianConsentCard from '#lib/components/GuardianConsentCard.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
 	import { resetDb } from '#lib/data/mock-db.ts';
@@ -102,52 +103,57 @@
 <div class="mt-8">
 	<VerticalTabs {tabs} bind:active={tab} label="Settings">
 		{#if tab === 'profile'}
-			<section class="card max-w-2xl">
-				<h2 class="flex items-center gap-2 text-lg font-semibold">
-					<Icon name={ICONS.profile} class="size-5 text-muted" /> Profile & contact
-				</h2>
-				<form class="mt-5 space-y-5" onsubmit={saveProfile} novalidate>
-					<div>
-						<label class="label" for="fullName">Full name</label>
-						<input
-							id="fullName"
-							class={['input', errors.fullName && 'input-error']}
-							bind:value={fullName}
-						/>
-						{#if errors.fullName}<p class="field-error">{errors.fullName}</p>{/if}
-					</div>
-					<div>
-						<label class="label" for="email">Email</label>
-						<input
-							id="email"
-							type="email"
-							class={['input', errors.email && 'input-error']}
-							bind:value={email}
-						/>
-						{#if errors.email}<p class="field-error">{errors.email}</p>{/if}
-					</div>
-					<div>
-						<span class="label">Phone number</span>
-						<p
-							class="flex items-center justify-between rounded-sm border border-line bg-raised px-3.5 py-2.5"
-						>
-							<span>{user.phone}</span>
-							<span
-								class="rounded-full bg-lime/15 px-2.5 py-0.5 text-xs font-medium text-lime ring-1 ring-lime/40"
-								>Verified</span
+			<div class="space-y-6">
+				<section class="card max-w-2xl">
+					<h2 class="flex items-center gap-2 text-lg font-semibold">
+						<Icon name={ICONS.profile} class="size-5 text-muted" /> Profile & contact
+					</h2>
+					<form class="mt-5 space-y-5" onsubmit={saveProfile} novalidate>
+						<div>
+							<label class="label" for="fullName">Full name</label>
+							<input
+								id="fullName"
+								class={['input', errors.fullName && 'input-error']}
+								bind:value={fullName}
+							/>
+							{#if errors.fullName}<p class="field-error">{errors.fullName}</p>{/if}
+						</div>
+						<div>
+							<label class="label" for="email">Email</label>
+							<input
+								id="email"
+								type="email"
+								class={['input', errors.email && 'input-error']}
+								bind:value={email}
+							/>
+							{#if errors.email}<p class="field-error">{errors.email}</p>{/if}
+						</div>
+						<div>
+							<span class="label">Phone number</span>
+							<p
+								class="flex items-center justify-between rounded-sm border border-line bg-raised px-3.5 py-2.5"
 							>
-						</p>
-					</div>
-					<div class="flex items-center gap-3">
-						<button class="btn btn-primary" disabled={saving}
-							>{saving ? 'Saving…' : 'Save profile'}</button
-						>
-						{#if profileMessage}<p class="text-sm text-muted" role="status">
-								{profileMessage}
-							</p>{/if}
-					</div>
-				</form>
-			</section>
+								<span>{user.phone}</span>
+								<span
+									class="rounded-full bg-lime/15 px-2.5 py-0.5 text-xs font-medium text-lime ring-1 ring-lime/40"
+									>Verified</span
+								>
+							</p>
+						</div>
+						<div class="flex items-center gap-3">
+							<button class="btn btn-primary" disabled={saving}
+								>{saving ? 'Saving…' : 'Save profile'}</button
+							>
+							{#if profileMessage}<p class="text-sm text-muted" role="status">
+									{profileMessage}
+								</p>{/if}
+						</div>
+					</form>
+				</section>
+				{#if user.minor}
+					<GuardianConsentCard consent={data.consent} />
+				{/if}
+			</div>
 		{:else if tab === 'address'}
 			<section class="card max-w-2xl">
 				<h2 class="flex items-center gap-2 text-lg font-semibold">

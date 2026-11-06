@@ -3,13 +3,15 @@ import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ parent }) => {
 	const { user } = await parent();
-	const [classrooms, invitations] = await Promise.all([
+	const [classrooms, invitations, consent] = await Promise.all([
 		services.classrooms.listMine(),
-		services.classrooms.listMyInvitations()
+		services.classrooms.listMyInvitations(),
+		user.minor ? services.profile.getGuardianConsent() : null
 	]);
 	return {
 		classrooms,
 		invitations,
+		consent,
 		// Platform admins create classrooms and invite each one's institution head.
 		canCreate: user.platformAdmin
 	};

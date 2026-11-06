@@ -1,5 +1,6 @@
 import type {
 	ClockFlag,
+	ConsentStatus,
 	AlertRule,
 	DataTerms,
 	SiteContent,
@@ -96,6 +97,25 @@ type StoredRecord = Omit<Reading, 'creditedTo'> & {
 	clockFlags?: ClockFlag[];
 };
 
+/** A guardian consent link (AP-04): one per minor, replaced when they ask again. */
+export interface StoredConsent {
+	userId: string;
+	token: string;
+	guardianName: string;
+	guardianContact: string;
+	status: Exclude<ConsentStatus, 'not_needed'>;
+	requestedAt: string;
+	decidedAt: string | null;
+}
+
+/** Stand-in for attribute assertions sent to SAM (AP-36); SAM enforces them. */
+export interface StoredAssertion {
+	userId: string;
+	attribute: 'consent';
+	value: 'given' | 'withdrawn';
+	assertedAt: string;
+}
+
 export interface MockDbState {
 	version: number;
 	users: User[];
@@ -137,11 +157,15 @@ export interface MockDbState {
 	samSources: StoredSamSource[];
 	labs: Lab[];
 	devices: StoredDevice[];
+	guardianConsents: StoredConsent[];
+	samAssertions: StoredAssertion[];
+	/** How much of a minor's position is kept: decimal places of latitude and longitude. */
+	privacy: { minorCoordinateDecimals: number };
 }
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 20;
+const VERSION = 21;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;

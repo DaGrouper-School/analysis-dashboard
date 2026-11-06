@@ -14,6 +14,7 @@ import {
 } from '#lib/data/mock-db.ts';
 import { ServiceError, type Services } from '../types';
 import { createMockClassrooms } from './classrooms';
+import { createMockConsent, createMockGuardian } from './consent';
 import { createMockExports } from './exports';
 import { createMockLabs } from './labs';
 import { createMockPlaces } from './places';
@@ -128,6 +129,8 @@ export function createMockServices({ latency = 250, now = Date.now }: MockOption
 			platformAdmin: false,
 			address: null,
 			onboardingCompleted: false,
+			minor: false,
+			consent: 'not_needed',
 			createdAt: t,
 			updatedAt: t,
 			...fields
@@ -277,7 +280,9 @@ export function createMockServices({ latency = 250, now = Date.now }: MockOption
 					touch(user);
 					return user;
 				});
-			}
+			},
+
+			...createMockGuardian({ delay, now })
 		},
 
 		classrooms: createMockClassrooms({ delay, now }),
@@ -287,6 +292,8 @@ export function createMockServices({ latency = 250, now = Date.now }: MockOption
 		exports: createMockExports({ delay, now }),
 
 		publicSite: createMockPublic(delay),
+
+		consent: createMockConsent({ delay, now }),
 
 		places: createMockPlaces(delay),
 
