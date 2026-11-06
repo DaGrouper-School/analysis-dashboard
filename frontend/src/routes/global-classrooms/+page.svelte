@@ -114,7 +114,14 @@
 						<li class="card flex flex-col gap-3">
 							<div class="flex items-start justify-between gap-3">
 								<div class="min-w-0">
-									<h4 class="text-lg font-semibold text-ink">{classroom.name}</h4>
+									<h4 class="text-lg font-semibold text-ink">
+										<a
+											class="hover:underline"
+											href={resolve('/global-classrooms/[classroom]', {
+												classroom: classroom.id
+											})}>{classroom.name}</a
+										>
+									</h4>
 									<p class="text-sm text-muted">
 										{[classroom.placeName, classroom.country].filter(Boolean).join(', ') ||
 											classroom.institutionName}

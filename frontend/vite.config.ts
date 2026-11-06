@@ -2,8 +2,11 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
+import pkg from './package.json' with { type: 'json' };
 
 export default defineConfig({
+	// The app version shown in the site footer, from package.json.
+	define: { __APP_VERSION__: JSON.stringify(pkg.version) },
 	plugins: [
 		tailwindcss(),
 		sveltekit({

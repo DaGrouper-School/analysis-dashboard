@@ -7,6 +7,7 @@ import type {
 	DeviceTypeDefinition,
 	DomainDefinition,
 	RegistryChange,
+	ClassroomProfile,
 	ClassroomRole,
 	InvitationStatus,
 	Parameter,
@@ -52,6 +53,8 @@ export interface StoredClassroom {
 	regionId: string | null;
 	/** Readings observed up to here are released to the public; null while none are. */
 	releasedThrough: string | null;
+	/** What its public profile shows (AP-29). */
+	profile: ClassroomProfile;
 }
 
 export interface StoredMembership {
@@ -94,6 +97,9 @@ type StoredRecord = Omit<Reading, 'creditedTo'> & {
 	samSourceId: string;
 	/** Who recorded it, when they opted in to credit. Resolved to their current name on read. */
 	creditedToUserId: string | null;
+	/** Who recorded or synced it, credited or not, so contributors can be counted. Null for a
+	 * device that uploads on its own. */
+	recordedByUserId: string | null;
 	/** The device's ID for a record synced from its outbox; a retry finds it again. */
 	clientId?: string;
 	clockFlags?: ClockFlag[];
@@ -167,7 +173,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 23;
+const VERSION = 24;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;

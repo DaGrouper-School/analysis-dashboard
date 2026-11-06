@@ -86,7 +86,10 @@ describe('syncing observations saved offline (AP-16)', () => {
 			observation: { deviceId: null }
 		});
 		const detail = await services.labs.get('lab_trinity');
-		expect(detail.observations).toHaveLength(1);
+		// Stored once, beside the seeded observations.
+		expect(
+			detail.observations.filter((o) => o.observedAt === '2026-10-20T07:00:00.000Z')
+		).toHaveLength(1);
 		const [reading] = await services.labs.deviceReadings('dev_shashamane_gauge');
 		expect(reading).not.toHaveProperty('clientId');
 	});

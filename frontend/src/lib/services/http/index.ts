@@ -20,6 +20,7 @@ import type {
 	CurrentConditions,
 	CsvExport,
 	PublicHome,
+	PublicClassroomProfile,
 	PublicParameterPage,
 	PublicStation,
 	SiteContent,
@@ -147,6 +148,11 @@ export function createHttpServices(baseUrl: string): Services {
 				request<PublicParameterPage>(
 					'GET',
 					`/public/classrooms/${encodeURIComponent(classroomId)}/parameters/${encodeURIComponent(parameterId)}`
+				),
+			profile: (classroomId) =>
+				request<PublicClassroomProfile>(
+					'GET',
+					`/public/classrooms/${encodeURIComponent(classroomId)}/profile`
 				)
 		},
 		labs: {

@@ -168,7 +168,7 @@ describe('submitting observations', () => {
 			creditedTo: 'Abebe T.'
 		});
 		const detail = await services.labs.get('lab_trinity');
-		expect(detail.observations.map((o) => o.id)).toEqual([stored.id]);
+		expect(detail.observations.map((o) => o.id)).toContain(stored.id);
 	});
 
 	it('runs the checks again, and never takes a device that is not registered', async () => {
