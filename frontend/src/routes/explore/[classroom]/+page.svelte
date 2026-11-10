@@ -262,11 +262,17 @@
 					aria-current={current ? 'page' : undefined}
 					title={place.name}
 					class={[
-						'border-b-2 pb-1.5',
-						current
-							? 'border-teal font-semibold text-ink'
-							: 'border-transparent text-muted hover:text-ink'
-					]}>{placeLabel(place.placeName, place.country) || place.name}</a
+						'relative pb-2 transition-colors',
+						current ? 'font-semibold text-ink' : 'text-muted hover:text-ink'
+					]}
+					>{placeLabel(place.placeName, place.country) || place.name}
+					{#if current}
+						<!-- One named underline, so switching classrooms slides it to the new tab. -->
+						<span
+							class="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-teal [view-transition-name:location-tab]"
+							aria-hidden="true"
+						></span>
+					{/if}</a
 				>
 			{/each}
 		</nav>
@@ -275,9 +281,9 @@
 	<div
 		class={[
 			'mt-6 grid gap-5',
-			data.institution
+			classroom.location
 				? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,1fr)]'
-				: 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]'
+				: 'lg:grid-cols-2'
 		]}
 	>
 		<NowCard tiles={data.now}>
@@ -287,7 +293,7 @@
 		</NowCard>
 		{#if classroom.location}
 			<section
-				class="card relative h-80 overflow-hidden p-0 sm:h-96 lg:h-auto lg:min-h-[28rem]"
+				class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] sm:h-96 lg:h-auto lg:min-h-[28rem]"
 				aria-label="Where {classroom.name} is"
 			>
 				<!-- Out of the flow, so the canvas never sets the card's height and grows it. -->
@@ -307,6 +313,15 @@
 		{/if}
 		{#if data.institution}
 			<InstitutionOverview overview={data.institution} />
+		{:else}
+			<!-- Keeps the three columns, so switching classrooms never reflows the row. -->
+			<section class="card flex flex-col" aria-labelledby="institution-heading">
+				<h2 id="institution-heading" class="text-xl font-medium">Institution overview</h2>
+				<p class="text-xs text-muted">What our community does here</p>
+				<p class="mt-5 text-sm text-muted">
+					{classroom.name} has not published its institution overview yet.
+				</p>
+			</section>
 		{/if}
 	</div>
 

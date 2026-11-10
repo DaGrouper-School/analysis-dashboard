@@ -247,10 +247,13 @@
 			redraw();
 			return;
 		}
+		// Longer turns take longer, and ease in as well as out, so a far jump never snaps.
+		const turn = Math.max(Math.abs(dLng), Math.abs(lat - from.lat));
+		const duration = Math.min(1400, 600 + turn * 5);
 		const start = performance.now();
 		const step = (now: number) => {
-			const t = Math.min(1, (now - start) / 700);
-			const e = 1 - Math.pow(1 - t, 3);
+			const t = Math.min(1, (now - start) / duration);
+			const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 			view = {
 				lat: from.lat + (lat - from.lat) * e,
 				lng: from.lng + dLng * e,
