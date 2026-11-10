@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ContributorId from '#lib/components/ContributorId.svelte';
 	import { resolve } from '$app/paths';
 	import type { GeoPoint, ObservationTemplate, Parameter } from '#lib/domain/types.ts';
 	import { formatPoint } from '#lib/geo.ts';
@@ -408,7 +409,10 @@
 					<li class="text-muted">
 						{stored.creditedTo
 							? `Credited to ${stored.creditedTo}`
-							: 'Not credited to anyone: public outputs show it without a name.'}
+							: 'Credited to your participant ID, without your name'}
+						{#if stored.recordedByParticipantId !== null}<ContributorId
+								participantId={stored.recordedByParticipantId}
+							/>{/if}
 					</li>
 				{:else}
 					<li>

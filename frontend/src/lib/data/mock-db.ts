@@ -96,7 +96,7 @@ export interface StoredDevice {
 	registeredAt: string;
 }
 
-type StoredRecord = Omit<Reading, 'creditedTo'> & {
+type StoredRecord = Omit<Reading, 'creditedTo' | 'recordedByParticipantId'> & {
 	samSourceId: string;
 	/** Who recorded it, when they opted in to credit. Resolved to their current name on read. */
 	creditedToUserId: string | null;
@@ -194,7 +194,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 28;
+const VERSION = 29;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;

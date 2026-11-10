@@ -44,6 +44,23 @@
 	let addressMessage = $state('');
 	let saving = $state(false);
 
+	let savingPublic = $state(false);
+	let publicMessage = $state('');
+
+	async function setPublicProfile(show: boolean) {
+		savingPublic = true;
+		publicMessage = '';
+		try {
+			await services.profile.setPublicProfile(show);
+			await invalidate('app:session');
+			publicMessage = show ? 'Your profile is public.' : 'Your profile is private.';
+		} catch (e) {
+			publicMessage = errorMessage(e);
+		} finally {
+			savingPublic = false;
+		}
+	}
+
 	async function saveProfile(event: SubmitEvent) {
 		event.preventDefault();
 		profileMessage = '';
@@ -149,6 +166,48 @@
 								</p>{/if}
 						</div>
 					</form>
+				</section>
+				<section class="card max-w-2xl">
+					<h2 class="flex items-center gap-2 text-lg font-semibold">
+						<Icon name="tag" class="size-5 text-muted" /> Participant ID and public profile
+					</h2>
+					<p class="mt-3 text-sm">
+						Your participant ID is
+						<a
+							class="font-mono text-ink underline decoration-teal underline-offset-4"
+							href={resolve('/contributors/[participantId]', {
+								participantId: String(user.participantId)
+							})}>{user.participantId}</a
+						>. It never changes. SAM, data exports and public pages credit every value you record to
+						this ID, never to your name or email.
+					</p>
+					{#if user.minor}
+						<p class="mt-3 text-sm text-muted">
+							A public profile is for contributors 18 and over. Your values stay credited to your
+							ID, so they will show on your profile if you turn it on later.
+						</p>
+					{:else}
+						<label class="mt-4 flex items-start gap-3">
+							<input
+								id="publicProfile"
+								type="checkbox"
+								class="mt-0.5"
+								checked={user.publicProfile}
+								disabled={savingPublic}
+								onchange={(e) => setPublicProfile(e.currentTarget.checked)}
+							/>
+							<span>
+								<span class="font-medium text-ink">Show my public profile</span>
+								<span class="block text-sm text-muted"
+									>Your name, email and role appear on your contributor page and next to your ID on
+									classroom pages. Turn it off at any time.</span
+								>
+							</span>
+						</label>
+						{#if publicMessage}<p class="mt-2 text-sm text-muted" role="status">
+								{publicMessage}
+							</p>{/if}
+					{/if}
 				</section>
 				{#if user.minor}
 					<GuardianConsentCard consent={data.consent} />

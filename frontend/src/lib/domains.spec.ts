@@ -32,7 +32,8 @@ function reading(observedAt: string, values: Reading['values']): Reading {
 		values,
 		location: { lat: 0, lng: 0 },
 		locationSource: 'lab',
-		creditedTo: null
+		creditedTo: null,
+		recordedByParticipantId: null
 	};
 }
 

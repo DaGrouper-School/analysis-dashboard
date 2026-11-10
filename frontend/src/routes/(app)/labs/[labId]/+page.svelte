@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ContributorId from '#lib/components/ContributorId.svelte';
 	import { invalidate } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { SvelteMap } from 'svelte/reactivity';
@@ -200,8 +201,11 @@
 													>Lab location, not from the device</span
 												>
 											{/if}
-											{#if reading.creditedTo}
-												<span class="text-muted">· recorded by {reading.creditedTo}</span>
+											{#if reading.recordedByParticipantId !== null}
+												<span class="text-muted"
+													>· recorded by {reading.creditedTo ?? 'participant'}</span
+												>
+												<ContributorId participantId={reading.recordedByParticipantId} />
 											{/if}
 										</li>
 									{/each}
@@ -295,7 +299,10 @@
 								<p class="text-xs text-muted">
 									{formatPoint(observation.location)}
 									{observation.locationSource === 'device' ? '· GPS' : '· lab location, no GPS'}
-									{observation.creditedTo ? `· recorded by ${observation.creditedTo}` : ''}
+									{#if observation.recordedByParticipantId !== null}
+										· recorded by {observation.creditedTo ?? 'participant'}
+										<ContributorId participantId={observation.recordedByParticipantId} />
+									{/if}
 								</p>
 							</li>
 						{/each}

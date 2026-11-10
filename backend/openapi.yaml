@@ -320,6 +320,36 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /me/public-profile:
+    put:
+      tags:
+        - Profile
+      operationId: profile.setPublicProfile
+      summary: Set public profile
+      description: |-
+        Turns the public contributor profile on or off (AP-39): name, email and role next to the
+        participant ID. Refused for a minor.
+
+        Returns 403 when a minor tries to turn it on.
+
+        Access: signed-in users. Classroom roles are checked on the server.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileSetPublicProfileBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /me/guardian-consent:
     post:
       tags:
@@ -1647,6 +1677,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PublicClassroomProfile"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /public/contributors/{participantId}:
+    get:
+      tags:
+        - Public site
+      operationId: publicSite.contributor
+      summary: Contributor
+      description: >-
+        A contributor's profile by participant ID (AP-39): the released values they recorded, in
+
+        which classrooms. SAM holds only the ID; the name comes from this platform, and only when
+
+        they took credit.
+
+
+        Looked up by participant ID, the only identifier SAM stores. 404 when the participant has no
+        released values.
+
+
+        Access: public, no session needed.
+      security: []
+      parameters:
+        - name: participantId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicContributor"
         "404":
           $ref: "#/components/responses/NotFound"
   /consent/{token}:
@@ -4088,6 +4153,12 @@ components:
             - "null"
           description: The person who recorded it, shown only if they chose to take credit. Otherwise null and
             the reading is attributed to the classroom.
+        recordedByParticipantId:
+          type:
+            - number
+            - "null"
+          description: The participant ID of whoever recorded it (AP-39), credited or not, so anyone can check
+            it on the platform. Null only for readings a device sent on its own.
         templateId:
           type: string
         deviceId:
@@ -4104,6 +4175,7 @@ components:
         - locationSource
         - observedAt
         - receivedAt
+        - recordedByParticipantId
         - templateId
         - values
       additionalProperties: false
@@ -4327,6 +4399,14 @@ components:
         - fullName
         - email
       additionalProperties: false
+    ProfileSetPublicProfileBody:
+      type: object
+      properties:
+        show:
+          type: boolean
+      required:
+        - show
+      additionalProperties: false
     ProfileStartPhoneVerificationBody:
       type: object
       properties:
@@ -4480,20 +4560,22 @@ components:
             $ref: "#/components/schemas/ClassroomSession"
           description: Upcoming sessions, soonest first.
         contributors:
-          type: object
-          properties:
-            named:
-              type: array
-              items:
-                type: string
-            anonymous:
-              type: number
-          required:
-            - named
-            - anonymous
-          additionalProperties: false
-          description: People who opted in to credit, by name; everyone else only counted. Minors are never
-            named.
+          type: array
+          items:
+            type: object
+            properties:
+              participantId:
+                type: number
+              name:
+                type:
+                  - string
+                  - "null"
+            required:
+              - participantId
+              - name
+            additionalProperties: false
+          description: Everyone who recorded released data, by participant ID (AP-39), each linking to their
+            contributor page. The name shows only for those with a public profile.
         member:
           type: boolean
         canManage:
@@ -4512,6 +4594,99 @@ components:
         - canManage
       additionalProperties: false
       description: A classroom's public profile (AP-29).
+    PublicContribution:
+      type: object
+      properties:
+        classroomId:
+          type: string
+        classroomName:
+          type: string
+        parameterId:
+          type: string
+        parameterLabel:
+          type: string
+        unit:
+          type: string
+        valueType:
+          $ref: "#/components/schemas/ValueType"
+        value:
+          type:
+            - number
+            - string
+        observedAt:
+          type: string
+      required:
+        - classroomId
+        - classroomName
+        - parameterId
+        - parameterLabel
+        - unit
+        - value
+        - observedAt
+      additionalProperties: false
+      description: One released value a contributor recorded.
+    PublicContributor:
+      type: object
+      properties:
+        content:
+          $ref: "#/components/schemas/SiteContent"
+        participantId:
+          type: number
+        profile:
+          anyOf:
+            - type: object
+              properties:
+                fullName:
+                  type: string
+                email:
+                  type:
+                    - string
+                    - "null"
+                role:
+                  $ref: "#/components/schemas/UserRole"
+                avatarUrl:
+                  type:
+                    - string
+                    - "null"
+              required:
+                - fullName
+                - email
+                - role
+                - avatarUrl
+              additionalProperties: false
+            - type: "null"
+          description: Who they are, only when they turned on their public profile.
+        classrooms:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+            required:
+              - id
+              - name
+            additionalProperties: false
+        total:
+          type: number
+          description: Every released value they recorded.
+        recent:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicContribution"
+          description: The latest of them, newest first.
+      required:
+        - content
+        - participantId
+        - profile
+        - classrooms
+        - total
+        - recent
+      additionalProperties: false
+      description: "A contributor's page, found by participant ID (AP-39): the released values they
+        recorded. Who they are shows only when they consented to a public profile in Settings."
     PublicDomainCard:
       type: object
       properties:
@@ -4886,10 +5061,13 @@ components:
           $ref: "#/components/schemas/GeoPoint"
         locationSource:
           $ref: "#/components/schemas/ReadingLocationSource"
-        creditedTo:
+        contributorId:
           type:
-            - string
+            - number
             - "null"
+          description: The participant ID of whoever recorded the value (AP-39); null only for readings a
+            device sent on its own. SAM holds only the ID; names stay with the Da Grouper School
+            platform.
       required:
         - id
         - observedAt
@@ -4903,7 +5081,7 @@ components:
         - siteName
         - location
         - locationSource
-        - creditedTo
+        - contributorId
       additionalProperties: false
       description: One value of one reading or field observation, as SAM's export service returns it.
     RawSortKey:
@@ -4947,6 +5125,12 @@ components:
             - "null"
           description: The person who recorded it, shown only if they chose to take credit. Otherwise null and
             the reading is attributed to the classroom.
+        recordedByParticipantId:
+          type:
+            - number
+            - "null"
+          description: The participant ID of whoever recorded it (AP-39), credited or not, so anyone can check
+            it on the platform. Null only for readings a device sent on its own.
       required:
         - id
         - deviceId
@@ -4958,6 +5142,7 @@ components:
         - location
         - locationSource
         - creditedTo
+        - recordedByParticipantId
       additionalProperties: false
       description: One measurement upload from a device, as stored by the backend and forwarded to SAM.
     ReadingInput:
@@ -5387,6 +5572,14 @@ components:
       properties:
         id:
           type: string
+        participantId:
+          type: number
+          description: "The participant ID (AP-39): unique, numeric, given when the account is created and
+            never changed. It is all SAM, CSV exports and public pages ever carry about a person."
+        publicProfile:
+          type: boolean
+          description: "The user's own consent to a public contributor profile (AP-39): their name, email and
+            role next to their participant ID. Off by default; a minor can never turn it on."
         authProvider:
           $ref: "#/components/schemas/AuthProvider"
         fullName:
@@ -5427,6 +5620,8 @@ components:
           type: string
       required:
         - id
+        - participantId
+        - publicProfile
         - authProvider
         - fullName
         - email

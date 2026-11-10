@@ -23,6 +23,16 @@ export interface Address {
 
 export interface User {
 	id: string;
+	/**
+	 * The participant ID (AP-39): unique, numeric, given when the account is created and never
+	 * changed. It is all SAM, CSV exports and public pages ever carry about a person.
+	 */
+	participantId: number;
+	/**
+	 * The user's own consent to a public contributor profile (AP-39): their name, email and role
+	 * next to their participant ID. Off by default; a minor can never turn it on.
+	 */
+	publicProfile: boolean;
 	authProvider: AuthProvider;
 	fullName: string;
 	email: string | null;
@@ -492,6 +502,11 @@ export interface Reading {
 	 * reading is attributed to the classroom.
 	 */
 	creditedTo: string | null;
+	/**
+	 * The participant ID of whoever recorded it (AP-39), credited or not, so anyone can check it
+	 * on the platform. Null only for readings a device sent on its own.
+	 */
+	recordedByParticipantId: number | null;
 }
 
 /** Options for recording readings. */
@@ -725,7 +740,11 @@ export interface RawRow {
 	siteName: string;
 	location: GeoPoint;
 	locationSource: ReadingLocationSource;
-	creditedTo: string | null;
+	/**
+	 * The participant ID of whoever recorded the value (AP-39); null only for readings a device
+	 * sent on its own. SAM holds only the ID; names stay with the Da Grouper School platform.
+	 */
+	contributorId: number | null;
 }
 
 /** A page of raw values from one classroom, with the filters it can offer and its terms. */
@@ -980,7 +999,11 @@ export interface PublicClassroomProfile {
 	/** Upcoming sessions, soonest first. */
 	sessions: ClassroomSession[];
 	/** People who opted in to credit, by name; everyone else only counted. Minors are never named. */
-	contributors: { named: string[]; anonymous: number };
+	/**
+	 * Everyone who recorded released data, by participant ID (AP-39), each linking to their
+	 * contributor page. The name shows only for those with a public profile.
+	 */
+	contributors: { participantId: number; name: string | null }[];
 	member: boolean;
 	/** The viewer can manage the classroom: show "Manage classroom". */
 	canManage: boolean;
@@ -1041,4 +1064,34 @@ export interface HostApplicationReceipt {
 	application: HostApplication;
 	/** The backend emails the status link; the mock returns it. */
 	token: string;
+}
+
+// ---- Contributors (AP-39) ------------------------------------------------------------
+
+/** One released value a contributor recorded. */
+export interface PublicContribution {
+	classroomId: string;
+	classroomName: string;
+	parameterId: string;
+	parameterLabel: string;
+	unit: string;
+	valueType?: ValueType;
+	value: number | string;
+	observedAt: string;
+}
+
+/**
+ * A contributor's page, found by participant ID (AP-39): the released values they recorded. Who
+ * they are shows only when they consented to a public profile in Settings.
+ */
+export interface PublicContributor {
+	content: SiteContent;
+	participantId: number;
+	/** Who they are, only when they turned on their public profile. */
+	profile: Pick<User, 'fullName' | 'email' | 'role' | 'avatarUrl'> | null;
+	classrooms: { id: string; name: string }[];
+	/** Every released value they recorded. */
+	total: number;
+	/** The latest of them, newest first. */
+	recent: PublicContribution[];
 }

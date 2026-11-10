@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ContributorId from '#lib/components/ContributorId.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
@@ -333,8 +334,10 @@
 						<tr class="align-top">
 							<td class="px-4 py-2.5 whitespace-nowrap">
 								{dateTime.format(new Date(row.observedAt))}
-								{#if row.creditedTo}
-									<p class="text-xs text-muted">Recorded by {row.creditedTo}</p>
+								{#if row.contributorId !== null}
+									<p class="text-xs text-muted">
+										Recorded by <ContributorId participantId={row.contributorId} />
+									</p>
 								{/if}
 							</td>
 							<td class="px-4 py-2.5">

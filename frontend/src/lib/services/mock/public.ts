@@ -4,6 +4,7 @@ import { readDb, type MockDbState, type StoredClassroom } from '#lib/data/mock-d
 import type {
 	PublicClassroom,
 	PublicClassroomProfile,
+	PublicContribution,
 	PublicDomainCard,
 	PublicSource,
 	PublicValue
@@ -11,6 +12,9 @@ import type {
 import { coarsen, FIELD_SOURCE } from '#lib/raw-data.ts';
 import { ServiceError, type PublicService } from '../types';
 import { permissionsFor, roleIn } from './classrooms';
+
+/** A contributor profile lists this many of their latest values. */
+const CONTRIBUTOR_RECENT = 20;
 
 /** Public positions are never finer than this, whatever a classroom's terms allow. */
 const PUBLIC_DECIMALS = 2;
@@ -249,20 +253,26 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 					};
 				});
 
-			// Everyone who recorded released data. Only those who took credit are named; a minor
-			// never takes credit, so is only ever counted.
+			// Everyone who recorded released data, by participant ID (AP-39). Only those who turned
+			// on their public profile are named; a minor never can.
 			const recorders = new Set<string>();
-			const named = new Set<string>();
 			for (const { record } of records) {
-				if (record.recordedByUserId) recorders.add(record.recordedByUserId);
-				if (record.creditedToUserId) named.add(record.creditedToUserId);
+				const by = record.recordedByUserId ?? record.creditedToUserId;
+				if (by) recorders.add(by);
 			}
-			const shown = [...named]
+			const contributors = [...recorders]
 				.map((id) => state.users.find((u) => u.id === id))
-				.filter((u) => !!u && !u.minor);
-			const shownIds = new Set(shown.map((u) => u!.id));
-			const names = shown.map((u) => u!.fullName).sort((a, b) => a.localeCompare(b));
-			const anonymous = [...recorders].filter((id) => !shownIds.has(id)).length;
+				.filter((u) => !!u)
+				.map((u) => ({
+					participantId: u.participantId,
+					name: u.publicProfile && !u.minor ? u.fullName : null
+				}))
+				.sort(
+					(a, b) =>
+						Number(b.name !== null) - Number(a.name !== null) ||
+						(a.name ?? '').localeCompare(b.name ?? '') ||
+						a.participantId - b.participantId
+				);
 
 			const now = new Date().toISOString();
 			const { profile } = classroom;
@@ -290,11 +300,60 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 					.filter((s) => s.startsAt >= now)
 					.sort((a, b) => a.startsAt.localeCompare(b.startsAt))
 					.map((s) => ({ ...s })),
-				contributors: { named: names, anonymous },
+				contributors,
 				member,
 				canManage: !!can && (can.manageMembers || can.invite.length > 0)
 			};
 			return result;
+		},
+
+		async contributor(participantId) {
+			await delay();
+			const state = readDb();
+			const user = state.users.find((u) => u.participantId === participantId);
+			const missing = () => new ServiceError('not_found', 'Contributor not found.');
+			if (!user) throw missing();
+			const contributions: PublicContribution[] = [];
+			const classrooms = new Map<string, string>();
+			for (const classroom of state.classrooms) {
+				for (const { record } of released(state, classroom).released) {
+					if ((record.recordedByUserId ?? record.creditedToUserId) !== user.id) continue;
+					classrooms.set(classroom.id, classroom.name);
+					for (const [parameterId, value] of Object.entries(record.values)) {
+						const param = state.parameters.find((p) => p.id === parameterId);
+						if (!param) continue;
+						contributions.push({
+							classroomId: classroom.id,
+							classroomName: classroom.name,
+							parameterId,
+							parameterLabel: param.label,
+							unit: param.unit,
+							valueType: param.valueType,
+							value,
+							observedAt: record.observedAt
+						});
+					}
+				}
+			}
+			if (!contributions.length) throw missing();
+			contributions.sort((a, b) => b.observedAt.localeCompare(a.observedAt));
+			return {
+				content: structuredClone(state.siteContent),
+				participantId: user.participantId,
+				// Shown only by their own choice in Settings, and never for a minor.
+				profile:
+					user.publicProfile && !user.minor
+						? {
+								fullName: user.fullName,
+								email: user.email,
+								role: user.role,
+								avatarUrl: user.avatarUrl
+							}
+						: null,
+				classrooms: [...classrooms].map(([id, name]) => ({ id, name })),
+				total: contributions.length,
+				recent: contributions.slice(0, CONTRIBUTOR_RECENT)
+			};
 		},
 
 		async parameter(classroomId, parameterId) {
