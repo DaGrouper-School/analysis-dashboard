@@ -309,7 +309,9 @@ const siteContent: MockDbState['siteContent'] = {
 /** The values the public core readings strip is made of. */
 const coreParameters: MockDbState['coreParameters'] = {
 	rainDaily: ['precip_accum_local_day', 'rain_gauge_daily_accumulation'],
-	airTemperature: ['air_temperature']
+	airTemperature: ['air_temperature'],
+	rainTolerance: 2,
+	rainReference: 'rain_gauge_daily_accumulation'
 };
 
 /**
@@ -1022,6 +1024,17 @@ for (const parameter of parameters) {
 	});
 }
 
+/** Each value's main chart on its page (AP-23); anything else numeric charts as a line. */
+const CHARTS: Record<string, Parameter['chart']> = {
+	rain_gauge_daily_accumulation: 'daily_bars',
+	precip_accum_local_day: 'daily_bars',
+	air_temperature: 'line_band',
+	soil_temperature: 'line_band'
+};
+for (const parameter of parameters) {
+	if (CHARTS[parameter.id]) parameter.chart = CHARTS[parameter.id];
+}
+
 const labs: MockDbState['labs'] = [
 	{
 		id: 'lab_trinity',
@@ -1036,7 +1049,13 @@ const labs: MockDbState['labs'] = [
 			researchQuestions: [
 				'How does rainfall in Shashamane compare with Addis Ababa through the season?',
 				'When is soil moisture high enough for planting in the school garden?'
-			]
+			],
+			parameterNotes: {
+				rain_gauge_daily_accumulation:
+					'Our gauge in Shashamane is read by hand every morning and counts as the reference. The station next to it measures the same rain, so a big gap between the two sends the day to review.',
+				air_temperature:
+					'The station sits in open ground at the Shashamane partner site, not in the school yard. Highland mornings are cool, so the day’s low and high are often far apart.'
+			}
 		},
 		createdAt: SEEDED_AT
 	},
@@ -1291,6 +1310,33 @@ function history(): MockDbState['readings'] {
 }
 
 readings.push(...history());
+
+/**
+ * The Shashamane station stands next to the manual gauge, so its rain follows the gauge's to
+ * within a few tenths of a mm. On two days its funnel was blocked and it read well over, which
+ * the rain page flags for review (AP-23).
+ */
+const BLOCKED_FUNNEL_DAYS = ['2026-10-07', '2026-10-14'];
+const gaugeReadings = readings
+	.filter((r) => r.deviceId === 'dev_shashamane_gauge')
+	.sort((a, b) => a.observedAt.localeCompare(b.observedAt));
+for (const r of readings.filter((r) => r.deviceId === 'dev_shashamane_ws')) {
+	const day = r.observedAt.slice(0, 10);
+	const sameDay = gaugeReadings.filter((g) => g.observedAt.slice(0, 10) === day);
+	if (!sameDay.length) continue;
+	const upToNow = sameDay.filter((g) => g.observedAt <= r.observedAt);
+	const gauge = Math.max(
+		...(upToNow.length ? upToNow : sameDay.slice(0, 1)).map(
+			(g) => g.values.rain_gauge_daily_accumulation as number
+		)
+	);
+	const jitter = ((Number(day.slice(8)) % 5) - 2) * 0.2;
+	const over = BLOCKED_FUNNEL_DAYS.includes(day) ? 3.5 : 0;
+	r.values = {
+		...r.values,
+		precip_accum_local_day: Math.max(0, Math.round((gauge + jitter + over) * 10) / 10)
+	};
+}
 
 const domains: DomainDefinition[] = [
 	{ id: 'AIR', label: 'Air', icon: 'tree', description: 'Temperature, humidity and air quality.' },

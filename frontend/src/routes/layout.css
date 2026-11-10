@@ -25,6 +25,10 @@
 	/* Feature panels: deep green-black with a teal edge. */
 	--color-forest: #04140f;
 	--color-danger: #ff5c7a;
+	/* Chart series in fixed order, checked for colour-blind separation on each surface. */
+	--color-series-1: #1fa585;
+	--color-series-2: #9085e9;
+	--color-series-3: #c98500;
 }
 
 @layer base {
@@ -78,6 +82,9 @@
 		--color-orange: #b85f00;
 		--color-forest: #e4f3ed;
 		--color-danger: #c8213f;
+		--color-series-1: #0f8a70;
+		--color-series-2: #6250d6;
+		--color-series-3: #eda100;
 	}
 }
 

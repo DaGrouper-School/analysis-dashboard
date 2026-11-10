@@ -3,7 +3,9 @@ import { coreReadings, stationCore, type CoreParameters } from './core-readings'
 
 const parameters: CoreParameters = {
 	rainDaily: ['precip_accum_local_day', 'rain_gauge_daily_accumulation'],
-	airTemperature: ['air_temperature']
+	airTemperature: ['air_temperature'],
+	rainTolerance: 2,
+	rainReference: 'rain_gauge_daily_accumulation'
 };
 
 const at = (observedAt: string, values: Record<string, number | string>, deviceId = 'ws') => ({
@@ -33,12 +35,13 @@ describe('core readings', () => {
 		});
 	});
 
-	it('takes each source’s day total, averages the sources, and sums the last seven days', () => {
+	it('takes the gauge’s day total over the station’s, never an average, and sums seven days', () => {
 		const core = coreReadings(records, '2026-10-20T08:00:00.000Z', parameters);
-		// Station 4 mm, gauge 6 mm: 5 mm today. Plus 2 mm on the 19th; the 12th is outside.
+		// Station 4 mm, gauge 6 mm: the gauge is the reference, 6 mm today. Plus the station's
+		// 2 mm on the 19th, with no gauge reading; the 12th is outside.
 		expect(core).toMatchObject({
-			rainToday: 5,
-			rainLast7Days: 7,
+			rainToday: 6,
+			rainLast7Days: 8,
 			rainDays: 2,
 			airTemperature: 27,
 			review: 'released'

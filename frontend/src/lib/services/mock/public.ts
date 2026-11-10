@@ -8,8 +8,10 @@ import type {
 	PublicClassroomProfile,
 	PublicContribution,
 	PublicDomainCard,
+	PublicParameterSeries,
 	PublicSource,
-	PublicValue
+	PublicValue,
+	Reading
 } from '#lib/domain/types.ts';
 import { coarsen, FIELD_SOURCE } from '#lib/raw-data.ts';
 import { nowTiles } from '#lib/station-now.ts';
@@ -409,37 +411,82 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 			const state = readDb();
 			const classroom = findClassroom(state, classroomId);
 			const parameter = state.parameters.find((p) => p.id === parameterId);
-			const records = released(state, classroom).released.filter(
-				(r) => r.record.values[parameterId] !== undefined
-			);
-			if (!parameter || !records.length) {
+			// Rain from a gauge and from a station is the same rain: the page shows them together.
+			const rainIds = state.coreParameters.rainDaily;
+			const isRain = rainIds.includes(parameterId);
+			const ids = isRain
+				? [parameterId, ...rainIds.filter((id) => id !== parameterId)]
+				: [parameterId];
+			const reports = (values: Reading['values']) => ids.find((id) => values[id] !== undefined);
+			const { labs, all, released: shown } = released(state, classroom);
+			if (!parameter || !shown.some((r) => reports(r.record.values))) {
 				throw new ServiceError('not_found', 'This classroom has no released values for that.');
 			}
+
 			const bySource = new Map<string, PublicParameterSeries>();
-			for (const { record, source } of records) {
-				const series = bySource.get(source.id) ?? { source, points: [] };
-				series.points.push({ observedAt: record.observedAt, value: record.values[parameterId] });
+			for (const { record, source } of shown) {
+				const id = reports(record.values);
+				if (!id) continue;
+				const series = bySource.get(source.id) ?? { source, parameterId: id, points: [] };
+				series.points.push({ observedAt: record.observedAt, value: record.values[id] });
 				bySource.set(source.id, series);
 			}
+			const manual = (series: PublicParameterSeries) =>
+				state.parameters.find((p) => p.id === series.parameterId)?.source === 'manual';
+			const reference = isRain ? ([...bySource.values()].find(manual) ?? null) : null;
+			const series = [...bySource.values()]
+				.map((s) => ({
+					...s,
+					points: s.points.sort((a, b) => a.observedAt.localeCompare(b.observedAt))
+				}))
+				.sort(
+					(a, b) =>
+						Number(b.source.id === reference?.source.id) -
+							Number(a.source.id === reference?.source.id) ||
+						(a.source.name ?? '').localeCompare(b.source.name ?? '')
+				);
+
+			const through = classroom.releasedThrough;
+			const deviceIds = new Set(series.map((s) => s.source.id));
+			const typeIds = new Set(state.devices.filter((d) => deviceIds.has(d.id)).map((d) => d.type));
 			const domain = domainOf(state, parameterId);
 			return {
 				content: structuredClone(state.siteContent),
 				classroom: toPublicClassroom(state, classroom),
 				parameter: structuredClone(parameter),
 				domain: domain && { id: domain.id, label: domain.label, icon: domain.icon },
-				series: [...bySource.values()]
-					.map((s) => ({
-						...s,
-						points: s.points.sort((a, b) => a.observedAt.localeCompare(b.observedAt))
-					}))
-					.sort((a, b) => (a.source.name ?? '').localeCompare(b.source.name ?? '')),
+				note: labs.map((l) => l.siteProfile.parameterNotes?.[parameterId]).find(Boolean) ?? null,
+				series,
+				rain: isRain
+					? {
+							referenceSourceId: reference?.source.id ?? null,
+							tolerance: state.coreParameters.rainTolerance
+						}
+					: null,
+				releasedThrough: through,
+				inReview: all.some(
+					(r) => (through === null || r.record.observedAt > through) && reports(r.record.values)
+				),
+				compare: state.classrooms
+					.filter(
+						(c) =>
+							c.id !== classroom.id &&
+							released(state, c).released.some((r) => reports(r.record.values))
+					)
+					.map((c) => {
+						const { id, name, placeName, country } = toPublicClassroom(state, c);
+						return { id, name, placeName, country };
+					})
+					.sort((a, b) => a.name.localeCompare(b.name)),
+				deviceTypes: state.deviceTypes.filter((t) => typeIds.has(t.id)).map((t) => t.label),
+				terms: {
+					licence: classroom.terms.licence,
+					licenceUrl: classroom.terms.licenceUrl,
+					attribution: classroom.terms.attribution,
+					restrictions: [...classroom.terms.restrictions]
+				},
 				member: isMember(state, classroom.id)
 			};
 		}
 	};
 }
-
-type PublicParameterSeries = {
-	source: PublicSource;
-	points: { observedAt: string; value: number | string }[];
-};

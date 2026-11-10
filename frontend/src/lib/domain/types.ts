@@ -312,7 +312,15 @@ export interface Parameter {
 	noise?: number;
 	/** How SAM gets the value: measured, derived from other values, or entered by hand. */
 	calculation?: Calculation;
+	/**
+	 * The main chart on the value's page (AP-23): daily bars for totals such as rain, a line with
+	 * each day's low to high for values such as temperature, or a plain line. Numbers only; a
+	 * value without one charts as a line.
+	 */
+	chart?: ParameterChart;
 }
+
+export type ParameterChart = 'daily_bars' | 'line_band' | 'line';
 
 export interface Calculation {
 	method: 'measured' | 'derived' | 'manual';
@@ -438,6 +446,11 @@ export interface SiteProfile {
 	setting: SiteSetting;
 	description: string;
 	researchQuestions: string[];
+	/**
+	 * "What it means here" (AP-23): the classroom's own two sentences on a value at this site,
+	 * by registry ID. A value without one shows the registry's plain sentence.
+	 */
+	parameterNotes?: Record<string, string>;
 }
 
 /** A Lab in a Bag, run by a classroom. Devices are registered to it. */
@@ -967,7 +980,7 @@ export interface NowTileConfig {
 	zeroText?: string;
 	/**
 	 * Take the value from the classroom's core readings instead, so the tile matches the core
-	 * strip (rain is a day total averaged over sources, not one source's latest reading).
+	 * strip (rain is the gauge's day total, not one source's latest reading).
 	 */
 	core?: {
 		value: 'rainToday' | 'airTemperature';
@@ -975,15 +988,42 @@ export interface NowTileConfig {
 	};
 }
 
-/** One parameter of one classroom for visitors: its meaning and released values over time. */
+/** One parameter of one classroom for visitors (AP-23): its meaning and released values. */
 export interface PublicParameterPage {
 	content: SiteContent;
 	classroom: PublicClassroom;
 	parameter: Parameter;
 	domain: Pick<DomainDefinition, 'id' | 'label' | 'icon'> | null;
-	/** One series per source, oldest first. */
-	series: { source: PublicSource; points: { observedAt: string; value: number | string }[] }[];
+	/** "What it means here": the classroom's own note, or null to use the registry's. */
+	note: string | null;
+	/**
+	 * One series per source, oldest first. For rain, every source of the day's rain shows
+	 * together, each with the registry value it reports (a gauge and a station differ).
+	 */
+	series: PublicParameterSeries[];
+	/**
+	 * Rain only: the manual gauge every other source is checked against, and how far apart
+	 * the protocol lets them be, in the parameter's unit. Null for other values.
+	 */
+	rain: { referenceSourceId: string | null; tolerance: number } | null;
+	/** Values observed after this are still in review and not shown. */
+	releasedThrough: string | null;
+	/** Some readings of this value wait for review. */
+	inReview: boolean;
+	/** Other public classrooms with released values of this one, to compare with. */
+	compare: Pick<PublicClassroom, 'id' | 'name' | 'placeName' | 'country'>[];
+	/** Kinds of device behind the values, by registry label. */
+	deviceTypes: string[];
+	/** The classroom's licence and attribution, written into every downloaded row. */
+	terms: Pick<DataTerms, 'licence' | 'licenceUrl' | 'attribution' | 'restrictions'>;
 	member: boolean;
+}
+
+export interface PublicParameterSeries {
+	source: PublicSource;
+	/** The registry value this source reports; differs from the page's for other rain sources. */
+	parameterId: string;
+	points: { observedAt: string; value: number | string }[];
 }
 
 /** A site where a research project measures (from LP-14 proposals). */

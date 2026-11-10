@@ -5,6 +5,13 @@ export interface CoreParameters {
 	/** Running rain totals for the day, e.g. a station's "Rain, today" or a gauge's daily total. */
 	rainDaily: string[];
 	airTemperature: string[];
+	/**
+	 * How far apart two rain sources may be on a day, in mm, before the day goes to review
+	 * (AP-23). From the classroom protocol; the manual gauge is the reference.
+	 */
+	rainTolerance: number;
+	/** The manual gauge's value: the reference for a day's rain wherever a gauge reported. */
+	rainReference: string;
 }
 
 type CoreRecord = Pick<Reading, 'observedAt' | 'receivedAt' | 'values'> & {
@@ -25,19 +32,26 @@ function firstNumber(values: Reading['values'], ids: string[]) {
 
 /**
  * A day's rain for the classroom: each source's highest running total that day (the total only
- * grows until midnight), averaged over the sources that reported. Null when none did.
+ * grows until midnight). The manual gauge is the reference (AP-23); without a gauge reading
+ * that day, the first other source's. Never an average of sources. Null when none reported.
  */
-function rainOn(records: CoreRecord[], day: string, ids: string[]) {
-	const bySource = new Map<string, number>();
+function rainOn(records: CoreRecord[], day: string, parameters: CoreParameters) {
+	const bySource = new Map<string, { value: number; reference: boolean }>();
 	for (const record of records) {
 		if (record.observedAt.slice(0, 10) !== day) continue;
-		const value = firstNumber(record.values, ids);
+		const value = firstNumber(record.values, parameters.rainDaily);
 		if (value === null) continue;
 		const source = record.deviceId ?? 'field';
-		bySource.set(source, Math.max(bySource.get(source) ?? 0, value));
+		const seen = bySource.get(source);
+		bySource.set(source, {
+			value: Math.max(seen?.value ?? 0, value),
+			reference: !!seen?.reference || typeof record.values[parameters.rainReference] === 'number'
+		});
 	}
-	if (!bySource.size) return null;
-	return round([...bySource.values()].reduce((a, b) => a + b, 0) / bySource.size);
+	const sources = [...bySource.entries()].sort(
+		([a, x], [b, y]) => Number(y.reference) - Number(x.reference) || a.localeCompare(b)
+	);
+	return sources.length ? round(sources[0][1].value) : null;
 }
 
 /**
@@ -72,7 +86,7 @@ export function coreReadings(
 		new Date(Date.parse(`${day}T00:00:00.000Z`) - i * DAY).toISOString().slice(0, 10)
 	);
 	const totals = week
-		.map((d) => rainOn(released, d, parameters.rainDaily))
+		.map((d) => rainOn(released, d, parameters))
 		.filter((t): t is number => t !== null);
 	const temperature = released
 		.map((r) => firstNumber(r.values, parameters.airTemperature))
@@ -80,7 +94,7 @@ export function coreReadings(
 
 	return {
 		day,
-		rainToday: rainOn(released, day, parameters.rainDaily),
+		rainToday: rainOn(released, day, parameters),
 		rainLast7Days: totals.length ? round(totals.reduce((a, b) => a + b, 0)) : null,
 		rainDays: totals.length,
 		airTemperature: temperature ?? null,

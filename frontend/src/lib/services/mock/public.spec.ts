@@ -78,6 +78,42 @@ describe('Explore data (AP-21)', () => {
 		});
 	});
 
+	it('lays out a value in a fixed order: the classroom’s note, chart type and compare list (AP-23)', async () => {
+		const page = await services.publicSite.parameter('cls_trinity', 'air_temperature');
+		expect(page.parameter.chart).toBe('line_band');
+		expect(page.note).toContain('Shashamane');
+		expect(page.rain).toBeNull();
+		expect(page.inReview).toBe(true);
+		expect(page.releasedThrough).toBe('2026-10-20T06:00:00.000Z');
+		expect(page.deviceTypes).toEqual(['Weather station']);
+		expect(page.terms.licence).toBeTruthy();
+		// Hargeisa has nothing released yet, so it is not offered.
+		expect(page.compare.map((c) => c.id)).toEqual(['cls_nassau']);
+		const other = await services.publicSite.parameter('cls_trinity', 'wind_avg');
+		expect(other.note).toBeNull();
+	});
+
+	it('shows every rain source together, with the manual gauge as the reference (AP-23)', async () => {
+		const page = await services.publicSite.parameter('cls_trinity', 'precip_accum_local_day');
+		expect(page.parameter.chart).toBe('daily_bars');
+		expect(page.series.map((s) => [s.source.id, s.parameterId])).toEqual([
+			['dev_shashamane_gauge', 'rain_gauge_daily_accumulation'],
+			['dev_shashamane_ws', 'precip_accum_local_day']
+		]);
+		expect(page.rain).toEqual({ referenceSourceId: 'dev_shashamane_gauge', tolerance: 2 });
+		// Nassau's station measures rain too, so the gauge page can be compared with it.
+		const gauge = await services.publicSite.parameter(
+			'cls_trinity',
+			'rain_gauge_daily_accumulation'
+		);
+		expect(gauge.compare.map((c) => c.id)).toEqual(['cls_nassau']);
+		const nassau = await services.publicSite.parameter(
+			'cls_nassau',
+			'rain_gauge_daily_accumulation'
+		);
+		expect(nassau.rain?.referenceSourceId).toBeNull();
+	});
+
 	it('tells members they can open the classroom on their dashboard', async () => {
 		const challenge = await services.auth.requestPhoneCode('+251911000001');
 		await services.auth.verifyPhoneCode(challenge.requestId, challenge.devCode!);
