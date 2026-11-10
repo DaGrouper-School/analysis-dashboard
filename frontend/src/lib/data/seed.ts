@@ -186,6 +186,39 @@ const siteContent: MockDbState['siteContent'] = {
 		body: 'People join a classroom by invitation from its facilitators. Sign in with the email your invitation was sent to.',
 		action: 'Sign in to join'
 	},
+	consentSheet: {
+		title: 'Guardian consent for a young contributor',
+		intro:
+			'{institution} runs {classroom}, a Global Classroom of the Da Grouper School programme. Students take weather, rain, soil and reef measurements and share them openly with researchers. Anyone under 18 needs a parent or guardian’s consent before they send any measurement.',
+		sections: [
+			{
+				heading: 'What your child will do',
+				body: 'Take measurements with the classroom’s kit, with a facilitator present, and send them through the DaGrouper app.'
+			},
+			{
+				heading: 'What we keep',
+				body: 'The measurements and when they were taken. Your child’s name is never shown with their measurements. A position from their phone is rounded to {decimals} decimal places before it is stored.'
+			},
+			{
+				heading: 'Changing your mind',
+				body: 'You can withdraw consent at any time. Tell a facilitator at {institution} or fill in a new sheet. From then on, your child cannot send measurements.'
+			}
+		],
+		choices: {
+			give: 'I give consent for my child to take part and send measurements.',
+			withdraw: 'I do not give consent, or I withdraw consent I gave before.'
+		},
+		contributorField: 'Young contributor’s full name',
+		fields: [
+			'Parent or guardian’s full name',
+			'Relationship to the contributor',
+			'Phone or email (optional)',
+			'Signature',
+			'Date'
+		],
+		officeNote:
+			'For the classroom: keep this sheet. The institution head or a facilitator records it in the app under the classroom’s Consent tab.'
+	},
 	sections: [
 		{
 			id: 'explore',
@@ -1498,6 +1531,9 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 			{
 				userId: 'usr_liya',
 				token: 'consent_liya_demo',
+				method: 'link' as const,
+				signedOn: null,
+				recordedBy: null,
 				guardianName: 'Almaz A.',
 				guardianContact: '+251911000004',
 				status: 'pending' as const,

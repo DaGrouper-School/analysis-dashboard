@@ -18,7 +18,8 @@
 	// svelte-ignore state_referenced_locally
 	let email = $state(data.user.email ?? '');
 	let phone = $state('');
-	// Under 18: a guardian is asked for consent before any observation is sent (AP-04).
+	// Under 18: a guardian's consent is needed before any observation is sent (AP-04). The link is
+	// optional: the classroom can record a signed paper sheet instead (AP-38).
 	let under18 = $state(false);
 	let guardianName = $state('');
 	let guardianContact = $state('');
@@ -52,7 +53,8 @@
 		event.preventDefault();
 		formError = '';
 		errors = validateProfile({ fullName, email });
-		if (under18 && !user.minor) {
+		const sendLink = Boolean(guardianName.trim() || guardianContact.trim());
+		if (under18 && !user.minor && sendLink) {
 			Object.assign(errors, validateGuardian({ guardianName, guardianContact }));
 		}
 		if (!user.phoneVerified) {
@@ -63,7 +65,11 @@
 		try {
 			await services.profile.updateProfile({ fullName, email });
 			if (under18 && !user.minor) {
-				await services.profile.requestGuardianConsent({ guardianName, guardianContact });
+				if (sendLink) {
+					await services.profile.requestGuardianConsent({ guardianName, guardianContact });
+				} else {
+					await services.profile.markMinor();
+				}
 			}
 			await invalidate('app:session');
 			await goto(resolve('/onboarding/address'));
@@ -153,8 +159,8 @@
 
 	{#if user.minor}
 		<p class="rounded-md border border-line bg-raised p-4 text-sm">
-			We asked your guardian for consent. You can look around now, and send observations once they
-			give it.
+			Your guardian's consent is needed. You can look around now, and send observations once it is
+			recorded.
 		</p>
 	{:else}
 		<fieldset class="space-y-4">
@@ -167,14 +173,19 @@
 				<span>
 					I am under 18
 					<span class="block text-xs text-muted"
-						>We send your parent or guardian a link to give consent before you send observations.</span
+						>Your parent or guardian gives consent before you send observations: on a paper sheet
+						from your facilitator, or by a link we send them.</span
 					>
 				</span>
 			</label>
 			{#if under18}
+				<p class="text-sm text-muted">
+					To send your guardian a link, enter their details. Leave both empty if your classroom
+					gives you a paper sheet instead.
+				</p>
 				<div class="grid gap-4 sm:grid-cols-2">
 					<div>
-						<label class="label" for="guardianName">Guardian's name</label>
+						<label class="label" for="guardianName">Guardian's name (optional)</label>
 						<input
 							id="guardianName"
 							class={['input', errors.guardianName && 'input-error']}
@@ -184,7 +195,7 @@
 						{#if errors.guardianName}<p class="field-error">{errors.guardianName}</p>{/if}
 					</div>
 					<div>
-						<label class="label" for="guardianContact">Their email or phone</label>
+						<label class="label" for="guardianContact">Their email or phone (optional)</label>
 						<input
 							id="guardianContact"
 							class={['input', errors.guardianContact && 'input-error']}

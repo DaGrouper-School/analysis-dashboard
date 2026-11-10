@@ -104,7 +104,8 @@ describe('classroom code visibility', () => {
 			invite: [],
 			manageMembers: false,
 			edit: false,
-			viewCode: false
+			viewCode: false,
+			manageConsent: false
 		});
 	});
 

@@ -4,9 +4,11 @@ import type {
 	ClassroomSummary,
 	Invitation,
 	InvitationPreview,
+	MemberConsent,
 	User
 } from '#lib/domain/types.ts';
 import { isValidEmail, validateClassroomUpdate } from '#lib/domain/validation.ts';
+import { fillConsentSheet, localDay, validatePaperConsent } from '#lib/domain/consent.ts';
 import {
 	newId,
 	readDb,
@@ -57,6 +59,9 @@ export function permissionsFor(user: User, role: ClassroomRole | null) {
 					? ['community_scientist']
 					: []) as ClassroomRole[],
 		manageMembers: user.platformAdmin || isHead,
+		// Minors' guardian consent (AP-38): the people who hand out and collect the paper sheets.
+		// Not platform admins: they are not at the classroom.
+		manageConsent: isHead || role === 'facilitator',
 		// Alert levels (AP-08): a classroom's focal people set one device's; only the head sets a
 		// sensor type's for the whole classroom. A platform admin sets the defaults, not these.
 		manageDeviceAlerts: isHead || role === 'facilitator',
@@ -126,6 +131,32 @@ function toPreview(state: MockDbState, invitation: StoredInvitation): Invitation
 		status: invitation.status,
 		invitedByName: toInvitation(state, invitation).invitedByName
 	};
+}
+
+/** A classroom's minor and where their guardian's consent stands (AP-38). */
+function toMemberConsent(state: MockDbState, minor: User): MemberConsent {
+	const stored = state.guardianConsents.find((c) => c.userId === minor.id);
+	return {
+		userId: minor.id,
+		fullName: minor.fullName,
+		status: minor.consent,
+		method: stored?.method ?? null,
+		guardianName: stored?.guardianName || null,
+		signedOn: stored?.signedOn ?? null,
+		decidedAt: stored?.decidedAt ?? null,
+		recordedByName: stored?.recordedBy
+			? (state.users.find((u) => u.id === stored.recordedBy)?.fullName ?? null)
+			: null
+	};
+}
+
+function minorsIn(state: MockDbState, classroomId: string): User[] {
+	const ids = new Set(
+		state.memberships.filter((m) => m.classroomId === classroomId).map((m) => m.userId)
+	);
+	return state.users
+		.filter((u) => ids.has(u.id) && u.minor)
+		.sort((a, b) => a.fullName.localeCompare(b.fullName));
 }
 
 /** Loads a classroom the user may see. Hidden classrooms read as not found. */
@@ -216,7 +247,8 @@ export function createMockClassrooms({
 					invite: can.invite,
 					manageMembers: can.manageMembers,
 					edit: can.manageMembers,
-					viewCode: can.seeCode
+					viewCode: can.seeCode,
+					manageConsent: can.manageConsent
 				}
 			};
 		},
@@ -390,6 +422,100 @@ export function createMockClassrooms({
 				}
 				state.memberships = state.memberships.filter((m) => m !== membership);
 			});
+		},
+
+		async listConsent(classroomId) {
+			await delay();
+			const state = readDb();
+			const user = currentUser(state);
+			const { classroom, can } = visibleClassroom(state, user, classroomId);
+			if (!can.manageConsent) {
+				throw new ServiceError(
+					'forbidden',
+					'Only the institution head and facilitators can see guardian consent.'
+				);
+			}
+			return minorsIn(state, classroom.id).map((m) => toMemberConsent(state, m));
+		},
+
+		async recordPaperConsent(classroomId, userId, input) {
+			await delay();
+			const errors = validatePaperConsent(input, localDay(new Date(now())));
+			if (Object.keys(errors).length) {
+				throw new ServiceError('invalid_input', 'Check the highlighted fields.', errors);
+			}
+			return updateDb((state) => {
+				const user = currentUser(state);
+				const { classroom, can } = visibleClassroom(state, user, classroomId);
+				if (!can.manageConsent) {
+					throw new ServiceError(
+						'forbidden',
+						'Only the institution head and facilitators can record guardian consent.'
+					);
+				}
+				const minor = minorsIn(state, classroom.id).find((m) => m.id === userId);
+				if (!minor) throw new ServiceError('not_found', 'No member under 18 with that name.');
+				const at = iso();
+				const value = input.give ? 'given' : 'withdrawn';
+				let stored = state.guardianConsents.find((c) => c.userId === minor.id);
+				if (!stored) {
+					stored = {
+						userId: minor.id,
+						token: null,
+						method: 'paper',
+						signedOn: null,
+						recordedBy: null,
+						guardianName: '',
+						guardianContact: '',
+						status: 'pending',
+						requestedAt: at,
+						decidedAt: null
+					};
+					state.guardianConsents.push(stored);
+				}
+				// Any link already sent keeps working: the guardian can still change their answer.
+				Object.assign(stored, {
+					method: 'paper',
+					status: value,
+					guardianName: input.guardianName.trim(),
+					signedOn: input.signedOn.trim(),
+					recordedBy: user.id,
+					decidedAt: at
+				});
+				minor.consent = value;
+				minor.updatedAt = at;
+				// Stand-in for the `consent` attribute assertion sent to SAM, as with the link.
+				state.samAssertions.push({
+					userId: minor.id,
+					attribute: 'consent',
+					value,
+					assertedAt: at
+				});
+				return toMemberConsent(state, minor);
+			});
+		},
+
+		async consentSheet(classroomId) {
+			await delay();
+			const state = readDb();
+			const user = currentUser(state);
+			const { classroom, can } = visibleClassroom(state, user, classroomId);
+			if (!can.manageConsent) {
+				throw new ServiceError(
+					'forbidden',
+					'Only the institution head and facilitators can print consent sheets.'
+				);
+			}
+			return {
+				classroomName: classroom.name,
+				institutionName: classroom.institutionName,
+				content: fillConsentSheet(state.siteContent.consentSheet, {
+					classroom: classroom.name,
+					institution: classroom.institutionName,
+					decimals: state.privacy.minorCoordinateDecimals
+				}),
+				minors: minorsIn(state, classroom.id).map((m) => ({ userId: m.id, fullName: m.fullName }))
+			};
 		},
 
 		async getInvitation(token) {

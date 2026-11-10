@@ -29,7 +29,10 @@ import type {
 	CreateLabInput,
 	CsvExport,
 	ConsentRequest,
+	ConsentSheet,
 	GuardianConsent,
+	MemberConsent,
+	PaperConsentInput,
 	GuardianInput,
 	PublicHome,
 	PublicClassroomProfile,
@@ -89,6 +92,11 @@ export interface ProfileService {
 	 * sends a new link; the old one stops working and consent is pending until answered.
 	 */
 	requestGuardianConsent(input: GuardianInput): Promise<GuardianConsent>;
+	/**
+	 * Marks the user as under 18 without sending a link (AP-38): their classroom records a signed
+	 * paper sheet instead. Consent is pending until then.
+	 */
+	markMinor(): Promise<User>;
 	/** The signed-in user's consent request, or null when they never needed one. */
 	getGuardianConsent(): Promise<GuardianConsent | null>;
 }
@@ -179,6 +187,22 @@ export interface ClassroomService {
 	revokeInvitation(invitationId: string): Promise<void>;
 	setMemberRole(classroomId: string, userId: string, role: ClassroomRole): Promise<void>;
 	removeMember(classroomId: string, userId: string): Promise<void>;
+	/**
+	 * Guardian consent of the classroom's minors (AP-38). Only its head and facilitators; anyone
+	 * else is refused.
+	 */
+	listConsent(classroomId: string): Promise<MemberConsent[]>;
+	/**
+	 * Records a signed paper sheet: consent given or withdrawn, the day on it, and who recorded
+	 * it. Like the guardian's link, the decision is asserted to SAM as `consent`.
+	 */
+	recordPaperConsent(
+		classroomId: string,
+		userId: string,
+		input: PaperConsentInput
+	): Promise<MemberConsent>;
+	/** The printable sheet with the classroom's details filled in. Head and facilitators only. */
+	consentSheet(classroomId: string): Promise<ConsentSheet>;
 	/** Public: what an invite link points to. */
 	getInvitation(token: string): Promise<InvitationPreview>;
 	/** Pending invitations sent to the signed-in user's email, newest first. */

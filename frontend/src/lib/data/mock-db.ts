@@ -2,6 +2,7 @@ import type {
 	HostApplication,
 	HostQuestion,
 	ClockFlag,
+	ConsentMethod,
 	ConsentStatus,
 	AlertRule,
 	DataTerms,
@@ -107,10 +108,20 @@ type StoredRecord = Omit<Reading, 'creditedTo'> & {
 	clockFlags?: ClockFlag[];
 };
 
-/** A guardian consent link (AP-04): one per minor, replaced when they ask again. */
+/**
+ * A minor's guardian consent: one per minor. A link (AP-04) is replaced when they ask again; a
+ * paper sheet recorded by the classroom (AP-38) updates the same record and keeps any link.
+ */
 export interface StoredConsent {
 	userId: string;
-	token: string;
+	/** The guardian link's secret; null when no link was ever sent. */
+	token: string | null;
+	/** How the current status was decided or recorded. */
+	method: ConsentMethod;
+	/** The day on a paper sheet, YYYY-MM-DD. */
+	signedOn: string | null;
+	/** The head or facilitator who recorded a paper sheet. */
+	recordedBy: string | null;
 	guardianName: string;
 	guardianContact: string;
 	status: Exclude<ConsentStatus, 'not_needed'>;
@@ -183,7 +194,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 26;
+const VERSION = 27;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;
