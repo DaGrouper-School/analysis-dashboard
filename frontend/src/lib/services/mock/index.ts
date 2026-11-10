@@ -27,13 +27,13 @@ const CODE_TTL_MS = 5 * 60_000;
 const MAX_ATTEMPTS = 5;
 
 export interface MockOptions {
-	/** Simulated network latency in ms. */
+	/** Simulated network latency in ms: half a second, so loading states are visible. */
 	latency?: number;
 	now?: () => number;
 }
 
 /** A localStorage-backed implementation of every service, behaving like the future backend. */
-export function createMockServices({ latency = 250, now = Date.now }: MockOptions = {}): Services {
+export function createMockServices({ latency = 500, now = Date.now }: MockOptions = {}): Services {
 	const delay = () => new Promise<void>((r) => setTimeout(r, latency));
 	const iso = (ms: number) => new Date(ms).toISOString();
 
