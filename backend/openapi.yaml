@@ -4422,6 +4422,11 @@ components:
         calculation:
           $ref: "#/components/schemas/Calculation"
           description: "How SAM gets the value: measured, derived from other values, or entered by hand."
+        chart:
+          $ref: "#/components/schemas/ParameterChart"
+          description: "The main chart on the value's page (AP-23): daily bars for totals such as rain, a line
+            with each day's low to high for values such as temperature, or a plain line. Numbers
+            only; a value without one charts as a line."
       required:
         - id
         - label
@@ -4430,6 +4435,12 @@ components:
         - domain
         - source
       additionalProperties: false
+    ParameterChart:
+      type: string
+      enum:
+        - daily_bars
+        - line_band
+        - line
     PhoneChallenge:
       type: object
       properties:
@@ -4867,33 +4878,97 @@ components:
                 - icon
               additionalProperties: false
             - type: "null"
+        note:
+          type:
+            - string
+            - "null"
+          description: "\"What it means here\": the classroom's own note, or null to use the registry's."
         series:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicParameterSeries"
+          description: One series per source, oldest first. For rain, every source of the day's rain shows
+            together, each with the registry value it reports (a gauge and a station differ).
+        rain:
+          anyOf:
+            - type: object
+              properties:
+                referenceSourceId:
+                  type:
+                    - string
+                    - "null"
+                tolerance:
+                  type: number
+              required:
+                - referenceSourceId
+                - tolerance
+              additionalProperties: false
+            - type: "null"
+          description: "Rain only: the manual gauge every other source is checked against, and how far apart
+            the protocol lets them be, in the parameter's unit. Null for other values."
+        releasedThrough:
+          type:
+            - string
+            - "null"
+          description: Values observed after this are still in review and not shown.
+        inReview:
+          type: boolean
+          description: Some readings of this value wait for review.
+        compare:
           type: array
           items:
             type: object
             properties:
-              source:
-                $ref: "#/components/schemas/PublicSource"
-              points:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    observedAt:
-                      type: string
-                    value:
-                      type:
-                        - number
-                        - string
-                  required:
-                    - observedAt
-                    - value
-                  additionalProperties: false
+              id:
+                type: string
+              name:
+                type: string
+              placeName:
+                type:
+                  - string
+                  - "null"
+                description: Where its first lab is, rounded; null before it has a lab.
+              country:
+                type:
+                  - string
+                  - "null"
             required:
-              - source
-              - points
+              - id
+              - name
+              - placeName
+              - country
             additionalProperties: false
-          description: One series per source, oldest first.
+          description: Other public classrooms with released values of this one, to compare with.
+        deviceTypes:
+          type: array
+          items:
+            type: string
+          description: Kinds of device behind the values, by registry label.
+        terms:
+          type: object
+          properties:
+            licence:
+              type: string
+              description: Licence name, e.g. "CC BY 4.0".
+            licenceUrl:
+              type:
+                - string
+                - "null"
+            attribution:
+              type: string
+              description: How to credit the data in a paper, poster or report.
+            restrictions:
+              type: array
+              items:
+                type: string
+              description: Limits on use or sharing; empty when there are none.
+          required:
+            - licence
+            - licenceUrl
+            - attribution
+            - restrictions
+          additionalProperties: false
+          description: The classroom's licence and attribution, written into every downloaded row.
         member:
           type: boolean
       required:
@@ -4901,10 +4976,45 @@ components:
         - classroom
         - parameter
         - domain
+        - note
         - series
+        - rain
+        - releasedThrough
+        - inReview
+        - compare
+        - deviceTypes
+        - terms
         - member
       additionalProperties: false
-      description: "One parameter of one classroom for visitors: its meaning and released values over time."
+      description: "One parameter of one classroom for visitors (AP-23): its meaning and released values."
+    PublicParameterSeries:
+      type: object
+      properties:
+        source:
+          $ref: "#/components/schemas/PublicSource"
+        parameterId:
+          type: string
+          description: The registry value this source reports; differs from the page's for other rain sources.
+        points:
+          type: array
+          items:
+            type: object
+            properties:
+              observedAt:
+                type: string
+              value:
+                type:
+                  - number
+                  - string
+            required:
+              - observedAt
+              - value
+            additionalProperties: false
+      required:
+        - source
+        - parameterId
+        - points
+      additionalProperties: false
     PublicSource:
       type: object
       properties:
@@ -5501,6 +5611,12 @@ components:
           type: array
           items:
             type: string
+        parameterNotes:
+          type: object
+          additionalProperties:
+            type: string
+          description: "\"What it means here\" (AP-23): the classroom's own two sentences on a value at this
+            site, by registry ID. A value without one shows the registry's plain sentence."
       required:
         - setting
         - description
