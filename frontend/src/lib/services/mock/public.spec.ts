@@ -118,6 +118,42 @@ describe('Explore data (AP-21)', () => {
 	});
 });
 
+describe('Explore station page (AP-43)', () => {
+	it('gives the location tabs every public classroom with a place on the map', async () => {
+		const station = await services.publicSite.station('cls_trinity');
+		expect(station.places.length).toBeGreaterThan(1);
+		expect(station.places.every((p) => p.location)).toBe(true);
+		expect(station.places.map((p) => p.id)).toContain('cls_trinity');
+		expect(JSON.stringify(station.places)).not.toContain('code');
+	});
+
+	it('shows what is happening now from released values, and no data as null', async () => {
+		const trinity = await services.publicSite.station('cls_trinity');
+		expect(trinity.now.map((t) => t.id)).toEqual(['temperature', 'wind', 'rain', 'pressure']);
+		const temp = trinity.now.find((t) => t.id === 'temperature')!;
+		expect(typeof temp.value).toBe('number');
+		expect(temp.unit).toBe('°C');
+		expect(temp.observedAt! <= '2026-10-20T06:00:00.000Z').toBe(true);
+		// Rain matches the core strip: the day total over sources, with the week under it.
+		const rain = trinity.now.find((t) => t.id === 'rain')!;
+		expect(rain.value).toBe(trinity.classroom.core.rainToday);
+		expect(rain.caption).toContain('this week');
+		const hargeisa = await services.publicSite.station('cls_hargeisa');
+		expect(hargeisa.now.every((t) => t.value === null && t.observedAt === null)).toBe(true);
+	});
+
+	it('shows the institution overview once a host agreement is signed', async () => {
+		const trinity = await services.publicSite.station('cls_trinity');
+		expect(trinity.institution).toMatchObject({ name: 'Trinity School, Addis Ababa' });
+		expect(trinity.institution!.history).not.toBe('');
+		expect(trinity.institution!.deviceTypes.length).toBeGreaterThan(0);
+		expect((await services.publicSite.station('cls_hargeisa')).institution).toBeNull();
+		expect((await services.publicSite.profile('cls_trinity')).institution).toEqual(
+			trinity.institution
+		);
+	});
+});
+
 describe('Classroom profile (AP-29)', () => {
 	const signIn = async (phone: string) => {
 		const challenge = await services.auth.requestPhoneCode(phone);

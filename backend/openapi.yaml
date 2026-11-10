@@ -3863,6 +3863,54 @@ components:
         - required
       additionalProperties: false
       description: A readiness question, from configuration.
+    InstitutionOverview:
+      type: object
+      properties:
+        photoUrl:
+          type:
+            - string
+            - "null"
+          description: "Null until a photo is added: pages show a placeholder."
+        photoAlt:
+          type: string
+          description: What the photo shows, for people who can't see it.
+        history:
+          type: string
+          description: "A short history: who they are and what the community does here."
+        hub:
+          type:
+            - string
+            - "null"
+          description: A partner or hub organisation it works with, if any.
+        website:
+          type:
+            - string
+            - "null"
+          description: Opened by "Learn more"; null hides the button.
+        name:
+          type: string
+        location:
+          anyOf:
+            - $ref: "#/components/schemas/GeoPoint"
+            - type: "null"
+          description: The classroom's published (rounded) position; null before it has a lab.
+        deviceTypes:
+          type: array
+          items:
+            type: string
+          description: Kinds of device in its Lab in a Bag, by registry label.
+      required:
+        - deviceTypes
+        - history
+        - hub
+        - location
+        - name
+        - photoAlt
+        - photoUrl
+        - website
+      additionalProperties: false
+      description: "The institution overview card (AP-43): who runs a classroom and what its community
+        does. Null on a page while the host agreement is unsigned, or with no photo and no history."
     Invitation:
       type: object
       properties:
@@ -4122,6 +4170,47 @@ components:
         - recordedByName
       additionalProperties: false
       description: A minor in a classroom and their guardian's consent (AP-38), for its head and facilitators.
+    NowTile:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        icon:
+          type: string
+        parameterId:
+          type:
+            - string
+            - "null"
+          description: The parameter shown; null when none of the tile's parameters has released data.
+        value:
+          type:
+            - number
+            - string
+            - "null"
+        unit:
+          type: string
+        caption:
+          type:
+            - string
+            - "null"
+          description: A plain line under the value, such as "Feels like 28.8°C"; null when there is none.
+        observedAt:
+          type:
+            - string
+            - "null"
+      required:
+        - id
+        - label
+        - icon
+        - parameterId
+        - value
+        - unit
+        - caption
+        - observedAt
+      additionalProperties: false
+      description: One tile of "What's happening now?" (AP-43), from the latest released reading.
     Observation:
       type: object
       properties:
@@ -4581,6 +4670,10 @@ components:
         canManage:
           type: boolean
           description: 'The viewer can manage the classroom: show "Manage classroom".'
+        institution:
+          anyOf:
+            - $ref: "#/components/schemas/InstitutionOverview"
+            - type: "null"
       required:
         - content
         - classroom
@@ -4592,6 +4685,7 @@ components:
         - contributors
         - member
         - canManage
+        - institution
       additionalProperties: false
       description: A classroom's public profile (AP-29).
     PublicContribution:
@@ -4889,6 +4983,48 @@ components:
         member:
           type: boolean
           description: The viewer belongs to this classroom, so their dashboard shows it with raw values too.
+        places:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              placeName:
+                type:
+                  - string
+                  - "null"
+                description: Where its first lab is, rounded; null before it has a lab.
+              country:
+                type:
+                  - string
+                  - "null"
+              location:
+                anyOf:
+                  - $ref: "#/components/schemas/GeoPoint"
+                  - type: "null"
+              stageId:
+                type: string
+            required:
+              - id
+              - name
+              - placeName
+              - country
+              - location
+              - stageId
+            additionalProperties: false
+          description: Every public classroom with a lab, for the location tabs and the globe (AP-43).
+        now:
+          type: array
+          items:
+            $ref: "#/components/schemas/NowTile"
+          description: "\"What's happening now?\" (AP-43): one tile per configured value."
+        institution:
+          anyOf:
+            - $ref: "#/components/schemas/InstitutionOverview"
+            - type: "null"
       required:
         - content
         - classroom
@@ -4899,6 +5035,9 @@ components:
         - completeness
         - siteCodes
         - member
+        - places
+        - now
+        - institution
       additionalProperties: false
       description: "A classroom's station overview for visitors (AP-21): released data only."
     PublicValue:

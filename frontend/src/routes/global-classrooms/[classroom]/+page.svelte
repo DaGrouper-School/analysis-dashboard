@@ -1,4 +1,5 @@
 <script lang="ts">
+	import InstitutionOverview from '#lib/components/InstitutionOverview.svelte';
 	import ContributorId from '#lib/components/ContributorId.svelte';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
@@ -73,6 +74,10 @@
 			{/if}
 		</div>
 	</header>
+
+	{#if data.institution}
+		<InstitutionOverview overview={data.institution} class="mt-8 max-w-xl" />
+	{/if}
 
 	<section class="mt-10" aria-labelledby="projects-heading">
 		<h2 id="projects-heading" class="font-display text-2xl">Research projects</h2>

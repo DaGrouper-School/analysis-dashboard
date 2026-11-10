@@ -917,6 +917,62 @@ export interface PublicStation {
 	siteCodes: string[];
 	/** The viewer belongs to this classroom, so their dashboard shows it with raw values too. */
 	member: boolean;
+	/** Every public classroom with a lab, for the location tabs and the globe (AP-43). */
+	places: Pick<PublicClassroom, 'id' | 'name' | 'placeName' | 'country' | 'location' | 'stageId'>[];
+	/** "What's happening now?" (AP-43): one tile per configured value. */
+	now: NowTile[];
+	institution: InstitutionOverview | null;
+}
+
+/**
+ * The institution overview card (AP-43): who runs a classroom and what its community does.
+ * Null on a page while the host agreement is unsigned, or with no photo and no history.
+ */
+export interface InstitutionOverview extends InstitutionInfo {
+	name: string;
+	/** The classroom's published (rounded) position; null before it has a lab. */
+	location: GeoPoint | null;
+	/** Kinds of device in its Lab in a Bag, by registry label. */
+	deviceTypes: string[];
+}
+
+/** One tile of "What's happening now?" (AP-43), from the latest released reading. */
+export interface NowTile {
+	id: string;
+	label: string;
+	icon: string;
+	/** The parameter shown; null when none of the tile's parameters has released data. */
+	parameterId: string | null;
+	value: number | string | null;
+	unit: string;
+	/** A plain line under the value, such as "Feels like 28.8°C"; null when there is none. */
+	caption: string | null;
+	observedAt: string | null;
+}
+
+/** Which values "What's happening now?" shows, in order (AP-43). Configuration, not code. */
+export interface NowTileConfig {
+	id: string;
+	label: string;
+	/** A registry icon name. */
+	icon: string;
+	/** Candidates, best first: the first with released data is shown. */
+	parameterIds: string[];
+	/**
+	 * The line under the value. `{value}` is the caption parameter's value with its unit, or as
+	 * a compass point ("east-southeast") when `format` is `compass`.
+	 */
+	caption?: { parameterIds: string[]; text: string; format?: 'compass' };
+	/** Shown instead of the caption when the value is zero, such as "No rain today". */
+	zeroText?: string;
+	/**
+	 * Take the value from the classroom's core readings instead, so the tile matches the core
+	 * strip (rain is a day total averaged over sources, not one source's latest reading).
+	 */
+	core?: {
+		value: 'rainToday' | 'airTemperature';
+		caption?: { value: 'rainLast7Days'; text: string };
+	};
 }
 
 /** One parameter of one classroom for visitors: its meaning and released values over time. */
@@ -960,6 +1016,23 @@ export interface ClassroomSession {
 }
 
 /** What a classroom says about itself on its public profile (AP-29). */
+/**
+ * The host institution as a classroom presents it (AP-43): a photo and a short history. Edited
+ * by the institution head; collected first in the host application (AP-40).
+ */
+export interface InstitutionInfo {
+	/** Null until a photo is added: pages show a placeholder. */
+	photoUrl: string | null;
+	/** What the photo shows, for people who can't see it. */
+	photoAlt: string;
+	/** A short history: who they are and what the community does here. */
+	history: string;
+	/** A partner or hub organisation it works with, if any. */
+	hub: string | null;
+	/** Opened by "Learn more"; null hides the button. */
+	website: string | null;
+}
+
 export interface ClassroomProfile {
 	/** Country or area code, e.g. `ET-AA`. */
 	areaCode: string;
@@ -972,6 +1045,7 @@ export interface ClassroomProfile {
 	sessions: ClassroomSession[];
 	/** Who looks after the Lab in a Bag. Shown to members only. */
 	custodianRole: ClassroomRole;
+	institution: InstitutionInfo;
 }
 
 /** One kind of device in a classroom's Lab in a Bag, from its registered devices. */
@@ -1007,6 +1081,7 @@ export interface PublicClassroomProfile {
 	member: boolean;
 	/** The viewer can manage the classroom: show "Manage classroom". */
 	canManage: boolean;
+	institution: InstitutionOverview | null;
 }
 
 export interface PublicHome {
