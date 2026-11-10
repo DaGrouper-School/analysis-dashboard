@@ -312,6 +312,42 @@ const coreParameters: MockDbState['coreParameters'] = {
 	airTemperature: ['air_temperature']
 };
 
+/**
+ * "What's happening now?" on a station (AP-43): which values, in order, and their plain
+ * captions. The first parameter with released data is shown.
+ */
+const nowTiles: MockDbState['nowTiles'] = [
+	{
+		id: 'temperature',
+		label: 'Temperature',
+		icon: 'thermometer',
+		parameterIds: ['air_temperature'],
+		caption: { parameterIds: ['feels_like'], text: 'Feels like {value}' }
+	},
+	{
+		id: 'wind',
+		label: 'Wind',
+		icon: 'wind',
+		parameterIds: ['wind_avg'],
+		caption: { parameterIds: ['wind_direction'], text: 'From the {value}', format: 'compass' }
+	},
+	{
+		id: 'rain',
+		label: 'Rain today',
+		icon: 'rain',
+		parameterIds: ['precip_accum_local_day', 'rain_gauge_daily_accumulation'],
+		zeroText: 'No rain today',
+		core: { value: 'rainToday', caption: { value: 'rainLast7Days', text: '{value} this week' } }
+	},
+	{
+		id: 'pressure',
+		label: 'Pressure',
+		icon: 'waves',
+		parameterIds: ['sea_level_pressure', 'station_pressure'],
+		caption: { parameterIds: ['pressure_trend'], text: 'Trend: {value}' }
+	}
+];
+
 /** The terms a new classroom's data starts with, until its head changes them. */
 const defaultDataTerms: MockDbState['defaultDataTerms'] = {
 	licence: 'CC BY 4.0',
@@ -407,7 +443,15 @@ const classrooms: MockDbState['classrooms'] = [
 					place: 'Online'
 				}
 			],
-			custodianRole: 'facilitator'
+			custodianRole: 'facilitator',
+			institution: {
+				photoUrl: null,
+				photoAlt: 'Trinity School buildings and the school garden in Addis Ababa.',
+				history:
+					'Trinity School has taught in Addis Ababa since 1994. Its science club and community scientists in Shashamane measure rain and heat on highland farmland and in the school garden, and share what they find with farmers nearby.',
+				hub: null,
+				website: null
+			}
 		},
 		terms: {
 			licence: 'CC BY 4.0',
@@ -462,7 +506,15 @@ const classrooms: MockDbState['classrooms'] = [
 					place: 'Bay Street School'
 				}
 			],
-			custodianRole: 'facilitator'
+			custodianRole: 'facilitator',
+			institution: {
+				photoUrl: null,
+				photoAlt: 'Bay Street School on the Nassau harbour front.',
+				history:
+					'Bay Street School has stood on the Nassau harbour front since 1962. Its shoreline lab tracks wind, heat and storm conditions on the harbour, with student interns and local volunteers taking part.',
+				hub: null,
+				website: null
+			}
 		},
 		terms: {
 			licence: 'CC BY-NC 4.0',
@@ -508,7 +560,15 @@ const classrooms: MockDbState['classrooms'] = [
 				}
 			],
 			sessions: [],
-			custodianRole: 'institution_head'
+			custodianRole: 'institution_head',
+			institution: {
+				photoUrl: null,
+				photoAlt: 'Hargeisa Secondary School grounds.',
+				history:
+					'A secondary school science club in Hargeisa studying dry-season heat and dust in the highlands.',
+				hub: null,
+				website: null
+			}
 		},
 		terms: {
 			licence: 'CC BY 4.0',
@@ -1546,6 +1606,7 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 		defaultDataTerms,
 		siteContent,
 		coreParameters,
+		nowTiles,
 		memberships,
 		invitations,
 		labs,

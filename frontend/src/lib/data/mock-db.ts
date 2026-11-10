@@ -3,6 +3,7 @@ import type {
 	HostQuestion,
 	ClockFlag,
 	ConsentMethod,
+	NowTileConfig,
 	ConsentStatus,
 	AlertRule,
 	DataTerms,
@@ -176,6 +177,8 @@ export interface MockDbState {
 	siteContent: SiteContent;
 	/** Which values feed the public core readings strip. */
 	coreParameters: CoreParameters;
+	/** What "What's happening now?" shows on a station (AP-43). */
+	nowTiles: NowTileConfig[];
 	/** New classrooms start with these; `{classroom}` and `{institution}` are filled in. */
 	defaultDataTerms: DataTerms;
 	memberships: StoredMembership[];
@@ -194,7 +197,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 29;
+const VERSION = 31;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;

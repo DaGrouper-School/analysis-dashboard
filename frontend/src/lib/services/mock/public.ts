@@ -2,6 +2,8 @@ import { monthCompleteness } from '#lib/completeness.ts';
 import { coreReadings, stationCore } from '#lib/core-readings.ts';
 import { readDb, type MockDbState, type StoredClassroom } from '#lib/data/mock-db.ts';
 import type {
+	InstitutionOverview,
+	KitItem,
 	PublicClassroom,
 	PublicClassroomProfile,
 	PublicContribution,
@@ -10,6 +12,7 @@ import type {
 	PublicValue
 } from '#lib/domain/types.ts';
 import { coarsen, FIELD_SOURCE } from '#lib/raw-data.ts';
+import { nowTiles } from '#lib/station-now.ts';
 import { ServiceError, type PublicService } from '../types';
 import { permissionsFor, roleIn } from './classrooms';
 
@@ -101,6 +104,50 @@ function domainOf(state: MockDbState, parameterId: string) {
 	return domain
 		? { id: domain.id, label: domain.label, icon: domain.icon, description: domain.description }
 		: null;
+}
+
+/** The Lab in a Bag, read from the devices registered to the classroom's labs. */
+function kitFor(state: MockDbState, labs: { id: string }[], member: boolean): KitItem[] {
+	const labelOf = (id: string) => state.parameters.find((p) => p.id === id)?.label ?? id;
+	const labIds = new Set(labs.map((l) => l.id));
+	const devices = state.devices.filter((d) => labIds.has(d.labId));
+	return state.deviceTypes
+		.map((type) => ({ type, devices: devices.filter((d) => d.type === type.id) }))
+		.filter((k) => k.devices.length)
+		.map(({ type, devices }) => {
+			// What it measures, by domain: a station sends dozens of values. Values with no
+			// domain yet are named one by one.
+			const domains = state.domains
+				.filter((d) => type.parameterIds.some((id) => domainOf(state, id)?.id === d.id))
+				.map((d) => d.label);
+			const loose = type.parameterIds.filter((id) => !domainOf(state, id)).map(labelOf);
+			return {
+				deviceType: { id: type.id, label: type.label, icon: type.icon },
+				count: devices.length,
+				measures: [...domains, ...loose],
+				serials: member ? devices.map((d) => d.identifier) : []
+			};
+		});
+}
+
+/**
+ * The institution overview card (AP-43). The host is shown only once it has signed the host
+ * agreement, and only when there is a photo or a history to show.
+ */
+function institutionFor(
+	state: MockDbState,
+	classroom: StoredClassroom,
+	publicClassroom: PublicClassroom,
+	kit: KitItem[]
+): InstitutionOverview | null {
+	const info = classroom.profile.institution;
+	if (!publicClassroom.institutionName || (!info.photoUrl && !info.history.trim())) return null;
+	return {
+		...structuredClone(info),
+		name: publicClassroom.institutionName,
+		location: publicClassroom.location,
+		deviceTypes: kit.map((k) => k.deviceType.label)
+	};
 }
 
 /** The public site needs no session: everything here is open to visitors (AP-20, AP-21). */
@@ -218,7 +265,26 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 				),
 				completeness,
 				siteCodes: member ? sites.map((s) => s.code) : [],
-				member
+				member,
+				places: state.classrooms
+					.map((c) => toPublicClassroom(state, c))
+					.filter((c) => c.location)
+					.sort((a, b) => a.name.localeCompare(b.name))
+					.map(({ id, name, placeName, country, location, stageId }) => ({
+						id,
+						name,
+						placeName,
+						country,
+						location,
+						stageId
+					})),
+				now: nowTiles(state.nowTiles, values, state.parameters, publicClassroom.core),
+				institution: institutionFor(
+					state,
+					classroom,
+					publicClassroom,
+					kitFor(state, released(state, classroom).labs, member)
+				)
 			};
 		},
 
@@ -232,26 +298,7 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 			const { labs, released: records } = released(state, classroom);
 			const labelOf = (id: string) => state.parameters.find((p) => p.id === id)?.label ?? id;
 
-			// The Lab in a Bag, read from the devices registered to the classroom's labs.
-			const labIds = new Set(labs.map((l) => l.id));
-			const devices = state.devices.filter((d) => labIds.has(d.labId));
-			const kit = state.deviceTypes
-				.map((type) => ({ type, devices: devices.filter((d) => d.type === type.id) }))
-				.filter((k) => k.devices.length)
-				.map(({ type, devices }) => {
-					// What it measures, by domain: a station sends dozens of values. Values with no
-					// domain yet are named one by one.
-					const domains = state.domains
-						.filter((d) => type.parameterIds.some((id) => domainOf(state, id)?.id === d.id))
-						.map((d) => d.label);
-					const loose = type.parameterIds.filter((id) => !domainOf(state, id)).map(labelOf);
-					return {
-						deviceType: { id: type.id, label: type.label, icon: type.icon },
-						count: devices.length,
-						measures: [...domains, ...loose],
-						serials: member ? devices.map((d) => d.identifier) : []
-					};
-				});
+			const kit = kitFor(state, labs, member);
 
 			// Everyone who recorded released data, by participant ID (AP-39). Only those who turned
 			// on their public profile are named; a minor never can.
@@ -295,6 +342,7 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 					}))
 				})),
 				kit,
+				institution: institutionFor(state, classroom, toPublicClassroom(state, classroom), kit),
 				custodianRole: member ? profile.custodianRole : null,
 				sessions: profile.sessions
 					.filter((s) => s.startsAt >= now)

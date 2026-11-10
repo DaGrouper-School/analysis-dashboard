@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { resolve } from '$app/paths';
-	import { replaceState } from '$app/navigation';
+	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
+	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import Icon from '#lib/components/Icon.svelte';
+	import InstitutionOverview from '#lib/components/InstitutionOverview.svelte';
+	import NowCard from '#lib/components/NowCard.svelte';
 	import PublicShell from '#lib/components/PublicShell.svelte';
 	import SampleDataBadge from '#lib/components/SampleDataBadge.svelte';
 	import Sparkline from '#lib/components/Sparkline.svelte';
@@ -18,6 +21,7 @@
 	} from '#lib/domain/types.ts';
 	import { FALLBACK_DOMAIN_ICON } from '#lib/icons.ts';
 	import { formatValue } from '#lib/key-values.ts';
+	import { placeLabel } from '#lib/station-now.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -37,6 +41,27 @@
 		month: 'long',
 		year: 'numeric',
 		timeZone: 'UTC'
+	});
+
+	// The location tabs and the globe (AP-43): every public classroom, this one selected.
+	const stageColor = $derived(new Map(data.content.stages.map((s) => [s.id, s.color])));
+	const markers = $derived<GlobeMarker[]>(
+		data.places.map((p) => ({
+			id: p.id,
+			lat: p.location!.lat,
+			lng: p.location!.lng,
+			color: stageColor.get(p.stageId) ?? '#8e98a3',
+			label: p.name
+		}))
+	);
+	// Follows the page's classroom; picking a marker overrides it until the next page.
+	let globeSelected = $derived(classroom.id);
+	// Picking another classroom on the globe opens its station.
+	$effect(() => {
+		const id = globeSelected;
+		if (id && id !== untrack(() => classroom.id)) {
+			goto(resolve('/explore/[classroom]', { classroom: id }));
+		}
 	});
 
 	const REVIEW: Record<ReviewState, string> = {
@@ -223,6 +248,64 @@
 			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		{/if}
 	</header>
+
+	{#if data.places.length > 1}
+		<nav
+			aria-label="Locations"
+			class="-mx-4 mt-6 flex gap-6 overflow-x-auto px-4 text-sm whitespace-nowrap sm:justify-center"
+		>
+			{#each data.places as place (place.id)}
+				{@const current = place.id === classroom.id}
+				<a
+					href={resolve('/explore/[classroom]', { classroom: place.id })}
+					data-sveltekit-noscroll
+					aria-current={current ? 'page' : undefined}
+					title={place.name}
+					class={[
+						'border-b-2 pb-1.5',
+						current
+							? 'border-teal font-semibold text-ink'
+							: 'border-transparent text-muted hover:text-ink'
+					]}>{placeLabel(place.placeName, place.country) || place.name}</a
+				>
+			{/each}
+		</nav>
+	{/if}
+
+	<div
+		class={[
+			'mt-6 grid gap-5',
+			data.institution
+				? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,1fr)]'
+				: 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]'
+		]}
+	>
+		<NowCard tiles={data.now}>
+			{#snippet actions()}
+				<a class="btn btn-ghost flex-1 rounded-full" href="#domains-heading">View domains</a>
+			{/snippet}
+		</NowCard>
+		{#if classroom.location}
+			<section
+				class="card relative h-80 overflow-hidden p-0 sm:h-96 lg:h-auto lg:min-h-[28rem]"
+				aria-label="Where {classroom.name} is"
+			>
+				<Globe
+					{markers}
+					bind:selectedId={globeSelected}
+					ariaLabel="Globe of Global Classrooms, turned to {classroom.name}"
+				/>
+				<p
+					class="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-line-strong bg-surface px-3 py-1 text-xs whitespace-nowrap text-ink"
+				>
+					{classroom.name}
+				</p>
+			</section>
+		{/if}
+		{#if data.institution}
+			<InstitutionOverview overview={data.institution} />
+		{/if}
+	</div>
 
 	<section class="mt-6" aria-labelledby="core-heading">
 		<h2 id="core-heading" class="sr-only">Core readings</h2>

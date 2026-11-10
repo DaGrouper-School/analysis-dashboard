@@ -323,7 +323,8 @@ export function createMockClassrooms({
 						hostAgreementSigned: false,
 						projects: [],
 						sessions: [],
-						custodianRole: 'institution_head'
+						custodianRole: 'institution_head',
+						institution: { photoUrl: null, photoAlt: '', history: '', hub: null, website: null }
 					}
 				};
 				state.classrooms.push(classroom);
