@@ -6,8 +6,9 @@
 	import { errorMessage, isMockDataSource, services, ServiceError } from '#lib/services/index.ts';
 
 	/**
-	 * A minor's guardian consent (AP-04): where it stands, and a new link when it is needed. Only
-	 * the guardian gives or withdraws it, from their link.
+	 * A minor's guardian consent: where it stands, and a link when it is needed (AP-04). The
+	 * guardian decides from their link, or on a paper sheet that the classroom records (AP-38).
+	 * The minor sees only their own status.
 	 */
 	let { consent }: { consent: GuardianConsent | null } = $props();
 
@@ -21,6 +22,7 @@
 	let message = $state('');
 	let sending = $state(false);
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+	const dateOnly = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeZone: 'UTC' });
 
 	const STATUS_TEXT = {
 		not_needed: '',
@@ -65,13 +67,20 @@
 	</div>
 	{#if current}
 		<p class="mt-2 text-sm">{STATUS_TEXT[current.status]}</p>
-		<p class="mt-1 text-sm text-muted">
-			Asked {current.guardianName} ({current.guardianContact}) on
-			{dateTime.format(new Date(current.requestedAt))}{current.decidedAt
-				? `; answered ${dateTime.format(new Date(current.decidedAt))}`
-				: ''}.
-		</p>
-		{#if isMockDataSource && current.devToken}
+		{#if current.method === 'paper' && current.signedOn}
+			<p class="mt-1 text-sm text-muted">
+				Your classroom recorded a paper sheet signed by {current.guardianName} on
+				{dateOnly.format(new Date(`${current.signedOn}T00:00:00Z`))}.
+			</p>
+		{:else if current.guardianContact}
+			<p class="mt-1 text-sm text-muted">
+				Asked {current.guardianName} ({current.guardianContact}) on
+				{dateTime.format(new Date(current.requestedAt))}{current.decidedAt
+					? `; answered ${dateTime.format(new Date(current.decidedAt))}`
+					: ''}.
+			</p>
+		{/if}
+		{#if isMockDataSource && current.devToken && current.method === 'link'}
 			<p class="mt-3 text-sm">
 				<span class="text-muted">Demo:</span>
 				<a class="link" href={resolve('/consent/[token]', { token: current.devToken })}
@@ -85,7 +94,11 @@
 		is stored.
 	</p>
 	{#if !current || current.status !== 'given'}
-		<form class="mt-5 grid gap-4 sm:grid-cols-2" onsubmit={send} novalidate>
+		<p class="mt-4 text-sm">
+			Ask your facilitator for a paper consent sheet for your guardian to sign. Or send your
+			guardian a link to answer online.
+		</p>
+		<form class="mt-4 grid gap-4 sm:grid-cols-2" onsubmit={send} novalidate>
 			<div>
 				<label class="label" for="consent-guardian-name">Guardian's name</label>
 				<input
@@ -106,7 +119,11 @@
 			</div>
 			<div class="flex flex-wrap items-center gap-3 sm:col-span-2">
 				<button class="btn btn-ghost" disabled={sending}
-					>{sending ? 'Sending…' : 'Send a new link'}</button
+					>{sending
+						? 'Sending…'
+						: current?.guardianContact
+							? 'Send a new link'
+							: 'Send a link'}</button
 				>
 				{#if message}<p class="text-sm text-muted" role="status">{message}</p>{/if}
 			</div>

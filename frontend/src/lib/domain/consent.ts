@@ -1,4 +1,10 @@
-import type { ConsentStatus, GuardianInput, User } from '#lib/domain/types.ts';
+import type {
+	ConsentSheetContent,
+	ConsentStatus,
+	GuardianInput,
+	PaperConsentInput,
+	User
+} from '#lib/domain/types.ts';
 import { isValidEmail, normalizePhone } from '#lib/domain/validation.ts';
 
 /**
@@ -36,4 +42,50 @@ export function validateGuardian(input: GuardianInput): Record<string, string> {
 export function normalizeGuardianContact(contact: string): string {
 	const trimmed = contact.trim();
 	return isValidEmail(trimmed) ? trimmed.toLowerCase() : (normalizePhone(trimmed) ?? trimmed);
+}
+
+/**
+ * A paper consent sheet as recorded (AP-38): the guardian's name, and the day on the sheet, which
+ * is a real date and not later than `today` (YYYY-MM-DD, in the recorder's time zone).
+ */
+export function validatePaperConsent(
+	input: PaperConsentInput,
+	today: string
+): Record<string, string> {
+	const errors: Record<string, string> = {};
+	if (!input.guardianName.trim()) errors.guardianName = 'Enter the guardian’s name from the sheet.';
+	const day = input.signedOn.trim();
+	const parsed = /^\d{4}-\d{2}-\d{2}$/.test(day) ? new Date(`${day}T00:00:00Z`) : null;
+	if (!day) errors.signedOn = 'Enter the date on the sheet.';
+	else if (!parsed || Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== day) {
+		errors.signedOn = 'Enter a valid date.';
+	} else if (day > today) errors.signedOn = 'The date on the sheet can’t be in the future.';
+	return errors;
+}
+
+/** Today as YYYY-MM-DD in the local time zone, for date fields and checks. */
+export function localDay(at: Date = new Date()): string {
+	const pad = (n: number) => String(n).padStart(2, '0');
+	return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
+}
+
+/** The sheet's words with one classroom's details in place of `{classroom}` and the others. */
+export function fillConsentSheet(
+	content: ConsentSheetContent,
+	values: { classroom: string; institution: string; decimals: number }
+): ConsentSheetContent {
+	const fill = (text: string) =>
+		text
+			.replaceAll('{classroom}', values.classroom)
+			.replaceAll('{institution}', values.institution)
+			.replaceAll('{decimals}', String(values.decimals));
+	return {
+		title: fill(content.title),
+		intro: fill(content.intro),
+		sections: content.sections.map((s) => ({ heading: fill(s.heading), body: fill(s.body) })),
+		choices: { give: fill(content.choices.give), withdraw: fill(content.choices.withdraw) },
+		contributorField: fill(content.contributorField),
+		fields: content.fields.map(fill),
+		officeNote: fill(content.officeNote)
+	};
 }

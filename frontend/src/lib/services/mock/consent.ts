@@ -12,13 +12,18 @@ import { currentUser } from './classrooms';
 
 type Clock = { delay: () => Promise<void>; now: () => number };
 
-function toGuardianConsent(stored: StoredConsent): GuardianConsent {
+function toGuardianConsent(state: MockDbState, stored: StoredConsent): GuardianConsent {
 	return {
 		status: stored.status,
+		method: stored.method,
 		guardianName: stored.guardianName,
 		guardianContact: stored.guardianContact,
 		requestedAt: stored.requestedAt,
 		decidedAt: stored.decidedAt,
+		signedOn: stored.signedOn,
+		recordedByName: stored.recordedBy
+			? (state.users.find((u) => u.id === stored.recordedBy)?.fullName ?? null)
+			: null,
 		// Mock only, like the SMS code: the real backend sends the link and never returns it.
 		devToken: stored.token
 	};
@@ -43,7 +48,7 @@ function toRequest(state: MockDbState, stored: StoredConsent): ConsentRequest {
 export function createMockGuardian({
 	delay,
 	now
-}: Clock): Pick<ProfileService, 'requestGuardianConsent' | 'getGuardianConsent'> {
+}: Clock): Pick<ProfileService, 'requestGuardianConsent' | 'markMinor' | 'getGuardianConsent'> {
 	return {
 		async requestGuardianConsent(input: GuardianInput) {
 			await delay();
@@ -60,6 +65,9 @@ export function createMockGuardian({
 				const stored: StoredConsent = {
 					userId: user.id,
 					token: newId('consent'),
+					method: 'link',
+					signedOn: null,
+					recordedBy: null,
 					guardianName: input.guardianName.trim(),
 					guardianContact: normalizeGuardianContact(input.guardianContact),
 					status: 'pending',
@@ -70,7 +78,21 @@ export function createMockGuardian({
 				user.minor = true;
 				user.consent = 'pending';
 				user.updatedAt = at;
-				return toGuardianConsent(stored);
+				return toGuardianConsent(state, stored);
+			});
+		},
+
+		async markMinor() {
+			await delay();
+			return updateDb((state) => {
+				const user: User = currentUser(state);
+				// Already a minor: their consent stays as it is.
+				if (!user.minor) {
+					user.minor = true;
+					user.consent = 'pending';
+					user.updatedAt = new Date(now()).toISOString();
+				}
+				return structuredClone(user);
 			});
 		},
 
@@ -78,7 +100,7 @@ export function createMockGuardian({
 			const state = readDb();
 			const user = currentUser(state);
 			const stored = state.guardianConsents.find((c) => c.userId === user.id);
-			return stored ? toGuardianConsent(stored) : null;
+			return stored ? toGuardianConsent(state, stored) : null;
 		}
 	};
 }
@@ -86,7 +108,7 @@ export function createMockGuardian({
 /** The guardian's side: open the link, give or withdraw consent. No sign-in. */
 export function createMockConsent({ delay, now }: Clock): ConsentService {
 	function find(state: MockDbState, token: string) {
-		const stored = state.guardianConsents.find((c) => c.token === token);
+		const stored = token ? state.guardianConsents.find((c) => c.token === token) : undefined;
 		if (!stored) {
 			throw new ServiceError('not_found', 'This consent link is not valid any more.');
 		}
@@ -109,6 +131,10 @@ export function createMockConsent({ delay, now }: Clock): ConsentService {
 				if (stored.status !== value) {
 					stored.status = value;
 					stored.decidedAt = at;
+					// The guardian's own answer now stands over any paper sheet.
+					stored.method = 'link';
+					stored.signedOn = null;
+					stored.recordedBy = null;
 					const user = state.users.find((u) => u.id === stored.userId)!;
 					user.consent = value;
 					user.updatedAt = at;

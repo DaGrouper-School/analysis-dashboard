@@ -159,6 +159,13 @@ export const routes: Route[] = [
 		notes: 'The backend emails the guardian their link. The link is never returned to the minor.'
 	},
 	{
+		method: 'profile.markMinor',
+		http: 'POST',
+		path: '/me/minor',
+		access: 'user',
+		response: 'User'
+	},
+	{
 		method: 'profile.getGuardianConsent',
 		http: 'GET',
 		path: '/me/guardian-consent',
@@ -231,6 +238,32 @@ export const routes: Route[] = [
 		path: '/classrooms/{classroomId}/members/{userId}',
 		access: 'user',
 		response: null
+	},
+	{
+		method: 'classrooms.listConsent',
+		http: 'GET',
+		path: '/classrooms/{classroomId}/consent',
+		access: 'user',
+		response: 'MemberConsent[]',
+		errors: [404]
+	},
+	{
+		method: 'classrooms.recordPaperConsent',
+		http: 'PUT',
+		path: '/classrooms/{classroomId}/consent/{userId}',
+		access: 'user',
+		body: 'PaperConsentInput',
+		response: 'MemberConsent',
+		errors: [400, 404],
+		notes: 'The recorder is the signed-in user. The decision is asserted to SAM as `consent`.'
+	},
+	{
+		method: 'classrooms.consentSheet',
+		http: 'GET',
+		path: '/classrooms/{classroomId}/consent-sheet',
+		access: 'user',
+		response: 'ConsentSheet',
+		errors: [404]
 	},
 	{
 		method: 'classrooms.getInvitation',

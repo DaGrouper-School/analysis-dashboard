@@ -128,3 +128,137 @@ describe('guardian consent for minors (AP-04)', () => {
 		expect(stored.location).toEqual({ lat: 9.04567, lng: 38.76123 });
 	});
 });
+
+describe('paper consent recorded by the classroom (AP-38)', () => {
+	const signInHead = () => services.auth.signInWithGoogle('g-tesfaye');
+	const today = new Date().toISOString().slice(0, 10);
+
+	it('shows the head every minor in the classroom with where consent stands', async () => {
+		await signInHead();
+		const detail = await services.classrooms.get('cls_trinity');
+		expect(detail.permissions.manageConsent).toBe(true);
+		expect(await services.classrooms.listConsent('cls_trinity')).toEqual([
+			expect.objectContaining({
+				userId: 'usr_liya',
+				status: 'pending',
+				method: 'link',
+				guardianName: 'Almaz A.'
+			})
+		]);
+	});
+
+	it('unblocks the minor, asserts it to SAM, and shows the minor only their status', async () => {
+		await signInHead();
+		const recorded = await services.classrooms.recordPaperConsent('cls_trinity', 'usr_liya', {
+			give: true,
+			guardianName: ' Almaz A. ',
+			signedOn: '2026-11-01'
+		});
+		expect(recorded).toMatchObject({
+			status: 'given',
+			method: 'paper',
+			guardianName: 'Almaz A.',
+			signedOn: '2026-11-01',
+			recordedByName: 'Tesfaye G.'
+		});
+		expect(readDb().samAssertions).toEqual([
+			expect.objectContaining({ userId: 'usr_liya', attribute: 'consent', value: 'given' })
+		]);
+
+		await signInLiya();
+		expect(await services.profile.getGuardianConsent()).toMatchObject({
+			status: 'given',
+			method: 'paper',
+			signedOn: '2026-11-01',
+			recordedByName: 'Tesfaye G.'
+		});
+		await expect(services.labs.submitObservation(sighting())).resolves.toBeTruthy();
+		await expect(services.classrooms.listConsent('cls_trinity')).rejects.toMatchObject({
+			code: 'forbidden'
+		});
+	});
+
+	it('records a withdrawal the same way, and the guardian link still works', async () => {
+		await signInHead();
+		await services.classrooms.recordPaperConsent('cls_trinity', 'usr_liya', {
+			give: true,
+			guardianName: 'Almaz A.',
+			signedOn: today
+		});
+		await services.classrooms.recordPaperConsent('cls_trinity', 'usr_liya', {
+			give: false,
+			guardianName: 'Almaz A.',
+			signedOn: today
+		});
+		await signInLiya();
+		await expect(services.labs.submitObservation(sighting())).rejects.toMatchObject({
+			code: 'forbidden',
+			message: expect.stringContaining('withdrew')
+		});
+		expect((await services.consent.decide(TOKEN, true)).status).toBe('given');
+		expect(readDb().samAssertions.map((a) => a.value)).toEqual(['given', 'withdrawn', 'given']);
+	});
+
+	it('checks the sheet’s details, and refuses everyone but the head and facilitators', async () => {
+		await signInHead();
+		await expect(
+			services.classrooms.recordPaperConsent('cls_trinity', 'usr_liya', {
+				give: true,
+				guardianName: '',
+				signedOn: '2999-01-01'
+			})
+		).rejects.toMatchObject({
+			code: 'invalid_input',
+			fields: { guardianName: expect.any(String), signedOn: expect.any(String) }
+		});
+		// Only members under 18 have consent to record.
+		await expect(
+			services.classrooms.recordPaperConsent('cls_trinity', 'usr_abebe', {
+				give: true,
+				guardianName: 'Someone',
+				signedOn: today
+			})
+		).rejects.toMatchObject({ code: 'not_found' });
+
+		// A platform admin is not at the classroom: no consent tab, no sheet, no recording.
+		await services.auth.signInWithGoogle('g-leila');
+		expect((await services.classrooms.get('cls_trinity')).permissions.manageConsent).toBe(false);
+		await expect(services.classrooms.consentSheet('cls_trinity')).rejects.toMatchObject({
+			code: 'forbidden'
+		});
+		await expect(
+			services.classrooms.recordPaperConsent('cls_trinity', 'usr_liya', {
+				give: true,
+				guardianName: 'Almaz A.',
+				signedOn: today
+			})
+		).rejects.toMatchObject({ code: 'forbidden' });
+		expect(readDb().samAssertions).toEqual([]);
+	});
+
+	it('fills the printable sheet with the classroom’s details from content', async () => {
+		await signInHead();
+		const sheet = await services.classrooms.consentSheet('cls_trinity');
+		const state = readDb();
+		expect(sheet).toMatchObject({
+			classroomName: 'Trinity Lab Classroom',
+			institutionName: 'Trinity School, Addis Ababa',
+			minors: [{ userId: 'usr_liya', fullName: 'Liya A.' }]
+		});
+		expect(sheet.content.fields).toEqual(state.siteContent.consentSheet.fields);
+		const text = JSON.stringify(sheet.content);
+		expect(text).not.toMatch(/\{(classroom|institution|decimals)\}/);
+		expect(sheet.content.intro).toContain('Trinity School, Addis Ababa');
+		expect(text).toContain(`${state.privacy.minorCoordinateDecimals} decimal places`);
+	});
+
+	it('lets a minor say they are under 18 without sending a link', async () => {
+		await signIn('+251911000001');
+		const user = await services.profile.markMinor();
+		expect(user).toMatchObject({ minor: true, consent: 'pending' });
+		expect(await services.profile.getGuardianConsent()).toBeNull();
+		await expect(services.labs.submitObservation(sighting())).rejects.toMatchObject({
+			code: 'forbidden'
+		});
+	});
+});

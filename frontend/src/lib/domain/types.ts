@@ -53,13 +53,25 @@ export interface GuardianInput {
 	guardianContact: string;
 }
 
-/** The signed-in minor's consent request, as they see it. */
+/**
+ * How a guardian's decision reached us: their link (AP-04), or a signed paper sheet that the
+ * classroom's head or a facilitator recorded (AP-38).
+ */
+export type ConsentMethod = 'link' | 'paper';
+
+/** The signed-in minor's consent, as they see it. */
 export interface GuardianConsent {
 	status: ConsentStatus;
+	method: ConsentMethod;
 	guardianName: string;
+	/** Empty for a paper sheet: nobody was sent a link. */
 	guardianContact: string;
 	requestedAt: string;
 	decidedAt: string | null;
+	/** The day the guardian signed the paper sheet (YYYY-MM-DD); null for a link. */
+	signedOn: string | null;
+	/** Who recorded the paper sheet; null for a link. */
+	recordedByName: string | null;
 	/** Mock only: the link the guardian would receive. The real backend never returns it. */
 	devToken: string | null;
 }
@@ -154,6 +166,57 @@ export interface Invitation {
 	token: string;
 }
 
+/** A minor in a classroom and their guardian's consent (AP-38), for its head and facilitators. */
+export interface MemberConsent {
+	userId: string;
+	fullName: string;
+	status: ConsentStatus;
+	/** Null while nothing was asked or recorded. */
+	method: ConsentMethod | null;
+	guardianName: string | null;
+	signedOn: string | null;
+	/** When the decision was recorded or answered. */
+	decidedAt: string | null;
+	recordedByName: string | null;
+}
+
+/** A paper consent sheet, as the head or a facilitator records it (AP-38). */
+export interface PaperConsentInput {
+	/** True for consent given, false for a withdrawal. */
+	give: boolean;
+	guardianName: string;
+	/** The day on the sheet, YYYY-MM-DD. Not in the future. */
+	signedOn: string;
+}
+
+/** The printable consent sheet's words (AP-38), edited as content rather than code. */
+export interface ConsentSheetContent {
+	title: string;
+	/**
+	 * Paragraphs and sections may use `{classroom}`, `{institution}` and `{decimals}`, filled in
+	 * for each classroom.
+	 */
+	intro: string;
+	sections: { heading: string; body: string }[];
+	/** The two boxes the guardian ticks. */
+	choices: { give: string; withdraw: string };
+	/** The line for the young contributor's name, filled in when the sheet is for one minor. */
+	contributorField: string;
+	/** Lines left blank for the guardian to fill in by hand. */
+	fields: string[];
+	/** For the classroom only, below the signature: how to record the sheet. */
+	officeNote: string;
+}
+
+/** A classroom's printable consent sheet, with its words filled in (AP-38). */
+export interface ConsentSheet {
+	classroomName: string;
+	institutionName: string;
+	content: ConsentSheetContent;
+	/** The classroom's minors, to print a sheet with a name already on it. */
+	minors: { userId: string; fullName: string }[];
+}
+
 export interface ClassroomDetail {
 	classroom: ClassroomSummary;
 	members: ClassroomMember[];
@@ -166,6 +229,8 @@ export interface ClassroomDetail {
 		edit: boolean;
 		/** Can see the classroom code: platform admins, the institution head and facilitators. */
 		viewCode: boolean;
+		/** Can see and record minors' guardian consent: the institution head and facilitators. */
+		manageConsent: boolean;
 	};
 }
 
@@ -720,6 +785,8 @@ export interface SiteContent {
 	hosting: { title: string; intro: string; submitted: string };
 	/** The "Join this classroom" box on a classroom profile (AP-29). */
 	joinClassroom: { title: string; body: string; action: string };
+	/** The printable guardian consent sheet (AP-38). */
+	consentSheet: ConsentSheetContent;
 }
 
 /** Where a classroom's released data stands. */

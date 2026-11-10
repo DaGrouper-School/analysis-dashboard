@@ -82,7 +82,7 @@
 
 <div class="min-h-dvh">
 	<header
-		class="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur [view-transition-name:app-header]"
+		class="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur [view-transition-name:app-header] print:hidden"
 	>
 		<div class="mx-auto flex max-w-6xl items-center gap-2 px-3 py-3 sm:gap-4 sm:px-6">
 			<a href={resolve('/(app)/dashboard')} aria-label="Dashboard"><Logo compact /></a>
@@ -153,7 +153,7 @@
 	{/if}
 	<main
 		class={[
-			'mx-auto max-w-6xl px-4 py-8 transition-opacity duration-200 sm:px-6',
+			'mx-auto max-w-6xl px-4 py-8 transition-opacity duration-200 sm:px-6 print:max-w-none print:p-0',
 			navigating.to && 'opacity-60 delay-150'
 		]}
 		aria-busy={navigating.to ? 'true' : undefined}
