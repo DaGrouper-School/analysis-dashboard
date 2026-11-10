@@ -344,6 +344,7 @@ const classrooms: MockDbState['classrooms'] = [
 								'air_temperature'
 							],
 							frequency: 'Daily',
+							readingsPerDay: 1,
 							yearsPlanned: 3
 						},
 						{
@@ -352,6 +353,7 @@ const classrooms: MockDbState['classrooms'] = [
 							ecosystem: 'City',
 							parameterIds: ['air_temperature', 'relative_humidity'],
 							frequency: 'Daily',
+							readingsPerDay: 1,
 							yearsPlanned: 3
 						}
 					]
@@ -367,6 +369,7 @@ const classrooms: MockDbState['classrooms'] = [
 							ecosystem: 'School garden',
 							parameterIds: ['soil_moisture', 'soil_temperature'],
 							frequency: 'Weekly',
+							readingsPerDay: 1 / 7,
 							yearsPlanned: 2
 						}
 					]
@@ -432,7 +435,8 @@ const classrooms: MockDbState['classrooms'] = [
 							name: 'Harbour front',
 							ecosystem: 'Shoreline',
 							parameterIds: ['wind_avg', 'wind_gust', 'air_temperature', 'uv'],
-							frequency: 'Hourly',
+							frequency: 'Daily',
+							readingsPerDay: 1,
 							yearsPlanned: 2
 						}
 					]
@@ -485,6 +489,7 @@ const classrooms: MockDbState['classrooms'] = [
 							ecosystem: 'Dry highland',
 							parameterIds: ['uv', 'air_temperature'],
 							frequency: 'Daily',
+							readingsPerDay: 1,
 							yearsPlanned: 1
 						}
 					]
@@ -1161,6 +1166,11 @@ const DAILY_SWING: Record<string, number> = {
 	soil_temperature: 1.5
 };
 const HISTORY_DAYS = 30;
+/** Days back with no reading, so completeness and charts show real gaps. */
+const GAP_DAYS: Record<string, number[]> = {
+	dev_shashamane_gauge: [3, 4, 11],
+	dev_nassau_ws: [6]
+};
 const HOUR = 3_600_000;
 
 /**
@@ -1192,6 +1202,7 @@ function history(): MockDbState['readings'] {
 			result.push(reading(device.id, observedAt, values, gps));
 		};
 		for (let day = 1; day < HISTORY_DAYS; day++) {
+			if (GAP_DAYS[device.id]?.includes(day)) continue;
 			const wave = Math.sin(day * 0.9 + d) + 0.5 * Math.sin(day * 2.3 + d * 2);
 			add(new Date(Date.parse(READING_AT) - day * 24 * HOUR).toISOString(), wave, null);
 		}

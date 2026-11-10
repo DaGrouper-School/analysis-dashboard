@@ -194,7 +194,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 27;
+const VERSION = 28;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;
