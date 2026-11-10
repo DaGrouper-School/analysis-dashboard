@@ -374,6 +374,28 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /me/minor:
+    post:
+      tags:
+        - Profile
+      operationId: profile.markMinor
+      summary: Mark minor
+      description: |-
+        Marks the user as under 18 without sending a link (AP-38): their classroom records a signed
+        paper sheet instead. Consent is pending until then.
+
+        Access: signed-in users. Classroom roles are checked on the server.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /classrooms:
     get:
       tags:
@@ -604,6 +626,112 @@ paths:
       responses:
         "204":
           description: No content
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /classrooms/{classroomId}/consent:
+    get:
+      tags:
+        - Classrooms
+      operationId: classrooms.listConsent
+      summary: List consent
+      description: |-
+        Guardian consent of the classroom's minors (AP-38). Only its head and facilitators; anyone
+        else is refused.
+
+        Access: signed-in users. Classroom roles are checked on the server.
+      parameters:
+        - name: classroomId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemberConsent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /classrooms/{classroomId}/consent/{userId}:
+    put:
+      tags:
+        - Classrooms
+      operationId: classrooms.recordPaperConsent
+      summary: Record paper consent
+      description: |-
+        Records a signed paper sheet: consent given or withdrawn, the day on it, and who recorded
+        it. Like the guardian's link, the decision is asserted to SAM as `consent`.
+
+        The recorder is the signed-in user. The decision is asserted to SAM as `consent`.
+
+        Access: signed-in users. Classroom roles are checked on the server.
+      parameters:
+        - name: classroomId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaperConsentInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberConsent"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /classrooms/{classroomId}/consent-sheet:
+    get:
+      tags:
+        - Classrooms
+      operationId: classrooms.consentSheet
+      summary: Consent sheet
+      description: |-
+        The printable sheet with the classroom's details filled in. Head and facilitators only.
+
+        Access: signed-in users. Classroom roles are checked on the server.
+      parameters:
+        - name: classroomId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsentSheet"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -2622,11 +2750,15 @@ components:
             viewCode:
               type: boolean
               description: "Can see the classroom code: platform admins, the institution head and facilitators."
+            manageConsent:
+              type: boolean
+              description: "Can see and record minors' guardian consent: the institution head and facilitators."
           required:
             - invite
             - manageMembers
             - edit
             - viewCode
+            - manageConsent
           additionalProperties: false
       required:
         - classroom
@@ -2776,6 +2908,13 @@ components:
       required:
         - give
       additionalProperties: false
+    ConsentMethod:
+      type: string
+      enum:
+        - link
+        - paper
+      description: "How a guardian's decision reached us: their link (AP-04), or a signed paper sheet that
+        the classroom's head or a facilitator recorded (AP-38)."
     ConsentRequest:
       type: object
       properties:
@@ -2806,6 +2945,91 @@ components:
         - coordinateDecimals
       additionalProperties: false
       description: What the guardian sees when they open their link. No sign-in.
+    ConsentSheet:
+      type: object
+      properties:
+        classroomName:
+          type: string
+        institutionName:
+          type: string
+        content:
+          $ref: "#/components/schemas/ConsentSheetContent"
+        minors:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                type: string
+              fullName:
+                type: string
+            required:
+              - userId
+              - fullName
+            additionalProperties: false
+          description: The classroom's minors, to print a sheet with a name already on it.
+      required:
+        - classroomName
+        - institutionName
+        - content
+        - minors
+      additionalProperties: false
+      description: A classroom's printable consent sheet, with its words filled in (AP-38).
+    ConsentSheetContent:
+      type: object
+      properties:
+        title:
+          type: string
+        intro:
+          type: string
+          description: Paragraphs and sections may use `{classroom}`, `{institution}` and `{decimals}`, filled
+            in for each classroom.
+        sections:
+          type: array
+          items:
+            type: object
+            properties:
+              heading:
+                type: string
+              body:
+                type: string
+            required:
+              - heading
+              - body
+            additionalProperties: false
+        choices:
+          type: object
+          properties:
+            give:
+              type: string
+            withdraw:
+              type: string
+          required:
+            - give
+            - withdraw
+          additionalProperties: false
+          description: The two boxes the guardian ticks.
+        contributorField:
+          type: string
+          description: The line for the young contributor's name, filled in when the sheet is for one minor.
+        fields:
+          type: array
+          items:
+            type: string
+          description: Lines left blank for the guardian to fill in by hand.
+        officeNote:
+          type: string
+          description: "For the classroom only, below the signature: how to record the sheet."
+      required:
+        - title
+        - intro
+        - sections
+        - choices
+        - contributorField
+        - fields
+        - officeNote
+      additionalProperties: false
+      description: The printable consent sheet's words (AP-38), edited as content rather than code.
     ConsentStatus:
       type: string
       enum:
@@ -3294,16 +3518,29 @@ components:
       properties:
         status:
           $ref: "#/components/schemas/ConsentStatus"
+        method:
+          $ref: "#/components/schemas/ConsentMethod"
         guardianName:
           type: string
         guardianContact:
           type: string
+          description: "Empty for a paper sheet: nobody was sent a link."
         requestedAt:
           type: string
         decidedAt:
           type:
             - string
             - "null"
+        signedOn:
+          type:
+            - string
+            - "null"
+          description: The day the guardian signed the paper sheet (YYYY-MM-DD); null for a link.
+        recordedByName:
+          type:
+            - string
+            - "null"
+          description: Who recorded the paper sheet; null for a link.
         devToken:
           type:
             - string
@@ -3311,13 +3548,16 @@ components:
           description: "Mock only: the link the guardian would receive. The real backend never returns it."
       required:
         - status
+        - method
         - guardianName
         - guardianContact
         - requestedAt
         - decidedAt
+        - signedOn
+        - recordedByName
         - devToken
       additionalProperties: false
-      description: The signed-in minor's consent request, as they see it.
+      description: The signed-in minor's consent, as they see it.
     GuardianInput:
       type: object
       properties:
@@ -3724,6 +3964,48 @@ components:
         - readings
         - credit
       additionalProperties: false
+    MemberConsent:
+      type: object
+      properties:
+        userId:
+          type: string
+        fullName:
+          type: string
+        status:
+          $ref: "#/components/schemas/ConsentStatus"
+        method:
+          anyOf:
+            - $ref: "#/components/schemas/ConsentMethod"
+            - type: "null"
+          description: Null while nothing was asked or recorded.
+        guardianName:
+          type:
+            - string
+            - "null"
+        signedOn:
+          type:
+            - string
+            - "null"
+        decidedAt:
+          type:
+            - string
+            - "null"
+          description: When the decision was recorded or answered.
+        recordedByName:
+          type:
+            - string
+            - "null"
+      required:
+        - userId
+        - fullName
+        - status
+        - method
+        - guardianName
+        - signedOn
+        - decidedAt
+        - recordedByName
+      additionalProperties: false
+      description: A minor in a classroom and their guardian's consent (AP-38), for its head and facilitators.
     Observation:
       type: object
       properties:
@@ -3859,6 +4141,23 @@ components:
       description: "What a manual observation asks for, per domain (AP-16): a rain gauge reading, a coral
         spawning check, a species sighting. A template with a device type is read off a registered
         device of that type; one without is a field observation with no device."
+    PaperConsentInput:
+      type: object
+      properties:
+        give:
+          type: boolean
+          description: True for consent given, false for a withdrawal.
+        guardianName:
+          type: string
+        signedOn:
+          type: string
+          description: The day on the sheet, YYYY-MM-DD. Not in the future.
+      required:
+        - give
+        - guardianName
+        - signedOn
+      additionalProperties: false
+      description: A paper consent sheet, as the head or a facilitator records it (AP-38).
     Parameter:
       type: object
       properties:
@@ -4758,6 +5057,9 @@ components:
             - action
           additionalProperties: false
           description: The "Join this classroom" box on a classroom profile (AP-29).
+        consentSheet:
+          $ref: "#/components/schemas/ConsentSheetContent"
+          description: The printable guardian consent sheet (AP-38).
       required:
         - hero
         - programme
@@ -4769,6 +5071,7 @@ components:
         - sampleData
         - hosting
         - joinClassroom
+        - consentSheet
       additionalProperties: false
       description: The public site's words and structure, edited as content rather than code.
     SiteProfile:

@@ -4,7 +4,9 @@ import type {
 	HostApplicationReceipt,
 	HostQuestion,
 	ConsentRequest,
+	ConsentSheet,
 	GuardianConsent,
+	MemberConsent,
 	AlertRule,
 	Address,
 	CalculationDetails,
@@ -95,6 +97,7 @@ export function createHttpServices(baseUrl: string): Services {
 			// The backend sends the guardian their link; it is never returned to the minor.
 			requestGuardianConsent: (input) =>
 				request<GuardianConsent>('POST', '/me/guardian-consent', input),
+			markMinor: () => request<User>('POST', '/me/minor'),
 			getGuardianConsent: () => request<GuardianConsent | null>('GET', '/me/guardian-consent')
 		},
 		classrooms: {
@@ -121,6 +124,17 @@ export function createHttpServices(baseUrl: string): Services {
 					'DELETE',
 					`/classrooms/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`
 				),
+			// Paper guardian consent (AP-38). Each decision is asserted to SAM as `consent`.
+			listConsent: (id) =>
+				request<MemberConsent[]>('GET', `/classrooms/${encodeURIComponent(id)}/consent`),
+			recordPaperConsent: (id, userId, input) =>
+				request<MemberConsent>(
+					'PUT',
+					`/classrooms/${encodeURIComponent(id)}/consent/${encodeURIComponent(userId)}`,
+					input
+				),
+			consentSheet: (id) =>
+				request<ConsentSheet>('GET', `/classrooms/${encodeURIComponent(id)}/consent-sheet`),
 			getInvitation: (token) =>
 				request<InvitationPreview>('GET', `/invitations/by-token/${encodeURIComponent(token)}`),
 			listMyInvitations: () => request<InvitationPreview[]>('GET', '/me/invitations'),

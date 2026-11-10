@@ -9,7 +9,11 @@ export const load: PageLoad = async ({ params, depends }) => {
 			services.classrooms.get(params.id),
 			services.labs.listForClassroom(params.id)
 		]);
-		return { detail, labs };
+		// Minors' guardian consent (AP-38): only for the head and facilitators.
+		const consent = detail.permissions.manageConsent
+			? await services.classrooms.listConsent(params.id)
+			: [];
+		return { detail, labs, consent };
 	} catch (e) {
 		if (e instanceof ServiceError && e.code === 'not_found') error(404, e.message);
 		throw e;

@@ -185,3 +185,19 @@
 		animation: none !important;
 	}
 }
+/* Printing (the guardian consent sheet, AP-38): white paper in either theme, nothing but the
+   page's printable content. */
+@media print {
+	:root,
+	body {
+		color-scheme: light;
+		background: #ffffff !important;
+	}
+	.nav-progress {
+		display: none;
+	}
+	@page {
+		size: A4;
+		margin: 16mm;
+	}
+}

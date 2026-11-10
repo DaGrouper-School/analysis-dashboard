@@ -341,8 +341,8 @@
 			<h2 class="text-xl font-semibold">Your guardian's consent is needed</h2>
 			<p class="mt-2 text-sm">{blocked}</p>
 			<p class="mt-1 text-sm text-muted">
-				You can still explore your classroom's data. Settings shows where consent stands and can
-				send your guardian a new link.
+				You can still explore your classroom's data. Ask your facilitator for a paper consent sheet,
+				or open Settings to see where consent stands and send your guardian a link.
 			</p>
 			<a class="btn btn-ghost mt-4" href={resolve('/(app)/settings')}>Open settings</a>
 		</div>
