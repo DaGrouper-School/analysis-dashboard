@@ -1,4 +1,5 @@
-import { coreReadings } from '#lib/core-readings.ts';
+import { monthCompleteness } from '#lib/completeness.ts';
+import { coreReadings, stationCore } from '#lib/core-readings.ts';
 import { readDb, type MockDbState, type StoredClassroom } from '#lib/data/mock-db.ts';
 import type {
 	PublicClassroom,
@@ -122,16 +123,40 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 			await delay();
 			const state = readDb();
 			const classroom = findClassroom(state, classroomId);
-			// The latest released value of each parameter from each source.
+			const { all, released: shownRecords } = released(state, classroom);
+			// The latest released value of each parameter from each source, and the last reading of
+			// each day for its sparkline.
 			const latest = new Map<string, PublicValue>();
-			for (const { record, source } of released(state, classroom).released) {
+			const daily = new Map<string, Map<string, { at: string; value: number }>>();
+			for (const { record, source } of shownRecords) {
 				for (const [parameterId, value] of Object.entries(record.values)) {
 					const key = `${source.id}|${parameterId}`;
 					const seen = latest.get(key);
 					if (!seen || record.observedAt > seen.observedAt) {
-						latest.set(key, { parameterId, value, observedAt: record.observedAt, source });
+						latest.set(key, {
+							parameterId,
+							value,
+							observedAt: record.observedAt,
+							source,
+							last7Days: []
+						});
 					}
+					if (typeof value !== 'number') continue;
+					const days = daily.get(key) ?? new Map<string, { at: string; value: number }>();
+					const day = record.observedAt.slice(0, 10);
+					const last = days.get(day);
+					if (!last || record.observedAt > last.at) days.set(day, { at: record.observedAt, value });
+					daily.set(key, days);
 				}
+			}
+			for (const [key, value] of latest) {
+				const days = daily.get(key);
+				if (!days) continue;
+				const end = Date.parse(`${value.observedAt.slice(0, 10)}T00:00:00.000Z`);
+				value.last7Days = Array.from({ length: 7 }, (_, i) => {
+					const day = new Date(end - (6 - i) * 86_400_000).toISOString().slice(0, 10);
+					return days.get(day)?.value ?? null;
+				});
 			}
 			const known = new Set(state.parameters.map((p) => p.id));
 			const values = [...latest.values()].filter((v) => known.has(v.parameterId));
@@ -153,13 +178,43 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 				}))
 				.filter((card) => card.values.length);
 			const shown = new Set(values.map((v) => v.parameterId));
+			const publicClassroom = toPublicClassroom(state, classroom);
+			const member = isMember(state, classroom.id);
+			const sites = classroom.profile.projects.flatMap((p) => p.sites);
+			const expectations = sites.flatMap((site) =>
+				site.parameterIds.map((parameterId) => ({
+					parameterId,
+					readingsPerDay: site.readingsPerDay
+				}))
+			);
+			// Completeness counts every reading that arrived, released or not: it says whether data
+			// came in, never what it says.
+			const completeness =
+				publicClassroom.core.day && expectations.length
+					? monthCompleteness(
+							all.map((r) => r.record),
+							publicClassroom.core.day,
+							expectations,
+							(id) => {
+								const domain = domainOf(state, id);
+								return domain ? { id: domain.id, label: domain.label, icon: domain.icon } : null;
+							}
+						)
+					: null;
 			return {
 				content: structuredClone(state.siteContent),
-				classroom: toPublicClassroom(state, classroom),
+				classroom: publicClassroom,
 				units: units(state),
 				parameters: structuredClone(state.parameters.filter((p) => shown.has(p.id))),
 				domains: structuredClone(cards),
-				member: isMember(state, classroom.id)
+				core: stationCore(
+					all.map((r) => r.record),
+					classroom.releasedThrough,
+					state.coreParameters
+				),
+				completeness,
+				siteCodes: member ? sites.map((s) => s.code) : [],
+				member
 			};
 		},
 

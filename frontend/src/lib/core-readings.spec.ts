@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coreReadings, type CoreParameters } from './core-readings';
+import { coreReadings, stationCore, type CoreParameters } from './core-readings';
 
 const parameters: CoreParameters = {
 	rainDaily: ['precip_accum_local_day', 'rain_gauge_daily_accumulation'],
@@ -64,6 +64,34 @@ describe('core readings', () => {
 		expect(coreReadings([], '2026-10-20T08:00:00.000Z', parameters)).toMatchObject({
 			lastSync: null,
 			review: 'released'
+		});
+	});
+});
+
+describe('station core detail', () => {
+	it('gives each core reading its review state, sources and spread', () => {
+		const core = stationCore(records, '2026-10-20T07:00:00.000Z', parameters);
+		// Released through 07:00: the station's 06:00 total and the gauge's 07:00 one.
+		expect(core.rain).toEqual({ review: 'in_review', sources: 2, spread: 3 });
+		expect(core.temperature).toEqual({
+			review: 'in_review',
+			sources: 1,
+			spread: null,
+			low: 25,
+			high: 25
+		});
+	});
+
+	it('says released when nothing newer is waiting, and not released before any release', () => {
+		expect(stationCore(records, '2026-10-21T00:00:00.000Z', parameters).temperature).toMatchObject({
+			review: 'released',
+			low: 25,
+			high: 27
+		});
+		expect(stationCore(records, null, parameters).rain).toEqual({
+			review: 'not_released',
+			sources: 0,
+			spread: null
 		});
 	});
 });

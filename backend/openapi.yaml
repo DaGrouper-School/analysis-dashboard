@@ -3113,6 +3113,57 @@ components:
         - color
         - values
       additionalProperties: false
+    DomainCompleteness:
+      type: object
+      properties:
+        domain:
+          anyOf:
+            - type: object
+              properties:
+                id:
+                  $ref: "#/components/schemas/EnvironmentalDomain"
+                  description: Short code, upper case, e.g. `SOIL`. Never changes once created.
+                label:
+                  type: string
+                icon:
+                  type: string
+                  description: A registry icon name (see `#lib/icons.ts`), shown on tabs and cards.
+              required:
+                - id
+                - label
+                - icon
+              additionalProperties: false
+            - type: "null"
+        received:
+          type: number
+          description: Expected slots (hours, days or weeks) that have a reading.
+        expected:
+          type: number
+        days:
+          type: array
+          items:
+            type: object
+            properties:
+              day:
+                type: string
+              status:
+                type: string
+                enum:
+                  - complete
+                  - partial
+                  - missing
+            required:
+              - day
+              - status
+            additionalProperties: false
+          description: Each day of the month so far, for values read daily or faster. Gaps stay gaps.
+      required:
+        - domain
+        - received
+        - expected
+        - days
+      additionalProperties: false
+      description: How much of the month one domain's protocol has received (AP-22).
     DomainDefinition:
       type: object
       properties:
@@ -4090,6 +4141,9 @@ components:
                     frequency:
                       type: string
                       description: How often, e.g. "Daily".
+                    readingsPerDay:
+                      type: number
+                      description: "The same as a rate the app can count: 24 is hourly, 1 daily, 1/7 weekly."
                     yearsPlanned:
                       type: number
                   required:
@@ -4098,6 +4152,7 @@ components:
                     - frequency
                     - name
                     - readings
+                    - readingsPerDay
                     - yearsPlanned
               id:
                 type: string
@@ -4332,6 +4387,31 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PublicDomainCard"
+        core:
+          $ref: "#/components/schemas/StationCore"
+          description: Review state, sources and today's range behind the core readings (AP-22).
+        completeness:
+          anyOf:
+            - type: object
+              properties:
+                month:
+                  type: string
+                domains:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/DomainCompleteness"
+              required:
+                - month
+                - domains
+              additionalProperties: false
+            - type: "null"
+          description: "\"How complete is this month?\": the month of the latest released reading, against the
+            classroom's protocol. Null with no released data or no protocol."
+        siteCodes:
+          type: array
+          items:
+            type: string
+          description: The classroom's site codes. Members only; empty for everyone else.
         member:
           type: boolean
           description: The viewer belongs to this classroom, so their dashboard shows it with raw values too.
@@ -4341,6 +4421,9 @@ components:
         - units
         - parameters
         - domains
+        - core
+        - completeness
+        - siteCodes
         - member
       additionalProperties: false
       description: "A classroom's station overview for visitors (AP-21): released data only."
@@ -4357,11 +4440,20 @@ components:
           type: string
         source:
           $ref: "#/components/schemas/PublicSource"
+        last7Days:
+          type: array
+          items:
+            type:
+              - number
+              - "null"
+          description: The last reading of each of the seven days up to this one, oldest first, for a
+            sparkline. Null for a day with no reading; empty for values that are not numbers.
       required:
         - parameterId
         - value
         - observedAt
         - source
+        - last7Days
       additionalProperties: false
       description: The latest released value of one parameter from one source.
     RawPage:
@@ -4817,6 +4909,63 @@ components:
         - highland
         - forest
         - other
+    StationCore:
+      type: object
+      properties:
+        rain:
+          $ref: "#/components/schemas/StationCoreItem"
+        temperature:
+          type: object
+          additionalProperties: false
+          properties:
+            low:
+              type:
+                - number
+                - "null"
+            high:
+              type:
+                - number
+                - "null"
+            review:
+              $ref: "#/components/schemas/ReviewState"
+            sources:
+              type: number
+              description: Sources with a value on the core day.
+            spread:
+              type:
+                - number
+                - "null"
+              description: How far apart those sources are, in the reading's unit; null with fewer than two.
+          required:
+            - high
+            - low
+            - review
+            - sources
+            - spread
+      required:
+        - rain
+        - temperature
+      additionalProperties: false
+      description: "The station page's detail on the core readings: review state, sources and today's range."
+    StationCoreItem:
+      type: object
+      properties:
+        review:
+          $ref: "#/components/schemas/ReviewState"
+        sources:
+          type: number
+          description: Sources with a value on the core day.
+        spread:
+          type:
+            - number
+            - "null"
+          description: How far apart those sources are, in the reading's unit; null with fewer than two.
+      required:
+        - review
+        - sources
+        - spread
+      additionalProperties: false
+      description: One core reading's detail on a station page (AP-22).
     SyncBatch:
       type: object
       properties:

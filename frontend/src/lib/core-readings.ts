@@ -1,4 +1,4 @@
-import type { CoreReadings, Reading } from '#lib/domain/types.ts';
+import type { CoreReadings, Reading, StationCore } from '#lib/domain/types.ts';
 
 /** Which registry values feed the shared core readings. Kept with the data, not the page. */
 export interface CoreParameters {
@@ -86,5 +86,83 @@ export function coreReadings(
 		airTemperature: temperature ?? null,
 		lastSync: latest.receivedAt,
 		review
+	};
+}
+
+function reviewOf(records: CoreRecord[], releasedThrough: string | null, ids: string[]) {
+	const has = (r: CoreRecord) => firstNumber(r.values, ids) !== null;
+	if (releasedThrough === null || !records.some((r) => has(r) && r.observedAt <= releasedThrough)) {
+		return 'not_released' as const;
+	}
+	return records.some((r) => has(r) && r.observedAt > releasedThrough)
+		? ('in_review' as const)
+		: ('released' as const);
+}
+
+/** Each source's value on a day, by a rule: the running total's highest, or the latest. */
+function bySourceOn(
+	records: CoreRecord[],
+	day: string | null,
+	ids: string[],
+	pick: 'max' | 'latest'
+) {
+	const values = new Map<string, { value: number; at: string }>();
+	if (!day) return values;
+	for (const record of records) {
+		if (record.observedAt.slice(0, 10) !== day) continue;
+		const value = firstNumber(record.values, ids);
+		if (value === null) continue;
+		const source = record.deviceId ?? 'field';
+		const seen = values.get(source);
+		const better = !seen || (pick === 'max' ? value > seen.value : record.observedAt > seen.at);
+		if (better) values.set(source, { value, at: record.observedAt });
+	}
+	return values;
+}
+
+function spreadOf(values: number[]) {
+	return values.length > 1 ? round(Math.max(...values) - Math.min(...values)) : null;
+}
+
+/**
+ * The station page's detail on the core readings (AP-22): each reading's review state, how many
+ * sources it comes from on the core day and how far apart they are, and today's temperature
+ * range. Released data only, like `coreReadings`.
+ */
+export function stationCore(
+	records: CoreRecord[],
+	releasedThrough: string | null,
+	parameters: CoreParameters
+): StationCore {
+	const released =
+		releasedThrough === null ? [] : records.filter((r) => r.observedAt <= releasedThrough);
+	const day =
+		released
+			.reduce<string | null>(
+				(latest, r) => (!latest || r.observedAt > latest ? r.observedAt : latest),
+				null
+			)
+			?.slice(0, 10) ?? null;
+
+	const rain = [...bySourceOn(released, day, parameters.rainDaily, 'max').values()];
+	const temperatures = [...bySourceOn(released, day, parameters.airTemperature, 'latest').values()];
+	const today = released
+		.filter((r) => r.observedAt.slice(0, 10) === day)
+		.map((r) => firstNumber(r.values, parameters.airTemperature))
+		.filter((t): t is number => t !== null);
+
+	return {
+		rain: {
+			review: reviewOf(records, releasedThrough, parameters.rainDaily),
+			sources: rain.length,
+			spread: spreadOf(rain.map((r) => r.value))
+		},
+		temperature: {
+			review: reviewOf(records, releasedThrough, parameters.airTemperature),
+			sources: temperatures.length,
+			spread: spreadOf(temperatures.map((t) => t.value)),
+			low: today.length ? Math.min(...today) : null,
+			high: today.length ? Math.max(...today) : null
+		}
 	};
 }

@@ -742,6 +742,21 @@ export interface CoreReadings {
 	review: ReviewState;
 }
 
+/** One core reading's detail on a station page (AP-22). */
+export interface StationCoreItem {
+	review: ReviewState;
+	/** Sources with a value on the core day. */
+	sources: number;
+	/** How far apart those sources are, in the reading's unit; null with fewer than two. */
+	spread: number | null;
+}
+
+/** The station page's detail on the core readings: review state, sources and today's range. */
+export interface StationCore {
+	rain: StationCoreItem;
+	temperature: StationCoreItem & { low: number | null; high: number | null };
+}
+
 /** A classroom as the public sees it: no code, no members, positions rounded. */
 export interface PublicClassroom {
 	id: string;
@@ -774,12 +789,27 @@ export interface PublicValue {
 	value: number | string;
 	observedAt: string;
 	source: PublicSource;
+	/**
+	 * The last reading of each of the seven days up to this one, oldest first, for a sparkline.
+	 * Null for a day with no reading; empty for values that are not numbers.
+	 */
+	last7Days: (number | null)[];
 }
 
 /** One domain's card on a station overview; `domain` null for values with no domain yet. */
 export interface PublicDomainCard {
 	domain: Pick<DomainDefinition, 'id' | 'label' | 'icon' | 'description'> | null;
 	values: PublicValue[];
+}
+
+/** How much of the month one domain's protocol has received (AP-22). */
+export interface DomainCompleteness {
+	domain: Pick<DomainDefinition, 'id' | 'label' | 'icon'> | null;
+	/** Expected slots (hours, days or weeks) that have a reading. */
+	received: number;
+	expected: number;
+	/** Each day of the month so far, for values read daily or faster. Gaps stay gaps. */
+	days: { day: string; status: 'complete' | 'partial' | 'missing' }[];
 }
 
 /** A classroom's station overview for visitors (AP-21): released data only. */
@@ -790,6 +820,15 @@ export interface PublicStation {
 	/** Registry entries for every parameter shown, by ID. */
 	parameters: Parameter[];
 	domains: PublicDomainCard[];
+	/** Review state, sources and today's range behind the core readings (AP-22). */
+	core: StationCore;
+	/**
+	 * "How complete is this month?": the month of the latest released reading, against the
+	 * classroom's protocol. Null with no released data or no protocol.
+	 */
+	completeness: { month: string; domains: DomainCompleteness[] } | null;
+	/** The classroom's site codes. Members only; empty for everyone else. */
+	siteCodes: string[];
 	/** The viewer belongs to this classroom, so their dashboard shows it with raw values too. */
 	member: boolean;
 }
@@ -814,6 +853,8 @@ export interface ProjectSite {
 	parameterIds: string[];
 	/** How often, e.g. "Daily". */
 	frequency: string;
+	/** The same as a rate the app can count: 24 is hourly, 1 daily, 1/7 weekly. */
+	readingsPerDay: number;
 	yearsPlanned: number;
 }
 

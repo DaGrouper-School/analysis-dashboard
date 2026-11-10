@@ -250,8 +250,8 @@ describe('labs (AP-05)', () => {
 		expect(devices.map((d) => d.id)).toEqual(['dev_nassau_ws']);
 		expect(devices[0].samSourceId).toBeNull();
 		const history = await services.labs.deviceReadings('dev_nassau_ws');
-		// A month of daily readings plus hourly ones over the last day.
-		expect(history.length).toBe(30 + 23);
+		// A month of daily readings, less one seeded gap day, plus hourly ones over the last day.
+		expect(history.length).toBe(30 - 1 + 23);
 		expect(history.map((r) => r.observedAt)).toEqual(
 			history
 				.map((r) => r.observedAt)

@@ -84,6 +84,38 @@ describe('Explore data (AP-21)', () => {
 		expect((await services.publicSite.station('cls_trinity')).member).toBe(true);
 		expect((await services.publicSite.station('cls_nassau')).member).toBe(false);
 	});
+
+	it('shows site codes to members only', async () => {
+		const challenge = await services.auth.requestPhoneCode('+251911000001');
+		await services.auth.verifyPhoneCode(challenge.requestId, challenge.devCode!);
+		expect((await services.publicSite.station('cls_trinity')).siteCodes).toContain('TRN-S1');
+		await services.auth.signOut();
+		expect((await services.publicSite.station('cls_trinity')).siteCodes).toEqual([]);
+	});
+
+	it('gives each number a 7-day sparkline and the month its completeness (AP-22)', async () => {
+		await services.auth.signOut();
+		const station = await services.publicSite.station('cls_trinity');
+		const air = station.domains
+			.flatMap((d) => d.values)
+			.find((v) => v.parameterId === 'air_temperature')!;
+		expect(air.last7Days).toHaveLength(7);
+		expect(air.last7Days.at(-1)).toBe(air.value);
+		expect(station.core.temperature.review).toBe('in_review');
+		// The seeded gauge skipped three days this month: rain shows them as missing.
+		const rain = station.completeness!.domains.find((d) => d.domain?.id === 'RAIN')!;
+		expect(station.completeness!.month).toBe('2026-10');
+		expect(rain.days).toHaveLength(20);
+		expect(rain.days.filter((d) => d.status !== 'complete').map((d) => d.day)).toEqual([
+			'2026-10-09',
+			'2026-10-16',
+			'2026-10-17'
+		]);
+	});
+
+	it('has no completeness before anything is released', async () => {
+		expect((await services.publicSite.station('cls_hargeisa')).completeness).toBeNull();
+	});
 });
 
 describe('Classroom profile (AP-29)', () => {
