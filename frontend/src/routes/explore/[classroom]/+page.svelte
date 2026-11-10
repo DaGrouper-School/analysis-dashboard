@@ -290,11 +290,14 @@
 				class="card relative h-80 overflow-hidden p-0 sm:h-96 lg:h-auto lg:min-h-[28rem]"
 				aria-label="Where {classroom.name} is"
 			>
-				<Globe
-					{markers}
-					bind:selectedId={globeSelected}
-					ariaLabel="Globe of Global Classrooms, turned to {classroom.name}"
-				/>
+				<!-- Out of the flow, so the canvas never sets the card's height and grows it. -->
+				<div class="absolute inset-0">
+					<Globe
+						{markers}
+						bind:selectedId={globeSelected}
+						ariaLabel="Globe of Global Classrooms, turned to {classroom.name}"
+					/>
+				</div>
 				<p
 					class="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-line-strong bg-surface px-3 py-1 text-xs whitespace-nowrap text-ink"
 				>
