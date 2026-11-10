@@ -117,10 +117,17 @@ export function createMockServices({ latency = 250, now = Date.now }: MockOption
 		return challenge;
 	}
 
-	function newUser(fields: Partial<User> & Pick<User, 'authProvider'>): User {
+	/** The next participant ID: one more than the highest given so far. Never reused. */
+	function nextParticipantId(state: MockDbState) {
+		return Math.max(100000, ...state.users.map((u) => u.participantId)) + 1;
+	}
+
+	function newUser(state: MockDbState, fields: Partial<User> & Pick<User, 'authProvider'>): User {
 		const t = iso(now());
 		return {
 			id: newId('usr'),
+			participantId: nextParticipantId(state),
+			publicProfile: false,
 			fullName: '',
 			email: null,
 			phone: null,
@@ -157,7 +164,7 @@ export function createMockServices({ latency = 250, now = Date.now }: MockOption
 						startSession(state, linked.id);
 						return { user: linked, isNewUser: false };
 					}
-					const user = newUser({
+					const user = newUser(state, {
 						authProvider: 'google',
 						fullName: account.name,
 						email: account.email,
@@ -184,7 +191,7 @@ export function createMockServices({ latency = 250, now = Date.now }: MockOption
 						startSession(state, existing.id);
 						return { user: existing, isNewUser: false };
 					}
-					const user = newUser({ authProvider: 'phone', phone, phoneVerified: true });
+					const user = newUser(state, { authProvider: 'phone', phone, phoneVerified: true });
 					state.users.push(user);
 					startSession(state, user.id);
 					return { user, isNewUser: true };
@@ -259,6 +266,22 @@ export function createMockServices({ latency = 250, now = Date.now }: MockOption
 				return updateDb((state) => {
 					const user = currentUser(state);
 					user.address = { ...address };
+					touch(user);
+					return user;
+				});
+			},
+
+			async setPublicProfile(show) {
+				await delay();
+				return updateDb((state) => {
+					const user = currentUser(state);
+					if (show && user.minor) {
+						throw new ServiceError(
+							'forbidden',
+							'Contributors under 18 cannot have a public profile.'
+						);
+					}
+					user.publicProfile = show;
 					touch(user);
 					return user;
 				});

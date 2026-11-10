@@ -149,6 +149,16 @@ export const routes: Route[] = [
 		errors: [400]
 	},
 	{
+		method: 'profile.setPublicProfile',
+		http: 'PUT',
+		path: '/me/public-profile',
+		access: 'user',
+		body: '{ show: boolean }',
+		response: 'User',
+		notes: 'Returns 403 when a minor tries to turn it on.',
+		args: [true]
+	},
+	{
 		method: 'profile.requestGuardianConsent',
 		http: 'POST',
 		path: '/me/guardian-consent',
@@ -519,6 +529,15 @@ export const routes: Route[] = [
 		access: 'public',
 		response: 'PublicClassroomProfile',
 		notes: 'Kit serial numbers are included only for members of the classroom.'
+	},
+	{
+		method: 'publicSite.contributor',
+		http: 'GET',
+		path: '/public/contributors/{participantId}',
+		access: 'public',
+		response: 'PublicContributor',
+		notes:
+			'Looked up by participant ID, the only identifier SAM stores. 404 when the participant has no released values.'
 	},
 
 	// Guardian consent

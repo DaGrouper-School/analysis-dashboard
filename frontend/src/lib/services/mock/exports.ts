@@ -24,8 +24,9 @@ function classroomRows(state: MockDbState, classroomId: string): RawRow[] {
 		state.labs.filter((l) => l.classroomId === classroomId).map((l) => [l.id, l])
 	);
 	const devices = new Map(state.devices.filter((d) => labs.has(d.labId)).map((d) => [d.id, d]));
-	const nameOf = (userId: string | null) =>
-		userId ? (state.users.find((u) => u.id === userId)?.fullName ?? null) : null;
+	// SAM knows a contributor by participant ID only (AP-39).
+	const participantOf = (userId: string | null) =>
+		userId ? (state.users.find((u) => u.id === userId)?.participantId ?? null) : null;
 	const records = [
 		...state.readings.filter((r) => devices.has(r.deviceId)),
 		...state.observations.filter((o) => labs.has(o.labId))
@@ -46,7 +47,7 @@ function classroomRows(state: MockDbState, classroomId: string): RawRow[] {
 			siteName: labs.get(record.labId)!.name,
 			location,
 			locationSource: record.locationSource,
-			creditedTo: nameOf(record.creditedToUserId)
+			contributorId: participantOf(record.recordedByUserId ?? record.creditedToUserId)
 		}));
 	});
 }

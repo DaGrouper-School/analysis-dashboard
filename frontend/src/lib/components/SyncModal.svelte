@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ContributorId from '#lib/components/ContributorId.svelte';
 	import type {
 		Device,
 		DeviceTypeDefinition,
@@ -273,7 +274,10 @@
 								>
 							{/if}
 							<span class="text-muted">
-								· {reading.creditedTo ? `credited to ${reading.creditedTo}` : 'not credited'}</span
+								· credited to {reading.creditedTo ?? 'participant'}
+								{#if reading.recordedByParticipantId !== null}<ContributorId
+										participantId={reading.recordedByParticipantId}
+									/>{/if}</span
 							>
 						</p>
 					</li>

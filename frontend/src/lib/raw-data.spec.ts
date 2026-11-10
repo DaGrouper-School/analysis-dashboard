@@ -23,7 +23,7 @@ const row = (over: Partial<RawRow>): RawRow => ({
 	siteName: 'North lab',
 	location: { lat: 9.03, lng: 38.74 },
 	locationSource: 'device',
-	creditedTo: null,
+	contributorId: null,
 	...over
 });
 

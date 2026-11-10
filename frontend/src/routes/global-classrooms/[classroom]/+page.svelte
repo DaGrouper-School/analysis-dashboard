@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ContributorId from '#lib/components/ContributorId.svelte';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
 	import PublicShell from '#lib/components/PublicShell.svelte';
@@ -156,16 +157,17 @@
 
 	<section class="mt-10" aria-labelledby="people-heading">
 		<h2 id="people-heading" class="font-display text-2xl">Community scientists and contributors</h2>
-		{#if data.contributors.named.length || data.contributors.anonymous}
+		{#if data.contributors.length}
+			<p class="mt-1 text-sm text-muted">
+				Every value is credited to a participant ID. Open one to check what they recorded.
+			</p>
 			<ul class="mt-3 flex flex-wrap gap-2">
-				{#each data.contributors.named as name (name)}<li class="chip">{name}</li>{/each}
-				{#if data.contributors.anonymous}
-					<li class="chip text-muted">
-						+ {data.contributors.anonymous} anonymous {data.contributors.anonymous === 1
-							? 'contributor'
-							: 'contributors'}
+				{#each data.contributors as person (person.participantId)}
+					<li class="chip gap-2">
+						{#if person.name}{person.name}{/if}
+						<ContributorId participantId={person.participantId} />
 					</li>
-				{/if}
+				{/each}
 			</ul>
 		{:else}
 			<p class="mt-3 text-muted">No released contributions yet.</p>

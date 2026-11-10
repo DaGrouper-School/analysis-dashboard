@@ -141,7 +141,9 @@ describe('submitting observations', () => {
 			classroomId: 'cls_trinity',
 			locationSource: 'lab',
 			location: { lat: 9.03, lng: 38.74 },
-			creditedTo: null
+			creditedTo: null,
+			// Not credited by name, but always by participant ID (AP-39).
+			recordedByParticipantId: 100002
 		});
 		// It is one of the gauge's readings now, so it shows on its charts.
 		const readings = await services.labs.deviceReadings('dev_shashamane_gauge');

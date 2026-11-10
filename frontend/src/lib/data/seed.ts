@@ -23,6 +23,8 @@ const SEEDED_AT = '2026-10-01T09:00:00.000Z';
 const users: User[] = [
 	{
 		id: 'usr_sarah',
+		participantId: 100001,
+		publicProfile: false,
 		authProvider: 'google',
 		fullName: 'Sarah K.',
 		email: 'sarah.k@example.org',
@@ -46,6 +48,8 @@ const users: User[] = [
 	},
 	{
 		id: 'usr_abebe',
+		participantId: 100002,
+		publicProfile: true,
 		authProvider: 'phone',
 		fullName: 'Abebe T.',
 		email: 'abebe.t@example.org',
@@ -69,6 +73,8 @@ const users: User[] = [
 	},
 	{
 		id: 'usr_marcus',
+		participantId: 100003,
+		publicProfile: false,
 		authProvider: 'google',
 		fullName: 'Dr. Marcus L.',
 		email: 'marcus.l@planetwerx.example',
@@ -93,6 +99,8 @@ const users: User[] = [
 	{
 		// Platform staff only: not a member of any classroom.
 		id: 'usr_leila',
+		participantId: 100004,
+		publicProfile: false,
 		authProvider: 'google',
 		fullName: 'Leila M.',
 		email: 'leila.m@planetwerx.example',
@@ -116,6 +124,8 @@ const users: User[] = [
 	},
 	{
 		id: 'usr_tesfaye',
+		participantId: 100005,
+		publicProfile: false,
 		authProvider: 'google',
 		fullName: 'Tesfaye G.',
 		email: 'tesfaye.g@trinity-school.example',
@@ -140,6 +150,8 @@ const users: User[] = [
 	{
 		// A student under 18: their guardian has not answered the consent link yet.
 		id: 'usr_liya',
+		participantId: 100006,
+		publicProfile: false,
 		authProvider: 'phone',
 		fullName: 'Liya A.',
 		email: 'liya.a@example.org',

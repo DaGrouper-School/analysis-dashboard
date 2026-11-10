@@ -36,6 +36,7 @@ import type {
 	GuardianInput,
 	PublicHome,
 	PublicClassroomProfile,
+	PublicContributor,
 	PublicParameterPage,
 	PublicStation,
 	SiteContent,
@@ -87,6 +88,11 @@ export interface ProfileService {
 	updateAddress(address: Address): Promise<User>;
 	/** Checks required fields and sets `onboardingCompleted`. */
 	completeOnboarding(): Promise<User>;
+	/**
+	 * Turns the public contributor profile on or off (AP-39): name, email and role next to the
+	 * participant ID. Refused for a minor.
+	 */
+	setPublicProfile(show: boolean): Promise<User>;
 	/**
 	 * Marks the user as under 18 and sends their guardian a consent link (AP-04). Asking again
 	 * sends a new link; the old one stops working and consent is pending until answered.
@@ -302,6 +308,12 @@ export interface PublicService {
 	parameter(classroomId: string, parameterId: string): Promise<PublicParameterPage>;
 	/** A classroom's public profile (AP-29): who they are, what they study, their kit. */
 	profile(classroomId: string): Promise<PublicClassroomProfile>;
+	/**
+	 * A contributor's profile by participant ID (AP-39): the released values they recorded, in
+	 * which classrooms. SAM holds only the ID; the name comes from this platform, and only when
+	 * they took credit.
+	 */
+	contributor(participantId: number): Promise<PublicContributor>;
 }
 
 export interface Services {

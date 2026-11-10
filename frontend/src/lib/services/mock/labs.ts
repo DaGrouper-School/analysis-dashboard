@@ -59,6 +59,22 @@ function toDevice(state: MockDbState, device: StoredDevice, showSource: boolean)
 }
 
 /**
+ * Who recorded it, by participant ID always (AP-39), and their current name only when they took
+ * credit.
+ */
+function credit(
+	state: MockDbState,
+	stored: { creditedToUserId: string | null; recordedByUserId: string | null }
+) {
+	const find = (id: string | null) => (id ? state.users.find((u) => u.id === id) : undefined);
+	return {
+		creditedTo: find(stored.creditedToUserId)?.fullName ?? null,
+		recordedByParticipantId:
+			find(stored.recordedByUserId ?? stored.creditedToUserId)?.participantId ?? null
+	};
+}
+
+/**
  * The stored reading without the SAM source ID (it contains the classroom code), and with the
  * recorder's current name when they opted in to credit.
  */
@@ -69,11 +85,10 @@ function toReading(state: MockDbState, stored: MockDbState['readings'][number]):
 	delete reading.recordedByUserId;
 	delete reading.clientId;
 	delete reading.clockFlags;
-	const credited = stored.creditedToUserId;
-	const creditedTo = credited
-		? (state.users.find((u) => u.id === credited)?.fullName ?? null)
-		: null;
-	return { ...(reading as Omit<Reading, 'creditedTo'>), creditedTo };
+	return {
+		...(reading as Omit<Reading, 'creditedTo' | 'recordedByParticipantId'>),
+		...credit(state, stored)
+	};
 }
 
 /** A stored field observation, shown the same way as a reading. */
@@ -81,7 +96,6 @@ function toObservation(
 	state: MockDbState,
 	stored: MockDbState['observations'][number]
 ): Observation {
-	const credited = stored.creditedToUserId;
 	return {
 		id: stored.id,
 		templateId: stored.templateId,
@@ -93,7 +107,7 @@ function toObservation(
 		values: { ...stored.values },
 		location: { ...stored.location },
 		locationSource: stored.locationSource,
-		creditedTo: credited ? (state.users.find((u) => u.id === credited)?.fullName ?? null) : null
+		...credit(state, stored)
 	};
 }
 

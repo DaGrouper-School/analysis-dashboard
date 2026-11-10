@@ -147,14 +147,18 @@ describe('Classroom profile (AP-29)', () => {
 		expect(text).not.toContain('usr_');
 	});
 
-	it('names only people who took credit and counts the rest', async () => {
+	it('lists every contributor by participant ID, named only with a public profile', async () => {
 		const page = await services.publicSite.profile('cls_trinity');
-		expect(page.contributors).toEqual({ named: ['Abebe T.'], anonymous: 1 });
+		expect(page.contributors).toEqual([
+			{ participantId: 100002, name: 'Abebe T.' },
+			{ participantId: 100005, name: null }
+		]);
 	});
 
-	it('never names a minor, even one who asked for credit', async () => {
+	it('never names a minor', async () => {
 		const { readDb, writeDb } = await import('#lib/data/mock-db.ts');
 		const state = readDb();
+		state.users.find((u) => u.id === 'usr_liya')!.publicProfile = true;
 		state.observations.push({
 			...state.observations[0],
 			id: 'obs_liya',
@@ -163,8 +167,8 @@ describe('Classroom profile (AP-29)', () => {
 		});
 		writeDb(state);
 		const page = await services.publicSite.profile('cls_trinity');
-		expect(page.contributors.named).not.toContain('Liya A.');
-		expect(page.contributors.anonymous).toBe(2);
+		expect(page.contributors).toContainEqual({ participantId: 100006, name: null });
+		expect((await services.publicSite.contributor(100006)).profile).toBeNull();
 	});
 
 	it('hides the host institution until a host agreement is signed', async () => {
@@ -189,6 +193,50 @@ describe('Classroom profile (AP-29)', () => {
 	it('says when a classroom does not exist', async () => {
 		await expect(services.publicSite.profile('cls_nope')).rejects.toMatchObject({
 			code: 'not_found'
+		});
+	});
+});
+
+describe('Contributor pages (AP-39)', () => {
+	const signIn = async (phone: string) => {
+		const challenge = await services.auth.requestPhoneCode(phone);
+		await services.auth.verifyPhoneCode(challenge.requestId, challenge.devCode!);
+	};
+
+	it('shows a public profile with the released values the participant recorded', async () => {
+		const page = await services.publicSite.contributor(100002);
+		expect(page.profile).toMatchObject({ fullName: 'Abebe T.', role: 'community_scientist' });
+		expect(page.classrooms.map((c) => c.id)).toEqual(['cls_trinity']);
+		expect(page.total).toBeGreaterThan(0);
+		expect(page.recent.every((c) => c.observedAt <= '2026-10-20T06:00:00.000Z')).toBe(true);
+	});
+
+	it('shows only the ID and contributions for a private profile', async () => {
+		const page = await services.publicSite.contributor(100005);
+		expect(page.profile).toBeNull();
+		expect(JSON.stringify(page)).not.toContain('Tesfaye');
+		expect(page.total).toBeGreaterThan(0);
+	});
+
+	it('has no page for someone with no released values', async () => {
+		await expect(services.publicSite.contributor(100004)).rejects.toMatchObject({
+			code: 'not_found'
+		});
+		await expect(services.publicSite.contributor(999999)).rejects.toMatchObject({
+			code: 'not_found'
+		});
+	});
+
+	it('lets adults turn their public profile on and off, and never minors', async () => {
+		await signIn('+251911000002');
+		expect((await services.profile.setPublicProfile(true)).publicProfile).toBe(true);
+		expect((await services.publicSite.contributor(100005)).profile?.fullName).toBe('Tesfaye G.');
+		expect((await services.profile.setPublicProfile(false)).publicProfile).toBe(false);
+		expect((await services.publicSite.contributor(100005)).profile).toBeNull();
+		await services.auth.signOut();
+		await signIn('+251911000003');
+		await expect(services.profile.setPublicProfile(true)).rejects.toMatchObject({
+			code: 'forbidden'
 		});
 	});
 });

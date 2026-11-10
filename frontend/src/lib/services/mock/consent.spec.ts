@@ -77,6 +77,7 @@ describe('guardian consent for minors (AP-04)', () => {
 		);
 		expect(stored).toMatchObject({
 			creditedTo: null,
+			recordedByParticipantId: 100006,
 			locationSource: 'device',
 			location: { lat: 9.05, lng: 38.76 }
 		});

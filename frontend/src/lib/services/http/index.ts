@@ -27,6 +27,7 @@ import type {
 	CsvExport,
 	PublicHome,
 	PublicClassroomProfile,
+	PublicContributor,
 	PublicParameterPage,
 	PublicStation,
 	SiteContent,
@@ -94,6 +95,7 @@ export function createHttpServices(baseUrl: string): Services {
 				request<User>('POST', '/me/phone/verify', { requestId, code }),
 			updateAddress: (address: Address) => request<User>('PUT', '/me/address', address),
 			completeOnboarding: () => request<User>('POST', '/me/onboarding/complete'),
+			setPublicProfile: (show) => request<User>('PUT', '/me/public-profile', { show }),
 			// The backend sends the guardian their link; it is never returned to the minor.
 			requestGuardianConsent: (input) =>
 				request<GuardianConsent>('POST', '/me/guardian-consent', input),
@@ -187,7 +189,9 @@ export function createHttpServices(baseUrl: string): Services {
 				request<PublicClassroomProfile>(
 					'GET',
 					`/public/classrooms/${encodeURIComponent(classroomId)}/profile`
-				)
+				),
+			contributor: (participantId) =>
+				request<PublicContributor>('GET', `/public/contributors/${participantId}`)
 		},
 		labs: {
 			listForClassroom: (classroomId) =>
