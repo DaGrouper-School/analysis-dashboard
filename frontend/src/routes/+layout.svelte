@@ -19,6 +19,10 @@
 	// motion, get the plain swap.
 	onNavigate((navigation) => {
 		if (!document.startViewTransition) return;
+		// Switching classrooms on an Explore station keeps the page and shows a skeleton while
+		// the next one loads (AP-43), so it is not faded as a whole.
+		const station = '/explore/[classroom]';
+		if (navigation.from?.route.id === station && navigation.to?.route.id === station) return;
 		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 		return new Promise((done) => {
 			document.startViewTransition(async () => {
@@ -27,7 +31,29 @@
 			});
 		});
 	});
+
+	/**
+	 * In-page links ("View domains", "Join") glide to their section instead of jumping, then move
+	 * focus there for keyboard and screen reader users. Reduced motion jumps as before.
+	 */
+	function smoothHashLink(event: MouseEvent) {
+		if (event.defaultPrevented || event.button !== 0) return;
+		if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+		const link = (event.target as Element | null)?.closest?.('a[href^="#"]');
+		const id = link?.getAttribute('href')?.slice(1);
+		const target = id ? document.getElementById(decodeURIComponent(id)) : null;
+		if (!target) return;
+		event.preventDefault();
+		const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+		target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+		if (!target.matches('a[href], button, input, select, textarea, [tabindex]')) {
+			target.setAttribute('tabindex', '-1');
+		}
+		target.focus({ preventScroll: true });
+	}
 </script>
+
+<svelte:document onclickcapture={smoothHashLink} />
 
 <svelte:head>
 	<!-- The site logo. The SVG follows the browser's light or dark theme; the PNG is a fallback. -->

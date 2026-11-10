@@ -24,8 +24,14 @@
 	const website = $derived(
 		overview.website && /^https?:\/\//i.test(overview.website) ? overview.website : null
 	);
+	// Without kit or a hub there is nothing to say yet, so the card shows just the name.
 	const kitLine = $derived(
-		[overview.deviceTypes.join(', '), `Hub: ${hub}`].filter(Boolean).join(' · ')
+		[
+			overview.deviceTypes.join(', '),
+			overview.deviceTypes.length || overview.hub ? `Hub: ${hub}` : ''
+		]
+			.filter(Boolean)
+			.join(' · ')
 	);
 </script>
 
@@ -62,7 +68,12 @@
 
 	<h3 class="mt-5 text-lg font-medium">{overview.name}</h3>
 	{#if kitLine}<p class="text-xs text-muted">{kitLine}</p>{/if}
-	{#if overview.history}<p class="mt-3 text-sm leading-relaxed">{overview.history}</p>{/if}
+	{#if overview.history}
+		<!-- Clamped on wide screens, so a long history never makes the row taller. -->
+		<p class="mt-3 text-sm leading-relaxed lg:line-clamp-5" title={overview.history}>
+			{overview.history}
+		</p>
+	{/if}
 
 	{#if website || actions}
 		<div class="mt-auto flex flex-wrap gap-3 pt-5">
