@@ -2,7 +2,7 @@
 	import { untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { goto, replaceState } from '$app/navigation';
-	import { page } from '$app/state';
+	import { navigating, page } from '$app/state';
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import InstitutionOverview from '#lib/components/InstitutionOverview.svelte';
@@ -13,6 +13,7 @@
 	import StageBadge from '#lib/components/StageBadge.svelte';
 	import type {
 		DomainCompleteness,
+		InstitutionOverview as InstitutionInfo,
 		PublicDomainCard,
 		PublicSource,
 		PublicValue,
@@ -28,7 +29,6 @@
 
 	const classroom = $derived(data.classroom);
 	const core = $derived(classroom.core);
-	const stage = $derived(data.content.stages.find((s) => s.id === classroom.stageId));
 	const params = $derived(new Map(data.parameters.map((p) => [p.id, p])));
 	const explore = $derived(data.content.sections.find((s) => s.id === 'explore'));
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
@@ -54,12 +54,43 @@
 			label: p.name
 		}))
 	);
-	// Follows the page's classroom; picking a marker overrides it until the next page.
-	let globeSelected = $derived(classroom.id);
+	// The classroom being opened: the tabs, the globe and the title move to it at once, and the
+	// rest of the page shows a skeleton until its data arrives, instead of blinking.
+	const pendingId = $derived(
+		(navigating.to?.route.id === '/explore/[classroom]' && navigating.to.params?.classroom) ||
+			classroom.id
+	);
+	const loading = $derived(pendingId !== classroom.id);
+	const shownPlace = $derived(data.places.find((p) => p.id === pendingId));
+	const shownName = $derived(shownPlace?.name ?? classroom.name);
+	const shownStageId = $derived(shownPlace?.stageId ?? classroom.stageId);
+	const shownStage = $derived(data.content.stages.find((s) => s.id === shownStageId));
+	const institution = $derived<InstitutionInfo>(
+		data.institution ?? {
+			name: classroom.name,
+			location: classroom.location,
+			deviceTypes: [],
+			photoUrl: null,
+			photoAlt: '',
+			history: '',
+			hub: null,
+			website: null
+		}
+	);
+	// The sliding underline under the location tabs, measured from the tab being opened.
+	const tabEls: Record<string, HTMLAnchorElement> = $state({});
+	let navWidth = $state(0);
+	const underline = $derived.by(() => {
+		void navWidth;
+		const el = tabEls[pendingId];
+		return el ? { left: el.offsetLeft, width: el.offsetWidth } : null;
+	});
+	// Follows the classroom being opened; picking a marker overrides it until the next page.
+	let globeSelected = $derived(pendingId);
 	// Picking another classroom on the globe opens its station.
 	$effect(() => {
 		const id = globeSelected;
-		if (id && id !== untrack(() => classroom.id)) {
+		if (id && id !== untrack(() => pendingId)) {
 			goto(resolve('/explore/[classroom]', { classroom: id }));
 		}
 	});
@@ -154,7 +185,8 @@
 	state: ReviewState,
 	notes: string[]
 )}
-	<div class="card flex flex-col gap-2 p-5">
+	<!-- A steady height, so a classroom with less to say does not move what is below. -->
+	<div class="card flex min-h-39 flex-col gap-2 p-5">
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			<p class="text-sm text-muted">{label}</p>
 			{@render review(state)}
@@ -212,24 +244,28 @@
 <PublicShell content={data.content} user={data.user}>
 	<nav aria-label="Breadcrumb" class="text-sm text-muted">
 		<a class="hover:text-ink" href={resolve('/explore')}>{explore?.label ?? 'Explore data'}</a>
-		{#if classroom.country}<span aria-hidden="true" class="px-1">›</span>{classroom.country}{/if}
+		{#if shownPlace?.country ?? classroom.country}<span aria-hidden="true" class="px-1">›</span
+			>{shownPlace?.country ?? classroom.country}{/if}
 		<span aria-hidden="true" class="px-1">›</span><span class="text-ink" aria-current="page"
-			>{classroom.name}</span
+			>{shownName}</span
 		>
 	</nav>
 
-	<header class="mt-4 flex flex-wrap items-start justify-between gap-4">
+	<header
+		class={['mt-4 flex flex-wrap items-start justify-between gap-4', loading && 'is-loading']}
+	>
 		<div class="min-w-0">
 			<div class="flex flex-wrap items-center gap-3">
-				<h1 class="font-display text-4xl">{classroom.name}</h1>
+				<h1 class="font-display text-4xl">{shownName}</h1>
 				<SampleDataBadge show={data.content.sampleData} />
 			</div>
 			<p class="mt-2 flex flex-wrap items-center gap-2 text-muted">
-				{[classroom.placeName, classroom.country].filter(Boolean).join(', ') ||
-					classroom.institutionName}
-				<StageBadge {stage} stageId={classroom.stageId} />
+				{[shownPlace?.placeName ?? classroom.placeName, shownPlace?.country ?? classroom.country]
+					.filter(Boolean)
+					.join(', ') || classroom.institutionName}
+				<StageBadge stage={shownStage} stageId={shownStageId} />
 			</p>
-			<p class="mt-1 text-sm text-muted">
+			<p class="mt-1 w-fit text-sm text-muted" data-skeleton>
 				{core.lastSync ? `Last sync ${dateTime.format(new Date(core.lastSync))}` : 'No sync yet'}
 				{#if data.siteCodes.length}
 					· Site codes
@@ -252,271 +288,264 @@
 	{#if data.places.length > 1}
 		<nav
 			aria-label="Locations"
-			class="-mx-4 mt-6 flex gap-6 overflow-x-auto px-4 text-sm whitespace-nowrap sm:justify-center"
+			class="relative -mx-4 mt-6 flex gap-6 overflow-x-auto px-4 text-sm font-medium whitespace-nowrap sm:justify-center"
+			bind:clientWidth={navWidth}
 		>
 			{#each data.places as place (place.id)}
-				{@const current = place.id === classroom.id}
+				{@const current = place.id === pendingId}
 				<a
+					bind:this={tabEls[place.id]}
 					href={resolve('/explore/[classroom]', { classroom: place.id })}
 					data-sveltekit-noscroll
 					aria-current={current ? 'page' : undefined}
 					title={place.name}
-					class={[
-						'relative pb-2 transition-colors',
-						current ? 'font-semibold text-ink' : 'text-muted hover:text-ink'
-					]}
-					>{placeLabel(place.placeName, place.country) || place.name}
-					{#if current}
-						<!-- One named underline, so switching classrooms slides it to the new tab. -->
-						<span
-							class="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-teal [view-transition-name:location-tab]"
-							aria-hidden="true"
-						></span>
-					{/if}</a
+					class={['pb-2 transition-colors', current ? 'text-ink' : 'text-muted hover:text-ink']}
+					>{placeLabel(place.placeName, place.country) || place.name}</a
 				>
 			{/each}
+			<!-- One underline that slides to the tab being opened, as soon as it is picked. -->
+			{#if underline}
+				<span
+					class="pointer-events-none absolute bottom-0 h-0.5 rounded-full bg-teal transition-[left,width] duration-300 ease-out motion-reduce:transition-none"
+					style:left="{underline.left}px"
+					style:width="{underline.width}px"
+					aria-hidden="true"
+				></span>
+			{/if}
 		</nav>
 	{/if}
 
-	<div
-		class={[
-			'mt-6 grid gap-5',
-			classroom.location
-				? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,1fr)]'
-				: 'lg:grid-cols-2'
-		]}
-	>
-		<NowCard tiles={data.now}>
-			{#snippet actions()}
-				<a class="btn btn-ghost flex-1 rounded-full" href="#domains-heading">View domains</a>
-			{/snippet}
-		</NowCard>
-		{#if classroom.location}
-			<section
-				class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] sm:h-96 lg:h-auto lg:min-h-[28rem]"
-				aria-label="Where {classroom.name} is"
-			>
-				<!-- Out of the flow, so the canvas never sets the card's height and grows it. -->
-				<div class="absolute inset-0">
-					<Globe
-						{markers}
-						bind:selectedId={globeSelected}
-						ariaLabel="Globe of Global Classrooms, turned to {classroom.name}"
-					/>
-				</div>
-				<p
-					class="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-line-strong bg-surface px-3 py-1 text-xs whitespace-nowrap text-ink"
+	<div class={['contents', loading && 'is-loading']} aria-busy={loading}>
+		<div
+			class={[
+				'mt-6 grid gap-5 lg:h-[34rem]',
+				classroom.location
+					? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,1fr)]'
+					: 'lg:grid-cols-2'
+			]}
+		>
+			<NowCard tiles={data.now}>
+				{#snippet actions()}
+					<a class="btn btn-ghost flex-1 rounded-full" href="#domains-heading">View domains</a>
+				{/snippet}
+			</NowCard>
+			{#if classroom.location}
+				<section
+					class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] sm:h-96 lg:h-full"
+					aria-label="Where {shownName} is"
 				>
-					{classroom.name}
+					<!-- Out of the flow, so the canvas never sets the card's height and grows it. -->
+					<div class="absolute inset-0">
+						<Globe
+							{markers}
+							bind:selectedId={globeSelected}
+							ariaLabel="Globe of Global Classrooms, turned to {shownName}"
+						/>
+					</div>
+					<span
+						class="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-line-strong bg-surface px-3 py-1 text-xs whitespace-nowrap text-ink"
+					>
+						{shownName}
+					</span>
+				</section>
+			{/if}
+			<!-- Always a card, with just the name until there is more, so the row never reflows. -->
+			<InstitutionOverview overview={institution} class="overflow-hidden" />
+		</div>
+
+		<section class="mt-6" aria-labelledby="core-heading">
+			<h2 id="core-heading" class="sr-only">Core readings</h2>
+			<div class="grid gap-3 sm:grid-cols-3">
+				{@render stat('Rain today', core.rainToday, data.units.rain, data.core.rain.review, [
+					agreement(data.core.rain, data.units.rain)
+				])}
+				{@render stat(
+					'Rain, last 7 days',
+					core.rainLast7Days,
+					data.units.rain,
+					data.core.rain.review,
+					[core.rainLast7Days !== null && core.rainDays < 7 ? `${core.rainDays} of 7 days` : '']
+				)}
+				{@render stat(
+					'Air temperature now',
+					core.airTemperature,
+					data.units.temperature,
+					data.core.temperature.review,
+					[
+						data.core.temperature.low !== null && data.core.temperature.high !== null
+							? `Today ${formatValue(data.core.temperature.low, data.units.temperature)} to ${formatValue(data.core.temperature.high, data.units.temperature)}`
+							: '',
+						agreement(data.core.temperature, data.units.temperature)
+					]
+				)}
+			</div>
+		</section>
+
+		<section class="mt-10" aria-labelledby="domains-heading">
+			<h2 id="domains-heading" class="font-display text-2xl">What this classroom measures</h2>
+			{#if data.domains.length}
+				<div
+					class="mt-4 flex gap-1 overflow-x-auto border-b border-line"
+					role="tablist"
+					aria-label="Domains"
+					tabindex="-1"
+					onkeydown={keys}
+				>
+					{#each tabs as tab (tab.id)}
+						{@const selected = tab.id === active}
+						<button
+							type="button"
+							role="tab"
+							id="domain-tab-{tab.id}"
+							aria-selected={selected}
+							aria-controls="domain-panel"
+							tabindex={selected ? 0 : -1}
+							class={[
+								'-mb-px flex shrink-0 items-center gap-2 border-b-2 px-3 py-2 text-sm whitespace-nowrap transition',
+								selected
+									? 'border-ink font-medium text-ink'
+									: 'border-transparent text-muted hover:text-ink'
+							]}
+							onclick={() => open(tab.id)}
+						>
+							<Icon name={tab.icon} fallback={FALLBACK_DOMAIN_ICON} class="size-4" />
+							{tab.label}
+							{#if tab.count !== undefined}<span class="text-xs text-muted">{tab.count}</span>{/if}
+						</button>
+					{/each}
+				</div>
+
+				<div
+					id="domain-panel"
+					class="mt-4"
+					role="tabpanel"
+					aria-labelledby="domain-tab-{active}"
+					tabindex="-1"
+				>
+					{#if openCard}
+						<article class="card">
+							<h3 class="flex items-center gap-2 text-lg font-semibold">
+								{@render domainTitle(openCard)}
+							</h3>
+							{#if openCard.domain?.description}
+								<p class="mt-1 text-sm text-muted">{openCard.domain.description}</p>
+							{/if}
+							<p class="mt-3 text-xs text-muted">
+								Sparklines show the last reading of each of 7 days.
+							</p>
+							<ul class="mt-2 divide-y divide-line">
+								{#each openCard.values as value (valueKey(value))}
+									{@render reading(value, false)}
+								{/each}
+							</ul>
+						</article>
+					{:else}
+						<div class="grid gap-4 md:grid-cols-2">
+							{#each data.domains as card (domainKey(card.domain))}
+								<article class="card flex flex-col">
+									<h3 class="text-lg font-semibold">
+										<button
+											type="button"
+											class="flex items-center gap-2 hover:text-teal"
+											onclick={() => open(domainKey(card.domain))}
+										>
+											{@render domainTitle(card)}
+										</button>
+									</h3>
+									<ul class="mt-3 divide-y divide-line">
+										{#each card.values.slice(0, CARD_READINGS) as value (valueKey(value))}
+											{@render reading(value, true)}
+										{/each}
+									</ul>
+									<button
+										type="button"
+										class="link mt-auto self-start pt-3 text-sm"
+										onclick={() => open(domainKey(card.domain))}
+									>
+										{card.values.length > CARD_READINGS
+											? `All ${card.values.length} readings`
+											: `Open ${card.domain?.label ?? 'Other'}`}
+									</button>
+								</article>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{:else}
+				<p class="mt-3 text-muted">Nothing from this classroom has been released yet.</p>
+			{/if}
+		</section>
+
+		{#if data.completeness}
+			{@const completeness = data.completeness}
+			<section class="mt-10" aria-labelledby="complete-heading">
+				<h2 id="complete-heading" class="font-display text-2xl">How complete is this month?</h2>
+				<p class="mt-1 max-w-2xl text-sm text-muted">
+					Readings received in {monthName.format(new Date(`${completeness.month}-01T00:00:00Z`))},
+					as a share of what the classroom's research protocol expects. Missing days stay empty;
+					they are never filled in.
 				</p>
-			</section>
-		{/if}
-		{#if data.institution}
-			<InstitutionOverview overview={data.institution} />
-		{:else}
-			<!-- Keeps the three columns, so switching classrooms never reflows the row. -->
-			<section class="card flex flex-col" aria-labelledby="institution-heading">
-				<h2 id="institution-heading" class="text-xl font-medium">Institution overview</h2>
-				<p class="text-xs text-muted">What our community does here</p>
-				<p class="mt-5 text-sm text-muted">
-					{classroom.name} has not published its institution overview yet.
+				<div class="card mt-4 divide-y divide-line p-0">
+					{#each completeness.domains as d (domainKey(d.domain))}
+						{@const missing = missingDays(d)}
+						<div class="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center">
+							<p class="flex w-40 shrink-0 items-center gap-2 font-medium text-ink">
+								<Icon
+									name={d.domain?.icon ?? FALLBACK_DOMAIN_ICON}
+									fallback={FALLBACK_DOMAIN_ICON}
+									class="size-4 text-muted"
+								/>
+								{d.domain?.label ?? 'Other'}
+							</p>
+							<p class="w-36 shrink-0 text-sm">
+								<span class="font-mono text-ink tabular-nums">{percent(d)}%</span>
+								<span class="text-muted">· {d.received} of {d.expected}</span>
+							</p>
+							{#if d.days.length}
+								<div class="min-w-0 flex-1">
+									<ol class="flex flex-wrap gap-1" aria-label="Days of the month">
+										{#each d.days as day (day.day)}
+											<li
+												class={['size-3.5 rounded-[3px]', DAY_TONE[day.status]]}
+												title="{dayMonth.format(new Date(`${day.day}T00:00:00Z`))}: {DAY_WORD[
+													day.status
+												]}"
+											>
+												<span class="sr-only"
+													>{dayMonth.format(new Date(`${day.day}T00:00:00Z`))}: {DAY_WORD[
+														day.status
+													]}</span
+												>
+											</li>
+										{/each}
+									</ol>
+									{#if missing.length}
+										<p class="mt-1.5 text-xs text-muted">
+											No readings on {missing
+												.map((m) => dayMonth.format(new Date(`${m}T00:00:00Z`)))
+												.join(', ')}
+										</p>
+									{/if}
+								</div>
+							{:else}
+								<p class="text-sm text-muted">Measured weekly</p>
+							{/if}
+						</div>
+					{/each}
+				</div>
+				<p class="mt-2 flex flex-wrap gap-4 text-xs text-muted" aria-hidden="true">
+					<span class="flex items-center gap-1.5"
+						><span class="size-3 rounded-[3px] bg-teal"></span>Complete</span
+					>
+					<span class="flex items-center gap-1.5"
+						><span class="size-3 rounded-[3px] bg-teal/40"></span>Partly received</span
+					>
+					<span class="flex items-center gap-1.5"
+						><span class="size-3 rounded-[3px] border border-dashed border-line-strong"></span>No
+						readings</span
+					>
 				</p>
 			</section>
 		{/if}
 	</div>
-
-	<section class="mt-6" aria-labelledby="core-heading">
-		<h2 id="core-heading" class="sr-only">Core readings</h2>
-		<div class="grid gap-3 sm:grid-cols-3">
-			{@render stat('Rain today', core.rainToday, data.units.rain, data.core.rain.review, [
-				agreement(data.core.rain, data.units.rain)
-			])}
-			{@render stat(
-				'Rain, last 7 days',
-				core.rainLast7Days,
-				data.units.rain,
-				data.core.rain.review,
-				[core.rainLast7Days !== null && core.rainDays < 7 ? `${core.rainDays} of 7 days` : '']
-			)}
-			{@render stat(
-				'Air temperature now',
-				core.airTemperature,
-				data.units.temperature,
-				data.core.temperature.review,
-				[
-					data.core.temperature.low !== null && data.core.temperature.high !== null
-						? `Today ${formatValue(data.core.temperature.low, data.units.temperature)} to ${formatValue(data.core.temperature.high, data.units.temperature)}`
-						: '',
-					agreement(data.core.temperature, data.units.temperature)
-				]
-			)}
-		</div>
-	</section>
-
-	<section class="mt-10" aria-labelledby="domains-heading">
-		<h2 id="domains-heading" class="font-display text-2xl">What this classroom measures</h2>
-		{#if data.domains.length}
-			<div
-				class="mt-4 flex gap-1 overflow-x-auto border-b border-line"
-				role="tablist"
-				aria-label="Domains"
-				tabindex="-1"
-				onkeydown={keys}
-			>
-				{#each tabs as tab (tab.id)}
-					{@const selected = tab.id === active}
-					<button
-						type="button"
-						role="tab"
-						id="domain-tab-{tab.id}"
-						aria-selected={selected}
-						aria-controls="domain-panel"
-						tabindex={selected ? 0 : -1}
-						class={[
-							'-mb-px flex shrink-0 items-center gap-2 border-b-2 px-3 py-2 text-sm whitespace-nowrap transition',
-							selected
-								? 'border-ink font-medium text-ink'
-								: 'border-transparent text-muted hover:text-ink'
-						]}
-						onclick={() => open(tab.id)}
-					>
-						<Icon name={tab.icon} fallback={FALLBACK_DOMAIN_ICON} class="size-4" />
-						{tab.label}
-						{#if tab.count !== undefined}<span class="text-xs text-muted">{tab.count}</span>{/if}
-					</button>
-				{/each}
-			</div>
-
-			<div
-				id="domain-panel"
-				class="mt-4"
-				role="tabpanel"
-				aria-labelledby="domain-tab-{active}"
-				tabindex="-1"
-			>
-				{#if openCard}
-					<article class="card">
-						<h3 class="flex items-center gap-2 text-lg font-semibold">
-							{@render domainTitle(openCard)}
-						</h3>
-						{#if openCard.domain?.description}
-							<p class="mt-1 text-sm text-muted">{openCard.domain.description}</p>
-						{/if}
-						<p class="mt-3 text-xs text-muted">
-							Sparklines show the last reading of each of 7 days.
-						</p>
-						<ul class="mt-2 divide-y divide-line">
-							{#each openCard.values as value (valueKey(value))}
-								{@render reading(value, false)}
-							{/each}
-						</ul>
-					</article>
-				{:else}
-					<div class="grid gap-4 md:grid-cols-2">
-						{#each data.domains as card (domainKey(card.domain))}
-							<article class="card flex flex-col">
-								<h3 class="text-lg font-semibold">
-									<button
-										type="button"
-										class="flex items-center gap-2 hover:text-teal"
-										onclick={() => open(domainKey(card.domain))}
-									>
-										{@render domainTitle(card)}
-									</button>
-								</h3>
-								<ul class="mt-3 divide-y divide-line">
-									{#each card.values.slice(0, CARD_READINGS) as value (valueKey(value))}
-										{@render reading(value, true)}
-									{/each}
-								</ul>
-								<button
-									type="button"
-									class="link mt-auto self-start pt-3 text-sm"
-									onclick={() => open(domainKey(card.domain))}
-								>
-									{card.values.length > CARD_READINGS
-										? `All ${card.values.length} readings`
-										: `Open ${card.domain?.label ?? 'Other'}`}
-								</button>
-							</article>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		{:else}
-			<p class="mt-3 text-muted">Nothing from this classroom has been released yet.</p>
-		{/if}
-	</section>
-
-	{#if data.completeness}
-		{@const completeness = data.completeness}
-		<section class="mt-10" aria-labelledby="complete-heading">
-			<h2 id="complete-heading" class="font-display text-2xl">How complete is this month?</h2>
-			<p class="mt-1 max-w-2xl text-sm text-muted">
-				Readings received in {monthName.format(new Date(`${completeness.month}-01T00:00:00Z`))}, as
-				a share of what the classroom's research protocol expects. Missing days stay empty; they are
-				never filled in.
-			</p>
-			<div class="card mt-4 divide-y divide-line p-0">
-				{#each completeness.domains as d (domainKey(d.domain))}
-					{@const missing = missingDays(d)}
-					<div class="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center">
-						<p class="flex w-40 shrink-0 items-center gap-2 font-medium text-ink">
-							<Icon
-								name={d.domain?.icon ?? FALLBACK_DOMAIN_ICON}
-								fallback={FALLBACK_DOMAIN_ICON}
-								class="size-4 text-muted"
-							/>
-							{d.domain?.label ?? 'Other'}
-						</p>
-						<p class="w-36 shrink-0 text-sm">
-							<span class="font-mono text-ink tabular-nums">{percent(d)}%</span>
-							<span class="text-muted">· {d.received} of {d.expected}</span>
-						</p>
-						{#if d.days.length}
-							<div class="min-w-0 flex-1">
-								<ol class="flex flex-wrap gap-1" aria-label="Days of the month">
-									{#each d.days as day (day.day)}
-										<li
-											class={['size-3.5 rounded-[3px]', DAY_TONE[day.status]]}
-											title="{dayMonth.format(new Date(`${day.day}T00:00:00Z`))}: {DAY_WORD[
-												day.status
-											]}"
-										>
-											<span class="sr-only"
-												>{dayMonth.format(new Date(`${day.day}T00:00:00Z`))}: {DAY_WORD[
-													day.status
-												]}</span
-											>
-										</li>
-									{/each}
-								</ol>
-								{#if missing.length}
-									<p class="mt-1.5 text-xs text-muted">
-										No readings on {missing
-											.map((m) => dayMonth.format(new Date(`${m}T00:00:00Z`)))
-											.join(', ')}
-									</p>
-								{/if}
-							</div>
-						{:else}
-							<p class="text-sm text-muted">Measured weekly</p>
-						{/if}
-					</div>
-				{/each}
-			</div>
-			<p class="mt-2 flex flex-wrap gap-4 text-xs text-muted" aria-hidden="true">
-				<span class="flex items-center gap-1.5"
-					><span class="size-3 rounded-[3px] bg-teal"></span>Complete</span
-				>
-				<span class="flex items-center gap-1.5"
-					><span class="size-3 rounded-[3px] bg-teal/40"></span>Partly received</span
-				>
-				<span class="flex items-center gap-1.5"
-					><span class="size-3 rounded-[3px] border border-dashed border-line-strong"></span>No
-					readings</span
-				>
-			</p>
-		</section>
-	{/if}
 </PublicShell>

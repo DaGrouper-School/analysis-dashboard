@@ -141,7 +141,8 @@ function institutionFor(
 	kit: KitItem[]
 ): InstitutionOverview | null {
 	const info = classroom.profile.institution;
-	if (!publicClassroom.institutionName || (!info.photoUrl && !info.history.trim())) return null;
+	// Shown once a host agreement is signed, even before a photo or history is added.
+	if (!publicClassroom.institutionName) return null;
 	return {
 		...structuredClone(info),
 		name: publicClassroom.institutionName,
