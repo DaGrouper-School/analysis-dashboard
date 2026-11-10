@@ -160,6 +160,19 @@
 		transform: translateY(4px);
 	}
 }
+/* Switching classrooms on an Explore station (AP-43): the tab underline slides to the new tab,
+   and the map is not faded, so its globe is seen turning to the new classroom. */
+::view-transition-group(location-tab) {
+	animation-duration: 320ms;
+	animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+::view-transition-group(station-map),
+::view-transition-new(station-map) {
+	animation: none;
+}
+::view-transition-old(station-map) {
+	display: none;
+}
 /* Loading bar for navigations: a teal sweep along the top of the window. */
 .nav-progress::before {
 	content: '';
