@@ -42,8 +42,9 @@ import type {
 import { ServiceError, type ServiceErrorCode, type Services } from '../types';
 
 /**
- * Sketch of the real implementation: same interfaces, backed by the auth API and SAM.
- * Endpoint paths are proposals for the backend team, not an agreed contract yet.
+ * The real implementation: same interfaces, backed by the DaGrouper School backend, which
+ * calls SAM. Every call is listed in `routes.ts`, which generates `backend/openapi.yaml`.
+ * The paths are a proposal for the backend team (BE-01), not an agreed contract yet.
  * The session lives in an HTTP-only cookie, so requests send credentials and the
  * front end never handles tokens.
  */
@@ -132,8 +133,8 @@ export function createHttpServices(baseUrl: string): Services {
 		// SAM's export service filters, sorts and applies each classroom's terms on the server.
 		exports: {
 			rawValues: (query, limit = 200) =>
-				request<RawPage>('POST', '/sam/exports/raw', { ...query, limit }),
-			rawCsv: (query) => request<CsvExport>('POST', '/sam/exports/raw.csv', query)
+				request<RawPage>('POST', '/exports/raw', { ...query, limit }),
+			rawCsv: (query) => request<CsvExport>('POST', '/exports/raw.csv', query)
 		},
 		// Open to visitors: the backend serves these without a session, released data only.
 		// Public: the guardian's link. Each decision is asserted to SAM as `consent`.
@@ -235,43 +236,50 @@ export function createHttpServices(baseUrl: string): Services {
 			getAddress: (placeId) => request<Address>('GET', `/places/${encodeURIComponent(placeId)}`)
 		},
 		registry: {
-			listParameters: () => request<Parameter[]>('GET', '/sam/parameters'),
-			listDomains: () => request<DomainDefinition[]>('GET', '/sam/domains'),
-			listDeviceTypes: () => request<DeviceTypeDefinition[]>('GET', '/sam/device-types'),
+			listParameters: () => request<Parameter[]>('GET', '/registry/parameters'),
+			listDomains: () => request<DomainDefinition[]>('GET', '/registry/domains'),
+			listDeviceTypes: () => request<DeviceTypeDefinition[]>('GET', '/registry/device-types'),
 			listObservationTemplates: () =>
-				request<ObservationTemplate[]>('GET', '/sam/observation-templates'),
+				request<ObservationTemplate[]>('GET', '/registry/observation-templates'),
 			getCalculation: (id) =>
-				request<CalculationDetails>('GET', `/sam/parameters/${encodeURIComponent(id)}/calculation`),
-			listChanges: () => request<RegistryChange[]>('GET', '/sam/changes'),
-			createDomain: (input) => request<DomainDefinition>('POST', '/sam/domains', input),
+				request<CalculationDetails>(
+					'GET',
+					`/registry/parameters/${encodeURIComponent(id)}/calculation`
+				),
+			listChanges: () => request<RegistryChange[]>('GET', '/registry/changes'),
+			createDomain: (input) => request<DomainDefinition>('POST', '/registry/domains', input),
 			updateDomain: (id, input) =>
-				request<DomainDefinition>('PATCH', `/sam/domains/${encodeURIComponent(id)}`, input),
-			deleteDomain: (id) => request<void>('DELETE', `/sam/domains/${encodeURIComponent(id)}`),
+				request<DomainDefinition>('PATCH', `/registry/domains/${encodeURIComponent(id)}`, input),
+			deleteDomain: (id) => request<void>('DELETE', `/registry/domains/${encodeURIComponent(id)}`),
 			createDeviceType: (input) =>
-				request<DeviceTypeDefinition>('POST', '/sam/device-types', input),
+				request<DeviceTypeDefinition>('POST', '/registry/device-types', input),
 			updateDeviceType: (id, input) =>
 				request<DeviceTypeDefinition>(
 					'PATCH',
-					`/sam/device-types/${encodeURIComponent(id)}`,
+					`/registry/device-types/${encodeURIComponent(id)}`,
 					input
 				),
 			mapParameter: (parameterId, domain) =>
-				request<Parameter>('PATCH', `/sam/parameters/${encodeURIComponent(parameterId)}`, {
+				request<Parameter>('PATCH', `/registry/parameters/${encodeURIComponent(parameterId)}`, {
 					domain
 				}),
 			explainParameter: (parameterId, input) =>
 				request<Parameter>(
 					'PUT',
-					`/sam/parameters/${encodeURIComponent(parameterId)}/explanation`,
+					`/registry/parameters/${encodeURIComponent(parameterId)}/explanation`,
 					input
 				),
-			listAlertDefaults: () => request<AlertRule[]>('GET', '/sam/alert-defaults'),
+			listAlertDefaults: () => request<AlertRule[]>('GET', '/registry/alert-defaults'),
 			saveAlertDefault: (input, ruleId) =>
 				ruleId
-					? request<AlertRule[]>('PUT', `/sam/alert-defaults/${encodeURIComponent(ruleId)}`, input)
-					: request<AlertRule[]>('POST', '/sam/alert-defaults', input),
+					? request<AlertRule[]>(
+							'PUT',
+							`/registry/alert-defaults/${encodeURIComponent(ruleId)}`,
+							input
+						)
+					: request<AlertRule[]>('POST', '/registry/alert-defaults', input),
 			deleteAlertDefault: (ruleId) =>
-				request<AlertRule[]>('DELETE', `/sam/alert-defaults/${encodeURIComponent(ruleId)}`)
+				request<AlertRule[]>('DELETE', `/registry/alert-defaults/${encodeURIComponent(ruleId)}`)
 		}
 	};
 }
