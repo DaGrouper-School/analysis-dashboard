@@ -250,8 +250,8 @@
 	style:--accent={accent}
 	aria-busy={loading}
 >
-	<!-- On a phone: the globe and the institution first, then the device, what's happening and
-	     its cards. On a wide screen: the device picker, then the three columns, then the cards. -->
+	<!-- On a phone: the institution (collapsed) first, then the globe, the device, what's
+	     happening and its cards. On a wide screen: the device picker, then the three columns, then the cards. -->
 	<div class="mt-6 flex flex-col gap-5 lg:block">
 		{#if devices?.length && onpickdevice}
 			<DevicePicker class="max-lg:order-3" {devices} {deviceId} onpick={onpickdevice} />
@@ -270,13 +270,14 @@
 				tiles={now ?? station.now}
 				{released}
 				{accent}
+				icon={devices?.find((d) => d.id === deviceId)?.icon}
 				actions={nowActions}
 				{onexplain}
 				href={valueOf}
 			/>
 			{#if classroom.location}
 				<section
-					class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] max-lg:order-1 sm:h-96 lg:h-full"
+					class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] max-lg:order-2 sm:h-96 lg:h-full"
 					aria-label="Where {shown.name} is"
 				>
 					<!-- Out of the flow, so the canvas never sets the card's height and grows it. -->
@@ -310,7 +311,7 @@
 			<InstitutionOverview
 				overview={institution}
 				actions={institutionActions}
-				class="overflow-hidden max-lg:order-2"
+				class="overflow-hidden max-lg:order-1"
 			/>
 		</div>
 

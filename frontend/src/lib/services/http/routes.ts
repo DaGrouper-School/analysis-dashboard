@@ -217,6 +217,17 @@ export const routes: Route[] = [
 		errors: [400]
 	},
 	{
+		method: 'classrooms.setInstitutionPhoto',
+		http: 'PUT',
+		path: '/classrooms/{classroomId}/institution/photo',
+		access: 'user',
+		body: 'InstitutionPhotoInput',
+		response: 'InstitutionInfo',
+		errors: [400],
+		notes:
+			'Institution head only. A null image removes the photo. The backend stores the image and returns its URL.'
+	},
+	{
 		method: 'classrooms.invite',
 		http: 'POST',
 		path: '/classrooms/{classroomId}/invitations',
@@ -611,6 +622,14 @@ export const routes: Route[] = [
 		response: 'PlaceSuggestion[]',
 		errors: [429],
 		notes: 'Proxies the places provider; the API key stays on the server.'
+	},
+	{
+		method: 'places.dialCodes',
+		http: 'GET',
+		path: '/places/dial-codes',
+		access: 'public',
+		response: 'DialCode[]',
+		notes: 'The countries a phone number can be from, pilot countries first.'
 	},
 	{
 		method: 'places.getAddress',

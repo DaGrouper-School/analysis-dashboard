@@ -6,6 +6,7 @@
 	import Logo from '#lib/components/Logo.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import { outbox } from '#lib/outbox.svelte.ts';
+	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import { isMockDataSource } from '#lib/services/index.ts';
 
 	let { data, children } = $props();
@@ -18,16 +19,29 @@
 			.join(' · ')
 	);
 
-	// Everything about your classrooms is on the dashboard (AP-45): the logo opens it, and the
-	// header holds only Record, for those who record (not researchers). Platform admins also manage the registry and host applications.
-	const nav = $derived(
-		data.user.platformAdmin
-			? [
-					{ href: resolve('/(app)/registry'), label: 'Registry' },
-					{ href: resolve('/(app)/host-applications'), label: 'Applications' }
-				]
-			: []
+	// Everything about your classrooms is on the dashboard (AP-45): the logo opens it. Members
+	// also get Classroom, the details page of the classroom they are on, and Record if they
+	// record (not researchers). Platform admins also manage the registry and host applications.
+	const classroomHref = $derived(
+		data.contextClassroom
+			? resolve('/(app)/dashboard/details') + sensorQuery(data.contextClassroom.id)
+			: null
 	);
+	const nav = $derived([
+		...(classroomHref
+			? [{ href: classroomHref, path: resolve('/(app)/dashboard/details'), label: 'Classroom' }]
+			: []),
+		...(data.user.platformAdmin
+			? [
+					{ href: resolve('/(app)/registry'), path: resolve('/(app)/registry'), label: 'Registry' },
+					{
+						href: resolve('/(app)/host-applications'),
+						path: resolve('/(app)/host-applications'),
+						label: 'Applications'
+					}
+				]
+			: [])
+	]);
 </script>
 
 <div class="min-h-dvh">
@@ -39,11 +53,13 @@
 			<div class="ml-auto"></div>
 			{#if nav.length}
 				<nav
-					aria-label="Admin"
+					aria-label="Main"
 					class="flex items-center gap-0.5 rounded-full border border-line-strong bg-canvas/80 p-1 sm:gap-1"
 				>
 					{#each nav as item (item.href)}
-						{@const current = page.url.pathname.startsWith(item.href)}
+						{@const current = page.url.pathname.startsWith(item.path)}
+						<!-- Resolved paths, some with the classroom's query. -->
+						<!-- eslint-disable svelte/no-navigation-without-resolve -->
 						<a
 							href={item.href}
 							class={[
@@ -52,6 +68,7 @@
 							]}
 							aria-current={current ? 'page' : undefined}>{item.label}</a
 						>
+						<!-- eslint-enable svelte/no-navigation-without-resolve -->
 					{/each}
 				</nav>
 			{/if}

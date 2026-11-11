@@ -3,6 +3,8 @@
 	import { resolve } from '$app/paths';
 	import { navigating, page } from '$app/state';
 	import { domainsOf } from '#lib/domains.ts';
+	import AlertsList from '#lib/components/AlertsList.svelte';
+	import AlertsPanel from '#lib/components/AlertsPanel.svelte';
 	import CalculationPanel from '#lib/components/CalculationPanel.svelte';
 	import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
 	import ClassroomAbout from '#lib/components/ClassroomAbout.svelte';
@@ -30,7 +32,6 @@
 		isManualType
 	} from '#lib/labels.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
-	import { valueHref } from '#lib/site.ts';
 	import type { PageData } from './$types';
 
 	/**
@@ -91,8 +92,10 @@
 					{ domainIcons, fallback: which === 'tileParameterIds' }
 				)
 			: [];
+	// A device with no readings yet still has its own colour and shows empty states, never
+	// another source's values.
 	const own = $derived.by(() => {
-		if (visiting || !device || !data.readings.length) return undefined;
+		if (visiting || !device) return undefined;
 		const icon = deviceTypeIcon(data.deviceTypes, device.type);
 		return {
 			tiles: readingTiles(data.readings, registryValues('tileParameterIds'), icon),
@@ -275,58 +278,14 @@
 						? `What needs you in ${station.classroom.name}, from each device's latest reading.`
 						: `Nothing needs you in ${station.classroom.name} right now.`
 				)}
-				<ul class="mt-5 space-y-3">
-					{#each data.alerts as alert (`${alert.device.id}|${alert.parameterId}`)}
-						{@const label = paramsById.get(alert.parameterId)?.label ?? alert.parameterId}
-						<li class="card flex flex-wrap items-center gap-4 p-5">
-							<div class="min-w-0 flex-1">
-								<p class="flex flex-wrap items-center gap-3 text-xs text-muted">
-									<span
-										class={[
-											'chip',
-											alert.level === 'warning'
-												? 'border-danger/60 text-danger'
-												: 'border-orange/60 text-orange'
-										]}
-										><Icon name="alert" class="size-3.5" />
-										{alert.level === 'warning' ? 'Warning' : 'Caution'}</span
-									>
-									{dateTime.format(new Date(alert.observedAt))}
-								</p>
-								<p class="mt-2 font-medium text-ink">{alert.title} at {alert.device.name}</p>
-								<p class="mt-1 text-sm">{alert.message}</p>
-							</div>
-							<!-- Opens the value's page on this device, with its alert levels. valueHref resolves. -->
-							<!-- eslint-disable svelte/no-navigation-without-resolve -->
-							<a
-								class="btn btn-ghost"
-								href={valueHref(station.classroom.id, alert.parameterId, alert.device.id)}
-								>Open {label}</a
-							>
-							<!-- eslint-enable svelte/no-navigation-without-resolve -->
-						</li>
-					{/each}
-					{#each data.waitingForConsent as member (member.userId)}
-						<li class="card flex flex-wrap items-center gap-4 p-5">
-							<div class="min-w-0 flex-1">
-								<p class="text-xs text-muted">
-									<span class="chip"><Icon name="user" class="size-3.5" /> Consent</span>
-								</p>
-								<p class="mt-2 font-medium text-ink">
-									{member.fullName} is waiting for guardian consent
-								</p>
-								<p class="mt-1 text-sm">
-									They can't send measurements until a parent or guardian consents{member.guardianName
-										? `. The link went to ${member.guardianName.replace(/\.$/, '')}.`
-										: '.'}
-								</p>
-							</div>
-							<button type="button" class="btn btn-ghost" onclick={() => openSection('people')}
-								>Record paper consent</button
-							>
-						</li>
-					{/each}
-				</ul>
+				<AlertsList
+					class="mt-5"
+					alerts={data.alerts}
+					waiting={data.waitingForConsent}
+					parameters={paramsById}
+					classroomId={station.classroom.id}
+					onconsent={() => openSection('people')}
+				/>
 			{:else if active === 'domains'}
 				<DomainBrowser
 					{domains}
@@ -506,7 +465,9 @@
 				</div>
 			{:else if active === 'settings' && data.detail}
 				{@render panelHead('Settings', `${station.classroom.name}'s name, institution and code.`)}
-				<div class="mt-5"><ClassroomSettings detail={data.detail} /></div>
+				<div class="mt-5">
+					<ClassroomSettings detail={data.detail} institutionInfo={station.institution} />
+				</div>
 			{/if}
 		</VerticalTabs>
 	</section>
@@ -560,6 +521,21 @@
 	</header>
 	{@render classroomSections(station)}
 {:else}
+	<!-- What needs the user in this classroom, on top; the full list is its Alerts tab. -->
+	{#if classroom && alertCount}
+		<AlertsPanel
+			count={alertCount}
+			href={detailsHref(station.classroom.id, shownDeviceId, 'alerts')}
+		>
+			<AlertsList
+				alerts={data.alerts}
+				waiting={data.waitingForConsent}
+				parameters={paramsById}
+				classroomId={station.classroom.id}
+				onconsent={() => openSection('people')}
+			/>
+		</AlertsPanel>
+	{/if}
 	<ClassroomOverview
 		{station}
 		{tabs}

@@ -1,4 +1,6 @@
 import type {
+	DialCode,
+	InstitutionInfo,
 	HostApplication,
 	HostApplicationInput,
 	HostApplicationReceipt,
@@ -108,6 +110,12 @@ export function createHttpServices(baseUrl: string): Services {
 			create: (input) => request<ClassroomSummary>('POST', '/classrooms', input),
 			update: (id, input) =>
 				request<ClassroomSummary>('PATCH', `/classrooms/${encodeURIComponent(id)}`, input),
+			setInstitutionPhoto: (id, input) =>
+				request<InstitutionInfo>(
+					'PUT',
+					`/classrooms/${encodeURIComponent(id)}/institution/photo`,
+					input
+				),
 			invite: (id, emails, role) =>
 				request<Invitation[]>('POST', `/classrooms/${encodeURIComponent(id)}/invitations`, {
 					emails,
@@ -251,7 +259,8 @@ export function createHttpServices(baseUrl: string): Services {
 		places: {
 			autocomplete: (q) =>
 				request<PlaceSuggestion[]>('GET', `/places/autocomplete?q=${encodeURIComponent(q)}`),
-			getAddress: (placeId) => request<Address>('GET', `/places/${encodeURIComponent(placeId)}`)
+			getAddress: (placeId) => request<Address>('GET', `/places/${encodeURIComponent(placeId)}`),
+			dialCodes: () => request<DialCode[]>('GET', '/places/dial-codes')
 		},
 		registry: {
 			listParameters: () => request<Parameter[]>('GET', '/registry/parameters'),

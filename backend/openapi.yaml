@@ -538,6 +538,48 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /classrooms/{classroomId}/institution/photo:
+    put:
+      tags:
+        - Classrooms
+      operationId: classrooms.setInstitutionPhoto
+      summary: Set institution photo
+      description: >-
+        The host institution's photo and its description, or none. Institution head only.
+
+
+        Institution head only. A null image removes the photo. The backend stores the image and
+        returns its URL.
+
+
+        Access: signed-in users. Classroom roles are checked on the server.
+      parameters:
+        - name: classroomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InstitutionPhotoInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstitutionInfo"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /classrooms/{classroomId}/invitations:
     post:
       tags:
@@ -1933,6 +1975,28 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /places/dial-codes:
+    get:
+      tags:
+        - Places
+      operationId: places.dialCodes
+      summary: Dial codes
+      description: |-
+        The countries a phone number can be from, pilot countries first.
+
+        The countries a phone number can be from, pilot countries first.
+
+        Access: public, no session needed.
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DialCode"
   /places/{placeId}:
     get:
       tags:
@@ -3499,6 +3563,23 @@ components:
         - color
         - values
       additionalProperties: false
+    DialCode:
+      type: object
+      properties:
+        code:
+          type: string
+          description: ISO 3166-1 alpha-2.
+        name:
+          type: string
+        dial:
+          type: string
+          description: With its plus, as in "+251".
+      required:
+        - code
+        - name
+        - dial
+      additionalProperties: false
+      description: A country's calling code, for phone numbers stored in E.164.
     DomainCompleteness:
       type: object
       properties:
@@ -3966,6 +4047,39 @@ components:
         - required
       additionalProperties: false
       description: A readiness question, from configuration.
+    InstitutionInfo:
+      type: object
+      properties:
+        photoUrl:
+          type:
+            - string
+            - "null"
+          description: "Null until a photo is added: pages show a placeholder."
+        photoAlt:
+          type: string
+          description: What the photo shows, for people who can't see it.
+        history:
+          type: string
+          description: "A short history: who they are and what the community does here."
+        hub:
+          type:
+            - string
+            - "null"
+          description: A partner or hub organisation it works with, if any.
+        website:
+          type:
+            - string
+            - "null"
+          description: Opened by "Learn more"; null hides the button.
+      required:
+        - photoUrl
+        - photoAlt
+        - history
+        - hub
+        - website
+      additionalProperties: false
+      description: "The host institution as a classroom presents it (AP-43): a photo and a short history.
+        Edited by the institution head; collected first in the host application (AP-40)."
     InstitutionOverview:
       type: object
       properties:
@@ -4014,6 +4128,22 @@ components:
       additionalProperties: false
       description: "The institution overview card (AP-43): who runs a classroom and what its community
         does. Null on a page while the host agreement is unsigned, or with no photo and no history."
+    InstitutionPhotoInput:
+      type: object
+      properties:
+        image:
+          type:
+            - string
+            - "null"
+          description: The image as a data URL (`data:image/…`), or null to remove the photo.
+        alt:
+          type: string
+          description: What the photo shows, for people who can't see it. Required with an image.
+      required:
+        - image
+        - alt
+      additionalProperties: false
+      description: A new photo of the host institution, or none to remove it (AP-43).
     Invitation:
       type: object
       properties:

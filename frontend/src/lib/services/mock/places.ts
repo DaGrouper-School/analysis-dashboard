@@ -1,4 +1,4 @@
-import type { Address } from '#lib/domain/types.ts';
+import type { Address, DialCode } from '#lib/domain/types.ts';
 import { ServiceError, type PlacesService } from '../types';
 
 /** A small offline stand-in for Google Places autocomplete, covering the pilot regions. */
@@ -85,6 +85,17 @@ const PLACES: (Address & { placeId: string })[] = [
 	}
 ];
 
+/** Calling codes, pilot countries first. */
+const DIAL_CODES: DialCode[] = [
+	{ code: 'ET', name: 'Ethiopia', dial: '+251' },
+	{ code: 'BS', name: 'Bahamas', dial: '+1242' },
+	{ code: 'SO', name: 'Somalia', dial: '+252' },
+	{ code: 'JM', name: 'Jamaica', dial: '+1876' },
+	{ code: 'US', name: 'United States', dial: '+1' },
+	{ code: 'GB', name: 'United Kingdom', dial: '+44' },
+	{ code: 'KE', name: 'Kenya', dial: '+254' }
+];
+
 export function createMockPlaces(delay: () => Promise<void>): PlacesService {
 	return {
 		async autocomplete(query) {
@@ -104,6 +115,11 @@ export function createMockPlaces(delay: () => Promise<void>): PlacesService {
 			const place = PLACES.find((p) => p.placeId === placeId);
 			if (!place) throw new ServiceError('not_found', 'That place could not be found.');
 			return { ...place };
+		},
+
+		async dialCodes() {
+			await delay();
+			return DIAL_CODES.map((c) => ({ ...c }));
 		}
 	};
 }
