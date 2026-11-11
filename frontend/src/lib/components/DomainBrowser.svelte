@@ -15,7 +15,7 @@
 	import { formatValue } from '#lib/key-values.ts';
 
 	/**
-	 * "What this classroom measures" (AP-22), the same on the public classroom page and the
+	 * "What this device measures" (AP-22), the same on the public classroom page and the
 	 * dashboard: a card per domain with its first readings, or one domain with all of them. The
 	 * open domain is kept in the URL (`?domain=`), so a shared link opens the same one.
 	 */
@@ -116,7 +116,7 @@
 {/snippet}
 
 <section class={className} aria-labelledby="domains-heading">
-	<h2 id="domains-heading" class="font-display text-2xl">What this classroom measures</h2>
+	<h2 id="domains-heading" class="font-display text-2xl">What this device measures</h2>
 	{#if domains.length}
 		<div
 			class="mt-4 flex gap-1 overflow-x-auto border-b border-line"
@@ -204,6 +204,6 @@
 			{/if}
 		</div>
 	{:else}
-		<p class="mt-3 text-muted">Nothing from this classroom has been released yet.</p>
+		<p class="mt-3 text-muted">This device has no readings to show yet.</p>
 	{/if}
 </section>
