@@ -1,31 +1,30 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Select from '#lib/components/Select.svelte';
+	import type { DialCode } from '#lib/domain/types.ts';
 
-	/** Pilot countries first; the number is stored in E.164. */
-	const COUNTRIES = [
-		{ code: 'ET', name: 'Ethiopia', dial: '+251' },
-		{ code: 'BS', name: 'Bahamas', dial: '+1242' },
-		{ code: 'SO', name: 'Somalia', dial: '+252' },
-		{ code: 'JM', name: 'Jamaica', dial: '+1876' },
-		{ code: 'US', name: 'United States', dial: '+1' },
-		{ code: 'GB', name: 'United Kingdom', dial: '+44' },
-		{ code: 'KE', name: 'Kenya', dial: '+254' }
-	];
-
+	/** A phone number, stored in E.164, with its country picked from `countries` (first is the default). */
 	let {
 		value = $bindable(''),
+		countries,
 		id = 'phone',
 		error = '',
 		disabled = false
-	}: { value?: string; id?: string; error?: string; disabled?: boolean } = $props();
+	}: {
+		value?: string;
+		countries: DialCode[];
+		id?: string;
+		error?: string;
+		disabled?: boolean;
+	} = $props();
 
-	let dial = $state(COUNTRIES[0].dial);
+	// svelte-ignore state_referenced_locally
+	let dial = $state(countries[0]?.dial ?? '');
 	let national = $state('');
 
 	onMount(() => {
 		// Split an existing E.164 value back into country and number (longest prefix wins).
-		const match = [...COUNTRIES]
+		const match = [...countries]
 			.sort((a, b) => b.dial.length - a.dial.length)
 			.find((c) => value.startsWith(c.dial));
 		if (match) {
@@ -45,7 +44,7 @@
 		id="{id}-country"
 		label="Country code"
 		class="w-36 shrink-0"
-		options={COUNTRIES.map((c) => ({ value: c.dial, label: `${c.name} ${c.dial}` }))}
+		options={countries.map((c) => ({ value: c.dial, label: `${c.name} ${c.dial}` }))}
 		bind:value={dial}
 		onchange={sync}
 		error={Boolean(error)}

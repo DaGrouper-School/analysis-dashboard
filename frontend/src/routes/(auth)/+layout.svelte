@@ -1,7 +1,7 @@
 <script lang="ts">
 	import AuthShell from '#lib/components/AuthShell.svelte';
 
-	let { children } = $props();
+	let { data, children } = $props();
 </script>
 
-<AuthShell>{@render children()}</AuthShell>
+<AuthShell markers={data.markers}>{@render children()}</AuthShell>
