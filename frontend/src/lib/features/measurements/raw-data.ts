@@ -11,7 +11,7 @@ import type {
 export const FIELD_SOURCE = 'field';
 
 /** Rows on each page of the raw data table. */
-export const PAGE_SIZE = 50;
+export const PAGE_SIZE = 25;
 
 /** What a raw data filter change sets; a filter left out stays as it is. */
 export type RawFilterChange = Partial<

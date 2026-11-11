@@ -8,7 +8,7 @@
 	import ClassroomSettings from '#lib/features/classroom/ClassroomSettings.svelte';
 	import ClassroomLabs from '#lib/features/devices/ClassroomLabs.svelte';
 	import DevicePicker, { type PickableDevice } from '#lib/features/devices/DevicePicker.svelte';
-	import RawDataLink from '#lib/features/devices/RawDataLink.svelte';
+	import RawDataButton from '#lib/features/measurements/RawDataButton.svelte';
 	import DomainBrowser from '#lib/features/measurements/DomainBrowser.svelte';
 	import type { domainsOf } from '#lib/features/measurements/domains.ts';
 	import MeasurementsPanel from './MeasurementsPanel.svelte';
@@ -78,10 +78,9 @@
 			<!-- The picked device's raw data beside the picker, as on its card in Measurements. -->
 			<div class="flex flex-wrap items-center justify-between gap-3 lg:flex-nowrap">
 				<DevicePicker {devices} {deviceId} onpick={onpickdevice} />
-				{#if deviceId}<RawDataLink
+				{#if deviceId}<RawDataButton
 						class="shrink-0"
-						classroomId={station.classroom.id}
-						{deviceId}
+						query={{ classroomId: station.classroom.id, sourceId: deviceId }}
 					/>{/if}
 			</div>
 			<DomainBrowser

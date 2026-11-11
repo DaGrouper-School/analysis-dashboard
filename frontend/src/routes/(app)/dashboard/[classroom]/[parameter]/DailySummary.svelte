@@ -1,5 +1,7 @@
 <script lang="ts">
 	import Icon from '#lib/components/Icon.svelte';
+	import Pagination from '#lib/components/Pagination.svelte';
+	import { Pager } from '#lib/components/pager.svelte.ts';
 	import type { Chart, Parameter, PublicParameterPage } from '#lib/domain/types.ts';
 	import { dailyStats, parameterCsv, rainDays } from '#lib/features/measurements/parameter-page.ts';
 	import { UTF8_BOM } from '#lib/features/measurements/raw-data.ts';
@@ -23,6 +25,9 @@
 
 	const show = (value: number | string | null | undefined) => showValue(value, parameter);
 	const referenceId = $derived(page.rain?.referenceSourceId ?? null);
+	// Newest day first, a page at a time.
+	const rainPager = new Pager(() => rainInRange?.toReversed() ?? []);
+	const statsPager = new Pager(() => statsInRange.toReversed());
 
 	function download() {
 		const units = Object.fromEntries(page.series.map((s) => [s.parameterId, parameter.unit]));
@@ -65,7 +70,7 @@
 				</thead>
 				<tbody class="divide-y divide-line">
 					{#if rainInRange}
-						{#each rainInRange.toReversed() as day (day.day)}
+						{#each rainPager.rows as day (day.day)}
 							<tr>
 								<td class="px-4 py-2.5 whitespace-nowrap">{dayText(day.day)}</td>
 								{#each page.series as s (s.source.id)}
@@ -91,7 +96,7 @@
 							>
 						{/each}
 					{:else}
-						{#each statsInRange.toReversed() as day (day.day)}
+						{#each statsPager.rows as day (day.day)}
 							<tr>
 								<td class="px-4 py-2.5 whitespace-nowrap">{dayText(day.day)}</td>
 								<td class="px-4 py-2.5 text-right font-mono tabular-nums">{show(day.low)}</td>
@@ -110,6 +115,7 @@
 				</tbody>
 			</table>
 		</div>
+		<Pagination class="mt-3" pager={rainInRange ? rainPager : statsPager} />
 	{/if}
 	<p class="mt-2 text-xs text-muted">
 		The CSV carries the licence ({page.terms.licence}) and how to credit {page.classroom.name}.

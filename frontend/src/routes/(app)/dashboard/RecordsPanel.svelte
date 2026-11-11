@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
+	import Pagination from '#lib/components/Pagination.svelte';
+	import { Pager } from '#lib/components/pager.svelte.ts';
 	import type { Parameter } from '#lib/domain/types.ts';
 	import { formatValue } from '#lib/features/measurements/key-values.ts';
 	import PanelHead from './PanelHead.svelte';
@@ -17,6 +19,7 @@
 		parameters: ReadonlyMap<string, Parameter>;
 	} = $props();
 
+	const pager = new Pager(() => records);
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 </script>
 
@@ -45,7 +48,7 @@
 				</tr>
 			</thead>
 			<tbody class="divide-y divide-line">
-				{#each records as row (row.id)}
+				{#each pager.rows as row (row.id)}
 					{@const param = parameters.get(row.parameterId)}
 					<tr>
 						<td class="py-3 pr-3 whitespace-nowrap text-muted tabular-nums"
@@ -65,6 +68,7 @@
 			</tbody>
 		</table>
 	</div>
+	<Pagination class="mt-3" {pager} />
 {:else}
 	<p class="mt-4 text-muted">Nothing has been recorded by hand yet.</p>
 {/if}

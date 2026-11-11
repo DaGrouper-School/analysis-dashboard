@@ -1,10 +1,9 @@
 <script lang="ts">
+	import RawDataButton from '#lib/features/measurements/RawDataButton.svelte';
 	import { invalidate } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import Modal from '#lib/components/Modal.svelte';
 	import type { ReleaseReview } from '#lib/domain/types.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
-	import { sensorQuery } from '#lib/utils/sensor-selection.ts';
 
 	/**
 	 * Reviewing what waits before the public sees it, and releasing it (AP-20): each source with
@@ -66,13 +65,7 @@
 					</p>
 				</div>
 				{#if source.kind === 'device'}
-					<!-- eslint-disable svelte/no-navigation-without-resolve -->
-					<a
-						class="btn btn-ghost"
-						href={resolve('/(app)/dashboard/readings') + sensorQuery(classroomId, source.id)}
-						>Check values</a
-					>
-					<!-- eslint-enable svelte/no-navigation-without-resolve -->
+					<RawDataButton label="Check values" query={{ classroomId, sourceId: source.id }} />
 				{/if}
 			</li>
 		{/each}

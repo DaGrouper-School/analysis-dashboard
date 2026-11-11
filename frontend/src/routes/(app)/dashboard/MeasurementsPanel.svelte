@@ -4,7 +4,7 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import Select from '#lib/components/Select.svelte';
 	import type { Parameter } from '#lib/domain/types.ts';
-	import RawDataLink from '#lib/features/devices/RawDataLink.svelte';
+	import RawDataButton from '#lib/features/measurements/RawDataButton.svelte';
 	import RegisterSensorModal from '#lib/features/devices/RegisterSensorModal.svelte';
 	import { keySummary } from '#lib/features/measurements/key-values.ts';
 	import {
@@ -134,7 +134,7 @@
 					>
 					<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				{/if}
-				<RawDataLink {classroomId} deviceId={option.id} />
+				<RawDataButton query={{ classroomId, sourceId: option.id }} />
 			</div>
 		</li>
 	{:else}

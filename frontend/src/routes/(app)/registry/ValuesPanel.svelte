@@ -1,5 +1,7 @@
 <script lang="ts">
 	import Icon from '#lib/components/Icon.svelte';
+	import Pagination from '#lib/components/Pagination.svelte';
+	import { Pager } from '#lib/components/pager.svelte.ts';
 	import Select, { toOptions, type SelectOption } from '#lib/components/Select.svelte';
 	import { CHARTS, CHART_LABELS, chartOf } from '#lib/domain/charts.ts';
 	import type {
@@ -52,6 +54,7 @@
 			)
 		);
 	});
+	const pager = new Pager(() => shownParameters, 25);
 </script>
 
 <div>
@@ -129,7 +132,7 @@
 				</thead>
 				{#key pickers}
 					<tbody class="divide-y divide-line">
-						{#each shownParameters as parameter (parameter.id)}
+						{#each pager.rows as parameter (parameter.id)}
 							{@const loose = !parameter.domain || !domainsById.has(parameter.domain)}
 							<tr class={loose ? 'bg-orange/5' : ''}>
 								<td class="px-4 py-2">
@@ -192,5 +195,6 @@
 				{/key}
 			</table>
 		</div>
+		<Pagination class="mt-3" {pager} />
 	</section>
 </div>

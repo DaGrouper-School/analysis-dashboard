@@ -2,6 +2,8 @@
 	import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
 	import { resolve } from '$app/paths';
 	import PublicShell from '#lib/components/PublicShell.svelte';
+	import Pagination from '#lib/components/Pagination.svelte';
+	import { Pager } from '#lib/components/pager.svelte.ts';
 	import SampleDataBadge from '#lib/components/SampleDataBadge.svelte';
 	import { formatValue } from '#lib/features/measurements/key-values.ts';
 	import { CLASSROOM_ROLE_LABELS } from '#lib/utils/labels.ts';
@@ -17,6 +19,7 @@
 	const title = $derived(data.profile?.fullName || `Participant ${data.participantId}`);
 	const ROLE_LABELS: Record<string, string> = CLASSROOM_ROLE_LABELS;
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+	const pager = new Pager(() => data.recent);
 </script>
 
 <svelte:head><title>{title} · {data.content.hero.eyebrow}</title></svelte:head>
@@ -81,7 +84,7 @@
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-line">
-					{#each data.recent as c, i (i)}
+					{#each pager.rows as c, i (i)}
 						<tr>
 							<td class="px-4 py-2.5 whitespace-nowrap">
 								{dateTime.format(new Date(c.observedAt))}
@@ -110,5 +113,6 @@
 				</tbody>
 			</table>
 		</div>
+		<Pagination class="mt-3" {pager} />
 	</section>
 </PublicShell>
