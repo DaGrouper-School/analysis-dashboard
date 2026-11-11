@@ -56,6 +56,7 @@
 			{options}
 			value={deviceId}
 			label="Device"
+			labelHidden
 			class="min-w-0 flex-1 sm:w-96 sm:flex-none"
 			onchange={onpick}
 		/>

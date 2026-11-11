@@ -68,6 +68,7 @@
 				<Select
 					id="site-language"
 					label="Language"
+					labelHidden
 					size="compact"
 					align="end"
 					options={content.languages.map((language) => ({

@@ -73,6 +73,7 @@
 							<Select
 								id="unmapped-{parameter.id}"
 								label="Domain for {parameter.label}"
+								labelHidden
 								class="w-full sm:w-56"
 								options={domainChoices}
 								value=""
@@ -136,6 +137,7 @@
 									<Select
 										id="map-{parameter.id}"
 										label="Domain for {parameter.label}"
+										labelHidden
 										size="compact"
 										warn={loose}
 										options={domainChoices}

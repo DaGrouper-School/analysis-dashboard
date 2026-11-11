@@ -55,16 +55,14 @@
 	onsubmit={(e) => e.preventDefault()}
 >
 	{#each pickers as picker (picker.id)}
-		<label class="flex flex-col gap-1 text-xs text-muted">
-			{picker.label}
-			<Select
-				size="compact"
-				class="max-w-56"
-				options={[{ value: '', label: picker.any }, ...picker.items]}
-				value={filter[picker.id]}
-				onchange={(value) => onchange({ ...filter, [picker.id]: value })}
-			/>
-		</label>
+		<Select
+			label={picker.label}
+			size="compact"
+			class="max-w-56"
+			options={[{ value: '', label: picker.any }, ...picker.items]}
+			value={filter[picker.id]}
+			onchange={(value) => onchange({ ...filter, [picker.id]: value })}
+		/>
 	{/each}
 	<button
 		type="button"

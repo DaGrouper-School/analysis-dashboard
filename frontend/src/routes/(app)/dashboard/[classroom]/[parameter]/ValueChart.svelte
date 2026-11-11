@@ -130,7 +130,7 @@
 					size="compact"
 					align="end"
 					class="max-w-72"
-					label="Compare with another classroom"
+					label="Compare with"
 					options={[
 						{ value: '', label: 'Compare with…' },
 						...page.compare.map((c) => ({

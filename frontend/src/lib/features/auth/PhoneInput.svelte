@@ -43,6 +43,7 @@
 	<Select
 		id="{id}-country"
 		label="Country code"
+		labelHidden
 		class="w-36 shrink-0"
 		options={countries.map((c) => ({ value: c.dial, label: `${c.name} ${c.dial}` }))}
 		bind:value={dial}
