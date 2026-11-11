@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
-	import ChartAlerts from '#lib/components/ChartAlerts.svelte';
+	import ChartAlerts from '#lib/features/alerts/ChartAlerts.svelte';
 	import { thresholdStatus, thresholdsFor } from '#lib/domain/alerts.ts';
-	import { deviceTypeLabel } from '#lib/labels.ts';
-	import { sensorQuery } from '#lib/sensor-selection.ts';
+	import { deviceTypeLabel } from '#lib/utils/labels.ts';
+	import { sensorQuery } from '#lib/features/devices/sensor-selection.ts';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
 	import Chart, { type ChartBars, type ChartLine } from '#lib/components/Chart.svelte';
 	import SampleDataBadge from '#lib/components/SampleDataBadge.svelte';
 	import Select from '#lib/components/Select.svelte';
 	import type { PublicParameterPage, PublicParameterSeries } from '#lib/domain/types.ts';
-	import { FALLBACK_DOMAIN_ICON } from '#lib/icons.ts';
-	import { formatValue } from '#lib/key-values.ts';
+	import { FALLBACK_DOMAIN_ICON } from '#lib/utils/icons.ts';
+	import { formatValue } from '#lib/features/measurements/key-values.ts';
 	import {
 		chartOf,
 		dailyStats,
@@ -24,10 +24,10 @@
 		rainDays,
 		RANGES,
 		type RangeId
-	} from '#lib/parameter-page.ts';
-	import { UTF8_BOM } from '#lib/raw-data.ts';
+	} from '#lib/features/measurements/parameter-page.ts';
+	import { UTF8_BOM } from '#lib/features/measurements/raw-data.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
-	import { sectionHref } from '#lib/site.ts';
+	import { sectionHref } from '#lib/utils/site.ts';
 	import type { PageProps } from './$types';
 
 	/**

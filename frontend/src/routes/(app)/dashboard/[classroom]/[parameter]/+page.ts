@@ -1,6 +1,6 @@
 import { error, redirect } from '@sveltejs/kit';
 import { resolve } from '$app/paths';
-import { sensorQuery } from '#lib/sensor-selection.ts';
+import { sensorQuery } from '#lib/features/devices/sensor-selection.ts';
 import type { DeviceAlerts } from '#lib/domain/types.ts';
 import type { PageLoad } from './$types';
 import { services, ServiceError } from '#lib/services/index.ts';

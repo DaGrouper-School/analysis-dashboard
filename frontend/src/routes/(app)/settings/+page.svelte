@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
-	import AddressForm from '#lib/components/AddressForm.svelte';
+	import AddressForm from '#lib/features/places/AddressForm.svelte';
 	import Avatar from '#lib/components/Avatar.svelte';
-	import ClassroomList from '#lib/components/ClassroomList.svelte';
-	import GuardianConsentCard from '#lib/components/GuardianConsentCard.svelte';
+	import ClassroomList from '#lib/features/classroom/ClassroomList.svelte';
+	import GuardianConsentCard from '#lib/features/consent/GuardianConsentCard.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
 	import { resetDb } from '#lib/data/mock-db.ts';

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
-	import GoogleAccountPicker from '#lib/components/GoogleAccountPicker.svelte';
-	import PhoneInput from '#lib/components/PhoneInput.svelte';
+	import GoogleAccountPicker from '#lib/features/auth/GoogleAccountPicker.svelte';
+	import PhoneInput from '#lib/features/auth/PhoneInput.svelte';
 	import { normalizePhone } from '#lib/domain/validation.ts';
-	import { savePendingChallenge } from '#lib/pending-challenge.ts';
+	import { savePendingChallenge } from '#lib/features/auth/pending-challenge.ts';
 	import { errorMessage, isMockDataSource, services } from '#lib/services/index.ts';
-	import { refreshSessionAndContinue } from '#lib/session.ts';
+	import { refreshSessionAndContinue } from '#lib/features/auth/session.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();

@@ -1,6 +1,6 @@
 import { resolve } from '$app/paths';
 import { redirect } from '@sveltejs/kit';
-import { isProfileStepDone } from '#lib/routing.ts';
+import { isProfileStepDone } from '#lib/utils/routing.ts';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ parent }) => {

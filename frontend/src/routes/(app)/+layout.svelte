@@ -5,8 +5,8 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import Logo from '#lib/components/Logo.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
-	import { outbox } from '#lib/outbox.svelte.ts';
-	import { sensorQuery } from '#lib/sensor-selection.ts';
+	import { outbox } from '#lib/features/devices/outbox.svelte.ts';
+	import { sensorQuery } from '#lib/features/devices/sensor-selection.ts';
 	import { isMockDataSource } from '#lib/services/index.ts';
 
 	let { data, children } = $props();

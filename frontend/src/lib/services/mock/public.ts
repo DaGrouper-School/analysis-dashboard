@@ -1,5 +1,5 @@
-import { monthCompleteness } from '#lib/completeness.ts';
-import { coreReadings, stationCore } from '#lib/core-readings.ts';
+import { monthCompleteness } from '#lib/features/classroom/completeness.ts';
+import { coreReadings, stationCore } from '#lib/features/devices/core-readings.ts';
 import { readDb, type MockDbState, type StoredClassroom } from '#lib/data/mock-db.ts';
 import type {
 	InstitutionOverview,
@@ -14,11 +14,16 @@ import type {
 	PublicValue,
 	Reading
 } from '#lib/domain/types.ts';
-import { coarsen, FIELD_SOURCE } from '#lib/raw-data.ts';
-import { deviceSummary, last24Hours, nowTiles, readingTiles } from '#lib/station-now.ts';
-import { recentTrend } from '#lib/indicators.ts';
-import { keyValues } from '#lib/key-values.ts';
-import { deviceTypeColor, deviceTypeIcon, deviceTypeOf } from '#lib/labels.ts';
+import { coarsen, FIELD_SOURCE } from '#lib/features/measurements/raw-data.ts';
+import {
+	deviceSummary,
+	last24Hours,
+	nowTiles,
+	readingTiles
+} from '#lib/features/devices/station-now.ts';
+import { recentTrend } from '#lib/features/measurements/indicators.ts';
+import { keyValues } from '#lib/features/measurements/key-values.ts';
+import { deviceTypeColor, deviceTypeIcon, deviceTypeOf } from '#lib/utils/labels.ts';
 import { ServiceError, type PublicService } from '../types';
 import { permissionsFor, roleIn } from './classrooms';
 

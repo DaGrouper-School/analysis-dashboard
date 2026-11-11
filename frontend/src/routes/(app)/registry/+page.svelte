@@ -8,16 +8,16 @@
 		Parameter
 	} from '#lib/domain/types.ts';
 	import { validateDeviceType, validateDomain } from '#lib/domain/validation.ts';
-	import DefaultAlerts from '#lib/components/DefaultAlerts.svelte';
-	import ExplanationModal from '#lib/components/ExplanationModal.svelte';
+	import DefaultAlerts from '#lib/features/alerts/DefaultAlerts.svelte';
+	import ExplanationModal from '#lib/features/measurements/ExplanationModal.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import Modal from '#lib/components/Modal.svelte';
 	import Select, { type SelectOption } from '#lib/components/Select.svelte';
 	import IconPicker from '#lib/components/IconPicker.svelte';
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
 	import Wizard from '#lib/components/Wizard.svelte';
-	import { FALLBACK_TYPE_ICON } from '#lib/icons.ts';
-	import { DEVICE_TYPE_PALETTE } from '#lib/labels.ts';
+	import { FALLBACK_TYPE_ICON } from '#lib/utils/icons.ts';
+	import { DEVICE_TYPE_PALETTE } from '#lib/utils/labels.ts';
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
 

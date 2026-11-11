@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { theme, toggleTheme } from '#lib/theme.svelte.ts';
+	import { theme, toggleTheme } from '#lib/utils/theme.svelte.ts';
 
 	const next = $derived(theme.current === 'dark' ? 'light' : 'dark');
 </script>

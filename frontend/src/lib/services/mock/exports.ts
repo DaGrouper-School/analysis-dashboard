@@ -1,6 +1,13 @@
 import type { RawPage, RawQuery, RawRow } from '#lib/domain/types.ts';
 import { newId, readDb, type MockDbState } from '#lib/data/mock-db.ts';
-import { FIELD_SOURCE, coarsen, csvFilename, filterRows, sortRows, toCsv } from '#lib/raw-data.ts';
+import {
+	FIELD_SOURCE,
+	coarsen,
+	csvFilename,
+	filterRows,
+	sortRows,
+	toCsv
+} from '#lib/features/measurements/raw-data.ts';
 import { ServiceError, type ExportService } from '../types';
 import { currentUser, roleIn } from './classrooms';
 

@@ -18,9 +18,9 @@ import {
 	validateLab,
 	validateReading
 } from '#lib/domain/validation.ts';
-import { checkObservation, withDeviceTemplates } from '#lib/observations.ts';
+import { checkObservation, withDeviceTemplates } from '#lib/features/measurements/observations.ts';
 import { contributionBlock } from '#lib/domain/consent.ts';
-import { coarsen } from '#lib/raw-data.ts';
+import { coarsen } from '#lib/features/measurements/raw-data.ts';
 import { newId, readDb, updateDb, type MockDbState, type StoredDevice } from '#lib/data/mock-db.ts';
 import { ServiceError, type LabService } from '../types';
 import { currentUser, permissionsFor, roleIn } from './classrooms';

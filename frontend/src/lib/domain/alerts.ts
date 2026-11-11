@@ -1,5 +1,5 @@
-import { formatValue } from '#lib/key-values.ts';
-import { rangeText } from '#lib/observations.ts';
+import { formatValue } from '#lib/features/measurements/key-values.ts';
+import { rangeText } from '#lib/features/measurements/observations.ts';
 import type {
 	AlertLevel,
 	AlertRule,

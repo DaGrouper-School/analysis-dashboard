@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { resetDb } from '#lib/data/mock-db.ts';
-import { CSV_COLUMNS } from '#lib/raw-data.ts';
+import { CSV_COLUMNS } from '#lib/features/measurements/raw-data.ts';
 import { createMockServices } from './index';
 
 const services = createMockServices({

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { sectionQuery } from '#lib/sensor-selection.ts';
+	import { sectionQuery } from '#lib/features/devices/sensor-selection.ts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import LabForm from '#lib/components/LabForm.svelte';
-	import SetupSteps from '#lib/components/SetupSteps.svelte';
+	import LabForm from '#lib/features/devices/LabForm.svelte';
+	import SetupSteps from '#lib/features/classroom/SetupSteps.svelte';
 	import type { CreateLabInput } from '#lib/domain/types.ts';
 	import { services } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';

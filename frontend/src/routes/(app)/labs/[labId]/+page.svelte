@@ -1,25 +1,25 @@
 <script lang="ts">
-	import { sectionQuery } from '#lib/sensor-selection.ts';
-	import ContributorId from '#lib/components/ContributorId.svelte';
+	import { sectionQuery } from '#lib/features/devices/sensor-selection.ts';
+	import ContributorId from '#lib/features/consent/ContributorId.svelte';
 	import { invalidate } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { SvelteMap } from 'svelte/reactivity';
 	import Icon from '#lib/components/Icon.svelte';
-	import RegisterSensorModal from '#lib/components/RegisterSensorModal.svelte';
-	import SetupSteps from '#lib/components/SetupSteps.svelte';
-	import SyncModal from '#lib/components/SyncModal.svelte';
+	import RegisterSensorModal from '#lib/features/devices/RegisterSensorModal.svelte';
+	import SetupSteps from '#lib/features/classroom/SetupSteps.svelte';
+	import SyncModal from '#lib/features/devices/SyncModal.svelte';
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
 	import type { Reading } from '#lib/domain/types.ts';
 	import { distanceKm } from '#lib/domain/validation.ts';
-	import { formatPoint } from '#lib/geo.ts';
+	import { formatPoint } from '#lib/features/map/geo.ts';
 	import {
 		deviceTypeColor,
 		deviceTypeIcon,
 		deviceTypeLabel,
 		isManualType,
 		SITE_SETTING_LABELS
-	} from '#lib/labels.ts';
-	import { formatValue } from '#lib/key-values.ts';
+	} from '#lib/utils/labels.ts';
+	import { formatValue } from '#lib/features/measurements/key-values.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
 

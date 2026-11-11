@@ -1,7 +1,7 @@
 import { resolve } from '$app/paths';
 import { redirect } from '@sveltejs/kit';
-import { nextRoute } from '#lib/routing.ts';
-import { loadClassroomMarkers } from '#lib/globe-markers.ts';
+import { nextRoute } from '#lib/utils/routing.ts';
+import { loadClassroomMarkers } from '#lib/features/map/globe-markers.ts';
 import type { LayoutLoad } from './$types';
 
 // Signed-in users skip sign-up (AP-01: existing users go straight to /dashboard).

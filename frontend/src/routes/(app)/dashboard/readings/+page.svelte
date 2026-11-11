@@ -1,14 +1,14 @@
 <script lang="ts">
-	import ContributorId from '#lib/components/ContributorId.svelte';
+	import ContributorId from '#lib/features/consent/ContributorId.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
 	import Select from '#lib/components/Select.svelte';
 	import type { RawSortKey } from '#lib/domain/types.ts';
-	import { formatPoint } from '#lib/geo.ts';
-	import { describeParameter, formatValue } from '#lib/key-values.ts';
-	import { PAGE_SIZE, UTF8_BOM } from '#lib/raw-data.ts';
-	import { sensorQuery } from '#lib/sensor-selection.ts';
+	import { formatPoint } from '#lib/features/map/geo.ts';
+	import { describeParameter, formatValue } from '#lib/features/measurements/key-values.ts';
+	import { PAGE_SIZE, UTF8_BOM } from '#lib/features/measurements/raw-data.ts';
+	import { sensorQuery } from '#lib/features/devices/sensor-selection.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
 

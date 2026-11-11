@@ -1,19 +1,29 @@
 <script lang="ts">
-	import ParticipantIdNote from '#lib/components/ParticipantIdNote.svelte';
-	import ContributorId from '#lib/components/ContributorId.svelte';
+	import ParticipantIdNote from '#lib/features/consent/ParticipantIdNote.svelte';
+	import ContributorId from '#lib/features/consent/ContributorId.svelte';
 	import { resolve } from '$app/paths';
 	import type { GeoPoint, ObservationTemplate, Parameter } from '#lib/domain/types.ts';
-	import { formatPoint } from '#lib/geo.ts';
-	import { formatValue } from '#lib/key-values.ts';
+	import { formatPoint } from '#lib/features/map/geo.ts';
+	import { formatValue } from '#lib/features/measurements/key-values.ts';
 	import Icon from '#lib/components/Icon.svelte';
 	import Select, { toOptions } from '#lib/components/Select.svelte';
-	import SyncStatus from '#lib/components/SyncStatus.svelte';
+	import SyncStatus from '#lib/features/devices/SyncStatus.svelte';
 	import Wizard from '#lib/components/Wizard.svelte';
-	import { FALLBACK_DOMAIN_ICON } from '#lib/icons.ts';
-	import { deviceOptions, deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
-	import { rangeText, readEntries, unitsFor, type FieldEntry } from '#lib/observations.ts';
-	import { outbox } from '#lib/outbox.svelte.ts';
-	import { clockMessage, type OutboxEntry } from '#lib/outbox.ts';
+	import { FALLBACK_DOMAIN_ICON } from '#lib/utils/icons.ts';
+	import {
+		deviceOptions,
+		deviceTypeColor,
+		deviceTypeIcon,
+		deviceTypeLabel
+	} from '#lib/utils/labels.ts';
+	import {
+		rangeText,
+		readEntries,
+		unitsFor,
+		type FieldEntry
+	} from '#lib/features/measurements/observations.ts';
+	import { outbox } from '#lib/features/devices/outbox.svelte.ts';
+	import { clockMessage, type OutboxEntry } from '#lib/features/devices/outbox.ts';
 	import { contributionBlock } from '#lib/domain/consent.ts';
 	import { errorMessage } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';

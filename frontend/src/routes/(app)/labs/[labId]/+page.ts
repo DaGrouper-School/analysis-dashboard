@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { rememberClassroom } from '#lib/classroom-context.ts';
+import { rememberClassroom } from '#lib/features/classroom/classroom-context.ts';
 import { services, ServiceError } from '#lib/services/index.ts';
 import type { PageLoad } from './$types';
 

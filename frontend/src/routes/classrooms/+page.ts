@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import { resolve } from '$app/paths';
-import { filterClassrooms, readFilter } from '#lib/directory.ts';
+import { filterClassrooms, readFilter } from '#lib/features/classroom/directory.ts';
 import { services } from '#lib/services/index.ts';
 import type { PageLoad } from './$types';
 

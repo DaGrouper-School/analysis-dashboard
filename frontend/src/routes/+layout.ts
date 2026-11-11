@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import { resolve } from '$app/paths';
 import { services } from '#lib/services/index.ts';
-import { sectionQuery, sensorQuery } from '#lib/sensor-selection.ts';
+import { sectionQuery, sensorQuery } from '#lib/features/devices/sensor-selection.ts';
 import type { LayoutLoad } from './$types';
 
 // Front-end only for now: render in the browser so the mock layer can use localStorage.

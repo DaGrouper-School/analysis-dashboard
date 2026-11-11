@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import LabForm from '#lib/components/LabForm.svelte';
+	import LabForm from '#lib/features/devices/LabForm.svelte';
 	import type { CreateLabInput } from '#lib/domain/types.ts';
 	import { services } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';

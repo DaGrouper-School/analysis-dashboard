@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from '#lib/components/Icon.svelte';
-	import { iconLabel, REGISTRY_ICON_NAMES } from '#lib/icons.ts';
+	import { iconLabel, REGISTRY_ICON_NAMES } from '#lib/utils/icons.ts';
 
 	/** Picks a registry icon for a device type or domain. Tinted with `color` when given. */
 	let {

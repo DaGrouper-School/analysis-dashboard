@@ -54,6 +54,11 @@ src/lib/
     mock/        localStorage-backed implementation that behaves like the backend
     http/        fetch-based sketch of the real implementation (proposed endpoints)
   data/          mock database (localStorage persistence) and seed data
+  components/    shared UI with no product knowledge (Select, Modal, Chart, Icon...)
+  features/      one folder per product area: auth, classroom, devices, alerts,
+                 measurements, map, consent, places (components and logic side by side)
+  views/         blocks that combine several features, shared by pages (ClassroomOverview)
+  utils/         small helpers (routing, labels, icons, theme...)
 ```
 
 Pages never touch localStorage or fetch directly. They call `services.*` from
@@ -96,7 +101,7 @@ chart and the domain views' 24 h, 7 d and 30 d ranges have a history. UV, solar 
 brightness follow the sun through the day.
 Each sensor type shows its own key values on the dashboard and map: temperature, wind, rain and
 UV for a weather station, soil moisture and temperature for a soil sensor, and so on
-(`src/lib/key-values.ts`).
+(`src/lib/features/measurements/key-values.ts`).
 
 Device types, environmental domains and which domain each value shows under live in a shared
 registry. Only the platform admin (Leila M.) changes it, on the Registry page: add or edit a

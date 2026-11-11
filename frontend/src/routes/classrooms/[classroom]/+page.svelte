@@ -3,12 +3,16 @@
 	import { resolve } from '$app/paths';
 	import { navigating, page } from '$app/state';
 	import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
-	import ClassroomFilter from '#lib/components/ClassroomFilter.svelte';
-	import ClassroomOverview from '#lib/components/ClassroomOverview.svelte';
+	import ClassroomFilter from '#lib/features/classroom/ClassroomFilter.svelte';
+	import ClassroomOverview from '#lib/views/ClassroomOverview.svelte';
 	import PublicShell from '#lib/components/PublicShell.svelte';
 	import SampleDataBadge from '#lib/components/SampleDataBadge.svelte';
-	import { filterClassrooms, filterQuery, type DirectoryFilter } from '#lib/directory.ts';
-	import { pickDevice, placeLabel } from '#lib/station-now.ts';
+	import {
+		filterClassrooms,
+		filterQuery,
+		type DirectoryFilter
+	} from '#lib/features/classroom/directory.ts';
+	import { pickDevice, placeLabel } from '#lib/features/devices/station-now.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();

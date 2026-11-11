@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import AuthShell from '#lib/components/AuthShell.svelte';
-	import { isProfileStepDone } from '#lib/routing.ts';
+	import AuthShell from '#lib/features/auth/AuthShell.svelte';
+	import { isProfileStepDone } from '#lib/utils/routing.ts';
 
 	let { data, children } = $props();
 

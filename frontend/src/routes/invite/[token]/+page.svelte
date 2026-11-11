@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { goto, invalidate } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import AuthShell from '#lib/components/AuthShell.svelte';
-	import { CLASSROOM_ROLE_LABELS } from '#lib/labels.ts';
-	import { savePendingInvite } from '#lib/pending-invite.ts';
-	import { sensorQuery } from '#lib/sensor-selection.ts';
-	import { nextRoute } from '#lib/routing.ts';
+	import AuthShell from '#lib/features/auth/AuthShell.svelte';
+	import { CLASSROOM_ROLE_LABELS } from '#lib/utils/labels.ts';
+	import { savePendingInvite } from '#lib/features/auth/pending-invite.ts';
+	import { sensorQuery } from '#lib/features/devices/sensor-selection.ts';
+	import { nextRoute } from '#lib/utils/routing.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
 

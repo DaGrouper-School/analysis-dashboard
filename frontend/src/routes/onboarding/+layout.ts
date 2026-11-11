@@ -1,6 +1,6 @@
 import { resolve } from '$app/paths';
 import { redirect } from '@sveltejs/kit';
-import { loadClassroomMarkers } from '#lib/globe-markers.ts';
+import { loadClassroomMarkers } from '#lib/features/map/globe-markers.ts';
 import type { LayoutLoad } from './$types';
 
 export const load: LayoutLoad = async ({ parent }) => {

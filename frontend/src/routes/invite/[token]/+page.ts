@@ -1,5 +1,5 @@
 import { services, ServiceError } from '#lib/services/index.ts';
-import { loadClassroomMarkers } from '#lib/globe-markers.ts';
+import { loadClassroomMarkers } from '#lib/features/map/globe-markers.ts';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ params }) => {
