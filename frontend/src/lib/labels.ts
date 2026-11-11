@@ -1,5 +1,6 @@
 import type {
 	ClassroomRole,
+	ClassroomStage,
 	DeviceType,
 	DeviceTypeDefinition,
 	SiteSetting
@@ -51,6 +52,11 @@ const UNKNOWN_TYPE_COLOR = DEVICE_TYPE_PALETTE.at(-1)!;
  */
 export function deviceTypeColor(types: DeviceTypeDefinition[], id: DeviceType) {
 	return types.find((t) => t.id === id)?.color ?? UNKNOWN_TYPE_COLOR;
+}
+
+/** A classroom stage's marker and badge color, read from the site's stages like a type's. */
+export function stageColor(stages: ClassroomStage[], id: string) {
+	return stages.find((s) => s.id === id)?.color ?? UNKNOWN_TYPE_COLOR;
 }
 
 /** A device type's icon name, read from the registry like its color. */

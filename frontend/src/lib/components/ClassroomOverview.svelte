@@ -24,6 +24,7 @@
 	import NowCard from '#lib/components/NowCard.svelte';
 	import StageBadge from '#lib/components/StageBadge.svelte';
 	import type { InstitutionOverview as InstitutionInfo, NowTile } from '#lib/domain/types.ts';
+	import { stageColor } from '#lib/labels.ts';
 
 	/**
 	 * A classroom at a glance (AP-43, AP-45), the same on its public page and on the dashboard:
@@ -37,12 +38,11 @@
 		tabs,
 		tabsLabel,
 		pendingId,
-		markers,
+		markerLabel,
 		eyebrow,
 		badges,
 		headerActions,
 		tabsEnd,
-		globeLegend,
 		nowActions,
 		nowControls,
 		now,
@@ -57,7 +57,8 @@
 		tabsLabel: string;
 		/** The classroom being opened, or the one shown when nothing is loading. */
 		pendingId: string;
-		markers: GlobeMarker[];
+		/** A classroom's name on the globe, such as "· yours" on the dashboard. */
+		markerLabel?: (place: ShownPlace) => string;
 		/** Above the title: a breadcrumb or a greeting, for the classroom being opened. */
 		eyebrow?: Snippet<[ShownPlace]>;
 		/** Beside the stage, such as the viewer's role. */
@@ -65,7 +66,6 @@
 		headerActions?: Snippet;
 		/** After the classroom tabs, such as "Join or start one". */
 		tabsEnd?: Snippet;
-		globeLegend?: Snippet;
 		nowActions?: Snippet;
 		/** Beside "What's happening now?", such as the dashboard's device picker. */
 		nowControls?: Snippet;
@@ -125,6 +125,20 @@
 		const id = globeSelected;
 		if (id && id !== untrack(() => pendingId)) onpick?.(id);
 	});
+	// Every classroom with a place, in its stage's colour from the site's stages, with a legend.
+	const stages = $derived(station.content.stages);
+	const markers = $derived<GlobeMarker[]>(
+		station.places
+			.filter((p) => p.location)
+			.map((p) => ({
+				id: p.id,
+				lat: p.location!.lat,
+				lng: p.location!.lng,
+				color: stageColor(stages, p.stageId),
+				label: markerLabel?.(p) ?? p.name
+			}))
+	);
+	const legend = $derived(stages.filter((s) => station.places.some((p) => p.stageId === s.id)));
 	const pill = $derived(markers.find((m) => m.id === globeSelected)?.label ?? shown.name);
 </script>
 
@@ -193,6 +207,7 @@
 	>
 		<NowCard
 			tiles={now ?? station.now}
+			released={!now}
 			{accent}
 			actions={nowActions}
 			controls={nowControls}
@@ -211,13 +226,18 @@
 						ariaLabel="Globe of classrooms, turned to {shown.name}"
 					/>
 				</div>
-				{#if globeLegend}
-					<div
+				{#if legend.length}
+					<ul
 						class="pointer-events-none absolute top-4 left-4 flex flex-wrap gap-3 text-xs text-text"
-						aria-hidden="true"
+						aria-label="Stages"
 					>
-						{@render globeLegend()}
-					</div>
+						{#each legend as stage (stage.id)}
+							<li class="flex items-center gap-1.5">
+								<span class="size-2.5 rounded-full" style:background-color={stage.color}></span>
+								{stage.label}
+							</li>
+						{/each}
+					</ul>
 				{/if}
 				<span
 					class="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-line-strong bg-surface px-3 py-1 text-xs whitespace-nowrap text-ink"

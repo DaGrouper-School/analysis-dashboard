@@ -13,6 +13,7 @@
 	 */
 	let {
 		tiles,
+		released = true,
 		accent,
 		actions,
 		controls,
@@ -20,6 +21,8 @@
 		class: className = ''
 	}: {
 		tiles: NowTile[];
+		/** Released data only (the public view); false for a device's own latest readings. */
+		released?: boolean;
 		/** Tints the card, its icons and lines, such as the picked device's registry colour. */
 		accent?: string;
 		/** Buttons under the tiles, such as "View domains". */
@@ -62,9 +65,9 @@
 				class="font-semibold text-text"
 				datetime={latest}
 				title={dateTime.format(new Date(latest))}>{timeAgo(latest)}</time
-			> · released data
+			>{released ? ' · released data' : ''}
 		{:else}
-			No released data yet
+			{released ? 'No released data yet' : 'No readings yet'}
 		{/if}
 	</p>
 

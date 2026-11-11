@@ -34,6 +34,7 @@
 		labLocation,
 		lastGps,
 		parameters = [],
+		onsynced,
 		onclose
 	}: {
 		open?: boolean;
@@ -47,6 +48,8 @@
 		lastGps: (deviceId: string) => GeoPoint | null;
 		/** The parameter registry, for labelling values. */
 		parameters?: Parameter[];
+		/** Runs once every reading is saved, so the page behind can show them straight away. */
+		onsynced?: () => unknown;
 		onclose: () => unknown;
 	} = $props();
 
@@ -154,6 +157,7 @@
 				if (!live()) return;
 			}
 			phase = 'done';
+			onsynced?.();
 		} catch (e) {
 			error = errorMessage(e);
 			phase = 'error';

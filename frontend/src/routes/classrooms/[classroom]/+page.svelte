@@ -8,7 +8,6 @@
 	import ClassroomCompleteness from '#lib/components/ClassroomCompleteness.svelte';
 	import ClassroomOverview from '#lib/components/ClassroomOverview.svelte';
 	import DomainBrowser from '#lib/components/DomainBrowser.svelte';
-	import type { GlobeMarker } from '#lib/components/Globe.svelte';
 	import PublicShell from '#lib/components/PublicShell.svelte';
 	import SampleDataBadge from '#lib/components/SampleDataBadge.svelte';
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
@@ -43,17 +42,7 @@
 		sectionsEl?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
 	}
 
-	// Every public classroom as a tab and on the globe, coloured by its stage.
-	const stageColor = $derived(new Map(data.content.stages.map((s) => [s.id, s.color])));
-	const markers = $derived<GlobeMarker[]>(
-		data.places.map((p) => ({
-			id: p.id,
-			lat: p.location!.lat,
-			lng: p.location!.lng,
-			color: stageColor.get(p.stageId) ?? '#8e98a3',
-			label: p.name
-		}))
-	);
+	// Every public classroom as a tab.
 	const tabs = $derived(
 		data.places.map((p) => ({
 			id: p.id,
@@ -72,14 +61,7 @@
 <svelte:head><title>{classroom.name} · {data.content.hero.eyebrow}</title></svelte:head>
 
 <PublicShell content={data.content} user={data.user}>
-	<ClassroomOverview
-		station={data}
-		{tabs}
-		tabsLabel="Locations"
-		{pendingId}
-		{markers}
-		onpick={pick}
-	>
+	<ClassroomOverview station={data} {tabs} tabsLabel="Locations" {pendingId} onpick={pick}>
 		{#snippet eyebrow(shown)}
 			<div class="flex flex-wrap items-center justify-between gap-3">
 				<Breadcrumbs

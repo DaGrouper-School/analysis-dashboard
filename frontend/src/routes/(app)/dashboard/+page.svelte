@@ -11,7 +11,6 @@
 	import ClassroomPeople from '#lib/components/ClassroomPeople.svelte';
 	import ClassroomSettings from '#lib/components/ClassroomSettings.svelte';
 	import DomainBrowser from '#lib/components/DomainBrowser.svelte';
-	import type { GlobeMarker } from '#lib/components/Globe.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
 	import SyncModal from '#lib/components/SyncModal.svelte';
@@ -125,15 +124,8 @@
 
 	// ---- The shared overview ---------------------------------------------------------------
 	const mine = $derived(new Set(data.classrooms.map((c) => c.id)));
-	const markers = $derived<GlobeMarker[]>(
-		(station?.places ?? []).map((p) => ({
-			id: p.id,
-			lat: p.location!.lat,
-			lng: p.location!.lng,
-			color: mine.has(p.id) ? '#3cc04b' : '#8e98a3',
-			label: mine.has(p.id) ? `${p.name} · yours` : `${p.name} · public data only`
-		}))
-	);
+	const markerLabel = (p: { id: string; name: string }) =>
+		`${p.name} · ${mine.has(p.id) ? 'yours' : 'public data only'}`;
 	const tabs = $derived<ClassroomTab[]>([
 		...data.classrooms.map((c) => ({ id: c.id, label: c.name, href: dashboardHref(c.id) })),
 		...(visiting
@@ -184,6 +176,10 @@
 	function lastGps() {
 		return data.readings.find((r) => r.locationSource === 'device')?.location ?? null;
 	}
+	// The sensor shown can be synced here: a recorder, a lab to fall back on, not entered by hand.
+	const canSync = $derived(
+		!!classroom && !!device && data.canRecord && !!data.labLocation && !manual
+	);
 	const conditionOf = (id: string) => data.classroomConditions.find((c) => c.device.id === id);
 </script>
 
@@ -215,7 +211,7 @@
 		{tabs}
 		tabsLabel="Your classrooms"
 		{pendingId}
-		{markers}
+		{markerLabel}
 		{now}
 		accent={now && device ? deviceTypeColor(data.deviceTypes, device.type) : undefined}
 		onexplain={explain}
@@ -244,14 +240,6 @@
 				><Icon name="plus" class="size-4" /> Join or start one</a
 			>
 		{/snippet}
-		{#snippet globeLegend()}
-			<span class="flex items-center gap-1.5"
-				><span class="size-2.5 rounded-full bg-lime"></span>Your classrooms</span
-			>
-			<span class="flex items-center gap-1.5"
-				><span class="size-2 rounded-full bg-muted"></span>Public data only</span
-			>
-		{/snippet}
 		{#snippet nowControls()}
 			{#if classroom && data.devices.length}
 				<label class="flex items-center gap-2 text-xs text-muted">
@@ -269,6 +257,15 @@
 			{/if}
 		{/snippet}
 		{#snippet nowActions()}
+			{#if canSync && device}
+				{@const id = device.id}
+				<button
+					type="button"
+					class="btn btn-primary w-full rounded-full"
+					aria-haspopup="dialog"
+					onclick={() => sync(id)}><Icon name="sync" class="size-4" /> Sync this device</button
+				>
+			{/if}
 			<button
 				type="button"
 				class="btn btn-ghost flex-1 rounded-full"
@@ -510,7 +507,7 @@
 		</section>
 	</ClassroomOverview>
 
-	{#if classroom && device && data.canRecord && data.labLocation && !manual}
+	{#if canSync && classroom && device && data.labLocation}
 		<!-- Keyed by sensor, so a new pick never syncs to the sensor the user moved away from. -->
 		{#key device.id}
 			<SyncModal
@@ -521,6 +518,7 @@
 				labLocation={data.labLocation}
 				{lastGps}
 				parameters={data.parameters}
+				onsynced={() => invalidateAll()}
 				onclose={() => invalidateAll()}
 			/>
 		{/key}
