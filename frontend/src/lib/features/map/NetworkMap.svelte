@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import Globe, { type GlobeMarker } from '#lib/features/map/Globe.svelte';
+	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import StageBadge from '#lib/components/StageBadge.svelte';
 	import type { ClassroomStage, PublicClassroom } from '#lib/domain/types.ts';
 	import { classroomMarkers } from '#lib/features/map/globe-markers.ts';

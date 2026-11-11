@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { sectionQuery } from '#lib/features/devices/sensor-selection.ts';
+	import { sectionQuery } from '#lib/utils/sensor-selection.ts';
 	import { resolve } from '$app/paths';
 	import PendingInvitations from '#lib/features/classroom/PendingInvitations.svelte';
 	import Icon from '#lib/components/Icon.svelte';

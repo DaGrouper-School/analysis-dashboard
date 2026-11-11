@@ -4,7 +4,7 @@
 	import AuthShell from '#lib/features/auth/AuthShell.svelte';
 	import { CLASSROOM_ROLE_LABELS } from '#lib/utils/labels.ts';
 	import { savePendingInvite } from '#lib/features/auth/pending-invite.ts';
-	import { sensorQuery } from '#lib/features/devices/sensor-selection.ts';
+	import { sensorQuery } from '#lib/utils/sensor-selection.ts';
 	import { nextRoute } from '#lib/utils/routing.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';

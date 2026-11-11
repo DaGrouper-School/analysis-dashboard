@@ -73,6 +73,25 @@ becomes an HTTP-only cookie set by the server (AP-02), so the front end never ha
 the mock is an account picker that returns a fake ID token; the real flow uses Google Identity
 Services and the backend verifies the token.
 
+## Where code goes
+
+Folder layout follows [Bulletproof React](https://github.com/alan2207/bulletproof-react/blob/master/docs/project-structure.md) and the [SvelteKit project structure](https://svelte.dev/docs/kit/project-structure). Code style follows the [Airbnb guide](https://github.com/airbnb/javascript) as far as ESLint and Prettier enforce it.
+
+| A new file that...                                        | goes in                                                       |
+| --------------------------------------------------------- | ------------------------------------------------------------- |
+| knows nothing about the product (button, dropdown, chart) | `lib/components`                                              |
+| is a small helper with no product knowledge               | `lib/utils`                                                   |
+| belongs to one product area                               | `lib/features/<area>`: auth, classroom, devices or alerts     |
+| is product logic several areas use                        | `lib/features/<shared>`: measurements, map, consent or places |
+| combines several areas, used by more than one page        | `lib/views`                                                   |
+| is used by one page only                                  | that route's folder, until a second page needs it             |
+
+- Product areas never import each other. Pages and `lib/views` combine them. Shared features never import an area, and components and utils never import any feature. ESLint enforces this (`no-restricted-imports` in `eslint.config.js`).
+- A file over 300 lines gets a lint warning. Split it by what the reader sees (one component per section or tab), move logic into tested `.ts` modules, and keep data loading in the page.
+- A component file is PascalCase and matches what it exports. A module is kebab-case. A test sits beside its file as `*.spec.ts`.
+- Imports use the `#lib/...` alias with the file extension. No barrel (`index.ts`) files.
+- Data only comes from `services`, colours and icons from the registry, and each UI pattern has one shared component.
+
 ## Routes
 
 | Route                 | Story                                                    |

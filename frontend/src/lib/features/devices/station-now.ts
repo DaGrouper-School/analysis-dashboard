@@ -44,22 +44,6 @@ export function placeLabel(placeName: string | null, country: string | null): st
 	return [town, country].filter((part, i, all) => part && all.indexOf(part) === i).join(', ');
 }
 
-/** Up to two initials for a photo placeholder: "Bay Street School" is "BS". */
-export function initials(name: string): string {
-	const words = name.split(/[\s,]+/).filter((w) => /^\p{Lu}/u.test(w));
-	return (words.length ? words : name.split(/\s+/))
-		.slice(0, 2)
-		.map((w) => w[0]?.toUpperCase() ?? '')
-		.join('');
-}
-
-/** A rounded position as "9.03° N, 38.74° E". */
-export function formatCoordinates(location: { lat: number; lng: number }): string {
-	const part = (value: number, positive: string, negative: string) =>
-		`${Math.abs(value).toFixed(2)}° ${value >= 0 ? positive : negative}`;
-	return `${part(location.lat, 'N', 'S')}, ${part(location.lng, 'E', 'W')}`;
-}
-
 /**
  * "What's happening now?" tiles (AP-43) from the latest released values: per tile, the first
  * configured parameter with a value, the newest across sources, or the classroom's core reading

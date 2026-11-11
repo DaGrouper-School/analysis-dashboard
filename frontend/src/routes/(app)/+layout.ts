@@ -1,6 +1,6 @@
 import { resolve } from '$app/paths';
 import { redirect } from '@sveltejs/kit';
-import { contextClassroom } from '#lib/features/classroom/classroom-context.ts';
+import { contextClassroom } from '#lib/utils/classroom-context.ts';
 import { services } from '#lib/services/index.ts';
 import { nextRoute } from '#lib/utils/routing.ts';
 import type { LayoutLoad } from './$types';

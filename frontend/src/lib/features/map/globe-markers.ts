@@ -1,4 +1,4 @@
-import type { GlobeMarker } from '#lib/features/map/Globe.svelte';
+import type { GlobeMarker } from '#lib/components/Globe.svelte';
 import type { ClassroomStage, PublicClassroom } from '#lib/domain/types.ts';
 import { stageColor } from '#lib/utils/labels.ts';
 import { services } from '#lib/services/index.ts';

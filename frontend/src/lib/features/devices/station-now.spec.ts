@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { NowTileConfig, Parameter, PublicValue } from '#lib/domain/types.ts';
 import {
 	compassPoint,
-	formatCoordinates,
-	initials,
 	last24Hours,
 	nowTiles,
 	placeLabel,
@@ -23,13 +21,6 @@ describe('station now helpers (AP-43)', () => {
 		expect(placeLabel('Trinity School, Addis Ababa', 'Ethiopia')).toBe('Addis Ababa, Ethiopia');
 		expect(placeLabel(null, 'Somalia')).toBe('Somalia');
 		expect(placeLabel('Nassau', 'Nassau')).toBe('Nassau');
-	});
-
-	it('makes initials and coordinates', () => {
-		expect(initials('Bay Street School')).toBe('BS');
-		expect(initials('Trinity School, Addis Ababa')).toBe('TS');
-		expect(formatCoordinates({ lat: 9.0301, lng: 38.7401 })).toBe('9.03° N, 38.74° E');
-		expect(formatCoordinates({ lat: 25.08, lng: -77.34 })).toBe('25.08° N, 77.34° W');
 	});
 
 	it('says how long ago', () => {

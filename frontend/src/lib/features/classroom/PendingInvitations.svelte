@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { sectionQuery } from '#lib/features/devices/sensor-selection.ts';
+	import { sectionQuery } from '#lib/utils/sensor-selection.ts';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { InvitationPreview } from '#lib/domain/types.ts';

@@ -2,7 +2,8 @@
 	import type { Snippet } from 'svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import type { InstitutionOverview } from '#lib/domain/types.ts';
-	import { formatCoordinates, initials } from '#lib/features/devices/station-now.ts';
+	import { formatCoordinates } from '#lib/features/map/geo.ts';
+	import { initials } from '#lib/utils/format.ts';
 
 	/**
 	 * Who runs a classroom and what its community does (AP-43): the institution's photo, or a
