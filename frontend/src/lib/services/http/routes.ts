@@ -228,6 +228,38 @@ export const routes: Route[] = [
 			'Institution head only. A null image removes the photo. The backend stores the image and returns its URL.'
 	},
 	{
+		method: 'classrooms.updateSharing',
+		http: 'PUT',
+		path: '/classrooms/{classroomId}/sharing',
+		access: 'user',
+		body: 'SharingInput',
+		response: 'SharingInput',
+		errors: [400],
+		notes:
+			'Institution head (and platform admins) only. The sharing settings decide who sees the data and what facilitators may do; the permissions follow them.'
+	},
+	{
+		method: 'classrooms.releaseReview',
+		http: 'GET',
+		path: '/classrooms/{classroomId}/release',
+		access: 'user',
+		response: 'ReleaseReview',
+		errors: [404],
+		notes:
+			'Whoever may release data: the institution head, and facilitators when the head allows it. Readings observed after the release cutoff, by source.'
+	},
+	{
+		method: 'classrooms.releaseData',
+		http: 'POST',
+		path: '/classrooms/{classroomId}/release',
+		access: 'user',
+		body: '{ through: string }',
+		response: 'ReleaseReview',
+		errors: [400, 404],
+		notes:
+			'Releases everything observed up to `through` (never later than now) to the public. The cutoff never moves back.'
+	},
+	{
 		method: 'classrooms.invite',
 		http: 'POST',
 		path: '/classrooms/{classroomId}/invitations',

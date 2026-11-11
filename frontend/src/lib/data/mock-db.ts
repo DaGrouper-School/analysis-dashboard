@@ -13,6 +13,7 @@ import type {
 	RegistryChange,
 	ClassroomProfile,
 	ClassroomRole,
+	ClassroomSharing,
 	InvitationStatus,
 	Parameter,
 	DeviceType,
@@ -57,6 +58,8 @@ export interface StoredClassroom {
 	regionId: string | null;
 	/** Readings observed up to here are released to the public; null while none are. */
 	releasedThrough: string | null;
+	/** Who sees its data and what its facilitators may do, set by its head. */
+	sharing: ClassroomSharing;
 	/** What its public profile shows (AP-29). */
 	profile: ClassroomProfile;
 }
@@ -197,7 +200,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 37;
+const VERSION = 38;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;

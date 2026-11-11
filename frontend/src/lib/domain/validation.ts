@@ -10,8 +10,10 @@ import type {
 	ProfileInput,
 	ReadingInput,
 	RegisterDeviceInput,
+	SharingInput,
 	UpdateClassroomInput
 } from './types';
+import { MAX_AUTO_RELEASE_DAYS } from './permissions';
 import { isRegistryIcon } from '#lib/utils/icons.ts';
 
 /** Normalises a phone number to E.164 (`+2519…`), or returns null when it is not valid. */
@@ -96,6 +98,28 @@ export function validateClassroomUpdate(input: UpdateClassroomInput): Record<str
 	if (input.name.trim().length < 3) errors.name = 'Enter a classroom name.';
 	if (input.institutionName.trim().length < 2)
 		errors.institutionName = 'Enter the institution name.';
+	return errors;
+}
+
+/** A classroom's sharing settings and data terms, as its head sets them in Settings. */
+export function validateSharing(input: SharingInput): Record<string, string> {
+	const errors: Record<string, string> = {};
+	const days = input.sharing.autoReleaseDays;
+	if (
+		input.sharing.review === 'auto' &&
+		(!Number.isInteger(days) || days < 1 || days > MAX_AUTO_RELEASE_DAYS)
+	) {
+		errors.autoReleaseDays = `Choose 1 to ${MAX_AUTO_RELEASE_DAYS} days.`;
+	}
+	const decimals = input.terms.coordinateDecimals;
+	if (decimals !== null && (!Number.isInteger(decimals) || decimals < 0 || decimals > 6)) {
+		errors.coordinateDecimals = 'Choose 0 to 6 decimal places.';
+	}
+	if (!input.terms.licence.trim()) errors.licence = 'Enter the licence.';
+	if (!input.terms.attribution.trim()) errors.attribution = 'Enter how to credit the data.';
+	const url = input.terms.licenceUrl?.trim();
+	if (url && !/^https?:\/\/\S+$/.test(url))
+		errors.licenceUrl = 'Enter a web address, or leave it empty.';
 	return errors;
 }
 

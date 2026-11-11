@@ -2,7 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import { resolve } from '$app/paths';
 import { services } from '#lib/services/index.ts';
 import { selectSensor } from '#lib/utils/sensor-selection.ts';
-import type { MemberConsent, RawRow } from '#lib/domain/types.ts';
+import type { MemberConsent, RawRow, ReleaseReview } from '#lib/domain/types.ts';
 import type { PageLoad } from './$types';
 import type { PageLoad as DetailsLoad } from './details/$types';
 
@@ -47,9 +47,10 @@ export async function loadDashboard({
 	const aboutLoading = shownId ? services.publicSite.profile(shownId).catch(() => null) : null;
 	// Hand-entered devices and field observations are what people record; a station sends its own.
 	const manual = devices.filter((d) => deviceTypes.find((t) => t.id === d.type)?.manual);
-	const [readings, lab, labs, station, consent, records, detail] = await Promise.all([
-		// A week of readings: the tiles' last 24 hours and the cards' last 7 days.
-		device ? services.labs.deviceReadings(device.id, 400) : [],
+	const [readings, lab, labs, station, consent, records, detail, release] = await Promise.all([
+		// The device's recent readings, for the last GPS position a sync starts from. Its tiles
+		// and cards come with the station, the same as on the public page.
+		device ? services.labs.deviceReadings(device.id, 50) : [],
 		device ? services.labs.get(device.labId) : null,
 		classroom ? services.labs.listForClassroom(classroom.id) : [],
 		classroom ? services.publicSite.station(classroom.id) : null,
@@ -74,7 +75,11 @@ export async function loadDashboard({
 				)
 			: [],
 		// Members, invitations and settings for the People and Settings tabs.
-		classroom ? services.classrooms.get(classroom.id) : null
+		classroom ? services.classrooms.get(classroom.id) : null,
+		// What waits for review, for whoever may release it; nobody else is told.
+		classroom
+			? services.classrooms.releaseReview(classroom.id).catch((): ReleaseReview | null => null)
+			: null
 	]);
 	const about = await aboutLoading;
 	return {
@@ -96,6 +101,8 @@ export async function loadDashboard({
 		detail,
 		consent,
 		waitingForConsent: consent.filter((m) => m.status === 'pending'),
+		// Released by hand and shown publicly: readings waiting for review need someone to act.
+		release: release && !release.auto && release.showPublic && release.pending ? release : null,
 		records
 	};
 }

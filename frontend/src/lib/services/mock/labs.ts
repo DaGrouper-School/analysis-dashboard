@@ -23,7 +23,7 @@ import { contributionBlock } from '#lib/domain/consent.ts';
 import { coarsen } from '#lib/features/measurements/raw-data.ts';
 import { newId, readDb, updateDb, type MockDbState, type StoredDevice } from '#lib/data/mock-db.ts';
 import { ServiceError, type LabService } from '../types';
-import { currentUser, permissionsFor, roleIn } from './classrooms';
+import { canIn, currentUser } from './classrooms';
 import { createMockAlerts, deviceRules } from './alerts';
 
 function classroomOf(state: MockDbState, lab: Lab) {
@@ -156,10 +156,9 @@ function checkLab(input: CreateLabInput) {
 function accessLab(state: MockDbState, labId: string) {
 	const user = currentUser(state);
 	const lab = state.labs.find((l) => l.id === labId);
-	const can = lab && permissionsFor(user, roleIn(state, lab.classroomId, user.id));
+	const can = lab && canIn(state, user, lab.classroomId).can;
 	if (!lab || !can?.view) throw new ServiceError('not_found', 'Lab not found.');
-	// Focal people (head, facilitator) register devices: the same people who can invite.
-	return { user, lab, can, canManage: can.invite.length > 0 };
+	return { user, lab, can, canManage: can.manageDevices };
 }
 
 /**
@@ -171,9 +170,9 @@ function memberReadings(state: MockDbState): CurrentConditions[] {
 	const result: CurrentConditions[] = [];
 	for (const device of state.devices) {
 		const lab = state.labs.find((l) => l.id === device.labId)!;
-		const role = roleIn(state, lab.classroomId, user.id);
+		const { role, can } = canIn(state, user, lab.classroomId);
 		if (role === null) continue;
-		const shown = toDevice(state, device, permissionsFor(user, role).seeCode);
+		const shown = toDevice(state, device, can.seeCode);
 		const classroomName = classroomOf(state, lab).name;
 		for (const r of state.readings) {
 			if (r.deviceId === device.id) {
@@ -271,7 +270,7 @@ export function createMockLabs({
 			await delay();
 			const state = readDb();
 			const user = currentUser(state);
-			if (!permissionsFor(user, roleIn(state, classroomId, user.id)).view) {
+			if (!canIn(state, user, classroomId).can.view) {
 				throw new ServiceError('not_found', 'Classroom not found.');
 			}
 			return state.labs.filter((l) => l.classroomId === classroomId);
@@ -307,11 +306,11 @@ export function createMockLabs({
 			checkLab(input);
 			return updateDb((state) => {
 				const user = currentUser(state);
-				const can = permissionsFor(user, roleIn(state, classroomId, user.id));
+				const { can } = canIn(state, user, classroomId);
 				if (!state.classrooms.some((c) => c.id === classroomId) || !can.view) {
 					throw new ServiceError('not_found', 'Classroom not found.');
 				}
-				if (!can.invite.length) {
+				if (!can.manageDevices) {
 					throw new ServiceError(
 						'forbidden',
 						'Only facilitators and the institution head can add a lab.'
@@ -466,7 +465,7 @@ export function createMockLabs({
 			await delay();
 			const state = readDb();
 			const user = currentUser(state);
-			const can = permissionsFor(user, roleIn(state, classroomId, user.id));
+			const { can } = canIn(state, user, classroomId);
 			if (!can.view) throw new ServiceError('not_found', 'Classroom not found.');
 			const labIds = new Set(
 				state.labs.filter((l) => l.classroomId === classroomId).map((l) => l.id)
@@ -495,18 +494,18 @@ export function createMockLabs({
 			const user = currentUser(state);
 			return state.labs
 				.filter((lab) => {
-					const role = roleIn(state, lab.classroomId, user.id);
+					const { role, can } = canIn(state, user, lab.classroomId);
 					// Membership only: admins record in classrooms they belong to, like everyone.
-					return role !== null && permissionsFor(user, role).recordReadings;
+					return role !== null && can.recordReadings;
 				})
 				.map((lab) => {
-					const role = roleIn(state, lab.classroomId, user.id);
+					const { can } = canIn(state, user, lab.classroomId);
 					return {
 						lab,
 						classroomName: classroomOf(state, lab).name,
 						devices: state.devices
 							.filter((d) => d.labId === lab.id)
-							.map((d) => toDevice(state, d, permissionsFor(user, role).seeCode))
+							.map((d) => toDevice(state, d, can.seeCode))
 					};
 				});
 		},

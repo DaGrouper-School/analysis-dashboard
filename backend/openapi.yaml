@@ -580,6 +580,129 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /classrooms/{classroomId}/sharing:
+    put:
+      tags:
+        - Classrooms
+      operationId: classrooms.updateSharing
+      summary: Update sharing
+      description: >-
+        Who sees the classroom's data and what its facilitators may do, with its data terms. The
+
+        institution head (and platform admins) only.
+
+
+        Institution head (and platform admins) only. The sharing settings decide who sees the data
+        and what facilitators may do; the permissions follow them.
+
+
+        Access: signed-in users. Classroom roles are checked on the server.
+      parameters:
+        - name: classroomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SharingInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharingInput"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /classrooms/{classroomId}/release:
+    get:
+      tags:
+        - Classrooms
+      operationId: classrooms.releaseReview
+      summary: Release review
+      description: >-
+        What waits for review before the public sees it: readings and observations observed after
+
+        the release cutoff, by source. Whoever may release data only.
+
+
+        Whoever may release data: the institution head, and facilitators when the head allows it.
+        Readings observed after the release cutoff, by source.
+
+
+        Access: signed-in users. Classroom roles are checked on the server.
+      parameters:
+        - name: classroomId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseReview"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags:
+        - Classrooms
+      operationId: classrooms.releaseData
+      summary: Release data
+      description: >-
+        Releases everything observed up to `through` to the public. Never moves the cutoff back.
+
+        Whoever may release data only: the head, and facilitators when the head allows it.
+
+
+        Releases everything observed up to `through` (never later than now) to the public. The
+        cutoff never moves back.
+
+
+        Access: signed-in users. Classroom roles are checked on the server.
+      parameters:
+        - name: classroomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassroomsReleaseDataBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseReview"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /classrooms/{classroomId}/invitations:
     post:
       tags:
@@ -2843,35 +2966,18 @@ components:
             $ref: "#/components/schemas/Invitation"
           description: Only for people who can manage the classroom; empty otherwise.
         permissions:
-          type: object
-          properties:
-            invite:
-              type: array
-              items:
-                $ref: "#/components/schemas/ClassroomRole"
-            manageMembers:
-              type: boolean
-            edit:
-              type: boolean
-              description: Can change the name and institution. The code never changes.
-            viewCode:
-              type: boolean
-              description: "Can see the classroom code: platform admins, the institution head and facilitators."
-            manageConsent:
-              type: boolean
-              description: "Can see and record minors' guardian consent: the institution head and facilitators."
-          required:
-            - invite
-            - manageMembers
-            - edit
-            - viewCode
-            - manageConsent
-          additionalProperties: false
+          $ref: "#/components/schemas/ClassroomPermissions"
+        sharing:
+          anyOf:
+            - $ref: "#/components/schemas/SharingInput"
+            - type: "null"
+          description: The sharing settings and data terms, for those who may see them; null otherwise.
       required:
         - classroom
         - members
         - invitations
         - permissions
+        - sharing
       additionalProperties: false
     ClassroomMember:
       type: object
@@ -2895,6 +3001,79 @@ components:
         - role
         - joinedAt
       additionalProperties: false
+    ClassroomPermissions:
+      type: object
+      properties:
+        view:
+          type: boolean
+          description: Open the classroom and its labs in the app.
+        seeUnreleased:
+          type: boolean
+          description: See readings still in review, and the last sync of any device. Members only.
+        openValuePage:
+          type: boolean
+          description: Open a value's page and the classroom details page. Members only.
+        seeCode:
+          type: boolean
+          description: The classroom code and SAM source IDs.
+        seeSiteCodes:
+          type: boolean
+          description: The classroom's site codes. Members only.
+        seeEmails:
+          type: boolean
+        invite:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClassroomRole"
+          description: The roles the viewer may invite.
+        manageMembers:
+          type: boolean
+        edit:
+          type: boolean
+          description: Change the name, institution and photo. The code never changes.
+        manageSharing:
+          type: boolean
+          description: Change the sharing settings and data terms.
+        viewSharing:
+          type: boolean
+          description: See the sharing settings, read-only without `manageSharing`.
+        manageConsent:
+          type: boolean
+          description: Minors' guardian consent (AP-38).
+        manageDeviceAlerts:
+          type: boolean
+        manageTypeAlerts:
+          type: boolean
+        manageDevices:
+          type: boolean
+          description: Add and edit labs, register and remove devices.
+        recordReadings:
+          type: boolean
+          description: Connect a registered device and record readings.
+        releaseData:
+          type: boolean
+          description: Review readings in review and release them to the public.
+      required:
+        - view
+        - seeUnreleased
+        - openValuePage
+        - seeCode
+        - seeSiteCodes
+        - seeEmails
+        - invite
+        - manageMembers
+        - edit
+        - manageSharing
+        - viewSharing
+        - manageConsent
+        - manageDeviceAlerts
+        - manageTypeAlerts
+        - manageDevices
+        - recordReadings
+        - releaseData
+      additionalProperties: false
+      description: "Who may do what in one classroom: the viewer's role there, the platform admin flag and
+        the classroom's sharing settings. Every page gates its features on these, never on a role."
     ClassroomRole:
       type: string
       enum:
@@ -2920,6 +3099,43 @@ components:
         - place
       additionalProperties: false
       description: A session on the classroom's calendar (LP-06).
+    ClassroomSharing:
+      type: object
+      properties:
+        showPublic:
+          type: boolean
+          description: Visitors and other classrooms see its released data; off, they see none.
+        review:
+          type: string
+          enum:
+            - manual
+            - auto
+          description: "`manual`: data is public only once a head or facilitator releases it. `auto`: readings
+            are released by themselves `autoReleaseDays` after they were observed."
+        autoReleaseDays:
+          type: number
+        releasers:
+          type: string
+          enum:
+            - head
+            - head_and_facilitators
+          description: Who may release data.
+        facilitatorsInvite:
+          type: boolean
+          description: Facilitators may invite community scientists.
+        facilitatorsManageDevices:
+          type: boolean
+          description: Facilitators may add and edit labs, and register and remove devices.
+      required:
+        - showPublic
+        - review
+        - autoReleaseDays
+        - releasers
+        - facilitatorsInvite
+        - facilitatorsManageDevices
+      additionalProperties: false
+      description: How a classroom shares its data and what its facilitators may do, set by its
+        institution head in Settings. The permissions follow these settings.
     ClassroomsInviteBody:
       type: object
       properties:
@@ -2932,6 +3148,14 @@ components:
       required:
         - emails
         - role
+      additionalProperties: false
+    ClassroomsReleaseDataBody:
+      type: object
+      properties:
+        through:
+          type: string
+      required:
+        - through
       additionalProperties: false
     ClassroomsSetMemberRoleBody:
       type: object
@@ -5355,9 +5579,12 @@ components:
           items:
             type: string
           description: The classroom's site codes. Members only; empty for everyone else.
-        member:
+        can:
+          $ref: "#/components/schemas/ClassroomPermissions"
+          description: What the viewer may do here. Members also get values still in review.
+        shared:
           type: boolean
-          description: The viewer belongs to this classroom, so their dashboard shows it with raw values too.
+          description: The classroom shows its data to the public. Off, visitors see its devices with no values.
         places:
           type: array
           items:
@@ -5406,9 +5633,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PublicDevice"
-          description: "The classroom's devices with released data, for the device picker on \"What's
-            happening now?\" (AP-45). Each has its own tiles: its key values and their last 24
-            hours."
+          description: Every device registered to the classroom, for the device picker on "What's happening
+            now?" (AP-45). Each has its own tiles and cards from the values the viewer may see; a
+            device with none still lists its registry values, with no data.
         institution:
           anyOf:
             - $ref: "#/components/schemas/InstitutionOverview"
@@ -5422,7 +5649,8 @@ components:
         - core
         - completeness
         - siteCodes
-        - member
+        - can
+        - shared
         - places
         - now
         - devices
@@ -5759,6 +5987,62 @@ components:
         - icon
         - description
       additionalProperties: false
+    ReleaseReview:
+      type: object
+      properties:
+        releasedThrough:
+          type:
+            - string
+            - "null"
+          description: Readings observed up to here are public; null while none are.
+        auto:
+          type: boolean
+          description: Released by themselves after a delay, rather than by hand.
+        showPublic:
+          type: boolean
+          description: The classroom shows its data to the public at all.
+        pending:
+          type: number
+          description: How many readings and observations wait.
+        sources:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              count:
+                type: number
+              first:
+                type: string
+              last:
+                type: string
+              id:
+                type: string
+              name:
+                type:
+                  - string
+                  - "null"
+                description: The device's name; null for field observations.
+              kind:
+                type: string
+                enum:
+                  - device
+                  - field
+            required:
+              - count
+              - first
+              - id
+              - kind
+              - last
+              - name
+      required:
+        - releasedThrough
+        - auto
+        - showPublic
+        - pending
+        - sources
+      additionalProperties: false
+      description: "What waits for review before it is public: counts by source."
     ReviewState:
       type: string
       enum:
@@ -5766,6 +6050,18 @@ components:
         - in_review
         - not_released
       description: Where a classroom's released data stands.
+    SharingInput:
+      type: object
+      properties:
+        sharing:
+          $ref: "#/components/schemas/ClassroomSharing"
+        terms:
+          $ref: "#/components/schemas/DataTerms"
+      required:
+        - sharing
+        - terms
+      additionalProperties: false
+      description: "What the sharing settings change: the settings and the data terms (AP-14)."
     SiteContent:
       type: object
       properties:

@@ -12,6 +12,7 @@ import type {
 	User
 } from '#lib/domain/types.ts';
 import type { MockDbState } from './mock-db';
+import { DEFAULT_SHARING } from '#lib/domain/permissions.ts';
 
 /**
  * Prefilled demo data. Personas come from the vault (User Personas); parameter values come
@@ -365,6 +366,7 @@ const classrooms: MockDbState['classrooms'] = [
 		stageId: 'operating',
 		regionId: 'east_africa',
 		releasedThrough: '2026-10-20T06:00:00.000Z',
+		sharing: { ...DEFAULT_SHARING },
 		profile: {
 			areaCode: 'ET-AA',
 			language: 'Amharic and English',
@@ -469,6 +471,7 @@ const classrooms: MockDbState['classrooms'] = [
 		stageId: 'pilot',
 		regionId: 'caribbean',
 		releasedThrough: '2026-10-20T08:00:00.000Z',
+		sharing: { ...DEFAULT_SHARING },
 		profile: {
 			areaCode: 'BS-NP',
 			language: 'English',
@@ -531,6 +534,7 @@ const classrooms: MockDbState['classrooms'] = [
 		stageId: 'preparing',
 		regionId: 'east_africa',
 		releasedThrough: null,
+		sharing: { ...DEFAULT_SHARING },
 		profile: {
 			areaCode: 'SO-WO',
 			language: 'Somali and English',

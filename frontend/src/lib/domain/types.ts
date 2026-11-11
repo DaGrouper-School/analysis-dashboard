@@ -238,21 +238,91 @@ export interface ConsentSheet {
 	minors: { userId: string; fullName: string }[];
 }
 
+/**
+ * How a classroom shares its data and what its facilitators may do, set by its institution head
+ * in Settings. The permissions follow these settings.
+ */
+export interface ClassroomSharing {
+	/** Visitors and other classrooms see its released data; off, they see none. */
+	showPublic: boolean;
+	/**
+	 * `manual`: data is public only once a head or facilitator releases it. `auto`: readings are
+	 * released by themselves `autoReleaseDays` after they were observed.
+	 */
+	review: 'manual' | 'auto';
+	autoReleaseDays: number;
+	/** Who may release data. */
+	releasers: 'head' | 'head_and_facilitators';
+	/** Facilitators may invite community scientists. */
+	facilitatorsInvite: boolean;
+	/** Facilitators may add and edit labs, and register and remove devices. */
+	facilitatorsManageDevices: boolean;
+}
+
+/** What the sharing settings change: the settings and the data terms (AP-14). */
+export interface SharingInput {
+	sharing: ClassroomSharing;
+	terms: DataTerms;
+}
+
+/**
+ * Who may do what in one classroom: the viewer's role there, the platform admin flag and the
+ * classroom's sharing settings. Every page gates its features on these, never on a role.
+ */
+export interface ClassroomPermissions {
+	/** Open the classroom and its labs in the app. */
+	view: boolean;
+	/** See readings still in review, and the last sync of any device. Members only. */
+	seeUnreleased: boolean;
+	/** Open a value's page and the classroom details page. Members only. */
+	openValuePage: boolean;
+	/** The classroom code and SAM source IDs. */
+	seeCode: boolean;
+	/** The classroom's site codes. Members only. */
+	seeSiteCodes: boolean;
+	seeEmails: boolean;
+	/** The roles the viewer may invite. */
+	invite: ClassroomRole[];
+	manageMembers: boolean;
+	/** Change the name, institution and photo. The code never changes. */
+	edit: boolean;
+	/** Change the sharing settings and data terms. */
+	manageSharing: boolean;
+	/** See the sharing settings, read-only without `manageSharing`. */
+	viewSharing: boolean;
+	/** Minors' guardian consent (AP-38). */
+	manageConsent: boolean;
+	manageDeviceAlerts: boolean;
+	manageTypeAlerts: boolean;
+	/** Add and edit labs, register and remove devices. */
+	manageDevices: boolean;
+	/** Connect a registered device and record readings. */
+	recordReadings: boolean;
+	/** Review readings in review and release them to the public. */
+	releaseData: boolean;
+}
+
+/** What waits for review before it is public: counts by source. */
+export interface ReleaseReview {
+	/** Readings observed up to here are public; null while none are. */
+	releasedThrough: string | null;
+	/** Released by themselves after a delay, rather than by hand. */
+	auto: boolean;
+	/** The classroom shows its data to the public at all. */
+	showPublic: boolean;
+	/** How many readings and observations wait. */
+	pending: number;
+	sources: (PublicSource & { count: number; first: string; last: string })[];
+}
+
 export interface ClassroomDetail {
 	classroom: ClassroomSummary;
 	members: ClassroomMember[];
 	/** Only for people who can manage the classroom; empty otherwise. */
 	invitations: Invitation[];
-	permissions: {
-		invite: ClassroomRole[];
-		manageMembers: boolean;
-		/** Can change the name and institution. The code never changes. */
-		edit: boolean;
-		/** Can see the classroom code: platform admins, the institution head and facilitators. */
-		viewCode: boolean;
-		/** Can see and record minors' guardian consent: the institution head and facilitators. */
-		manageConsent: boolean;
-	};
+	permissions: ClassroomPermissions;
+	/** The sharing settings and data terms, for those who may see them; null otherwise. */
+	sharing: SharingInput | null;
 }
 
 /** What the invite page shows before the user signs in. */
@@ -986,8 +1056,10 @@ export interface PublicStation {
 	completeness: { month: string; domains: DomainCompleteness[] } | null;
 	/** The classroom's site codes. Members only; empty for everyone else. */
 	siteCodes: string[];
-	/** The viewer belongs to this classroom, so their dashboard shows it with raw values too. */
-	member: boolean;
+	/** What the viewer may do here. Members also get values still in review. */
+	can: ClassroomPermissions;
+	/** The classroom shows its data to the public. Off, visitors see its devices with no values. */
+	shared: boolean;
 	/** Every public classroom with a lab, for the location tabs and the globe (AP-43). */
 	places: Pick<
 		PublicClassroom,
@@ -996,8 +1068,9 @@ export interface PublicStation {
 	/** "What's happening now?" (AP-43): one tile per configured value. */
 	now: NowTile[];
 	/**
-	 * The classroom's devices with released data, for the device picker on "What's happening
-	 * now?" (AP-45). Each has its own tiles: its key values and their last 24 hours.
+	 * Every device registered to the classroom, for the device picker on "What's happening now?"
+	 * (AP-45). Each has its own tiles and cards from the values the viewer may see; a device with
+	 * none still lists its registry values, with no data.
 	 */
 	devices: PublicDevice[];
 	institution: InstitutionOverview | null;

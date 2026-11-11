@@ -6,7 +6,7 @@ import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ params, url }) => {
 	const detail = await services.classrooms.get(params.id);
-	if (!detail.permissions.invite.length) {
+	if (!detail.permissions.manageDevices) {
 		redirect(307, resolve('/(app)/dashboard') + sectionQuery(params.id, 'labs'));
 	}
 	return { classroom: detail.classroom, onboarding: url.searchParams.has('onboarding') };

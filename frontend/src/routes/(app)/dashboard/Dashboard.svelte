@@ -16,12 +16,13 @@
 	import DomainBrowser from '#lib/features/measurements/DomainBrowser.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import PendingInvitations from '#lib/features/classroom/PendingInvitations.svelte';
+	import ReleaseModal from '#lib/features/classroom/ReleaseModal.svelte';
 	import RegisterSensorModal from '#lib/features/devices/RegisterSensorModal.svelte';
 	import Select from '#lib/components/Select.svelte';
 	import SyncModal from '#lib/features/devices/SyncModal.svelte';
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
-	import { formatValue, keySummary, keyValues } from '#lib/features/measurements/key-values.ts';
-	import { deviceSummary, pickDevice, readingTiles } from '#lib/features/devices/station-now.ts';
+	import { formatValue, keySummary } from '#lib/features/measurements/key-values.ts';
+	import { pickDevice } from '#lib/features/devices/station-now.ts';
 	import {
 		CLASSROOM_ROLE_LABELS,
 		withArticle,
@@ -80,52 +81,22 @@
 	}
 
 	// ---- Devices: the one picked sets the tiles, the cards, the domains and the colour ----
-	// A member's own classroom: the picked device's raw readings, so a sync shows at once.
-	const domainIcons = $derived(new Map(data.domains.map((d) => [d.id, d.icon])));
-	/** The device's tile or card values, as set for its type in the Registry. */
-	const registryValues = (which: 'tileParameterIds' | 'cardParameterIds') =>
-		device && data.readings[0]
-			? keyValues(
-					deviceTypeOf(data.deviceTypes, device.type)?.[which],
-					data.readings[0].values,
-					paramsById,
-					{ domainIcons, fallback: which === 'tileParameterIds' }
-				)
-			: [];
-	// A device with no readings yet still has its own colour and shows empty states, never
-	// another source's values.
-	const own = $derived.by(() => {
-		if (visiting || !device) return undefined;
-		const icon = deviceTypeIcon(data.deviceTypes, device.type);
-		return {
-			tiles: readingTiles(data.readings, registryValues('tileParameterIds'), icon, paramsById),
-			summary: deviceSummary(data.readings, registryValues('cardParameterIds')),
-			color: deviceTypeColor(data.deviceTypes, device.type)
-		};
-	});
-	// Another classroom: its released devices, picked on the page as on its public page.
+	// The same devices as the classroom's public page, built by the same service from the
+	// database: a member's own classroom with its readings still in review, so a sync shows at
+	// once; another classroom with its released data only.
 	let visitingDeviceId = $state<string>();
-	const visitingDevice = $derived(
-		visiting
-			? pickDevice(visiting.devices, visitingDeviceId ?? page.url.searchParams.get('device'))
+	const shownDevice = $derived(
+		station
+			? pickDevice(
+					station.devices,
+					visiting ? (visitingDeviceId ?? page.url.searchParams.get('device')) : device?.id
+				)
 			: null
 	);
-	const shownDevice = $derived(visiting ? visitingDevice : own);
-	const shownDeviceId = $derived(visiting ? visitingDevice?.id : device?.id);
+	const shownDeviceId = $derived(shownDevice?.id);
 	// The domains of the device shown.
 	const domains = $derived(domainsOf(station?.domains ?? [], shownDeviceId));
-	const pickerDevices = $derived(
-		visiting
-			? visiting.devices
-			: classroom
-				? data.devices.map((d) => ({
-						id: d.id,
-						name: d.name,
-						color: deviceTypeColor(data.deviceTypes, d.type),
-						icon: deviceTypeIcon(data.deviceTypes, d.type)
-					}))
-				: []
-	);
+	const pickerDevices = $derived(station?.devices ?? []);
 	function pickDeviceShown(id: string) {
 		if (visiting) visitingDeviceId = id;
 		else if (classroom) choose(classroom.id, id);
@@ -149,9 +120,15 @@
 		!!permissions &&
 			(permissions.manageMembers || permissions.manageConsent || permissions.invite.length > 0)
 	);
-	const managesSettings = $derived(!!permissions && (permissions.edit || permissions.viewCode));
+	const managesSettings = $derived(
+		!!permissions && (permissions.edit || permissions.seeCode || permissions.viewSharing)
+	);
 	let active = $state<Section>();
-	const alertCount = $derived(data.alerts.length + data.waitingForConsent.length);
+	const alertCount = $derived(
+		data.alerts.length + data.waitingForConsent.length + (data.release ? 1 : 0)
+	);
+	// Reviewing and releasing data to the public, from its alert.
+	let reviewing = $state(false);
 	const sections = $derived<TabItem<Section>[]>(
 		visiting
 			? [
@@ -193,8 +170,8 @@
 				]
 	);
 	// ---- Adding a measurement (a device) to one of the classroom's labs ----
-	// Heads and facilitators add devices, as on a lab page.
-	const canAddDevice = $derived(!!permissions?.invite.length && data.labs.length > 0);
+	// Whoever manages the classroom's devices adds them, as on a lab page.
+	const canAddDevice = $derived(!!permissions?.manageDevices && data.labs.length > 0);
 	let adding = $state(false);
 	let addLabId = $state('');
 	const addLab = $derived(data.labs.find((l) => l.id === addLabId) ?? data.labs[0]);
@@ -282,9 +259,11 @@
 					class="mt-5"
 					alerts={data.alerts}
 					waiting={data.waitingForConsent}
+					release={data.release}
 					parameters={paramsById}
 					classroomId={station.classroom.id}
 					onconsent={() => openSection('people')}
+					onrelease={() => (reviewing = true)}
 				/>
 			{:else if active === 'domains'}
 				<DomainBrowser
@@ -397,7 +376,7 @@
 						classroomId={station.classroom.id}
 						labs={data.labs}
 						devices={data.devices}
-						canAdd={!!permissions?.invite.length}
+						canAdd={!!permissions?.manageDevices}
 					/>
 				</div>
 			{:else if active === 'records'}
@@ -464,7 +443,7 @@
 					<ClassroomPeople detail={data.detail} consent={data.consent} userId={data.user.id} />
 				</div>
 			{:else if active === 'settings' && data.detail}
-				{@render panelHead('Settings', `${station.classroom.name}'s name, institution and code.`)}
+				{@render panelHead('Settings', `${station.classroom.name}'s name, institution, sharing and code.`)}
 				<div class="mt-5">
 					<ClassroomSettings detail={data.detail} institutionInfo={station.institution} />
 				</div>
@@ -530,9 +509,11 @@
 			<AlertsList
 				alerts={data.alerts}
 				waiting={data.waitingForConsent}
+				release={data.release}
 				parameters={paramsById}
 				classroomId={station.classroom.id}
 				onconsent={() => openSection('people')}
+				onrelease={() => (reviewing = true)}
 			/>
 		</AlertsPanel>
 	{/if}
@@ -545,7 +526,6 @@
 		now={shownDevice?.tiles}
 		summary={shownDevice?.summary}
 		accent={shownDevice?.color}
-		released={!own}
 		devices={pickerDevices}
 		deviceId={shownDeviceId}
 		onpickdevice={pickDeviceShown}
@@ -614,6 +594,10 @@
 			/>
 		{/key}
 	{/if}
+{/if}
+
+{#if classroom && data.release}
+	<ReleaseModal bind:open={reviewing} classroomId={classroom.id} review={data.release} />
 {/if}
 
 {#if canAddDevice && addLab}

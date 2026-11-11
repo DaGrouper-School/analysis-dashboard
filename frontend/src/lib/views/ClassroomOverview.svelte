@@ -56,13 +56,12 @@
 		headerActions,
 		tabsStart,
 		nowActions,
-		devices,
+		devices = [],
 		deviceId,
 		onpickdevice,
 		now,
 		accent,
 		summary,
-		released = true,
 		onexplain,
 		institutionActions,
 		onpick,
@@ -95,8 +94,6 @@
 		accent?: string;
 		/** The picked device's card numbers from the Registry, charted in place of the classroom's core readings. */
 		summary?: DeviceSummaryCard[];
-		/** The tiles are released data only; false for a member's raw readings. */
-		released?: boolean;
 		/** Opens how a value is calculated; signed-in pages only. */
 		onexplain?: (parameterId: string) => void;
 		institutionActions?: Snippet;
@@ -109,7 +106,7 @@
 	const classroom = $derived(station.classroom);
 	/** A tile's or card's value page, on the picked device. Value pages are for members only. */
 	const valueOf = $derived(
-		station.member
+		station.can.openValuePage
 			? (parameterId: string) => valueHref(classroom.id, parameterId, deviceId)
 			: undefined
 	);
@@ -266,13 +263,14 @@
 	<!-- On a phone: the institution (collapsed) first, then the globe, the device, what's
 	     happening and its cards. On a wide screen: the device picker, then the three columns, then the cards. -->
 	<div class="mt-6 flex flex-col gap-5 lg:block">
-		{#if devices?.length && onpickdevice}
+		<!-- Always shown, with no devices too, so every classroom has the same layout. -->
+		{#if onpickdevice}
 			<DevicePicker class="max-lg:order-3" {devices} {deviceId} onpick={onpickdevice} />
 		{/if}
 		<div
 			class={[
 				'contents lg:grid lg:h-[38rem] lg:gap-5',
-				devices?.length && onpickdevice && 'lg:mt-6',
+				onpickdevice && 'lg:mt-6',
 				classroom.location
 					? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,1fr)]'
 					: 'lg:grid-cols-2'
@@ -282,9 +280,10 @@
 				bind:element={nowCard}
 				class="max-lg:order-4"
 				tiles={now ?? station.now}
-				{released}
+				released={!station.can.seeUnreleased}
+				shared={station.shared}
 				{accent}
-				icon={devices?.find((d) => d.id === deviceId)?.icon}
+				icon={devices.find((d) => d.id === deviceId)?.icon}
 				actions={nowActions}
 				{onexplain}
 				href={valueOf}
