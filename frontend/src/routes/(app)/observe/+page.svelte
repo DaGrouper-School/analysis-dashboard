@@ -5,10 +5,11 @@
 	import { formatPoint } from '#lib/geo.ts';
 	import { formatValue } from '#lib/key-values.ts';
 	import Icon from '#lib/components/Icon.svelte';
+	import Select, { toOptions } from '#lib/components/Select.svelte';
 	import SyncStatus from '#lib/components/SyncStatus.svelte';
 	import Wizard from '#lib/components/Wizard.svelte';
 	import { FALLBACK_DOMAIN_ICON } from '#lib/icons.ts';
-	import { deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
+	import { deviceOptions, deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
 	import { rangeText, readEntries, unitsFor, type FieldEntry } from '#lib/observations.ts';
 	import { outbox } from '#lib/outbox.svelte.ts';
 	import { clockMessage, type OutboxEntry } from '#lib/outbox.ts';
@@ -459,16 +460,16 @@
 						{#if data.targets.length > 1}
 							<div class="max-w-sm">
 								<label class="label" for="observe-lab">Lab</label>
-								<select
+								<Select
 									id="observe-lab"
-									class="input"
+									options={data.targets.map((t) => ({
+										value: t.lab.id,
+										label: t.lab.name,
+										hint: t.classroomName
+									}))}
 									bind:value={labId}
 									onchange={() => (deviceId = '')}
-								>
-									{#each data.targets as t (t.lab.id)}
-										<option value={t.lab.id}>{t.lab.name} · {t.classroomName}</option>
-									{/each}
-								</select>
+								/>
 							</div>
 						{:else if target}
 							<p class="text-sm text-muted">
@@ -548,18 +549,14 @@
 						{#if fitting.length > 1}
 							<div class="mt-3 max-w-sm">
 								<label class="label" for="observe-device">Device</label>
-								<select
+								<Select
 									id="observe-device"
-									class={['input', triedDevice && deviceError && 'input-error']}
+									placeholder="Choose a device"
+									options={deviceOptions(fitting, data.deviceTypes, 'identifier')}
 									bind:value={deviceId}
-									aria-invalid={triedDevice && !!deviceError}
+									error={triedDevice && !!deviceError}
 									aria-describedby="observe-device-help"
-								>
-									<option value="" disabled>Choose a device</option>
-									{#each fitting as d (d.id)}
-										<option value={d.id}>{d.name} · {d.identifier}</option>
-									{/each}
-								</select>
+								/>
 							</div>
 						{:else if device}
 							<p id="observe-device" tabindex="-1" class="mt-3 text-ink">
@@ -598,19 +595,14 @@
 											</label>
 											<div class="flex gap-2">
 												{#if param.options}
-													<select
+													<Select
 														id="field-{param.id}"
-														class={['input', error && 'input-error']}
+														options={toOptions(param.options)}
 														bind:value={entry.value}
 														onblur={() => (touched[param.id] = true)}
-														aria-invalid={!!error}
+														error={!!error}
 														aria-describedby="help-{param.id}"
-													>
-														<option value="">Choose</option>
-														{#each param.options as option (option)}
-															<option value={option}>{option}</option>
-														{/each}
-													</select>
+													/>
 												{:else}
 													<input
 														id="field-{param.id}"
@@ -626,15 +618,14 @@
 													/>
 												{/if}
 												{#if units.length > 1}
-													<select
-														class="input w-24 shrink-0"
-														aria-label="{param.label} unit"
+													<Select
+														size="mini"
+														align="end"
+														class="w-24 shrink-0"
+														label="{param.label} unit"
+														options={toOptions(units)}
 														bind:value={entry.unit}
-													>
-														{#each units as unit (unit)}
-															<option value={unit}>{unit}</option>
-														{/each}
-													</select>
+													/>
 												{:else if param.unit}
 													<span class="self-center text-sm text-muted">{param.unit}</span>
 												{/if}

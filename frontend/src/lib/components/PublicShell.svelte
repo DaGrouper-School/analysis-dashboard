@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import type { Snippet } from 'svelte';
 	import Logo from '#lib/components/Logo.svelte';
+	import Select from '#lib/components/Select.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import type { SiteContent, User } from '#lib/domain/types.ts';
 	import { nextRoute } from '#lib/routing.ts';
@@ -43,14 +44,19 @@
 				{@render sectionLinks('')}
 			</nav>
 			<div class="ml-auto flex items-center gap-2">
-				<label class="sr-only" for="site-language">Language</label>
-				<select id="site-language" class="input w-auto py-1.5 pr-9 text-sm" value="en">
-					{#each content.languages as language (language.code)}
-						<option value={language.code} disabled={!language.ready}
-							>{language.label}{language.ready ? '' : ' (coming soon)'}</option
-						>
-					{/each}
-				</select>
+				<Select
+					id="site-language"
+					label="Language"
+					size="compact"
+					align="end"
+					options={content.languages.map((language) => ({
+						value: language.code,
+						label: language.label,
+						disabled: !language.ready,
+						badge: language.ready ? undefined : 'Coming soon'
+					}))}
+					value="en"
+				/>
 				<ThemeToggle />
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 				<a href={account.href} class="btn btn-primary hidden sm:inline-flex">{account.label}</a>

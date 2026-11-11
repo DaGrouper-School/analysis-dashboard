@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { filterOptions, NO_FILTER, type DirectoryFilter } from '#lib/directory.ts';
 	import type { PublicStation } from '#lib/domain/types.ts';
+	import Select from '#lib/components/Select.svelte';
 
 	/**
 	 * The public Classrooms filters (AP-28, AP-45): region, country and stage, offering only what
@@ -39,7 +40,7 @@
 			id: 'stage' as const,
 			label: 'Stage',
 			any: 'All stages',
-			items: options.stages.map((s) => ({ value: s.id, label: s.label }))
+			items: options.stages.map((s) => ({ value: s.id, label: s.label, color: s.color }))
 		}
 	]);
 </script>
@@ -52,16 +53,13 @@
 	{#each pickers as picker (picker.id)}
 		<label class="flex flex-col gap-1 text-xs text-muted">
 			{picker.label}
-			<select
-				class="input w-auto max-w-48 py-1.5 pr-9 text-sm"
+			<Select
+				size="compact"
+				class="max-w-56"
+				options={[{ value: '', label: picker.any }, ...picker.items]}
 				value={filter[picker.id]}
-				onchange={(e) => onchange({ ...filter, [picker.id]: e.currentTarget.value })}
-			>
-				<option value="">{picker.any}</option>
-				{#each picker.items as item (item.value)}
-					<option value={item.value}>{item.label}</option>
-				{/each}
-			</select>
+				onchange={(value) => onchange({ ...filter, [picker.id]: value })}
+			/>
 		</label>
 	{/each}
 	<button
