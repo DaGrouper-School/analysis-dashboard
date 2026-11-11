@@ -24,6 +24,9 @@
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import InstitutionOverview from '#lib/components/InstitutionOverview.svelte';
 	import NowCard from '#lib/components/NowCard.svelte';
+	import Select from '#lib/components/Select.svelte';
+	import { MOBILE_TABS_MAX } from '#lib/tabs.ts';
+	import { goto } from '$app/navigation';
 	import StageBadge from '#lib/components/StageBadge.svelte';
 	import type {
 		DeviceSummaryCard,
@@ -188,8 +191,24 @@
 
 {#if tabsStart}<div class="mt-6">{@render tabsStart()}</div>{/if}
 
+{#if tabs.length > MOBILE_TABS_MAX}
+	<Select
+		options={tabs.map((t) => ({ value: t.id, label: t.label, hint: t.title }))}
+		value={pendingId}
+		label={tabsLabel}
+		class="mt-6 w-full lg:hidden"
+		onchange={(id) => {
+			if (onpick) return onpick(id);
+			const tab = tabs.find((t) => t.id === id);
+			// Callers pass resolved paths.
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
+			if (tab) goto(tab.href);
+		}}
+	/>
+{/if}
 {#if tabs.length > 1 || tabsStart}
 	<nav
+		class:max-lg:hidden={tabs.length > MOBILE_TABS_MAX}
 		aria-label={tabsLabel}
 		class="relative -mx-4 mt-6 flex gap-7 overflow-x-auto px-4 text-sm font-medium whitespace-nowrap sm:justify-center"
 		bind:clientWidth={navWidth}

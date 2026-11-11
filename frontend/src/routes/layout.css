@@ -34,6 +34,9 @@
 @layer base {
 	body {
 		@apply bg-canvas font-sans text-text antialiased;
+		/* No page ever scrolls sideways; wide pieces (tabs, tables) scroll inside themselves.
+		   clip, not hidden, so sticky headers keep working. */
+		overflow-x: clip;
 	}
 	h1,
 	h2,

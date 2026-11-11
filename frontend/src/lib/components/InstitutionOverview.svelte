@@ -40,7 +40,7 @@
 </script>
 
 <section class={['card flex flex-col', className]} aria-labelledby="institution-heading">
-	<div class="relative flex items-start justify-between gap-x-4 gap-y-1">
+	<div class="relative flex items-start justify-between gap-x-4 gap-y-1 lg:flex-wrap">
 		<div>
 			<h2 id="institution-heading" class="text-xl font-medium">Institution overview</h2>
 			<p class="text-xs text-muted">What our community does here</p>

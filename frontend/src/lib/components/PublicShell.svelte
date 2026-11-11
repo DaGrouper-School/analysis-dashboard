@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import type { Snippet } from 'svelte';
 	import Logo from '#lib/components/Logo.svelte';
 	import Select from '#lib/components/Select.svelte';
@@ -18,6 +19,13 @@
 
 	let menuOpen = $state(false);
 
+	/** The section the page is in: its own page, or any page under it (its nearest breadcrumb). */
+	function isCurrent(href: string) {
+		const base = href.replace(/\/$/, '');
+		const path = page.url.pathname.replace(/\/$/, '');
+		return path === base || path.startsWith(`${base}/`);
+	}
+
 	// Signed-in people go on to their dashboard, or to the next step of sign-up.
 	const account = $derived(
 		user
@@ -31,8 +39,20 @@
 
 {#snippet sectionLinks(extra: string)}
 	{#each content.sections as section (section.id)}
-		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-		<a href={sectionHref(section)} class={['text-muted hover:text-ink', extra]}>{section.label}</a>
+		{@const href = sectionHref(section)}
+		{@const current = isCurrent(href)}
+		<!-- sectionHref resolves. -->
+		<!-- eslint-disable svelte/no-navigation-without-resolve -->
+		<a
+			{href}
+			aria-current={current ? 'page' : undefined}
+			class={[
+				'underline-offset-[6px] hover:text-ink',
+				current ? 'text-ink underline decoration-teal decoration-2' : 'text-muted',
+				extra
+			]}>{section.label}</a
+		>
+		<!-- eslint-enable svelte/no-navigation-without-resolve -->
 	{/each}
 {/snippet}
 

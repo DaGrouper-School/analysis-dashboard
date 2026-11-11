@@ -13,6 +13,8 @@
 	import DomainBrowser from '#lib/components/DomainBrowser.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
+	import RegisterSensorModal from '#lib/components/RegisterSensorModal.svelte';
+	import Select from '#lib/components/Select.svelte';
 	import SyncModal from '#lib/components/SyncModal.svelte';
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
 	import { formatValue, keySummary, keyValues } from '#lib/key-values.ts';
@@ -149,7 +151,7 @@
 							? { badge: { text: String(alertCount), title: `${alertCount} need you` } }
 							: { count: 0 })
 					},
-					{ id: 'devices', label: 'Devices', icon: 'station', count: data.devices.length },
+					{ id: 'devices', label: 'Measurements', icon: 'station', count: data.devices.length },
 					...(role === 'institution_head'
 						? [{ id: 'labs' as const, label: 'Labs', icon: 'flask', count: data.labs.length }]
 						: []),
@@ -171,6 +173,14 @@
 						: [])
 				]
 	);
+	// ---- Adding a measurement (a device) to one of the classroom's labs ----
+	// Heads and facilitators add devices, as on a lab page.
+	const canAddDevice = $derived(!!permissions?.invite.length && data.labs.length > 0);
+	let adding = $state(false);
+	let addLabId = $state('');
+	const addLab = $derived(data.labs.find((l) => l.id === addLabId) ?? data.labs[0]);
+	const labOptions = $derived(data.labs.map((l) => ({ value: l.id, label: l.name })));
+
 	let sectionsEl = $state<HTMLElement>();
 	function openSection(id: Section) {
 		active = id;
@@ -381,10 +391,31 @@
 					<div class="flex flex-wrap items-end justify-between gap-3">
 						<div>
 							{@render panelHead(
-								'Devices',
+								'Measurements',
 								`The devices in ${station.classroom.name}'s labs, each with its latest reading.`
 							)}
 						</div>
+						{#if canAddDevice}
+							<div class="flex flex-wrap items-center gap-2">
+								{#if data.labs.length > 1}
+									<Select
+										options={labOptions}
+										value={addLab?.id}
+										label="Lab to add it to"
+										size="compact"
+										onchange={(id) => (addLabId = id)}
+									/>
+								{/if}
+								<button
+									type="button"
+									class="btn btn-primary"
+									aria-haspopup="dialog"
+									onclick={() => (adding = true)}
+								>
+									<Icon name="plus" class="size-4" /> Add measurement
+								</button>
+							</div>
+						{/if}
 					</div>
 					<ul class="mt-5 space-y-2.5">
 						{#each data.devices as option (option.id)}
@@ -552,6 +583,18 @@
 			/>
 		{/key}
 	{/if}
+{/if}
+
+{#if canAddDevice && addLab}
+	<RegisterSensorModal
+		bind:open={adding}
+		labId={addLab.id}
+		labName={addLab.name}
+		deviceTypes={data.deviceTypes}
+		domains={data.domains}
+		parameters={data.parameters}
+		onclose={() => invalidateAll()}
+	/>
 {/if}
 
 <CalculationPanel

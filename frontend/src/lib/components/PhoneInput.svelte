@@ -53,7 +53,7 @@
 	/>
 	<input
 		{id}
-		class={['input', error && 'input-error']}
+		class={['input min-w-0 flex-1', error && 'input-error']}
 		type="tel"
 		inputmode="tel"
 		autocomplete="tel-national"

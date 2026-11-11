@@ -3,6 +3,8 @@
 	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import Icon from '#lib/components/Icon.svelte';
+	import Select from '#lib/components/Select.svelte';
+	import { MOBILE_TABS_MAX } from '#lib/tabs.ts';
 	import Sparkline from '#lib/components/Sparkline.svelte';
 	import type {
 		Parameter,
@@ -53,6 +55,15 @@
 			count: card.values.length
 		}))
 	]);
+	const dropdown = $derived(tabs.length > MOBILE_TABS_MAX);
+	const options = $derived(
+		tabs.map((t) => ({
+			value: t.id,
+			label: t.label,
+			icon: t.icon,
+			badge: t.count !== undefined ? String(t.count) : undefined
+		}))
+	);
 	const openCard = $derived(domains.find((c) => domainKey(c.domain) === active));
 
 	function open(id: string) {
@@ -122,7 +133,17 @@
 <section class={className} aria-labelledby="domains-heading">
 	<h2 id="domains-heading" class="font-display text-2xl">What this classroom measures</h2>
 	{#if domains.length}
+		{#if dropdown}
+			<Select
+				{options}
+				value={active}
+				label="Domain"
+				class="mt-4 w-full lg:hidden"
+				onchange={open}
+			/>
+		{/if}
 		<div
+			class:max-lg:hidden={dropdown}
 			class="mt-4 flex gap-1 overflow-x-auto border-b border-line"
 			role="tablist"
 			aria-label="Domains"
