@@ -102,6 +102,7 @@ function summarize(state: MockDbState, user: User, classroom: StoredClassroom): 
 		setup: classroom.setup,
 		createdAt: classroom.createdAt,
 		myRole,
+		canRecord: myRole !== null && permissionsFor(user, myRole).recordReadings,
 		memberCount: state.memberships.filter((m) => m.classroomId === classroom.id).length
 	};
 }

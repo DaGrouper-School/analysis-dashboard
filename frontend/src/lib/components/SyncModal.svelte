@@ -268,7 +268,11 @@
 							>
 						</div>
 						<p class="text-muted">
-							{keySummary(deviceTypeOf(deviceTypes, device.type), reading.values, paramsById)}
+							{keySummary(
+								deviceTypeOf(deviceTypes, device.type)?.tileParameterIds,
+								reading.values,
+								paramsById
+							)}
 						</p>
 						<p>
 							{formatPoint(reading.location)}

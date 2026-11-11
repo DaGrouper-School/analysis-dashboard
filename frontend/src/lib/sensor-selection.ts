@@ -52,18 +52,3 @@ export function sensorQuery(classroomId: string, deviceId?: string) {
 	if (deviceId) query += `&device=${encodeURIComponent(deviceId)}`;
 	return query;
 }
-
-/**
- * A sensor's domain view, opened on `domain` and filtered to values matching `search`, e.g. from
- * an active alert. The path is the caller's to resolve.
- */
-export function domainQuery(
-	classroomId: string,
-	deviceId: string,
-	{ domain, search }: { domain?: string | null; search?: string } = {}
-) {
-	let query = sensorQuery(classroomId, deviceId);
-	if (domain) query += `&domain=${encodeURIComponent(domain)}`;
-	if (search) query += `&q=${encodeURIComponent(search)}`;
-	return query;
-}

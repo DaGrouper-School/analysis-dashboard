@@ -74,14 +74,8 @@ function publicDevices(
 			.sort((a, b) => b.observedAt.localeCompare(a.observedAt));
 		if (!readings.length) return [];
 		const icon = deviceTypeIcon(state.deviceTypes, device.type);
-		const featured = (max: number) =>
-			keyValues(
-				deviceTypeOf(state.deviceTypes, device.type),
-				readings[0].values as Reading['values'],
-				parameters,
-				max,
-				domainIcons
-			);
+		const type = deviceTypeOf(state.deviceTypes, device.type);
+		const values = readings[0].values as Reading['values'];
 		return [
 			{
 				id: device.id,
@@ -89,8 +83,15 @@ function publicDevices(
 				type: device.type,
 				color: deviceTypeColor(state.deviceTypes, device.type),
 				icon,
-				tiles: readingTiles(readings, featured(4), icon),
-				summary: deviceSummary(readings, featured(8))
+				tiles: readingTiles(
+					readings,
+					keyValues(type?.tileParameterIds, values, parameters, { domainIcons }),
+					icon
+				),
+				summary: deviceSummary(
+					readings,
+					keyValues(type?.cardParameterIds, values, parameters, { domainIcons, fallback: false })
+				)
 			}
 		];
 	});

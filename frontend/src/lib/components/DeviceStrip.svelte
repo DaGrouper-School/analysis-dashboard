@@ -4,12 +4,21 @@
 	import { formatValue } from '#lib/key-values.ts';
 
 	/**
-	 * The picked device's featured numbers under "What's happening now?" (AP-45): a card each with
+	 * The picked device's card numbers (set in the Registry) under "What's happening now?" (AP-45): a card each with
 	 * the newest value, the last 7 days as bars and today's and the week's range. Which values,
 	 * and their order, are set per device type in the Registry. The same on the public classroom
 	 * page and the dashboard; drawn in the page's colour.
 	 */
-	let { cards, class: className = '' }: { cards: DeviceSummaryCard[]; class?: string } = $props();
+	let {
+		cards,
+		href,
+		class: className = ''
+	}: {
+		cards: DeviceSummaryCard[];
+		/** Each card's value page. */
+		href?: (parameterId: string) => string;
+		class?: string;
+	} = $props();
 
 	const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'short', timeZone: 'UTC' });
 
@@ -46,7 +55,7 @@
 >
 	<h2 id="device-strip-heading" class="sr-only">The last 7 days</h2>
 	{#each cards as card (card.id)}
-		<StripCard label={card.label} icon={card.icon} note={note(card)}>
+		<StripCard label={card.label} icon={card.icon} note={note(card)} href={href?.(card.id)}>
 			{#snippet value()}
 				{#if card.latest === null}
 					<span class="font-sans text-base text-muted italic">no data</span>

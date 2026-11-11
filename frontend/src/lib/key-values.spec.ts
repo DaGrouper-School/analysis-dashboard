@@ -28,10 +28,10 @@ const parameters = new Map<string, Parameter>([
 	]
 ]);
 
-describe('featured values (AP-45)', () => {
-	const station = { featuredParameterIds: ['air_temperature', 'precip_accum_local_day', 'uv'] };
+describe('registry tile and card values (AP-45)', () => {
+	const station = ['air_temperature', 'precip_accum_local_day', 'uv'];
 
-	it("leads with the type's featured values, in the registry's order, labelled from it", () => {
+	it("leads with the type's values from the Registry, in the registry's order, labelled from it", () => {
 		const values = { relative_humidity: 60, precip_accum_local_day: 0, air_temperature: 27 };
 		expect(keySummary(station, values, parameters)).toBe(
 			'Air temperature 27°C · Rain since midnight 0 mm'
@@ -40,7 +40,9 @@ describe('featured values (AP-45)', () => {
 
 	it("gives each value its domain's icon", () => {
 		const icons = new Map([['AIR', 'thermometer']]);
-		expect(keyValues(station, { air_temperature: 27 }, parameters, 4, icons)[0]).toEqual({
+		expect(
+			keyValues(station, { air_temperature: 27 }, parameters, { domainIcons: icons })[0]
+		).toEqual({
 			id: 'air_temperature',
 			label: 'Air temperature',
 			unit: '°C',
@@ -50,9 +52,13 @@ describe('featured values (AP-45)', () => {
 		});
 	});
 
-	it('falls back to whatever a device sends when nothing featured is in it', () => {
+	it('falls back to whatever a device sends when none of its set values is in it', () => {
 		expect(keySummary(undefined, { light_level: 4 }, parameters)).toBe('Light level 4');
 		expect(keySummary(station, { light_level: 4 }, parameters)).toBe('Light level 4');
+	});
+
+	it('shows nothing without the fallback, as for cards', () => {
+		expect(keyValues([], { light_level: 4 }, parameters, { fallback: false })).toEqual([]);
 	});
 
 	it('formats values for reading at a glance', () => {

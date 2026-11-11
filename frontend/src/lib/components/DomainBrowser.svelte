@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { replaceState } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import Icon from '#lib/components/Icon.svelte';
 	import Sparkline from '#lib/components/Sparkline.svelte';
@@ -13,6 +12,7 @@
 	} from '#lib/domain/types.ts';
 	import { FALLBACK_DOMAIN_ICON } from '#lib/icons.ts';
 	import { formatValue } from '#lib/key-values.ts';
+	import { valueHref } from '#lib/site.ts';
 
 	/**
 	 * "What this classroom measures" (AP-22), the same on the public classroom page and the
@@ -79,13 +79,17 @@
 	{@const param = paramsById.get(value.parameterId)}
 	<li class="flex items-center justify-between gap-3 py-2.5">
 		<span class="min-w-0">
+			<!-- valueHref resolves. -->
+			<!-- eslint-disable svelte/no-navigation-without-resolve -->
 			<a
 				class="link"
-				href={resolve('/classrooms/[classroom]/[parameter]', {
-					classroom: classroomId,
-					parameter: value.parameterId
-				})}>{param?.label ?? value.parameterId}</a
+				href={valueHref(
+					classroomId,
+					value.parameterId,
+					value.source.kind === 'device' ? value.source.id : null
+				)}>{param?.label ?? value.parameterId}</a
 			>
+			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 			<span class="block truncate text-xs text-muted">
 				{sourceName(value.source)}{compact
 					? ''

@@ -1352,8 +1352,11 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		icon: 'station',
 		parameterIds: parameters.filter((p) => p.source === 'weather_station').map((p) => p.id),
 		// In the registry's own order, as the Registry form keeps them.
-		featuredParameterIds: parameters
+		tileParameterIds: parameters
 			.filter((p) => ['air_temperature', 'precip_accum_local_day', 'uv', 'wind_avg'].includes(p.id))
+			.map((p) => p.id),
+		cardParameterIds: parameters
+			.filter((p) => ['air_temperature', 'precip_accum_local_day', 'uv'].includes(p.id))
 			.map((p) => p.id)
 	},
 	{
@@ -1363,7 +1366,8 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		color: '#00bdff',
 		icon: 'gauge',
 		parameterIds: ['rain_gauge_daily_accumulation'],
-		featuredParameterIds: ['rain_gauge_daily_accumulation'],
+		tileParameterIds: ['rain_gauge_daily_accumulation'],
+		cardParameterIds: ['rain_gauge_daily_accumulation'],
 		manual: true
 	},
 	{
@@ -1373,7 +1377,8 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		color: '#f6921e',
 		icon: 'soil',
 		parameterIds: ['soil_moisture', 'soil_temperature'],
-		featuredParameterIds: ['soil_moisture', 'soil_temperature']
+		tileParameterIds: ['soil_moisture', 'soil_temperature'],
+		cardParameterIds: ['soil_moisture', 'soil_temperature']
 	},
 	{
 		id: 'water_probe',
@@ -1382,7 +1387,8 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		color: '#2f7ff0',
 		icon: 'water',
 		parameterIds: ['water_temperature', 'water_ph'],
-		featuredParameterIds: ['water_temperature', 'water_ph']
+		tileParameterIds: ['water_temperature', 'water_ph'],
+		cardParameterIds: ['water_temperature', 'water_ph']
 	},
 	{
 		id: 'air_quality_sensor',
@@ -1391,7 +1397,8 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		color: '#e8457a',
 		icon: 'particles',
 		parameterIds: ['pm2_5', 'pm10'],
-		featuredParameterIds: ['pm2_5', 'pm10']
+		tileParameterIds: ['pm2_5', 'pm10'],
+		cardParameterIds: ['pm2_5', 'pm10']
 	},
 	{
 		id: 'other',
@@ -1400,7 +1407,8 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		color: '#9aa5ae',
 		icon: 'sensor',
 		parameterIds: [],
-		featuredParameterIds: []
+		tileParameterIds: [],
+		cardParameterIds: []
 	}
 ];
 

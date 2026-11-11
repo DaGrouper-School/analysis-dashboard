@@ -248,7 +248,8 @@ export function createMockRegistry({
 					color: input.color || DEVICE_TYPE_PALETTE.at(-1)!,
 					icon: input.icon?.trim() || FALLBACK_TYPE_ICON,
 					parameterIds: input.values.map((v) => v.id.trim()),
-					featuredParameterIds: input.values.filter((v) => v.featured).map((v) => v.id.trim()),
+					tileParameterIds: input.values.filter((v) => v.tile).map((v) => v.id.trim()),
+					cardParameterIds: input.values.filter((v) => v.card).map((v) => v.id.trim()),
 					...(input.manual ? { manual: true } : {})
 				};
 				state.deviceTypes.push(type);
@@ -301,7 +302,8 @@ export function createMockRegistry({
 				if (input.manual) type.manual = true;
 				else delete type.manual;
 				type.parameterIds = input.values.map((v) => v.id.trim());
-				type.featuredParameterIds = input.values.filter((v) => v.featured).map((v) => v.id.trim());
+				type.tileParameterIds = input.values.filter((v) => v.tile).map((v) => v.id.trim());
+				type.cardParameterIds = input.values.filter((v) => v.card).map((v) => v.id.trim());
 				const removed = before.filter((p) => !type.parameterIds.includes(p));
 				const parts = [
 					added.length && `added ${added.join(', ')}`,

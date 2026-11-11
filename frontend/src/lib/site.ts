@@ -9,3 +9,15 @@ export function sectionHref(section: SiteSection) {
 	if (!section.href) return resolve('/soon/[id]', { id: section.id });
 	return resolve('/') + section.href.replace(/^\//, '');
 }
+
+/**
+ * A value's own page in a classroom (AP-23), opened on one device's readings when `deviceId` is
+ * given. Tiles, cards, domain readings and alerts all link here.
+ */
+export function valueHref(classroomId: string, parameterId: string, deviceId?: string | null) {
+	const path = resolve('/classrooms/[classroom]/[parameter]', {
+		classroom: classroomId,
+		parameter: parameterId
+	});
+	return deviceId ? `${path}?device=${encodeURIComponent(deviceId)}` : path;
+}

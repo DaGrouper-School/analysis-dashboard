@@ -31,6 +31,7 @@
 		NowTile
 	} from '#lib/domain/types.ts';
 	import { stageColor } from '#lib/labels.ts';
+	import { valueHref } from '#lib/site.ts';
 
 	/**
 	 * A classroom at a glance (AP-43, AP-45), the same on its public page and on the dashboard:
@@ -50,7 +51,6 @@
 		badges,
 		headerActions,
 		tabsStart,
-		tabsEnd,
 		nowActions,
 		devices,
 		deviceId,
@@ -80,8 +80,6 @@
 		headerActions?: Snippet;
 		/** Above the classroom tabs, such as the public page's filter. */
 		tabsStart?: Snippet;
-		/** After the classroom tabs, such as "Join or start one". */
-		tabsEnd?: Snippet;
 		nowActions?: Snippet;
 		/** The device picker on "What's happening now?": its devices, the one shown, and a pick. */
 		devices?: PickableDevice[];
@@ -91,7 +89,7 @@
 		now?: NowTile[];
 		/** Tints "What's happening now?", such as with the picked device's colour. */
 		accent?: string;
-		/** The picked device's featured numbers, charted in place of the classroom's core readings. */
+		/** The picked device's card numbers from the Registry, charted in place of the classroom's core readings. */
 		summary?: DeviceSummaryCard[];
 		/** The tiles are released data only; false for a member's raw readings. */
 		released?: boolean;
@@ -105,6 +103,8 @@
 	} = $props();
 
 	const classroom = $derived(station.classroom);
+	/** A tile's or card's value page, on the picked device. */
+	const valueOf = (parameterId: string) => valueHref(classroom.id, parameterId, deviceId);
 	const loading = $derived(pendingId !== classroom.id);
 	const shown = $derived<ShownPlace>(
 		station.places.find((p) => p.id === pendingId) ?? {
@@ -188,7 +188,7 @@
 
 {#if tabsStart}<div class="mt-6">{@render tabsStart()}</div>{/if}
 
-{#if tabs.length > 1 || tabsEnd || tabsStart}
+{#if tabs.length > 1 || tabsStart}
 	<nav
 		aria-label={tabsLabel}
 		class="relative -mx-4 mt-6 flex gap-7 overflow-x-auto px-4 text-sm font-medium whitespace-nowrap sm:justify-center"
@@ -209,7 +209,6 @@
 			>
 			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		{/each}
-		{@render tabsEnd?.()}
 		<!-- One underline that slides to the tab being opened, as soon as it is picked. -->
 		{#if underline}
 			<span
@@ -228,63 +227,81 @@
 	style:--accent={accent}
 	aria-busy={loading}
 >
-	{#if devices?.length && onpickdevice}
-		<DevicePicker class="mt-6" {devices} {deviceId} onpick={onpickdevice} />
-	{/if}
-	<div
-		class={[
-			'mt-6 grid gap-5 lg:h-[38rem]',
-			classroom.location
-				? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,1fr)]'
-				: 'lg:grid-cols-2'
-		]}
-	>
-		<NowCard tiles={now ?? station.now} {released} {accent} actions={nowActions} {onexplain} />
-		{#if classroom.location}
-			<section
-				class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] sm:h-96 lg:h-full"
-				aria-label="Where {shown.name} is"
-			>
-				<!-- Out of the flow, so the canvas never sets the card's height and grows it. -->
-				<div class="absolute inset-0">
-					<Globe
-						{markers}
-						bind:selectedId={globeSelected}
-						ariaLabel="Globe of classrooms, turned to {shown.name}"
-					/>
-				</div>
-				{#if legend.length}
-					<ul
-						class="pointer-events-none absolute top-4 left-4 flex flex-wrap gap-3 text-xs text-text"
-						aria-label="Stages"
-					>
-						{#each legend as stage (stage.id)}
-							<li class="flex items-center gap-1.5">
-								<span class="size-2.5 rounded-full" style:background-color={stage.color}></span>
-								{stage.label}
-							</li>
-						{/each}
-					</ul>
-				{/if}
-				<span
-					class="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-line-strong bg-surface px-3 py-1 text-xs whitespace-nowrap text-ink"
-				>
-					{pill}
-				</span>
-			</section>
+	<!-- On a phone: the globe and the institution first, then the device, what's happening and
+	     its cards. On a wide screen: the device picker, then the three columns, then the cards. -->
+	<div class="mt-6 flex flex-col gap-5 lg:block">
+		{#if devices?.length && onpickdevice}
+			<DevicePicker class="max-lg:order-3" {devices} {deviceId} onpick={onpickdevice} />
 		{/if}
-		<InstitutionOverview
-			overview={institution}
-			actions={institutionActions}
-			class="overflow-hidden"
-		/>
-	</div>
+		<div
+			class={[
+				'contents lg:grid lg:h-[38rem] lg:gap-5',
+				devices?.length && onpickdevice && 'lg:mt-6',
+				classroom.location
+					? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,1fr)]'
+					: 'lg:grid-cols-2'
+			]}
+		>
+			<NowCard
+				class="max-lg:order-4"
+				tiles={now ?? station.now}
+				{released}
+				{accent}
+				actions={nowActions}
+				{onexplain}
+				href={valueOf}
+			/>
+			{#if classroom.location}
+				<section
+					class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] max-lg:order-1 sm:h-96 lg:h-full"
+					aria-label="Where {shown.name} is"
+				>
+					<!-- Out of the flow, so the canvas never sets the card's height and grows it. -->
+					<div class="absolute inset-0">
+						<Globe
+							{markers}
+							bind:selectedId={globeSelected}
+							ariaLabel="Globe of classrooms, turned to {shown.name}"
+						/>
+					</div>
+					{#if legend.length}
+						<ul
+							class="pointer-events-none absolute top-4 left-4 flex flex-wrap gap-3 text-xs text-text"
+							aria-label="Stages"
+						>
+							{#each legend as stage (stage.id)}
+								<li class="flex items-center gap-1.5">
+									<span class="size-2.5 rounded-full" style:background-color={stage.color}></span>
+									{stage.label}
+								</li>
+							{/each}
+						</ul>
+					{/if}
+					<span
+						class="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-line-strong bg-surface px-3 py-1 text-xs whitespace-nowrap text-ink"
+					>
+						{pill}
+					</span>
+				</section>
+			{/if}
+			<InstitutionOverview
+				overview={institution}
+				actions={institutionActions}
+				class="overflow-hidden max-lg:order-2"
+			/>
+		</div>
 
-	{#if summary?.length}
-		<DeviceStrip class="mt-5" cards={summary} />
-	{:else}
-		<CoreStrip class="mt-5" {station} />
-	{/if}
+		<!-- A picked device's cards come from the Registry; a type with none set shows none. -->
+		{#if summary}
+			{#if summary.length}<DeviceStrip
+					class="max-lg:order-5 lg:mt-5"
+					cards={summary}
+					href={valueOf}
+				/>{/if}
+		{:else}
+			<CoreStrip class="max-lg:order-5 lg:mt-5" {station} />
+		{/if}
+	</div>
 
 	{@render children?.()}
 </div>
