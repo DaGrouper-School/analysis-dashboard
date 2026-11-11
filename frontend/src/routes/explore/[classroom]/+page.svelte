@@ -4,6 +4,7 @@
 	import { goto, replaceState } from '$app/navigation';
 	import { navigating, page } from '$app/state';
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
+	import CompletenessCard from '#lib/components/CompletenessCard.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import InstitutionOverview from '#lib/components/InstitutionOverview.svelte';
 	import NowCard from '#lib/components/NowCard.svelte';
@@ -12,7 +13,6 @@
 	import Sparkline from '#lib/components/Sparkline.svelte';
 	import StageBadge from '#lib/components/StageBadge.svelte';
 	import type {
-		DomainCompleteness,
 		InstitutionOverview as InstitutionInfo,
 		PublicDomainCard,
 		PublicSource,
@@ -32,11 +32,6 @@
 	const params = $derived(new Map(data.parameters.map((p) => [p.id, p])));
 	const explore = $derived(data.content.sections.find((s) => s.id === 'explore'));
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-	const dayMonth = new Intl.DateTimeFormat(undefined, {
-		day: 'numeric',
-		month: 'short',
-		timeZone: 'UTC'
-	});
 	const monthName = new Intl.DateTimeFormat(undefined, {
 		month: 'long',
 		year: 'numeric',
@@ -156,17 +151,6 @@
 		open(tabs[(i + step + tabs.length) % tabs.length].id);
 		document.getElementById(`domain-tab-${active}`)?.focus();
 	}
-
-	const percent = (d: DomainCompleteness) =>
-		d.expected ? Math.round((d.received / d.expected) * 100) : 0;
-	const missingDays = (d: DomainCompleteness) =>
-		d.days.filter((day) => day.status === 'missing').map((day) => day.day);
-	const DAY_TONE = {
-		complete: 'bg-teal',
-		partial: 'bg-teal/40',
-		missing: 'border border-dashed border-line-strong'
-	} as const;
-	const DAY_WORD = { complete: 'complete', partial: 'partly received', missing: 'no readings' };
 </script>
 
 <svelte:head><title>{classroom.name} · {data.content.hero.eyebrow}</title></svelte:head>
@@ -485,66 +469,7 @@
 					as a share of what the classroom's research protocol expects. Missing days stay empty;
 					they are never filled in.
 				</p>
-				<div class="card mt-4 divide-y divide-line p-0">
-					{#each completeness.domains as d (domainKey(d.domain))}
-						{@const missing = missingDays(d)}
-						<div class="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center">
-							<p class="flex w-40 shrink-0 items-center gap-2 font-medium text-ink">
-								<Icon
-									name={d.domain?.icon ?? FALLBACK_DOMAIN_ICON}
-									fallback={FALLBACK_DOMAIN_ICON}
-									class="size-4 text-muted"
-								/>
-								{d.domain?.label ?? 'Other'}
-							</p>
-							<p class="w-36 shrink-0 text-sm">
-								<span class="font-mono text-ink tabular-nums">{percent(d)}%</span>
-								<span class="text-muted">· {d.received} of {d.expected}</span>
-							</p>
-							{#if d.days.length}
-								<div class="min-w-0 flex-1">
-									<ol class="flex flex-wrap gap-1" aria-label="Days of the month">
-										{#each d.days as day (day.day)}
-											<li
-												class={['size-3.5 rounded-[3px]', DAY_TONE[day.status]]}
-												title="{dayMonth.format(new Date(`${day.day}T00:00:00Z`))}: {DAY_WORD[
-													day.status
-												]}"
-											>
-												<span class="sr-only"
-													>{dayMonth.format(new Date(`${day.day}T00:00:00Z`))}: {DAY_WORD[
-														day.status
-													]}</span
-												>
-											</li>
-										{/each}
-									</ol>
-									{#if missing.length}
-										<p class="mt-1.5 text-xs text-muted">
-											No readings on {missing
-												.map((m) => dayMonth.format(new Date(`${m}T00:00:00Z`)))
-												.join(', ')}
-										</p>
-									{/if}
-								</div>
-							{:else}
-								<p class="text-sm text-muted">Measured weekly</p>
-							{/if}
-						</div>
-					{/each}
-				</div>
-				<p class="mt-2 flex flex-wrap gap-4 text-xs text-muted" aria-hidden="true">
-					<span class="flex items-center gap-1.5"
-						><span class="size-3 rounded-[3px] bg-teal"></span>Complete</span
-					>
-					<span class="flex items-center gap-1.5"
-						><span class="size-3 rounded-[3px] bg-teal/40"></span>Partly received</span
-					>
-					<span class="flex items-center gap-1.5"
-						><span class="size-3 rounded-[3px] border border-dashed border-line-strong"></span>No
-						readings</span
-					>
-				</p>
+				<CompletenessCard class="mt-4" domains={completeness.domains} />
 			</section>
 		{/if}
 	</div>
