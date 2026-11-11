@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import Collapse from '#lib/components/Collapse.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 
 	/**
@@ -55,5 +56,5 @@
 			</button>
 		</div>
 	</div>
-	<div id="alerts-panel-body" class="mt-4" hidden={!open}>{@render children()}</div>
+	<Collapse id="alerts-panel-body" {open} class="pt-4">{@render children()}</Collapse>
 </section>

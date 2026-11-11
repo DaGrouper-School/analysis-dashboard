@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Collapse from '#lib/components/Collapse.svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import type { Snippet } from 'svelte';
@@ -89,9 +90,8 @@
 				>
 			</div>
 		</div>
-		{#if menuOpen}
+		<Collapse id="site-menu" open={menuOpen}>
 			<nav
-				id="site-menu"
 				aria-label="Sections"
 				class="mx-auto flex max-w-6xl flex-col gap-3 border-t border-line px-4 py-4 sm:px-6 lg:hidden"
 			>
@@ -99,7 +99,7 @@
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 				<a href={account.href} class="btn btn-primary mt-2 sm:hidden">{account.label}</a>
 			</nav>
-		{/if}
+		</Collapse>
 		{#if isMockDataSource}
 			<p class="border-t border-line bg-raised py-1 text-center text-xs text-muted">
 				Demo mode: data is mock and saved only in this browser.

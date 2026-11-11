@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
+	import Collapse from '#lib/components/Collapse.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import GoogleAccountPicker from '#lib/features/auth/GoogleAccountPicker.svelte';
 	import PhoneInput from '#lib/features/auth/PhoneInput.svelte';
 	import { normalizePhone } from '#lib/domain/validation.ts';
@@ -17,6 +19,7 @@
 	let sendingCode = $state(false);
 	let googleBusy = $state(false);
 	let pickerOpen = $state(false);
+	let demoOpen = $state(false);
 
 	async function continueWithGoogle(idToken: string) {
 		pickerOpen = false;
@@ -99,17 +102,28 @@
 	{#if formError}<p class="field-error" role="alert">{formError}</p>{/if}
 
 	{#if isMockDataSource}
-		<details class="rounded-md border border-line bg-surface px-4 py-3 text-sm text-muted">
-			<summary class="cursor-pointer font-medium text-ink">Demo accounts</summary>
-			<ul class="mt-2 list-disc space-y-1 pl-5">
-				<li>
-					Google: Tesfaye G. (institution head), Dr. Marcus L. (researcher), Leila M. (platform
-					admin) and Sarah K. (community scientist) already have accounts.
-				</li>
-				<li>Google: Hana Bekele and Amina Yusuf are new, so they go through onboarding.</li>
-				<li>Phone: Ethiopia 911 000 001 is Abebe T. Any other number creates a new account.</li>
-			</ul>
-		</details>
+		<div class="rounded-md border border-line bg-surface px-4 py-3 text-sm text-muted">
+			<button
+				type="button"
+				class="flex w-full items-center justify-between gap-2 text-left font-medium text-ink"
+				aria-expanded={demoOpen}
+				aria-controls="demo-accounts"
+				onclick={() => (demoOpen = !demoOpen)}
+			>
+				Demo accounts
+				<Icon name="chevron" class="size-4 transition-transform {demoOpen ? 'rotate-180' : ''}" />
+			</button>
+			<Collapse id="demo-accounts" open={demoOpen}>
+				<ul class="list-disc space-y-1 pt-2 pl-5">
+					<li>
+						Google: Tesfaye G. (institution head), Dr. Marcus L. (researcher), Leila M. (platform
+						admin) and Sarah K. (community scientist) already have accounts.
+					</li>
+					<li>Google: Hana Bekele and Amina Yusuf are new, so they go through onboarding.</li>
+					<li>Phone: Ethiopia 911 000 001 is Abebe T. Any other number creates a new account.</li>
+				</ul>
+			</Collapse>
+		</div>
 	{/if}
 </div>
 
