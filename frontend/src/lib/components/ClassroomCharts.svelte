@@ -1,5 +1,5 @@
 <script lang="ts">
-	import DailyChart from '#lib/components/DailyChart.svelte';
+	import Chart, { type ChartLine } from '#lib/components/Chart.svelte';
 	import type { PublicStation } from '#lib/domain/types.ts';
 	import { formatValue } from '#lib/key-values.ts';
 
@@ -31,6 +31,48 @@
 	const stationDays = $derived(rain.filter((d) => d.value !== null && !d.reference).length);
 	const soils = $derived(numbers(soil));
 	const uvs = $derived(numbers(uv));
+	// One point a day, at noon, so a day's point sits in the middle of its day.
+	const COLOR = 'var(--color-series-1)';
+	const at = (day: string) => Date.parse(`${day}T12:00:00.000Z`);
+	const span = $derived({
+		from: days.length ? at(days[0]) : 0,
+		to: days.length ? at(days.at(-1)!) : 0
+	});
+	function line(id: string, label: string, values: (number | null)[]): ChartLine {
+		return {
+			id,
+			label,
+			color: COLOR,
+			points: values.flatMap((value, i) => (value === null ? [] : [{ at: at(days[i]), value }]))
+		};
+	}
+	const temperatureLine = $derived<ChartLine>({
+		...line(
+			'temperature',
+			'Average',
+			temperature.map((d) => d?.mean ?? null)
+		),
+		band: temperature.flatMap((d, i) => (d ? [{ at: at(days[i]), low: d.low, high: d.high }] : []))
+	});
+	const rainBars = $derived([
+		{
+			id: 'gauge',
+			label: 'Gauge',
+			color: COLOR,
+			values: Object.fromEntries(
+				rain.filter((d) => d.value !== null && d.reference).map((d) => [d.day, d.value!])
+			)
+		},
+		{
+			id: 'station',
+			label: 'Station',
+			color: COLOR,
+			outlined: true,
+			values: Object.fromEntries(
+				rain.filter((d) => d.value !== null && !d.reference).map((d) => [d.day, d.value!])
+			)
+		}
+	]);
 	const range2 = (values: number[], unit: string) =>
 		values.length
 			? `${formatValue(Math.min(...values))} to ${formatValue(Math.max(...values), unit)}`
@@ -67,7 +109,7 @@
 			<div>
 				<h2 id="charts-heading" class="font-display text-2xl">Charts</h2>
 				<p class="mt-1 max-w-2xl text-sm text-muted">
-					One point a day from released data. Point at a day to see its value.
+					One point a day from released data. Point at a day, or use the arrow keys, to read it.
 				</p>
 			</div>
 			<div
@@ -103,16 +145,12 @@
 						{@render key('line', 'Average')}
 						{@render key('band', 'Low to high')}
 					</div>
-					<DailyChart
-						{days}
-						line={temperature.map((d) => d?.mean ?? null)}
-						band={temperature}
-						label="Air temperature, last {range} days"
-						tick={(v) => `${formatValue(v)}°`}
-						tip={(i) =>
-							temperature[i]
-								? `${formatValue(temperature[i]!.mean, t)} · ${formatValue(temperature[i]!.low)} to ${formatValue(temperature[i]!.high)}`
-								: null}
+					<Chart
+						label="Air temperature"
+						unit={t}
+						lines={[temperatureLine]}
+						from={span.from}
+						to={span.to}
 					/>
 				</figure>
 			{/if}
@@ -130,15 +168,13 @@
 						{@render key('outline', 'Station, no gauge reading')}
 						{#if flagged}{@render key('flag', 'Flagged for review')}{/if}
 					</div>
-					<DailyChart
+					<Chart
+						label="Daily rain"
+						unit={mm}
 						{days}
-						bars={rain}
-						label="Daily rain, last {range} days"
-						tick={(v) => formatValue(v)}
-						tip={(i) =>
-							rain[i].value === null
-								? null
-								: `${formatValue(rain[i].value!, mm)}, ${rain[i].reference ? 'gauge' : 'station'}${rain[i].flagged ? ' · flagged' : ''}`}
+						bars={rainBars}
+						overlay
+						flagged={rain.filter((d) => d.flagged).map((d) => d.day)}
 					/>
 				</figure>
 			{/if}
@@ -147,12 +183,11 @@
 					<figcaption>
 						{@render figure('UV index', "The day's highest", range2(uvs, ''))}
 					</figcaption>
-					<DailyChart
-						{days}
-						line={uv}
-						label="UV index, last {range} days"
-						tick={(v) => formatValue(v)}
-						tip={(i) => (uv[i] === null ? null : `UV ${formatValue(uv[i]!)}`)}
+					<Chart
+						label="UV index"
+						lines={[line('uv', 'UV index', uv)]}
+						from={span.from}
+						to={span.to}
 					/>
 				</figure>
 			{/if}
@@ -161,12 +196,12 @@
 					<figcaption>
 						{@render figure('Soil moisture', "The day's average", range2(soils, soilUnit))}
 					</figcaption>
-					<DailyChart
-						{days}
-						line={soil}
-						label="Soil moisture, last {range} days"
-						tick={(v) => `${formatValue(v)}${soilUnit}`}
-						tip={(i) => (soil[i] === null ? null : formatValue(soil[i]!, soilUnit))}
+					<Chart
+						label="Soil moisture"
+						unit={soilUnit}
+						lines={[line('soil', 'Soil moisture', soil)]}
+						from={span.from}
+						to={span.to}
 					/>
 				</figure>
 			{/if}

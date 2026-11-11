@@ -1,6 +1,6 @@
 import type {
 	Parameter,
-	ParameterChart,
+	Chart,
 	PublicParameterPage,
 	PublicParameterSeries
 } from '#lib/domain/types.ts';
@@ -20,7 +20,7 @@ export const RANGES: { id: RangeId; label: string; days: number }[] = [
 ];
 
 /** The chart a value gets: its registry choice, a line for other numbers, none for text. */
-export function chartOf(parameter: Pick<Parameter, 'chart' | 'valueType'>): ParameterChart | null {
+export function chartOf(parameter: Pick<Parameter, 'chart' | 'valueType'>): Chart | null {
 	if ((parameter.valueType ?? 'number') !== 'number') return null;
 	return parameter.chart ?? 'line';
 }

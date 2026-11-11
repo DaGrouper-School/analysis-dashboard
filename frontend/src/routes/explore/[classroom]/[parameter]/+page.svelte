@@ -3,10 +3,7 @@
 	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
-	import ParameterChart, {
-		type ChartBars,
-		type ChartLine
-	} from '#lib/components/ParameterChart.svelte';
+	import Chart, { type ChartBars, type ChartLine } from '#lib/components/Chart.svelte';
 	import PublicShell from '#lib/components/PublicShell.svelte';
 	import SampleDataBadge from '#lib/components/SampleDataBadge.svelte';
 	import type { PublicParameterPage, PublicParameterSeries } from '#lib/domain/types.ts';
@@ -395,7 +392,7 @@
 		{/if}
 		<div class="mt-4">
 			{#if rain}
-				<ParameterChart
+				<Chart
 					label={parameter.label}
 					{unit}
 					days={range === '24h' ? rangeDays.slice(-1) : rangeDays}
@@ -403,7 +400,7 @@
 					flagged={rainInRange.filter((d) => d.review).map((d) => d.day)}
 				/>
 			{:else if chart}
-				<ParameterChart
+				<Chart
 					label={parameter.label}
 					{unit}
 					lines={chartLines}

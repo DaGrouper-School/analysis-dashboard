@@ -317,10 +317,10 @@ export interface Parameter {
 	 * each day's low to high for values such as temperature, or a plain line. Numbers only; a
 	 * value without one charts as a line.
 	 */
-	chart?: ParameterChart;
+	chart?: Chart;
 }
 
-export type ParameterChart = 'daily_bars' | 'line_band' | 'line';
+export type Chart = 'daily_bars' | 'line_band' | 'line';
 
 export interface Calculation {
 	method: 'measured' | 'derived' | 'manual';

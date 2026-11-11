@@ -6,6 +6,8 @@
 		color: string;
 		/** The day's value, by day; a missing day stays empty, never zero. */
 		values: Record<string, number>;
+		/** Drawn as an outline, for a stand-in such as the station on a day with no gauge. */
+		outlined?: boolean;
 	}
 
 	export interface ChartLine {
@@ -16,14 +18,25 @@
 		/** Each day's low to high, drawn as a soft band behind the line. */
 		band?: { at: number; low: number; high: number }[];
 		dashed?: boolean;
+		/** A soft wash under the line, down to the axis. */
+		wash?: boolean;
 	}
+
+	/** An alert level (AP-08) drawn on a line chart. */
+	export type ChartLevel = Pick<AlertRule, 'id' | 'value' | 'level' | 'direction'>;
 </script>
 
 <script lang="ts">
+	import { LEVEL_LABELS } from '#lib/domain/alerts.ts';
+	import type { AlertRule } from '#lib/domain/types.ts';
+
 	/**
-	 * The main chart of a value's page (AP-23), in the form the registry gives it: daily bars,
-	 * one per source side by side, for totals such as rain; or lines with an optional low-to-high
-	 * band for values such as temperature. Days flagged for review get a marker over their bars.
+	 * The one chart of the app: a value's page (AP-23), a device's domains, and the classroom
+	 * charts (AP-45). Daily bars, one per source side by side (or sharing the day with
+	 * `overlay`), for totals such as rain; or lines with an optional low-to-high band for values
+	 * such as temperature. Days flagged for review get a marker over their bars. Alert levels show
+	 * as dashed lines in their status color, and the stretch of line past a level takes that
+	 * color; a level far outside the readings is listed under the chart instead of squashing it.
 	 * Hover, tap or use the arrow keys to read a day or a reading.
 	 */
 	let {
@@ -36,7 +49,10 @@
 		lines = [],
 		from = 0,
 		to = 0,
-		hourly = false
+		hourly = false,
+		overlay = false,
+		thresholds = [],
+		endLabel = false
 	}: {
 		label: string;
 		unit?: string;
@@ -52,9 +68,27 @@
 		to?: number;
 		/** Lines: label the axis with hours rather than dates. */
 		hourly?: boolean;
+		/** Bars: every source in the same place, one bar a day (they never report the same day). */
+		overlay?: boolean;
+		/** Lines: alert levels in force for the first line's value. */
+		thresholds?: ChartLevel[];
+		/** Lines: write the first line's latest value at its end. */
+		endLabel?: boolean;
 	} = $props();
 
-	const PAD = { top: 20, right: 16, bottom: 28, left: 44 };
+	const LEVEL_LINE = { warning: 'stroke-danger', caution: 'stroke-orange' };
+	const LEVEL_FILL = { warning: 'fill-danger', caution: 'fill-orange' };
+	const uid = $props.id();
+
+	const main = $derived(lines[0]?.points ?? []);
+	const lastPoint = $derived(main.at(-1) ?? null);
+	// Room for the latest value at the end of the line, at about 7px a character.
+	const PAD = $derived({
+		top: 20,
+		right: endLabel && lastPoint ? Math.max(56, format(lastPoint.value).length * 7 + 16) : 16,
+		bottom: 28,
+		left: 44
+	});
 	let width = $state(0);
 	let active = $state<number | null>(null);
 
@@ -62,7 +96,7 @@
 	const plotWidth = $derived(Math.max(width - PAD.left - PAD.right, 1));
 	const plotHeight = $derived(height - PAD.top - PAD.bottom);
 
-	const values = $derived(
+	const data = $derived(
 		isBars
 			? bars.flatMap((b) => Object.values(b.values))
 			: lines.flatMap((l) => [
@@ -70,7 +104,21 @@
 					...(l.band ?? []).flatMap((b) => [b.low, b.high])
 				])
 	);
-	const empty = $derived(values.length === 0);
+	const empty = $derived(data.length === 0);
+
+	/** Levels close enough to the readings to draw without flattening the line. */
+	const levels = $derived.by(() => {
+		if (isBars || !data.length) return { drawn: [], off: [] };
+		const min = Math.min(...data);
+		const max = Math.max(...data);
+		const reach = Math.max(max - min, Math.abs(max) * 0.25, 1);
+		const near = (t: { value: number }) => t.value >= min - reach && t.value <= max + reach;
+		return {
+			drawn: thresholds.filter(near),
+			off: thresholds.filter((t) => !near(t)).map((t) => ({ ...t, above: t.value > max }))
+		};
+	});
+	const values = $derived([...data, ...levels.drawn.map((t) => t.value)]);
 
 	function niceStep(span: number, count: number) {
 		const raw = span / count || 1;
@@ -95,11 +143,20 @@
 	// Bars: one slot per day, the sources side by side with a 2px gap.
 	const slot = $derived(plotWidth / Math.max(days.length, 1));
 	const barWidth = $derived(
-		Math.max(Math.min((slot * 0.7 - 2 * (bars.length - 1)) / Math.max(bars.length, 1), 28), 2)
+		Math.max(
+			Math.min(
+				(slot * 0.7 - 2 * ((overlay ? 1 : bars.length) - 1)) /
+					(overlay ? 1 : Math.max(bars.length, 1)),
+				28
+			),
+			2
+		)
 	);
-	const groupWidth = $derived(bars.length * barWidth + 2 * (bars.length - 1));
+	const lanes = $derived(overlay ? 1 : bars.length);
+	const groupWidth = $derived(lanes * barWidth + 2 * (lanes - 1));
 	const dayX = (i: number) => PAD.left + slot * i + slot / 2;
-	const barX = (i: number, b: number) => dayX(i) - groupWidth / 2 + b * (barWidth + 2);
+	const barX = (i: number, b: number) =>
+		dayX(i) - groupWidth / 2 + (overlay ? 0 : b) * (barWidth + 2);
 	/** A bar with a rounded top, anchored to the baseline. */
 	function barPath(x: number, value: number) {
 		const base = yScale.y(Math.max(0, yScale.ticks[0]));
@@ -113,6 +170,38 @@
 		PAD.left + (to === from ? plotWidth / 2 : ((at - from) / (to - from)) * plotWidth);
 	const path = (points: { at: number; value: number }[]) =>
 		points.map((p, i) => `${i ? 'L' : 'M'}${x(p.at)},${yScale.y(p.value)}`).join('');
+	/** The plot under a line, for its wash and the level bands. */
+	const washPath = (points: { at: number; value: number }[]) =>
+		points.length
+			? `${path(points)}L${x(points.at(-1)!.at)},${height - PAD.bottom}L${x(points[0].at)},${height - PAD.bottom}Z`
+			: '';
+	/**
+	 * The part of the plot past each level, as a clip for the colored copy of the line: above
+	 * the level for an "above" alert, below it for a "below" one. Cautions first, so a warning
+	 * paints over the caution it sits inside.
+	 */
+	const levelBands = $derived(
+		thresholds
+			.toSorted((a, b) => (a.level === b.level ? 0 : a.level === 'caution' ? -1 : 1))
+			.map((t) => {
+				const top = PAD.top;
+				const bottom = height - PAD.bottom;
+				const y = Math.min(Math.max(yScale.y(t.value), top), bottom);
+				return {
+					...t,
+					y: t.direction === 'above' ? top - 8 : y,
+					h: t.direction === 'above' ? y - top + 8 : bottom - y + 8
+				};
+			})
+			.filter((b) => b.h > 0)
+	);
+	/** The most severe level a value is past, for the tooltip. */
+	function levelAt(value: number) {
+		const hit = thresholds
+			.filter((t) => (t.direction === 'above' ? value >= t.value : value <= t.value))
+			.sort((a, b) => (a.level === b.level ? 0 : a.level === 'warning' ? -1 : 1))[0];
+		return hit ? LEVEL_LABELS[hit.level] : null;
+	}
 	const bandPath = (band: NonNullable<ChartLine['band']>) =>
 		band.length
 			? band.map((b, i) => `${i ? 'L' : 'M'}${x(b.at)},${yScale.y(b.high)}`).join('') +
@@ -192,7 +281,7 @@
 			return {
 				x: dayX(active),
 				title: dayLong.format(atDay(day)),
-				rows: bars.map((b) => ({
+				rows: (overlay ? bars.filter((b) => b.values[day] !== undefined) : bars).map((b) => ({
 					color: b.color,
 					label: b.label,
 					value: b.values[day] === undefined ? 'No reading' : format(b.values[day])
@@ -208,7 +297,12 @@
 				const point = l.points.find((p) => p.at === at);
 				return point ? [{ color: l.color, label: l.label, value: format(point.value) }] : [];
 			}),
-			note: null
+			note: (() => {
+				const point = main.find((p) => p.at === at);
+				return point && levelAt(point.value)
+					? `Past the ${levelAt(point.value)!.toLowerCase()} level`
+					: null;
+			})()
 		};
 	});
 	const tipLeft = $derived(tip ? Math.min(Math.max(tip.x, 90), Math.max(width - 90, 90)) : 0);
@@ -278,7 +372,17 @@
 				{#each days as day, i (day)}
 					{#each bars as bar, b (bar.id)}
 						{#if bar.values[day] !== undefined}
-							<path d={barPath(barX(i, b), bar.values[day])} fill={bar.color} />
+							{#if bar.outlined}
+								<path
+									d={barPath(barX(i, b), bar.values[day])}
+									fill="none"
+									stroke={bar.color}
+									stroke-width="1.5"
+									stroke-dasharray="3 2"
+								/>
+							{:else}
+								<path d={barPath(barX(i, b), bar.values[day])} fill={bar.color} />
+							{/if}
 						{/if}
 					{/each}
 					{#if flagged.includes(day)}
@@ -294,7 +398,21 @@
 					{/if}
 				{/each}
 			{:else}
+				{#each levels.drawn as level (level.id)}
+					<line
+						x1={PAD.left}
+						x2={width - PAD.right}
+						y1={yScale.y(level.value)}
+						y2={yScale.y(level.value)}
+						class={LEVEL_LINE[level.level]}
+						stroke-width="1.5"
+						stroke-dasharray="5 4"
+					/>
+				{/each}
 				{#each lines as line (line.id)}
+					{#if line.wash}
+						<path d={washPath(line.points)} fill={line.color} fill-opacity="0.1" />
+					{/if}
 					{#if line.band?.length}
 						<path d={bandPath(line.band)} fill={line.color} fill-opacity="0.16" />
 					{/if}
@@ -341,6 +459,52 @@
 						{/if}
 					{/if}
 				{/each}
+				{#each levelBands as band (band.id)}
+					<clipPath id="{uid}-{band.id}">
+						<rect x="0" y={band.y} {width} height={band.h} />
+					</clipPath>
+					<g clip-path="url(#{uid}-{band.id})">
+						{#if lines[0]?.wash}
+							<path d={washPath(main)} class={LEVEL_FILL[band.level]} fill-opacity="0.14" />
+						{/if}
+						<path
+							d={path(main)}
+							fill="none"
+							class={LEVEL_LINE[band.level]}
+							stroke-width="2"
+							stroke-linejoin="round"
+							stroke-linecap="round"
+						/>
+					</g>
+				{/each}
+				{#each levels.drawn as level (level.id)}
+					<!-- At the start of the line, clear of the latest value; a halo keeps it legible. -->
+					<text
+						x={PAD.left + 4}
+						y={yScale.y(level.value) - 5}
+						class="fill-muted stroke-surface text-[11px]"
+						stroke-width="3"
+						paint-order="stroke">{LEVEL_LABELS[level.level]} {format(level.value)}</text
+					>
+				{/each}
+				{#if lastPoint && main.length > 1}
+					<circle
+						cx={x(lastPoint.at)}
+						cy={yScale.y(lastPoint.value)}
+						r="4"
+						fill={lines[0].color}
+						class="stroke-surface"
+						stroke-width="2"
+					/>
+					{#if endLabel}
+						<text
+							x={x(lastPoint.at) + 8}
+							y={yScale.y(lastPoint.value)}
+							dy="0.32em"
+							class="fill-ink text-xs font-medium">{format(lastPoint.value)}</text
+						>
+					{/if}
+				{/if}
 			{/if}
 		</svg>
 		{#if tip}
@@ -359,6 +523,17 @@
 				{/each}
 				{#if tip.note}<p class="mt-1 text-orange">{tip.note}</p>{/if}
 			</div>
+		{/if}
+		{#if levels.off.length}
+			<p class="mt-1 text-xs text-muted">
+				Off this chart:
+				{levels.off
+					.map(
+						(t) =>
+							`${LEVEL_LABELS[t.level]} ${format(t.value)}, well ${t.above ? 'above' : 'below'} these readings`
+					)
+					.join('; ')}.
+			</p>
 		{/if}
 	{/if}
 </div>
