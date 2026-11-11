@@ -19,6 +19,7 @@
 	import { deviceSummary, pickDevice, readingTiles } from '#lib/station-now.ts';
 	import {
 		CLASSROOM_ROLE_LABELS,
+		withArticle,
 		deviceTypeColor,
 		deviceTypeIcon,
 		deviceTypeLabel,
@@ -272,9 +273,9 @@
 		{#snippet badges()}
 			{#if role}
 				<span class="chip"
-					><Icon name="user" class="size-3" /> You're {CLASSROOM_ROLE_LABELS[
-						role
-					].toLowerCase()}</span
+					><Icon name="user" class="size-3" /> You're {withArticle(
+						CLASSROOM_ROLE_LABELS[role].toLowerCase()
+					)}</span
 				>
 			{:else if visiting}
 				<span class="chip">Public data only</span>
