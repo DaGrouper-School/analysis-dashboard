@@ -28,7 +28,7 @@
 
 	/**
 	 * One value of one classroom (AP-23), always in the same order: what it means here, the value
-	 * now, the main chart, the daily summary, compare, data quality, how it is measured, the
+	 * now, the main chart, compare, the daily summary, data quality, how it is measured, the
 	 * curriculum link and the download. Released values only.
 	 */
 	let { data }: PageProps = $props();
@@ -432,7 +432,33 @@
 		{/if}
 	</section>
 
-	<!-- 4. Daily summary -->
+	<!-- 4. Compare with another classroom -->
+	<section class="mt-8" aria-labelledby="compare-heading">
+		<h2 id="compare-heading" class="font-display text-2xl">Compare with another classroom</h2>
+		{#if data.compare.length}
+			<label class="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
+				Show on the chart
+				<select class="input w-auto py-1" bind:value={compareId}>
+					<option value="">No other classroom</option>
+					{#each data.compare as c (c.id)}
+						<option value={c.id}>{c.name}{c.placeName ? `, ${c.placeName}` : ''}</option>
+					{/each}
+				</select>
+			</label>
+			{#if compareError}<p class="mt-2 text-sm text-danger" role="alert">{compareError}</p>{/if}
+			{#if compared}
+				<p class="mt-2 text-sm text-muted">
+					{compared.classroom.name} shows as
+					{rain ? 'a third bar each day' : 'a dashed line'} on the chart above, from
+					{comparedSeries ? sourceName(comparedSeries) : 'its readings'}.
+				</p>
+			{/if}
+		{:else}
+			<p class="mt-2 text-sm text-muted">No other classroom has released values of this yet.</p>
+		{/if}
+	</section>
+
+	<!-- 5. Daily summary -->
 	{#if chart}
 		<section class="mt-8" aria-labelledby="daily-heading">
 			<h2 id="daily-heading" class="font-display text-2xl">Daily summary</h2>
@@ -503,32 +529,6 @@
 			</div>
 		</section>
 	{/if}
-
-	<!-- 5. Compare with another classroom -->
-	<section class="mt-8" aria-labelledby="compare-heading">
-		<h2 id="compare-heading" class="font-display text-2xl">Compare with another classroom</h2>
-		{#if data.compare.length}
-			<label class="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
-				Show on the chart
-				<select class="input w-auto py-1" bind:value={compareId}>
-					<option value="">No other classroom</option>
-					{#each data.compare as c (c.id)}
-						<option value={c.id}>{c.name}{c.placeName ? `, ${c.placeName}` : ''}</option>
-					{/each}
-				</select>
-			</label>
-			{#if compareError}<p class="mt-2 text-sm text-danger" role="alert">{compareError}</p>{/if}
-			{#if compared}
-				<p class="mt-2 text-sm text-muted">
-					{compared.classroom.name} shows as
-					{rain ? 'a third bar each day' : 'a dashed line'} on the chart above, from
-					{comparedSeries ? sourceName(comparedSeries) : 'its readings'}.
-				</p>
-			{/if}
-		{:else}
-			<p class="mt-2 text-sm text-muted">No other classroom has released values of this yet.</p>
-		{/if}
-	</section>
 
 	<!-- 6. Data quality -->
 	<section class="mt-8" aria-labelledby="quality-heading">
