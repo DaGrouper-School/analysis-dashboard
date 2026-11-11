@@ -263,6 +263,14 @@ export interface UpdateClassroomInput {
 	institutionName: string;
 }
 
+/** A new photo of the host institution, or none to remove it (AP-43). */
+export interface InstitutionPhotoInput {
+	/** The image as a data URL (`data:image/…`), or null to remove the photo. */
+	image: string | null;
+	/** What the photo shows, for people who can't see it. Required with an image. */
+	alt: string;
+}
+
 export interface CreateClassroomInput {
 	name: string;
 	institutionName: string;

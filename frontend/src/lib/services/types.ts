@@ -1,4 +1,6 @@
 import type {
+	InstitutionInfo,
+	InstitutionPhotoInput,
 	HostApplication,
 	HostApplicationInput,
 	HostApplicationReceipt,
@@ -188,6 +190,8 @@ export interface ClassroomService {
 	create(input: CreateClassroomInput): Promise<ClassroomSummary>;
 	/** Name and institution. The classroom code is its identifier and cannot change. */
 	update(classroomId: string, input: UpdateClassroomInput): Promise<ClassroomSummary>;
+	/** The host institution's photo and its description, or none. Institution head only. */
+	setInstitutionPhoto(classroomId: string, input: InstitutionPhotoInput): Promise<InstitutionInfo>;
 	/** Sends one invitation email per address. */
 	invite(classroomId: string, emails: string[], role: ClassroomRole): Promise<Invitation[]>;
 	revokeInvitation(invitationId: string): Promise<void>;

@@ -1,4 +1,5 @@
 import type {
+	InstitutionInfo,
 	HostApplication,
 	HostApplicationInput,
 	HostApplicationReceipt,
@@ -108,6 +109,12 @@ export function createHttpServices(baseUrl: string): Services {
 			create: (input) => request<ClassroomSummary>('POST', '/classrooms', input),
 			update: (id, input) =>
 				request<ClassroomSummary>('PATCH', `/classrooms/${encodeURIComponent(id)}`, input),
+			setInstitutionPhoto: (id, input) =>
+				request<InstitutionInfo>(
+					'PUT',
+					`/classrooms/${encodeURIComponent(id)}/institution/photo`,
+					input
+				),
 			invite: (id, emails, role) =>
 				request<Invitation[]>('POST', `/classrooms/${encodeURIComponent(id)}/invitations`, {
 					emails,

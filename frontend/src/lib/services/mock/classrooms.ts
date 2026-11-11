@@ -7,7 +7,11 @@ import type {
 	MemberConsent,
 	User
 } from '#lib/domain/types.ts';
-import { isValidEmail, validateClassroomUpdate } from '#lib/domain/validation.ts';
+import {
+	isValidEmail,
+	validateClassroomUpdate,
+	validateInstitutionPhoto
+} from '#lib/domain/validation.ts';
 import { fillConsentSheet, localDay, validatePaperConsent } from '#lib/domain/consent.ts';
 import {
 	newId,
@@ -270,6 +274,29 @@ export function createMockClassrooms({
 				classroom.name = input.name.trim();
 				classroom.institutionName = input.institutionName.trim();
 				return summarize(state, user, classroom);
+			});
+		},
+
+		async setInstitutionPhoto(classroomId, input) {
+			await delay();
+			const errors = validateInstitutionPhoto(input);
+			if (Object.keys(errors).length) {
+				throw new ServiceError('invalid_input', Object.values(errors)[0], errors);
+			}
+			return updateDb((state) => {
+				const user = currentUser(state);
+				const { classroom, can } = visibleClassroom(state, user, classroomId);
+				if (!can.manageMembers) {
+					throw new ServiceError(
+						'forbidden',
+						"Only the institution head can change the institution's photo."
+					);
+				}
+				// Stand-in for an upload: the mock keeps the image itself as its URL.
+				const info = classroom.profile.institution;
+				info.photoUrl = input.image;
+				info.photoAlt = input.image ? input.alt.trim() : '';
+				return structuredClone(info);
 			});
 		},
 

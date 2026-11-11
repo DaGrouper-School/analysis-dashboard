@@ -1,15 +1,19 @@
 <script lang="ts">
 	import { invalidate } from '$app/navigation';
 	import CopyButton from '#lib/components/CopyButton.svelte';
-	import type { ClassroomDetail } from '#lib/domain/types.ts';
+	import InstitutionPhotoForm from '#lib/components/InstitutionPhotoForm.svelte';
+	import type { ClassroomDetail, InstitutionInfo } from '#lib/domain/types.ts';
 	import { validateClassroomUpdate } from '#lib/domain/validation.ts';
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
 
 	/**
-	 * A classroom's settings (AP-45): its name and institution, for those who may edit them, and
-	 * its permanent code, for those who may see it. A dashboard tab.
+	 * A classroom's settings (AP-45): its name, institution and the institution's photo, for those
+	 * who may edit them, and its permanent code, for those who may see it. A dashboard tab.
 	 */
-	let { detail }: { detail: ClassroomDetail } = $props();
+	let {
+		detail,
+		institutionInfo = null
+	}: { detail: ClassroomDetail; institutionInfo?: InstitutionInfo | null } = $props();
 
 	const classroom = $derived(detail.classroom);
 	const permissions = $derived(detail.permissions);
@@ -74,6 +78,9 @@
 				{#if saved}<p class="text-sm text-muted" role="status">Saved.</p>{/if}
 			</div>
 		</form>
+		{#if institutionInfo}
+			<InstitutionPhotoForm classroomId={classroom.id} institution={institutionInfo} />
+		{/if}
 	{/if}
 
 	{#if permissions.viewCode && classroom.code}

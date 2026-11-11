@@ -1,4 +1,5 @@
 import type {
+	InstitutionPhotoInput,
 	Address,
 	CreateLabInput,
 	DeviceTypeInput,
@@ -95,6 +96,21 @@ export function validateClassroomUpdate(input: UpdateClassroomInput): Record<str
 	if (input.name.trim().length < 3) errors.name = 'Enter a classroom name.';
 	if (input.institutionName.trim().length < 2)
 		errors.institutionName = 'Enter the institution name.';
+	return errors;
+}
+
+/** The largest institution photo accepted, as a data URL (about 1.5 MB of image). */
+export const MAX_PHOTO_LENGTH = 2_000_000;
+
+export function validateInstitutionPhoto(input: InstitutionPhotoInput): Record<string, string> {
+	const errors: Record<string, string> = {};
+	if (input.image === null) return errors;
+	if (!/^data:image\/(png|jpeg|webp);base64,/.test(input.image)) {
+		errors.image = 'Choose a PNG, JPEG or WebP image.';
+	} else if (input.image.length > MAX_PHOTO_LENGTH) {
+		errors.image = 'That image is too large. Choose a smaller one.';
+	}
+	if (input.alt.trim().length < 3) errors.alt = 'Say what the photo shows.';
 	return errors;
 }
 

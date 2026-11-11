@@ -217,6 +217,17 @@ export const routes: Route[] = [
 		errors: [400]
 	},
 	{
+		method: 'classrooms.setInstitutionPhoto',
+		http: 'PUT',
+		path: '/classrooms/{classroomId}/institution/photo',
+		access: 'user',
+		body: 'InstitutionPhotoInput',
+		response: 'InstitutionInfo',
+		errors: [400],
+		notes:
+			'Institution head only. A null image removes the photo. The backend stores the image and returns its URL.'
+	},
+	{
 		method: 'classrooms.invite',
 		http: 'POST',
 		path: '/classrooms/{classroomId}/invitations',
