@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import Icon from '#lib/components/Icon.svelte';
+	import RollingNumber from '#lib/components/RollingNumber.svelte';
 	import Sparkline from '#lib/components/Sparkline.svelte';
 	import type { NowTile } from '#lib/domain/types.ts';
 	import { formatValue } from '#lib/key-values.ts';
@@ -9,7 +10,8 @@
 	/**
 	 * "What's happening now?" (AP-43): a few current values as large tiles with a plain line
 	 * each, and when the newest of them was measured. Missing data reads "no data", never zero.
-	 * With `onexplain`, each value has an info button for how it is calculated (AP-07).
+	 * With `onexplain`, each value has an info button for how it is calculated (AP-07). Values
+	 * roll to their new digits when they change, and each says which way it went (AP-07).
 	 */
 	let {
 		tiles,
@@ -19,6 +21,7 @@
 		actions,
 		onexplain,
 		href,
+		element = $bindable(),
 		class: className = ''
 	}: {
 		tiles: NowTile[];
@@ -34,6 +37,8 @@
 		onexplain?: (parameterId: string) => void;
 		/** Each tile's value page; the whole tile is the link. */
 		href?: (parameterId: string) => string;
+		/** The card itself, so a page can bring it into view. */
+		element?: HTMLElement;
 		class?: string;
 	} = $props();
 
@@ -53,7 +58,8 @@
 </script>
 
 <section
-	class={['card flex flex-col', accent && 'accent-panel', className]}
+	bind:this={element}
+	class={['card flex scroll-mt-24 flex-col', accent && 'accent-panel', className]}
 	style:--accent={accent}
 	aria-labelledby="now-heading"
 >
@@ -97,7 +103,8 @@
 				tiles.length > 2 ? 'flex-1 auto-rows-fr' : 'content-start'
 			]}
 		>
-			{#each tiles as tile (tile.id)}
+			<!-- Keyed by position, so picking another device rolls the numbers in place. -->
+			{#each tiles as tile, i (i)}
 				<li
 					class={[
 						'relative flex min-w-0 flex-col rounded-md border p-4',
@@ -136,7 +143,15 @@
 						<p class="mt-3 text-sm text-muted italic">no data</p>
 					{:else}
 						<p class="mt-3 font-mono text-3xl leading-none text-ink tabular-nums">
-							{bare(tile)}<span class="ml-1 text-sm text-muted">{tile.unit}</span>
+							<RollingNumber value={bare(tile)} /><span class="ml-1 text-sm text-muted"
+								>{tile.unit}</span
+							>
+						</p>
+					{/if}
+					{#if tile.trend}
+						<p class="mt-2 text-xs text-muted" title={tile.trend.text}>
+							<span aria-hidden="true">{tile.trend.label}</span>
+							<span class="sr-only">{tile.trend.text}</span>
 						</p>
 					{/if}
 					{#if tile.caption}<p class="mt-2 text-xs text-muted">{tile.caption}</p>{/if}

@@ -16,6 +16,7 @@ import type {
 } from '#lib/domain/types.ts';
 import { coarsen, FIELD_SOURCE } from '#lib/raw-data.ts';
 import { deviceSummary, last24Hours, nowTiles, readingTiles } from '#lib/station-now.ts';
+import { recentTrend } from '#lib/indicators.ts';
 import { keyValues } from '#lib/key-values.ts';
 import { deviceTypeColor, deviceTypeIcon, deviceTypeOf } from '#lib/labels.ts';
 import { ServiceError, type PublicService } from '../types';
@@ -91,7 +92,8 @@ function publicDevices(
 				tiles: readingTiles(
 					readings,
 					keyValues(type?.tileParameterIds, values, parameters, { domainIcons }),
-					icon
+					icon,
+					parameters
 				),
 				summary: deviceSummary(
 					readings,
@@ -350,9 +352,11 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 						const records = shownRecords
 							.filter((r) => r.source.id === shown.source.id)
 							.map((r) => r.record);
+						const parameter = state.parameters.find((p) => p.id === shown.parameterId);
 						return {
 							...tile,
-							last24Hours: last24Hours(records, [shown.parameterId], tile.observedAt)
+							last24Hours: last24Hours(records, [shown.parameterId], tile.observedAt),
+							trend: parameter ? recentTrend(records, parameter, tile.observedAt) : null
 						};
 					}
 				),

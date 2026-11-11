@@ -98,7 +98,7 @@
 		if (visiting || !device) return undefined;
 		const icon = deviceTypeIcon(data.deviceTypes, device.type);
 		return {
-			tiles: readingTiles(data.readings, registryValues('tileParameterIds'), icon),
+			tiles: readingTiles(data.readings, registryValues('tileParameterIds'), icon, paramsById),
 			summary: deviceSummary(data.readings, registryValues('cardParameterIds')),
 			color: deviceTypeColor(data.deviceTypes, device.type)
 		};

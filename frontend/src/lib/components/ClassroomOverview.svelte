@@ -17,7 +17,7 @@
 </script>
 
 <script lang="ts">
-	import { untrack, type Snippet } from 'svelte';
+	import { tick, untrack, type Snippet } from 'svelte';
 	import CoreStrip from '#lib/components/CoreStrip.svelte';
 	import DeviceStrip from '#lib/components/DeviceStrip.svelte';
 	import DevicePicker, { type PickableDevice } from '#lib/components/DevicePicker.svelte';
@@ -26,6 +26,7 @@
 	import NowCard from '#lib/components/NowCard.svelte';
 	import Select from '#lib/components/Select.svelte';
 	import { MOBILE_TABS_MAX } from '#lib/tabs.ts';
+	import { reveal } from '#lib/reveal.ts';
 	import { goto } from '$app/navigation';
 	import StageBadge from '#lib/components/StageBadge.svelte';
 	import type {
@@ -148,6 +149,18 @@
 		return el ? { left: el.offsetLeft, width: el.offsetWidth } : null;
 	});
 
+	// After a device is picked, bring its values into view if they are off screen (on a phone the
+	// picker sits under the globe). Not on the first show, and not when the classroom changes.
+	let nowCard = $state<HTMLElement>();
+	let shownDevice: { classroom: string; device?: string } | undefined;
+	$effect(() => {
+		const next = { classroom: classroom.id, device: deviceId };
+		const before = shownDevice;
+		shownDevice = next;
+		if (before?.classroom === next.classroom && before.device !== next.device)
+			tick().then(() => reveal(nowCard));
+	});
+
 	// Follows the classroom being opened; picking a marker overrides it until the next page.
 	let globeSelected = $derived(pendingId);
 	$effect(() => {
@@ -266,6 +279,7 @@
 			]}
 		>
 			<NowCard
+				bind:element={nowCard}
 				class="max-lg:order-4"
 				tiles={now ?? station.now}
 				{released}
