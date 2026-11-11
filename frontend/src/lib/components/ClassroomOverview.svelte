@@ -106,8 +106,12 @@
 	} = $props();
 
 	const classroom = $derived(station.classroom);
-	/** A tile's or card's value page, on the picked device. */
-	const valueOf = (parameterId: string) => valueHref(classroom.id, parameterId, deviceId);
+	/** A tile's or card's value page, on the picked device. Value pages are for members only. */
+	const valueOf = $derived(
+		station.member
+			? (parameterId: string) => valueHref(classroom.id, parameterId, deviceId)
+			: undefined
+	);
 	const loading = $derived(pendingId !== classroom.id);
 	const shown = $derived<ShownPlace>(
 		station.places.find((p) => p.id === pendingId) ?? {

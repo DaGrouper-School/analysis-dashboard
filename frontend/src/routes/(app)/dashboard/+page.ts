@@ -1,17 +1,33 @@
+import { redirect } from '@sveltejs/kit';
+import { resolve } from '$app/paths';
 import { services } from '#lib/services/index.ts';
 import { selectSensor } from '#lib/sensor-selection.ts';
 import type { MemberConsent, RawRow } from '#lib/domain/types.ts';
 import type { PageLoad } from './$types';
+import type { PageLoad as DetailsLoad } from './details/$types';
 
 /** How many recent records the Records tab lists. */
 const RECORDS = 8;
 
 /**
- * The dashboard (AP-45): one classroom at a time, with the same overview as its public page and
- * alerts, domains, devices, labs, records and completeness as tabs. Sync follows the picked
- * device. Another classroom (`?classroom=` one the user is not in) shows its public data only.
+ * The dashboard (AP-45): one classroom at a time, with the same overview as its public page. Its
+ * sections (domains, alerts, measurements, labs, records, completeness and the rest) are tabs on
+ * the classroom details page, which loads the same data. Sync follows the picked device. Another
+ * classroom (`?classroom=` one the user is not in) shows its public data only.
  */
-export const load: PageLoad = async ({ url, parent, depends }) => {
+export const load: PageLoad = (event) => {
+	// A link to a section (`?tab=`) opens it on the details page.
+	if (event.url.searchParams.has('tab')) {
+		redirect(307, resolve('/(app)/dashboard/details') + event.url.search);
+	}
+	return loadDashboard(event);
+};
+
+export async function loadDashboard({
+	url,
+	parent,
+	depends
+}: Pick<Parameters<PageLoad>[0] | Parameters<DetailsLoad>[0], 'url' | 'parent' | 'depends'>) {
 	depends('app:classroom');
 	const [{ deviceTypes }, selection, parameters, invitations] = await Promise.all([
 		parent(),
@@ -82,4 +98,4 @@ export const load: PageLoad = async ({ url, parent, depends }) => {
 		waitingForConsent: consent.filter((m) => m.status === 'pending'),
 		records
 	};
-};
+}

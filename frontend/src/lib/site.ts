@@ -12,10 +12,11 @@ export function sectionHref(section: SiteSection) {
 
 /**
  * A value's own page in a classroom (AP-23), opened on one device's readings when `deviceId` is
- * given. Tiles, cards, domain readings and alerts all link here.
+ * given. Tiles, cards, domain readings and alerts all link here, for the classroom's members only:
+ * the page is in the app.
  */
 export function valueHref(classroomId: string, parameterId: string, deviceId?: string | null) {
-	const path = resolve('/classrooms/[classroom]/[parameter]', {
+	const path = resolve('/(app)/dashboard/[classroom]/[parameter]', {
 		classroom: classroomId,
 		parameter: parameterId
 	});
