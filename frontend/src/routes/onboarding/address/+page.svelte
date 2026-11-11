@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import AddressForm from '#lib/components/AddressForm.svelte';
+	import AddressForm from '#lib/features/places/AddressForm.svelte';
 	import type { Address } from '#lib/domain/types.ts';
 	import { services } from '#lib/services/index.ts';
-	import { refreshSessionAndContinue } from '#lib/session.ts';
+	import { refreshSessionAndContinue } from '#lib/features/auth/session.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();

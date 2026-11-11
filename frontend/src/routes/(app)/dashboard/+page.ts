@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import { resolve } from '$app/paths';
 import { services } from '#lib/services/index.ts';
-import { selectSensor } from '#lib/sensor-selection.ts';
+import { selectSensor } from '#lib/features/devices/sensor-selection.ts';
 import type { MemberConsent, RawRow } from '#lib/domain/types.ts';
 import type { PageLoad } from './$types';
 import type { PageLoad as DetailsLoad } from './details/$types';

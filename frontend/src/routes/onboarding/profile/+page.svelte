@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { goto, invalidate } from '$app/navigation';
-	import OtpForm from '#lib/components/OtpForm.svelte';
-	import PhoneInput from '#lib/components/PhoneInput.svelte';
+	import OtpForm from '#lib/features/auth/OtpForm.svelte';
+	import PhoneInput from '#lib/features/auth/PhoneInput.svelte';
 	import type { PhoneChallenge } from '#lib/domain/types.ts';
 	import { validateProfile } from '#lib/domain/validation.ts';
 	import { validateGuardian } from '#lib/domain/consent.ts';

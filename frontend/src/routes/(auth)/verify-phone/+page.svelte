@@ -2,15 +2,15 @@
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import OtpForm from '#lib/components/OtpForm.svelte';
+	import OtpForm from '#lib/features/auth/OtpForm.svelte';
 	import type { PhoneChallenge } from '#lib/domain/types.ts';
 	import {
 		clearPendingChallenge,
 		loadPendingChallenge,
 		savePendingChallenge
-	} from '#lib/pending-challenge.ts';
+	} from '#lib/features/auth/pending-challenge.ts';
 	import { services } from '#lib/services/index.ts';
-	import { refreshSessionAndContinue } from '#lib/session.ts';
+	import { refreshSessionAndContinue } from '#lib/features/auth/session.ts';
 
 	let challenge = $state<PhoneChallenge | null>(null);
 

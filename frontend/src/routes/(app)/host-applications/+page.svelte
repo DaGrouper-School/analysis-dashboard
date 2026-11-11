@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { sectionQuery } from '#lib/sensor-selection.ts';
+	import { sectionQuery } from '#lib/features/devices/sensor-selection.ts';
 	import { resolve } from '$app/paths';
 	import { HOST_STATUS_LABELS } from '#lib/domain/hosting.ts';
 	import type { HostApplication } from '#lib/domain/types.ts';

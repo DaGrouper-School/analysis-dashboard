@@ -1,6 +1,6 @@
 import type { RawQuery, RawSortKey } from '#lib/domain/types.ts';
-import { rememberClassroom } from '#lib/classroom-context.ts';
-import { PAGE_SIZE, SORT_KEYS } from '#lib/raw-data.ts';
+import { rememberClassroom } from '#lib/features/classroom/classroom-context.ts';
+import { PAGE_SIZE, SORT_KEYS } from '#lib/features/measurements/raw-data.ts';
 import { services } from '#lib/services/index.ts';
 import type { PageLoad } from './$types';
 

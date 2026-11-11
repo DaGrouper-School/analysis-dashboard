@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import CoreReadingsTable from '#lib/components/CoreReadingsTable.svelte';
-	import Globe from '#lib/components/Globe.svelte';
-	import NetworkMap from '#lib/components/NetworkMap.svelte';
+	import CoreReadingsTable from '#lib/features/devices/CoreReadingsTable.svelte';
+	import Globe from '#lib/features/map/Globe.svelte';
+	import NetworkMap from '#lib/features/map/NetworkMap.svelte';
 	import PublicShell from '#lib/components/PublicShell.svelte';
 	import SampleDataBadge from '#lib/components/SampleDataBadge.svelte';
-	import { sectionHref } from '#lib/site.ts';
+	import { sectionHref } from '#lib/utils/site.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();

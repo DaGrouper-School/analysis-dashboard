@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { iconShapes, type RegistryIconName } from '#lib/icons.ts';
+	import { iconShapes, type RegistryIconName } from '#lib/utils/icons.ts';
 
 	/**
 	 * A line icon in the current text color. `name` is a registry icon (stored on a device type

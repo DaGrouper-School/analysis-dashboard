@@ -3,8 +3,8 @@
 	import { resolve } from '$app/paths';
 	import PublicShell from '#lib/components/PublicShell.svelte';
 	import SampleDataBadge from '#lib/components/SampleDataBadge.svelte';
-	import { formatValue } from '#lib/key-values.ts';
-	import { CLASSROOM_ROLE_LABELS } from '#lib/labels.ts';
+	import { formatValue } from '#lib/features/measurements/key-values.ts';
+	import { CLASSROOM_ROLE_LABELS } from '#lib/utils/labels.ts';
 	import type { PageProps } from './$types';
 
 	/**

@@ -16,7 +16,7 @@
 	import { page } from '$app/state';
 	import Icon from '#lib/components/Icon.svelte';
 	import Select from '#lib/components/Select.svelte';
-	import { MOBILE_TABS_MAX } from '#lib/tabs.ts';
+	import { MOBILE_TABS_MAX } from '#lib/utils/tabs.ts';
 
 	/**
 	 * Tabs down the left on wide screens, a scrolling row on narrow ones, or a dropdown there when

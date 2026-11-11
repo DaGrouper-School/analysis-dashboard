@@ -12,7 +12,7 @@ import type {
 	RegisterDeviceInput,
 	UpdateClassroomInput
 } from './types';
-import { isRegistryIcon } from '#lib/icons.ts';
+import { isRegistryIcon } from '#lib/utils/icons.ts';
 
 /** Normalises a phone number to E.164 (`+2519…`), or returns null when it is not valid. */
 export function normalizePhone(raw: string): string | null {
@@ -100,7 +100,7 @@ export function validateClassroomUpdate(input: UpdateClassroomInput): Record<str
 }
 
 /** The largest institution photo accepted, as a data URL (about 1.5 MB of image). */
-export const MAX_PHOTO_LENGTH = 2_000_000;
+const MAX_PHOTO_LENGTH = 2_000_000;
 
 export function validateInstitutionPhoto(input: InstitutionPhotoInput): Record<string, string> {
 	const errors: Record<string, string> = {};

@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { readFilter } from '#lib/directory.ts';
+import { readFilter } from '#lib/features/classroom/directory.ts';
 import { services, ServiceError } from '#lib/services/index.ts';
 import type { PageLoad } from './$types';
 

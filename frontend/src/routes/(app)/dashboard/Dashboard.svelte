@@ -2,26 +2,26 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { navigating, page } from '$app/state';
-	import { domainsOf } from '#lib/domains.ts';
-	import AlertsList from '#lib/components/AlertsList.svelte';
-	import AlertsPanel from '#lib/components/AlertsPanel.svelte';
-	import CalculationPanel from '#lib/components/CalculationPanel.svelte';
+	import { domainsOf } from '#lib/features/measurements/domains.ts';
+	import AlertsList from '#lib/features/alerts/AlertsList.svelte';
+	import AlertsPanel from '#lib/features/alerts/AlertsPanel.svelte';
+	import CalculationPanel from '#lib/features/measurements/CalculationPanel.svelte';
 	import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
-	import ClassroomAbout from '#lib/components/ClassroomAbout.svelte';
-	import ClassroomCompleteness from '#lib/components/ClassroomCompleteness.svelte';
-	import ClassroomOverview, { type ClassroomTab } from '#lib/components/ClassroomOverview.svelte';
-	import ClassroomLabs from '#lib/components/ClassroomLabs.svelte';
-	import ClassroomPeople from '#lib/components/ClassroomPeople.svelte';
-	import ClassroomSettings from '#lib/components/ClassroomSettings.svelte';
-	import DomainBrowser from '#lib/components/DomainBrowser.svelte';
+	import ClassroomAbout from '#lib/features/classroom/ClassroomAbout.svelte';
+	import ClassroomCompleteness from '#lib/features/classroom/ClassroomCompleteness.svelte';
+	import ClassroomOverview, { type ClassroomTab } from '#lib/views/ClassroomOverview.svelte';
+	import ClassroomLabs from '#lib/features/devices/ClassroomLabs.svelte';
+	import ClassroomPeople from '#lib/features/classroom/ClassroomPeople.svelte';
+	import ClassroomSettings from '#lib/features/classroom/ClassroomSettings.svelte';
+	import DomainBrowser from '#lib/features/measurements/DomainBrowser.svelte';
 	import Icon from '#lib/components/Icon.svelte';
-	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
-	import RegisterSensorModal from '#lib/components/RegisterSensorModal.svelte';
+	import PendingInvitations from '#lib/features/classroom/PendingInvitations.svelte';
+	import RegisterSensorModal from '#lib/features/devices/RegisterSensorModal.svelte';
 	import Select from '#lib/components/Select.svelte';
-	import SyncModal from '#lib/components/SyncModal.svelte';
+	import SyncModal from '#lib/features/devices/SyncModal.svelte';
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
-	import { formatValue, keySummary, keyValues } from '#lib/key-values.ts';
-	import { deviceSummary, pickDevice, readingTiles } from '#lib/station-now.ts';
+	import { formatValue, keySummary, keyValues } from '#lib/features/measurements/key-values.ts';
+	import { deviceSummary, pickDevice, readingTiles } from '#lib/features/devices/station-now.ts';
 	import {
 		CLASSROOM_ROLE_LABELS,
 		withArticle,
@@ -30,8 +30,8 @@
 		deviceTypeLabel,
 		deviceTypeOf,
 		isManualType
-	} from '#lib/labels.ts';
-	import { sensorQuery } from '#lib/sensor-selection.ts';
+	} from '#lib/utils/labels.ts';
+	import { sensorQuery } from '#lib/features/devices/sensor-selection.ts';
 	import type { PageData } from './$types';
 
 	/**

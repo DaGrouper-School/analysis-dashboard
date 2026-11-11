@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { sectionQuery } from '#lib/sensor-selection.ts';
+	import { sectionQuery } from '#lib/features/devices/sensor-selection.ts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';

@@ -236,12 +236,12 @@ describe('labs (AP-05)', () => {
 		const detail = await services.labs.get('lab_trinity');
 		expect(detail.lab.name).toBe('Trinity Field Lab');
 		expect(detail.readings.map((r) => r.id)).toContain(stored.id);
-		const [latest] = await services.labs.recentReadings(1);
-		expect(latest.reading.id).toBe(stored.id);
+		const [latest] = await services.labs.deviceReadings(device.id, 1);
+		expect(latest.id).toBe(stored.id);
 		expect((await services.labs.currentConditions()).map((c) => c.device.id)).toContain(device.id);
 
 		await signInAs('g-amina');
-		expect(await services.labs.recentReadings()).toEqual([]);
+		expect(await services.labs.currentConditions()).toEqual([]);
 	});
 
 	it('lists a classroom’s devices and one device’s history to its members only', async () => {
@@ -274,7 +274,6 @@ describe('labs (AP-05)', () => {
 			new Set(['lab_trinity', 'lab_nassau', 'lab_hargeisa'])
 		);
 		expect(conditions.map((c) => c.device.id)).toContain('dev_shashamane_ws');
-		expect((await services.labs.recentReadings()).length).toBeGreaterThan(0);
 	});
 
 	it('lets the demo community scientist record in each of their classrooms, and only there', async () => {
@@ -314,19 +313,5 @@ describe('labs (AP-05)', () => {
 		const station = conditions.find((c) => c.device.id === 'dev_shashamane_ws')!;
 		expect(station.alerts.map((a) => a.title)).toEqual(['High UV']);
 		expect(conditions.find((c) => c.device.id === 'dev_trinity_soil')!.alerts).toEqual([]);
-	});
-
-	it('lists recorded readings from my classrooms, newest first', async () => {
-		await signInAs('g-tesfaye');
-		const device = await services.labs.registerDevice('lab_trinity', deviceInput);
-		await services.labs.uploadReadings(device.id, [
-			{ ...reading(null), observedAt: '2026-10-21T09:00:00.000Z' }
-		]);
-		const recent = await services.labs.recentReadings(3);
-		expect(recent.length).toBe(3);
-		expect(recent[0].device.id).toBe(device.id);
-		expect(recent.every((r) => r.device.labId === 'lab_trinity')).toBe(true);
-		await signInAs('g-amina');
-		expect(await services.labs.recentReadings()).toEqual([]);
 	});
 });

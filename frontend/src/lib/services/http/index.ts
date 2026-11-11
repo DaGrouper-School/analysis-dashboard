@@ -219,8 +219,6 @@ export function createHttpServices(baseUrl: string): Services {
 					credit: options.credit
 				}),
 			currentConditions: () => request<CurrentConditions[]>('GET', '/me/conditions'),
-			recentReadings: (limit = 20) =>
-				request<CurrentConditions[]>('GET', `/me/readings?limit=${limit}`),
 			listClassroomDevices: (classroomId) =>
 				request<Device[]>('GET', `/classrooms/${encodeURIComponent(classroomId)}/devices`),
 			deviceReadings: (deviceId, limit = 100) =>

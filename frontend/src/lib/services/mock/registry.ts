@@ -15,9 +15,9 @@ import {
 import { newId, readDb, updateDb, type MockDbState } from '#lib/data/mock-db.ts';
 import { ServiceError, type RegistryService } from '../types';
 import { currentUser } from './classrooms';
-import { DEVICE_TYPE_PALETTE } from '#lib/labels.ts';
-import { FALLBACK_DOMAIN_ICON, FALLBACK_TYPE_ICON } from '#lib/icons.ts';
-import { withDeviceTemplates } from '#lib/observations.ts';
+import { DEVICE_TYPE_PALETTE } from '#lib/utils/labels.ts';
+import { FALLBACK_DOMAIN_ICON, FALLBACK_TYPE_ICON } from '#lib/utils/icons.ts';
+import { withDeviceTemplates } from '#lib/features/measurements/observations.ts';
 import { SOURCE_CALCULATION } from '#lib/data/seed.ts';
 
 /**

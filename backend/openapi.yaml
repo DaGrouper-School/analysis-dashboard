@@ -1182,36 +1182,6 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
-  /me/readings:
-    get:
-      tags:
-        - Labs and devices
-      operationId: labs.recentReadings
-      summary: Recent readings
-      description: |-
-        Recent readings from devices in the user's classrooms, newest first. Same membership rule.
-
-        Access: signed-in users. Classroom roles are checked on the server.
-      parameters:
-        - name: limit
-          in: query
-          required: false
-          description: Default 20.
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/CurrentConditions"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "403":
-          $ref: "#/components/responses/Forbidden"
   /classrooms/{classroomId}/devices:
     get:
       tags:

@@ -6,9 +6,9 @@
 	import Select from '#lib/components/Select.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import type { SiteContent, User } from '#lib/domain/types.ts';
-	import { nextRoute } from '#lib/routing.ts';
+	import { nextRoute } from '#lib/utils/routing.ts';
 	import { isMockDataSource } from '#lib/services/index.ts';
-	import { sectionHref } from '#lib/site.ts';
+	import { sectionHref } from '#lib/utils/site.ts';
 
 	/**
 	 * The public site's frame (AP-20): every section in the top bar, a language switch and

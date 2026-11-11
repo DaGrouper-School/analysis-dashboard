@@ -22,7 +22,7 @@ import type {
 	User
 } from '#lib/domain/types.ts';
 import type { StoredAlertRule } from '#lib/domain/alerts.ts';
-import type { CoreParameters } from '#lib/core-readings.ts';
+import type { CoreParameters } from '#lib/features/devices/core-readings.ts';
 import { createSeed } from './seed';
 
 /**
