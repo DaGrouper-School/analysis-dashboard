@@ -53,7 +53,7 @@
 	]}
 	aria-labelledby="device-strip-heading"
 >
-	<h2 id="device-strip-heading" class="sr-only">The last 7 days</h2>
+	<h2 id="device-strip-heading" class="col-span-full pt-6 text-xl font-medium">Last week</h2>
 	{#each cards as card (card.id)}
 		<StripCard label={card.label} icon={card.icon} note={note(card)} href={href?.(card.id)}>
 			{#snippet value()}
