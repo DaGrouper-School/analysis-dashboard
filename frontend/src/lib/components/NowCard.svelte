@@ -70,9 +70,13 @@
 		{/if}
 	</p>
 
-	<!-- The tiles share the card's height evenly, with the same gap between them every way. -->
+	<!-- Three or more tiles share the card's height evenly, with the same gap between them every
+	     way. One row of tiles keeps its own height, rather than stretching down the card. -->
 	<ul
-		class="mt-5 grid flex-1 auto-rows-fr grid-cols-2 gap-3 [&>:last-child:nth-child(odd)]:col-span-2"
+		class={[
+			'mt-5 grid grid-cols-2 gap-3 [&>:last-child:nth-child(odd)]:col-span-2',
+			tiles.length > 2 ? 'flex-1 auto-rows-fr' : 'content-start'
+		]}
 	>
 		{#each tiles as tile (tile.id)}
 			<li
@@ -126,6 +130,6 @@
 	{/if}
 
 	{#if actions}
-		<div class="flex flex-wrap gap-3 pt-5">{@render actions()}</div>
+		<div class="mt-auto flex flex-wrap gap-3 pt-5">{@render actions()}</div>
 	{/if}
 </section>
