@@ -4,6 +4,7 @@
 	import CopyButton from '#lib/components/CopyButton.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import Modal from '#lib/components/Modal.svelte';
+	import Select, { toOptions } from '#lib/components/Select.svelte';
 	import { CONSENT_LABELS, localDay, validatePaperConsent } from '#lib/domain/consent.ts';
 	import type {
 		ClassroomDetail,
@@ -28,6 +29,8 @@
 	const classroom = $derived(detail.classroom);
 	const permissions = $derived(detail.permissions);
 	const ICONS = { members: 'users', invitations: 'mail', consent: 'clipboard' };
+	/** Roles a member can be moved between; the institution head is set elsewhere. */
+	const MEMBER_ROLES: ClassroomRole[] = ['facilitator', 'community_scientist', 'researcher'];
 
 	// Paper guardian consent (AP-38): the head or a facilitator records a signed sheet.
 	const dateOnly = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeZone: 'UTC' });
@@ -186,23 +189,15 @@
 					</div>
 					{#if editable}
 						<label class="sr-only" for="role-{member.userId}">Role for {member.fullName}</label>
-						<select
+						<Select
 							id="role-{member.userId}"
-							class="input w-auto py-1.5 pr-9 text-sm"
+							size="compact"
+							align="end"
+							options={toOptions(MEMBER_ROLES, CLASSROOM_ROLE_LABELS)}
 							value={member.role}
-							onchange={(e) =>
-								run(() =>
-									services.classrooms.setMemberRole(
-										classroom.id,
-										member.userId,
-										e.currentTarget.value as ClassroomRole
-									)
-								)}
-						>
-							<option value="facilitator">Facilitator</option>
-							<option value="community_scientist">Community scientist</option>
-							<option value="researcher">Researcher</option>
-						</select>
+							onchange={(role) =>
+								run(() => services.classrooms.setMemberRole(classroom.id, member.userId, role))}
+						/>
 						<button
 							class="btn btn-ghost px-3 py-1.5 text-xs"
 							onclick={() => remove(member.userId, member.fullName)}>Remove</button
@@ -361,11 +356,11 @@
 				</div>
 				<div>
 					<label class="label" for="inviteRole">Role</label>
-					<select id="inviteRole" class="input" bind:value={inviteRole}>
-						{#each permissions.invite as role (role)}
-							<option value={role}>{CLASSROOM_ROLE_LABELS[role]}</option>
-						{/each}
-					</select>
+					<Select
+						id="inviteRole"
+						options={toOptions(permissions.invite, CLASSROOM_ROLE_LABELS)}
+						bind:value={inviteRole}
+					/>
 				</div>
 			</form>
 		{/if}

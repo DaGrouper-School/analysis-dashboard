@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
+	import Select from '#lib/components/Select.svelte';
 	import type { RawSortKey } from '#lib/domain/types.ts';
 	import { formatPoint } from '#lib/geo.ts';
 	import { describeParameter, formatValue } from '#lib/key-values.ts';
@@ -240,45 +241,39 @@
 		</div>
 		<div>
 			<label class="label" for="raw-param">Parameter</label>
-			<select
+			<Select
 				id="raw-param"
-				class="input"
+				options={[
+					{ value: '', label: 'All parameters' },
+					...parameterOptions.map((o) => ({ value: o.id, label: o.label }))
+				]}
 				value={query.parameterId ?? ''}
-				onchange={(e) => apply({ param: e.currentTarget.value, n: undefined })}
-			>
-				<option value="">All parameters</option>
-				{#each parameterOptions as option (option.id)}
-					<option value={option.id}>{option.label}</option>
-				{/each}
-			</select>
+				onchange={(value) => apply({ param: value, n: undefined })}
+			/>
 		</div>
 		<div>
 			<label class="label" for="raw-source">Source</label>
-			<select
+			<Select
 				id="raw-source"
-				class="input"
+				options={[
+					{ value: '', label: 'All sources' },
+					...page.options.sources.map((o) => ({ value: o.id, label: o.name }))
+				]}
 				value={query.sourceId ?? ''}
-				onchange={(e) => apply({ source: e.currentTarget.value, n: undefined })}
-			>
-				<option value="">All sources</option>
-				{#each page.options.sources as option (option.id)}
-					<option value={option.id}>{option.name}</option>
-				{/each}
-			</select>
+				onchange={(value) => apply({ source: value, n: undefined })}
+			/>
 		</div>
 		<div>
 			<label class="label" for="raw-site">Site</label>
-			<select
+			<Select
 				id="raw-site"
-				class="input"
+				options={[
+					{ value: '', label: 'All sites' },
+					...page.options.sites.map((o) => ({ value: o.id, label: o.name }))
+				]}
 				value={query.labId ?? ''}
-				onchange={(e) => apply({ site: e.currentTarget.value, n: undefined })}
-			>
-				<option value="">All sites</option>
-				{#each page.options.sites as option (option.id)}
-					<option value={option.id}>{option.name}</option>
-				{/each}
-			</select>
+				onchange={(value) => apply({ site: value, n: undefined })}
+			/>
 		</div>
 		<div class="flex items-end">
 			<button

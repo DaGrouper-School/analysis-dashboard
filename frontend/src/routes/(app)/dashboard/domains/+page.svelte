@@ -5,11 +5,12 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import Chart from '#lib/components/Chart.svelte';
 	import ChartAlerts from '#lib/components/ChartAlerts.svelte';
+	import Select from '#lib/components/Select.svelte';
 	import { thresholdStatus, thresholdsFor } from '#lib/domain/alerts.ts';
 	import { TIME_RANGES, withinRange } from '#lib/domains.ts';
 	import { trendOf, trendText } from '#lib/indicators.ts';
 	import { describeParameter, formatValue, timeAgo } from '#lib/key-values.ts';
-	import { deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
+	import { deviceOptions, deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import type { PageProps } from './$types';
 
@@ -105,16 +106,12 @@
 		{#if data.classroom && data.devices.length > 1}
 			<div class="w-full sm:w-72">
 				<label class="label" for="domain-device">Measurement</label>
-				<select
+				<Select
 					id="domain-device"
-					class="input"
+					options={deviceOptions(data.devices, data.deviceTypes)}
 					value={device?.id ?? ''}
-					onchange={(e) => go({ device: e.currentTarget.value })}
-				>
-					{#each data.devices as option (option.id)}
-						<option value={option.id}>{option.name}</option>
-					{/each}
-				</select>
+					onchange={(value) => go({ device: value })}
+				/>
 			</div>
 		{/if}
 	</div>

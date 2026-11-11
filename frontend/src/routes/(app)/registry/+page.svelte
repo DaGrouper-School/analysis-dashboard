@@ -12,6 +12,7 @@
 	import ExplanationModal from '#lib/components/ExplanationModal.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import Modal from '#lib/components/Modal.svelte';
+	import Select, { type SelectOption } from '#lib/components/Select.svelte';
 	import IconPicker from '#lib/components/IconPicker.svelte';
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
 	import Wizard from '#lib/components/Wizard.svelte';
@@ -33,6 +34,22 @@
 	const typesFor = (parameterId: string) =>
 		data.deviceTypes.filter((t) => t.parameterIds.includes(parameterId));
 	const unmapped = $derived(parameters.filter((p) => !p.domain || !domainsById.has(p.domain)));
+	/** Where a value can go: no domain, one of the registry's, or a new one made on the spot. */
+	const domainChoices = $derived<SelectOption[]>([
+		{ value: '', label: 'Not in a domain' },
+		...data.domains.map((d) => ({
+			value: d.id,
+			label: d.label,
+			hint: d.description,
+			icon: d.icon
+		})),
+		{ value: NEW_DOMAIN, label: 'New domain…', icon: 'plus' }
+	]);
+	const VALUE_KINDS: SelectOption<NonNullable<ValueRow['valueType']>>[] = [
+		{ value: 'number', label: 'Number' },
+		{ value: 'text', label: 'Text' },
+		{ value: 'time', label: 'Time (Unix seconds)' }
+	];
 
 	/** Each tab's icon, also drawn by its section title. */
 	const ICONS = {
@@ -350,14 +367,6 @@
 
 <svelte:head><title>Registry · DaGrouper Analysis</title></svelte:head>
 
-{#snippet domainOptions(selected: string | null)}
-	<option value="" selected={!selected}>Not in a domain</option>
-	{#each data.domains as domain (domain.id)}
-		<option value={domain.id} selected={domain.id === selected}>{domain.label}</option>
-	{/each}
-	<option value={NEW_DOMAIN}>+ New domain…</option>
-{/snippet}
-
 {#snippet typeReview()}
 	<h4 class="text-sm font-semibold text-ink">Check and save</h4>
 	<dl class="mt-3 grid gap-4 text-sm sm:grid-cols-[10rem_1fr]">
@@ -623,16 +632,14 @@
 													{/if}
 												</p>
 											</div>
-											<label class="sr-only" for="unmapped-{parameter.id}"
-												>Domain for {parameter.label}</label
-											>
-											<select
+											<Select
 												id="unmapped-{parameter.id}"
-												class="input w-full sm:w-56"
-												onchange={(e) => mapTo(parameter, e.currentTarget.value)}
-											>
-												{@render domainOptions(null)}
-											</select>
+												label="Domain for {parameter.label}"
+												class="w-full sm:w-56"
+												options={domainChoices}
+												value=""
+												onchange={(value) => mapTo(parameter, value)}
+											/>
 										</li>
 									{/each}
 								</ul>
@@ -688,16 +695,15 @@
 														.join(', ') || '—'}
 												</td>
 												<td class="px-4 py-2">
-													<label class="sr-only" for="map-{parameter.id}"
-														>Domain for {parameter.label}</label
-													>
-													<select
+													<Select
 														id="map-{parameter.id}"
-														class={['input py-1.5 text-sm', loose && 'border-orange']}
-														onchange={(e) => mapTo(parameter, e.currentTarget.value)}
-													>
-														{@render domainOptions(loose ? null : parameter.domain)}
-													</select>
+														label="Domain for {parameter.label}"
+														size="compact"
+														warn={loose}
+														options={domainChoices}
+														value={loose ? '' : (parameter.domain ?? '')}
+														onchange={(value) => mapTo(parameter, value)}
+													/>
 												</td>
 												<td class="px-4 py-2 text-right">
 													<button
@@ -908,26 +914,23 @@
 								</div>
 								<div>
 									<label class="label text-xs" for="row-{row.key}-kind">Type</label>
-									<select
+									<Select
 										id="row-{row.key}-kind"
-										class="input text-sm"
+										class="text-sm"
 										disabled={locked}
+										options={VALUE_KINDS}
 										bind:value={row.valueType}
-									>
-										<option value="number">Number</option>
-										<option value="text">Text</option>
-										<option value="time">Time (Unix seconds)</option>
-									</select>
+									/>
 								</div>
 								<div>
 									<label class="label text-xs" for="row-{row.key}-domain">Domain</label>
-									<select
+									<Select
 										id="row-{row.key}-domain"
-										class="input text-sm"
-										onchange={(e) => rowDomain(row, e.currentTarget.value)}
-									>
-										{@render domainOptions(row.domain)}
-									</select>
+										class="text-sm"
+										options={domainChoices}
+										value={row.domain ?? ''}
+										onchange={(value) => rowDomain(row, value)}
+									/>
 								</div>
 								<div class="flex items-end gap-2">
 									<label
