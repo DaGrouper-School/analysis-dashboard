@@ -12,7 +12,7 @@ export const prerender = false;
 /**
  * The public site's pages that a signed-in member sees in the app instead (AP-45): the public
  * site stays public, and members always work in the app. Links people are sent (invitations,
- * consent), contributor pages, hosting and value pages stay where they are.
+ * consent), contributor pages and hosting stay where they are. A value page opens in the app.
  */
 const IN_THE_APP = new Set(['/', '/classrooms', '/explore', '/global-classrooms']);
 const CLASSROOM_PAGES = new Set([
@@ -44,6 +44,15 @@ export const load: LayoutLoad = async ({ depends, route, params, url }) => {
 			307,
 			resolve('/(app)/dashboard') +
 				(section ? sectionQuery(params.classroom, section) : sensorQuery(params.classroom))
+		);
+	}
+	if (user && route.id === '/classrooms/[classroom]/[parameter]' && params.parameter) {
+		redirect(
+			307,
+			resolve('/(app)/dashboard/[classroom]/[parameter]', {
+				classroom: params.classroom!,
+				parameter: params.parameter
+			}) + url.search
 		);
 	}
 	return { user };

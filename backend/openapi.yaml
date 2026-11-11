@@ -1601,7 +1601,8 @@ paths:
       operationId: publicSite.station
       summary: Station
       description: |-
-        A classroom's station overview (AP-21): the latest released value of each parameter.
+        A classroom's station overview (AP-21): the latest released value of each parameter. Its own
+        members also get values still in review, and the last sync of any device.
 
         Access: public, no session needed.
       security: []
@@ -1627,7 +1628,8 @@ paths:
       operationId: publicSite.parameter
       summary: Parameter
       description: |-
-        One parameter of a classroom: its registry entry and released values over time.
+        One parameter of a classroom: its registry entry and released values over time. Its own
+        members also get values still in review.
 
         Access: public, no session needed.
       security: []

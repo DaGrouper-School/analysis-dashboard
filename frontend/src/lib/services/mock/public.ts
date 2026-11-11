@@ -30,8 +30,9 @@ const PUBLIC_DECIMALS = 2;
 /**
  * A classroom's released records, each with its source (AP-20, AP-21). Records observed after
  * `releasedThrough` are still in review and never reach visitors; with nothing released, none do.
+ * Its own members see every record, so what they sync shows at once.
  */
-function released(state: MockDbState, classroom: StoredClassroom) {
+function released(state: MockDbState, classroom: StoredClassroom, member = false) {
 	const labs = state.labs.filter((l) => l.classroomId === classroom.id);
 	const labIds = new Set(labs.map((l) => l.id));
 	const devices = state.devices.filter((d) => labIds.has(d.labId));
@@ -53,7 +54,11 @@ function released(state: MockDbState, classroom: StoredClassroom) {
 	return {
 		labs,
 		all,
-		released: through === null ? [] : all.filter((r) => r.record.observedAt <= through)
+		released: member
+			? all
+			: through === null
+				? []
+				: all.filter((r) => r.record.observedAt <= through)
 	};
 }
 
@@ -99,6 +104,19 @@ function publicDevices(
 
 function toPublicClassroom(state: MockDbState, classroom: StoredClassroom): PublicClassroom {
 	const { labs, all } = released(state, classroom);
+	const core = coreReadings(
+		all.map((r) => r.record),
+		classroom.releasedThrough,
+		state.coreParameters
+	);
+	// Its members see when a device last synced, even while what it sent is in review.
+	if (isMember(state, classroom.id)) {
+		const synced = all
+			.map((r) => r.record.receivedAt)
+			.sort()
+			.at(-1);
+		if (synced) core.lastSync = synced;
+	}
 	const lab = labs[0];
 	const decimals = Math.min(classroom.terms.coordinateDecimals ?? PUBLIC_DECIMALS, PUBLIC_DECIMALS);
 	return {
@@ -112,11 +130,7 @@ function toPublicClassroom(state: MockDbState, classroom: StoredClassroom): Publ
 		stageId: classroom.stageId,
 		regionId: classroom.regionId,
 		themes: labs.flatMap((l) => l.siteProfile.researchQuestions),
-		core: coreReadings(
-			all.map((r) => r.record),
-			classroom.releasedThrough,
-			state.coreParameters
-		)
+		core
 	};
 }
 
@@ -220,7 +234,8 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 			await delay();
 			const state = readDb();
 			const classroom = findClassroom(state, classroomId);
-			const { all, released: shownRecords } = released(state, classroom);
+			const member = isMember(state, classroom.id);
+			const { all, released: shownRecords } = released(state, classroom, member);
 			// The latest released value of each parameter from each source, and the last reading of
 			// each day for its sparkline.
 			const latest = new Map<string, PublicValue>();
@@ -276,7 +291,6 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 				.filter((card) => card.values.length);
 			const shown = new Set(values.map((v) => v.parameterId));
 			const publicClassroom = toPublicClassroom(state, classroom);
-			const member = isMember(state, classroom.id);
 			const sites = classroom.profile.projects.flatMap((p) => p.sites);
 			const expectations = sites.flatMap((site) =>
 				site.parameterIds.map((parameterId) => ({
@@ -480,7 +494,8 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 				? [parameterId, ...rainIds.filter((id) => id !== parameterId)]
 				: [parameterId];
 			const reports = (values: Reading['values']) => ids.find((id) => values[id] !== undefined);
-			const { labs, all, released: shown } = released(state, classroom);
+			const member = isMember(state, classroom.id);
+			const { labs, all, released: shown } = released(state, classroom, member);
 			if (!parameter || !shown.some((r) => reports(r.record.values))) {
 				throw new ServiceError('not_found', 'This classroom has no released values for that.');
 			}
@@ -547,7 +562,7 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 					attribution: classroom.terms.attribution,
 					restrictions: [...classroom.terms.restrictions]
 				},
-				member: isMember(state, classroom.id)
+				member
 			};
 		}
 	};
