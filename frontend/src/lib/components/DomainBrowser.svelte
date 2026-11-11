@@ -174,7 +174,7 @@
 			{:else}
 				<div class="grid gap-4 md:grid-cols-2">
 					{#each domains as card (domainKey(card.domain))}
-						<article class="card flex flex-col">
+						<article class="card flex min-w-0 flex-col">
 							<h3 class="text-lg font-semibold">
 								<button
 									type="button"

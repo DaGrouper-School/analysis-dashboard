@@ -1,5 +1,6 @@
 import type {
 	CoreReadings,
+	DeviceSummaryCard,
 	NowTile,
 	NowTileConfig,
 	Parameter,
@@ -176,6 +177,68 @@ export function readingTiles(
 		observedAt: at,
 		last24Hours: at && typeof v.value === 'number' ? last24Hours(readings, [v.id], at) : []
 	}));
+}
+
+/**
+ * A device's featured numbers over the 7 days up to its newest reading (AP-45), for the cards
+ * under "What's happening now?". `readings` are the device's own, newest first.
+ */
+export function deviceSummary(
+	readings: { observedAt: string; values: Record<string, unknown> }[],
+	values: KeyValue[],
+	max = 3
+): DeviceSummaryCard[] {
+	const newest = readings[0];
+	if (!newest) return [];
+	const today = newest.observedAt.slice(0, 10);
+	const end = Date.parse(`${today}T00:00:00.000Z`);
+	const days = Array.from({ length: 7 }, (_, i) =>
+		new Date(end - (6 - i) * 86_400_000).toISOString().slice(0, 10)
+	);
+	const numberOf = (r: (typeof readings)[number], id: string) =>
+		typeof r.values[id] === 'number' ? (r.values[id] as number) : null;
+	const range = (list: number[]) =>
+		list.length ? { low: Math.min(...list), high: Math.max(...list) } : { low: null, high: null };
+	return values
+		.filter((v) => typeof v.value === 'number')
+		.slice(0, max)
+		.map((v) => {
+			const inWeek = readings.filter((r) => r.observedAt.slice(0, 10) >= days[0]);
+			const numbers = (day?: string) =>
+				inWeek
+					.filter((r) => !day || r.observedAt.startsWith(day))
+					.map((r) => numberOf(r, v.id))
+					.filter((n): n is number => n !== null);
+			const todays = range(numbers(today));
+			const weeks = range(numbers());
+			return {
+				id: v.id,
+				label: v.label,
+				unit: v.unit,
+				icon: v.icon ?? null,
+				latest: numberOf(newest, v.id),
+				observedAt: newest.observedAt,
+				// The last reading of each day: a day's total for an accumulation, else its close.
+				week: days.map((day) => ({ day, value: numbers(day)[0] ?? null })),
+				todayLow: todays.low,
+				todayHigh: todays.high,
+				weekLow: weeks.low,
+				weekHigh: weeks.high
+			};
+		});
+}
+
+/** The device a page opens on: the one asked for, else a weather station, else the first. */
+export function pickDevice<T extends { id: string; type: string }>(
+	devices: T[],
+	id: string | null | undefined
+): T | null {
+	return (
+		devices.find((d) => d.id === id) ??
+		devices.find((d) => d.type === 'weather_station') ??
+		devices[0] ??
+		null
+	);
 }
 
 /** How long ago, in plain words: "5 mins ago", "3 days ago". */

@@ -1,12 +1,17 @@
-import { readFilter } from '#lib/directory.ts';
+import { redirect } from '@sveltejs/kit';
+import { resolve } from '$app/paths';
+import { filterClassrooms, readFilter } from '#lib/directory.ts';
 import { services } from '#lib/services/index.ts';
 import type { PageLoad } from './$types';
 
 /**
- * The public Classrooms page (AP-21, AP-28, AP-45): every classroom on the map, their core
- * readings and the directory by region. Replaces Explore data and Global Classrooms. No sign-in.
+ * The public Classrooms (AP-45) are one page: every classroom as a tab, one open at a time. This
+ * address opens the first classroom the filter keeps, alphabetically, keeping the filter.
  */
-export const load: PageLoad = async ({ parent, url }) => {
-	const [{ user }, home] = await Promise.all([parent(), services.publicSite.home()]);
-	return { user, ...home, filter: readFilter(url.searchParams) };
+export const load: PageLoad = async ({ url }) => {
+	const { classrooms } = await services.publicSite.home();
+	const placed = classrooms.filter((c) => c.location).sort((a, b) => a.name.localeCompare(b.name));
+	const first = filterClassrooms(placed, readFilter(url.searchParams))[0] ?? placed[0];
+	if (!first) return {};
+	redirect(307, resolve('/classrooms/[classroom]', { classroom: first.id }) + url.search);
 };

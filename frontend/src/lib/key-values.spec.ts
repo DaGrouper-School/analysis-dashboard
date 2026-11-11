@@ -28,38 +28,31 @@ const parameters = new Map<string, Parameter>([
 	]
 ]);
 
-describe('key values per sensor type', () => {
-	it('shows soil values for a soil sensor, and nothing about rain', () => {
-		const values = { soil_moisture: 31, soil_temperature: 18.4, precip_accum_local_day: 2 };
-		expect(keyValues('soil_sensor', values, parameters)).toEqual([
-			{
-				id: 'soil_moisture',
-				label: 'Soil moisture',
-				unit: '%',
-				valueType: 'number',
-				value: 31,
-				icon: 'droplet'
-			},
-			{
-				id: 'soil_temperature',
-				icon: 'thermometer',
-				label: 'Soil temperature',
-				unit: '°C',
-				valueType: 'number',
-				value: 18.4
-			}
-		]);
-	});
+describe('featured values (AP-45)', () => {
+	const station = { featuredParameterIds: ['air_temperature', 'precip_accum_local_day', 'uv'] };
 
-	it('leads a weather station with its headline values, units from the registry', () => {
+	it("leads with the type's featured values, in the registry's order, labelled from it", () => {
 		const values = { relative_humidity: 60, precip_accum_local_day: 0, air_temperature: 27 };
-		expect(keySummary('weather_station', values, parameters)).toBe(
-			'Temperature 27°C · Rain today 0 mm'
+		expect(keySummary(station, values, parameters)).toBe(
+			'Air temperature 27°C · Rain since midnight 0 mm'
 		);
 	});
 
-	it('falls back to whatever an unknown device sends', () => {
-		expect(keySummary('other', { light_level: 4 }, parameters)).toBe('Light level 4');
+	it("gives each value its domain's icon", () => {
+		const icons = new Map([['AIR', 'thermometer']]);
+		expect(keyValues(station, { air_temperature: 27 }, parameters, 4, icons)[0]).toEqual({
+			id: 'air_temperature',
+			label: 'Air temperature',
+			unit: '°C',
+			valueType: 'number',
+			value: 27,
+			icon: 'thermometer'
+		});
+	});
+
+	it('falls back to whatever a device sends when nothing featured is in it', () => {
+		expect(keySummary(undefined, { light_level: 4 }, parameters)).toBe('Light level 4');
+		expect(keySummary(station, { light_level: 4 }, parameters)).toBe('Light level 4');
 	});
 
 	it('formats values for reading at a glance', () => {
@@ -67,12 +60,7 @@ describe('key values per sensor type', () => {
 		expect(formatValue(undefined)).toBe('—');
 	});
 
-	it('describes parameters the registry lacks from the sensor types', () => {
-		expect(describeParameter('soil_moisture', parameters)).toEqual({
-			label: 'Soil moisture',
-			unit: '%',
-			valueType: 'number'
-		});
+	it('describes parameters the registry lacks from their ID', () => {
 		expect(describeParameter('air_temperature', parameters).label).toBe('Air temperature');
 		expect(describeParameter('light_level', parameters)).toEqual({
 			label: 'Light level',

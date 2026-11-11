@@ -1,6 +1,6 @@
 import type { PublicClassroom, SiteContent } from '#lib/domain/types.ts';
 
-/** The directory's filters (AP-28); an empty value means any. */
+/** The public Classrooms filters (AP-28, AP-45); an empty value means any. */
 export interface DirectoryFilter {
 	region: string;
 	country: string;
@@ -9,10 +9,13 @@ export interface DirectoryFilter {
 
 export const NO_FILTER: DirectoryFilter = { region: '', country: '', stage: '' };
 
-export function filterClassrooms(
-	classrooms: PublicClassroom[],
+/** What a filter reads from a classroom: a public classroom, or a place on its page. */
+type Filterable = Pick<PublicClassroom, 'regionId' | 'country' | 'stageId'>;
+
+export function filterClassrooms<T extends Filterable>(
+	classrooms: T[],
 	filter: DirectoryFilter
-): PublicClassroom[] {
+): T[] {
 	return classrooms.filter(
 		(c) =>
 			(!filter.region || c.regionId === filter.region) &&
@@ -21,48 +24,8 @@ export function filterClassrooms(
 	);
 }
 
-export interface DirectoryGroup {
-	/** Null for classrooms with no region yet. */
-	region: { id: string; label: string } | null;
-	countries: { country: string | null; classrooms: PublicClassroom[] }[];
-}
-
-/**
- * Classrooms by region, in the site content's order, then by country and name. Classrooms
- * with no region, or no country, come last in their list.
- */
-export function groupClassrooms(
-	classrooms: PublicClassroom[],
-	regions: SiteContent['regions']
-): DirectoryGroup[] {
-	const known = new Set(regions.map((r) => r.id));
-	const groups = [
-		...regions.map((region) => ({
-			region,
-			members: classrooms.filter((c) => c.regionId === region.id)
-		})),
-		{ region: null, members: classrooms.filter((c) => !c.regionId || !known.has(c.regionId)) }
-	];
-	return groups
-		.filter((g) => g.members.length)
-		.map(({ region, members }) => {
-			const countries = [...new Set(members.map((c) => c.country))].sort((a, b) =>
-				a === null ? 1 : b === null ? -1 : a.localeCompare(b)
-			);
-			return {
-				region,
-				countries: countries.map((country) => ({
-					country,
-					classrooms: members
-						.filter((c) => c.country === country)
-						.sort((a, b) => a.name.localeCompare(b.name))
-				}))
-			};
-		});
-}
-
 /** The choices each filter offers, from the classrooms themselves. */
-export function filterOptions(classrooms: PublicClassroom[], content: SiteContent) {
+export function filterOptions(classrooms: Filterable[], content: SiteContent) {
 	const used = (values: (string | null)[]) => new Set(values.filter((v): v is string => !!v));
 	const regions = used(classrooms.map((c) => c.regionId));
 	const stages = used(classrooms.map((c) => c.stageId));

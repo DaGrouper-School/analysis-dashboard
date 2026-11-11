@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { navigating } from '$app/state';
-	import { domainOf } from '#lib/domains.ts';
+	import { navigating, page } from '$app/state';
+	import { domainOf, domainsOf } from '#lib/domains.ts';
 	import CalculationPanel from '#lib/components/CalculationPanel.svelte';
 	import ClassroomAbout from '#lib/components/ClassroomAbout.svelte';
 	import ClassroomCompleteness from '#lib/components/ClassroomCompleteness.svelte';
@@ -16,12 +16,13 @@
 	import SyncModal from '#lib/components/SyncModal.svelte';
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
 	import { formatValue, keySummary, keyValues } from '#lib/key-values.ts';
-	import { readingTiles } from '#lib/station-now.ts';
+	import { deviceSummary, pickDevice, readingTiles } from '#lib/station-now.ts';
 	import {
 		CLASSROOM_ROLE_LABELS,
 		deviceTypeColor,
 		deviceTypeIcon,
 		deviceTypeLabel,
+		deviceTypeOf,
 		isManualType
 	} from '#lib/labels.ts';
 	import { domainQuery, sensorQuery } from '#lib/sensor-selection.ts';
@@ -58,6 +59,56 @@
 		return goto(dashboardHref(classroomId, deviceId, tab), { replace: true, reset: false });
 	}
 
+	// ---- Devices: the one picked sets the tiles, the cards, the domains and the colour ----
+	// A member's own classroom: the picked device's raw readings, so a sync shows at once.
+	const domainIcons = $derived(new Map(data.domains.map((d) => [d.id, d.icon])));
+	const featured = (max: number) =>
+		device && data.readings[0]
+			? keyValues(
+					deviceTypeOf(data.deviceTypes, device.type),
+					data.readings[0].values,
+					paramsById,
+					max,
+					domainIcons
+				)
+			: [];
+	const own = $derived.by(() => {
+		if (visiting || !device || !data.readings.length) return undefined;
+		const icon = deviceTypeIcon(data.deviceTypes, device.type);
+		return {
+			tiles: readingTiles(data.readings, featured(4), icon),
+			summary: deviceSummary(data.readings, featured(8)),
+			color: deviceTypeColor(data.deviceTypes, device.type)
+		};
+	});
+	// Another classroom: its released devices, picked on the page as on its public page.
+	let visitingDeviceId = $state<string>();
+	const visitingDevice = $derived(
+		visiting
+			? pickDevice(visiting.devices, visitingDeviceId ?? page.url.searchParams.get('device'))
+			: null
+	);
+	const shownDevice = $derived(visiting ? visitingDevice : own);
+	const shownDeviceId = $derived(visiting ? visitingDevice?.id : device?.id);
+	// The domains of the device shown.
+	const domains = $derived(domainsOf(station?.domains ?? [], shownDeviceId));
+	const pickerDevices = $derived(
+		visiting
+			? visiting.devices
+			: classroom
+				? data.devices.map((d) => ({
+						id: d.id,
+						name: d.name,
+						color: deviceTypeColor(data.deviceTypes, d.type),
+						icon: deviceTypeIcon(data.deviceTypes, d.type)
+					}))
+				: []
+	);
+	function pickDeviceShown(id: string) {
+		if (visiting) visitingDeviceId = id;
+		else if (classroom) choose(classroom.id, id);
+	}
+
 	// ---- The section tabs (AP-45) ----------------------------------------------------------
 	type Section =
 		| 'alerts'
@@ -81,7 +132,7 @@
 	const sections = $derived<TabItem<Section>[]>(
 		visiting
 			? [
-					{ id: 'domains', label: 'Domains', icon: 'layers', count: visiting.domains.length },
+					{ id: 'domains', label: 'Domains', icon: 'layers', count: domains.length },
 					{ id: 'complete', label: 'Completeness', icon: 'check' },
 					{ id: 'about', label: 'About', icon: 'info' }
 				]
@@ -94,7 +145,7 @@
 							? { badge: { text: String(alertCount), title: `${alertCount} need you` } }
 							: { count: 0 })
 					},
-					{ id: 'domains', label: 'Domains', icon: 'layers', count: station?.domains.length ?? 0 },
+					{ id: 'domains', label: 'Domains', icon: 'layers', count: domains.length },
 					{ id: 'devices', label: 'Devices', icon: 'station', count: data.devices.length },
 					{ id: 'labs', label: 'Labs', icon: 'flask', count: data.labs.length },
 					{ id: 'records', label: 'Records', icon: 'clipboard', count: data.records.length },
@@ -149,15 +200,6 @@
 	const role = $derived(data.classrooms.find((c) => c.id === pendingId)?.myRole ?? null);
 
 	// ---- What's happening now: the picked device's values, as it used to be (AP-45) --------
-	const now = $derived.by(() => {
-		const latest = data.readings[0];
-		if (visiting || !device || !latest) return undefined;
-		return readingTiles(
-			data.readings,
-			keyValues(device.type, latest.values, paramsById),
-			deviceTypeIcon(data.deviceTypes, device.type)
-		);
-	});
 	// "How is this calculated?" (AP-07) behind each value's info icon.
 	let calculating = $state(false);
 	let calculationId = $state('');
@@ -212,8 +254,13 @@
 		tabsLabel="Your classrooms"
 		{pendingId}
 		{markerLabel}
-		{now}
-		accent={now && device ? deviceTypeColor(data.deviceTypes, device.type) : undefined}
+		now={shownDevice?.tiles}
+		summary={shownDevice?.summary}
+		accent={shownDevice?.color}
+		released={!own}
+		devices={pickerDevices}
+		deviceId={shownDeviceId}
+		onpickdevice={pickDeviceShown}
 		onexplain={explain}
 		onpick={(id) => choose(id, undefined, active)}
 	>
@@ -239,22 +286,6 @@
 				class="flex items-center gap-1.5 pb-2 text-muted hover:text-ink"
 				><Icon name="plus" class="size-4" /> Join or start one</a
 			>
-		{/snippet}
-		{#snippet nowControls()}
-			{#if classroom && data.devices.length}
-				<label class="flex items-center gap-2 text-xs text-muted">
-					<span class="sr-only sm:not-sr-only">Device</span>
-					<select
-						class="input w-auto max-w-60 py-1.5 pr-9 text-sm"
-						value={device?.id ?? ''}
-						onchange={(e) => choose(classroom.id, e.currentTarget.value)}
-					>
-						{#each data.devices as option (option.id)}
-							<option value={option.id}>{option.name}</option>
-						{/each}
-					</select>
-				</label>
-			{/if}
 		{/snippet}
 		{#snippet nowActions()}
 			{#if canSync && device}
@@ -348,7 +379,7 @@
 					</ul>
 				{:else if active === 'domains'}
 					<DomainBrowser
-						domains={station.domains}
+						{domains}
 						parameters={station.parameters}
 						classroomId={station.classroom.id}
 					/>
@@ -380,7 +411,11 @@
 								<div class="min-w-0 flex-[2_1_12rem] text-sm">
 									<p class="text-ink">
 										{item
-											? keySummary(option.type, item.reading.values, paramsById)
+											? keySummary(
+													deviceTypeOf(data.deviceTypes, option.type),
+													item.reading.values,
+													paramsById
+												)
 											: 'No readings yet'}
 									</p>
 									{#if item}

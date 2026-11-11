@@ -306,9 +306,7 @@ const coreParameters: MockDbState['coreParameters'] = {
 	rainDaily: ['precip_accum_local_day', 'rain_gauge_daily_accumulation'],
 	airTemperature: ['air_temperature'],
 	rainTolerance: 2,
-	rainReference: 'rain_gauge_daily_accumulation',
-	uv: ['uv'],
-	soilMoisture: ['soil_moisture']
+	rainReference: 'rain_gauge_daily_accumulation'
 };
 
 /**
@@ -1352,7 +1350,11 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		description: 'Tempest-style station: air, rain, wind, sun, pressure and lightning.',
 		color: '#3cc04b',
 		icon: 'station',
-		parameterIds: parameters.filter((p) => p.source === 'weather_station').map((p) => p.id)
+		parameterIds: parameters.filter((p) => p.source === 'weather_station').map((p) => p.id),
+		// In the registry's own order, as the Registry form keeps them.
+		featuredParameterIds: parameters
+			.filter((p) => ['air_temperature', 'precip_accum_local_day', 'uv', 'wind_avg'].includes(p.id))
+			.map((p) => p.id)
 	},
 	{
 		id: 'rain_gauge',
@@ -1361,6 +1363,7 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		color: '#00bdff',
 		icon: 'gauge',
 		parameterIds: ['rain_gauge_daily_accumulation'],
+		featuredParameterIds: ['rain_gauge_daily_accumulation'],
 		manual: true
 	},
 	{
@@ -1369,7 +1372,8 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		description: 'Probe in the ground: moisture and temperature.',
 		color: '#f6921e',
 		icon: 'soil',
-		parameterIds: ['soil_moisture', 'soil_temperature']
+		parameterIds: ['soil_moisture', 'soil_temperature'],
+		featuredParameterIds: ['soil_moisture', 'soil_temperature']
 	},
 	{
 		id: 'water_probe',
@@ -1377,7 +1381,8 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		description: 'Probe in a stream, pond or tank.',
 		color: '#2f7ff0',
 		icon: 'water',
-		parameterIds: ['water_temperature', 'water_ph']
+		parameterIds: ['water_temperature', 'water_ph'],
+		featuredParameterIds: ['water_temperature', 'water_ph']
 	},
 	{
 		id: 'air_quality_sensor',
@@ -1385,7 +1390,8 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		description: 'Particulate matter counter.',
 		color: '#e8457a',
 		icon: 'particles',
-		parameterIds: ['pm2_5', 'pm10']
+		parameterIds: ['pm2_5', 'pm10'],
+		featuredParameterIds: ['pm2_5', 'pm10']
 	},
 	{
 		id: 'other',
@@ -1393,7 +1399,8 @@ const deviceTypes: DeviceTypeDefinition[] = [
 		description: 'Anything else; shows whatever it sends.',
 		color: '#9aa5ae',
 		icon: 'sensor',
-		parameterIds: []
+		parameterIds: [],
+		featuredParameterIds: []
 	}
 ];
 

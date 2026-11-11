@@ -192,7 +192,8 @@
 		label: '',
 		unit: '',
 		valueType: 'number',
-		domain: null
+		domain: null,
+		featured: false
 	});
 
 	let editingType = $state<string | null>(null);
@@ -245,7 +246,8 @@
 				label: p?.label ?? id,
 				unit: p?.unit ?? '',
 				valueType: p?.valueType ?? 'number',
-				domain: p?.domain ?? null
+				domain: p?.domain ?? null,
+				featured: type.featuredParameterIds.includes(id)
 			};
 		});
 		if (!rows.length) rows = [blankRow()];
@@ -289,7 +291,8 @@
 				label: r.label,
 				unit: r.unit,
 				valueType: r.valueType,
-				domain: r.domain
+				domain: r.domain,
+				featured: r.featured
 			}))
 		};
 	}
@@ -382,6 +385,7 @@
 							>{row.label}{row.unit ? ` (${row.unit})` : ''}
 							<span class="font-mono text-xs text-muted">{row.id}</span></span
 						>
+						{#if row.featured}<span class="chip">Featured</span>{/if}
 						{#if domain}
 							<span class="chip"
 								><Icon name={domain.icon} fallback="tag" class="size-3.5" /> {domain.label}</span
@@ -850,7 +854,9 @@
 				<h4 class="text-sm font-semibold text-ink">Expected values</h4>
 				<p class="text-xs text-muted">
 					Use an ID from the registry to share an existing value, or a new ID to add one. Station
-					values can't be edited here.
+					values can't be edited here. Featured values lead a classroom page when this device is
+					picked, in this order: the first four under "What's happening now?", the first three
+					numbers charted under it.
 				</p>
 				{#if typeErrors.values}<p class="field-error">{typeErrors.values}</p>{/if}
 				<datalist id="parameter-ids">
@@ -923,7 +929,14 @@
 										{@render domainOptions(row.domain)}
 									</select>
 								</div>
-								<div class="flex items-end">
+								<div class="flex items-end gap-2">
+									<label
+										class="flex h-10 items-center gap-1.5 text-xs whitespace-nowrap text-muted"
+										title="Shown first on classroom pages when this device is picked, in this order"
+									>
+										<input type="checkbox" bind:checked={row.featured} />
+										Featured
+									</label>
 									<button
 										type="button"
 										class="btn btn-ghost px-3"
