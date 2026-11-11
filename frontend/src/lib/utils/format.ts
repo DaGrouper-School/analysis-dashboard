@@ -6,3 +6,8 @@ export function initials(name: string): string {
 		.map((w) => w[0]?.toUpperCase() ?? '')
 		.join('');
 }
+
+/** The name to greet someone by, skipping a title: "Dr. Marcus L." is Marcus. */
+export function givenName(fullName: string): string {
+	return fullName.split(' ').find((part) => !/^(dr|prof|mr|mrs|ms)\.?$/i.test(part)) ?? fullName;
+}
