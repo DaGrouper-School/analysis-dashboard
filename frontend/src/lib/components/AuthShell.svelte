@@ -4,15 +4,8 @@
 	import Logo from './Logo.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
 
-	// The seeded labs, as a hint of what the app shows.
-	const SITES: GlobeMarker[] = [
-		{ id: 'addis', lat: 9.03, lng: 38.74, color: '#3cc04b', label: 'Addis Ababa' },
-		{ id: 'shashamane', lat: 7.2, lng: 38.6, color: '#00bdff', label: 'Shashamane' },
-		{ id: 'hargeisa', lat: 9.56, lng: 44.06, color: '#3cc04b', label: 'Hargeisa' },
-		{ id: 'nassau', lat: 25.06, lng: -77.34, color: '#f6921e', label: 'Nassau' }
-	];
-
-	let { children }: { children: Snippet } = $props();
+	/** The Global Classrooms on the globe beside the form, as a hint of what the app shows. */
+	let { children, markers }: { children: Snippet; markers: Promise<GlobeMarker[]> } = $props();
 </script>
 
 <div class="grid min-h-dvh lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
@@ -20,7 +13,7 @@
 		class="relative hidden overflow-hidden border-r border-line bg-canvas p-10 lg:flex lg:flex-col"
 	>
 		<div class="pointer-events-none absolute inset-x-0 top-[42%] bottom-[-38%]">
-			<Globe markers={SITES} interactive={false} />
+			{#await markers then shown}<Globe markers={shown} interactive={false} />{/await}
 		</div>
 		<Logo />
 		<div class="relative mt-16 mb-auto max-w-md">

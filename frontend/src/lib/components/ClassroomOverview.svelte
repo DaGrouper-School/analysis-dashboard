@@ -270,6 +270,7 @@
 				tiles={now ?? station.now}
 				{released}
 				{accent}
+				icon={devices?.find((d) => d.id === deviceId)?.icon}
 				actions={nowActions}
 				{onexplain}
 				href={valueOf}
