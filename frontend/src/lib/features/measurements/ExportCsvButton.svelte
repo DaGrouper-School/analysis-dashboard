@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Icon from '#lib/components/Icon.svelte';
 	import Modal from '#lib/components/Modal.svelte';
-	import type { Parameter, RawPage, RawQuery } from '#lib/domain/types.ts';
+	import type { DomainDefinition, Parameter, RawPage, RawQuery } from '#lib/domain/types.ts';
 	import RawFilters from '#lib/features/measurements/RawFilters.svelte';
 	import { UTF8_BOM, type RawFilterChange } from '#lib/features/measurements/raw-data.ts';
 	import { sourceLooks, type SourceLooks } from '#lib/features/measurements/source-looks.ts';
@@ -30,6 +30,7 @@
 	let found = $state<RawPage | null>(null);
 	let looks = $state<SourceLooks>({});
 	let parameters = $state<ReadonlyMap<string, Parameter>>(new Map());
+	let domains = $state<DomainDefinition[]>([]);
 	let loadError = $state('');
 	let exporting = $state(false);
 	let exportError = $state('');
@@ -40,9 +41,12 @@
 		exportError = '';
 		open = true;
 		if (!parameters.size)
-			services.registry
-				.listParameters()
-				.then((list) => (parameters = new Map(list.map((p) => [p.id, p]))));
+			Promise.all([services.registry.listParameters(), services.registry.listDomains()]).then(
+				([list, registryDomains]) => {
+					parameters = new Map(list.map((p) => [p.id, p]));
+					domains = registryDomains;
+				}
+			);
 	}
 
 	// What the filters match, and what each of them can offer, as they change.
@@ -107,6 +111,7 @@
 				options={found.options}
 				{looks}
 				{parameters}
+				{domains}
 				idPrefix="export"
 				onchange={change}
 			/>

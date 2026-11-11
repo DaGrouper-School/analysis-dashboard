@@ -1,9 +1,10 @@
 <script lang="ts">
 	import Select from '#lib/components/Select.svelte';
-	import type { Parameter, RawPage, RawQuery } from '#lib/domain/types.ts';
+	import type { DomainDefinition, Parameter, RawPage, RawQuery } from '#lib/domain/types.ts';
 	import { describeParameter } from '#lib/features/measurements/key-values.ts';
 	import type { RawFilterChange } from '#lib/features/measurements/raw-data.ts';
 	import type { SourceLooks } from '#lib/features/measurements/source-looks.ts';
+	import { FALLBACK_DOMAIN_ICON } from '#lib/utils/icons.ts';
 
 	/**
 	 * The raw data filters (AP-14), in order: classroom, then measurement, then parameter, then
@@ -16,6 +17,7 @@
 		options,
 		looks,
 		parameters,
+		domains,
 		idPrefix = 'raw',
 		onchange
 	}: {
@@ -25,6 +27,8 @@
 		options: RawPage['options'];
 		looks: SourceLooks;
 		parameters: ReadonlyMap<string, Parameter>;
+		/** The registry's domains: each parameter shows its domain's icon. */
+		domains: DomainDefinition[];
 		/** Keeps the field IDs apart when the page and a dialog both show the filters. */
 		idPrefix?: string;
 		onchange: (change: RawFilterChange) => void;
@@ -32,7 +36,11 @@
 
 	const parameterOptions = $derived(
 		options.parameterIds
-			.map((id) => ({ value: id, label: describeParameter(id, parameters).label }))
+			.map((id) => ({
+				value: id,
+				label: describeParameter(id, parameters).label,
+				icon: domains.find((d) => d.id === parameters.get(id)?.domain)?.icon ?? FALLBACK_DOMAIN_ICON
+			}))
 			.sort((a, b) => a.label.localeCompare(b.label))
 	);
 </script>

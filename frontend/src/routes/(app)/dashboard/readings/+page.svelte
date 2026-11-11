@@ -179,6 +179,7 @@
 			options={page.options}
 			looks={data.looks}
 			parameters={paramsById}
+			domains={data.domains}
 			onchange={(change) =>
 				apply({
 					...('classroomId' in change && { classroom: change.classroomId, site: undefined }),
