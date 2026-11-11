@@ -36,9 +36,13 @@
 	);
 </script>
 
-<!-- The "Devices" label sits in the card, beside the choices, as part of the selector. -->
+<!-- The "Devices" label sits in the card, beside the choices, as part of the selector. On a wide
+     screen the card is as wide as what is in it; narrower, it spans the row like the cards below. -->
 <section
-	class={['card flex min-w-0 items-center gap-3 overflow-hidden p-3', className]}
+	class={[
+		'card flex min-w-0 items-center gap-3 overflow-hidden p-3 lg:w-fit lg:max-w-full',
+		className
+	]}
 	aria-labelledby="devices-heading"
 >
 	<h2
