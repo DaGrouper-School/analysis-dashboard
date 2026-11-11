@@ -6,9 +6,9 @@ import { formatValue } from '#lib/key-values.ts';
  * here compares values or says why one changed.
  */
 
-export type TrendDirection = NowTileTrend['direction'];
+type TrendDirection = NowTileTrend['direction'];
 
-export interface Trend {
+interface Trend {
 	direction: TrendDirection;
 	/** The change across the readings along the fitted line, in the parameter's unit. */
 	change: number;
@@ -17,7 +17,7 @@ export interface Trend {
 	to: number;
 }
 
-export const TREND_LABELS: Record<TrendDirection, string> = {
+const TREND_LABELS: Record<TrendDirection, string> = {
 	rising: 'Rising',
 	steady: 'Steady',
 	falling: 'Falling'

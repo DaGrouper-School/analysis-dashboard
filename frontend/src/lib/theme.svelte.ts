@@ -1,4 +1,4 @@
-export type Theme = 'light' | 'dark';
+type Theme = 'light' | 'dark';
 
 const KEY = 'dagrouper:theme';
 const systemQuery =
@@ -26,7 +26,7 @@ function apply(value: Theme) {
 }
 
 /** An explicit choice is remembered; until then the theme follows the system setting. */
-export function setTheme(value: Theme) {
+function setTheme(value: Theme) {
 	try {
 		localStorage.setItem(KEY, value);
 	} catch {

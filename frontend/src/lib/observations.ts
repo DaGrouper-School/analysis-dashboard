@@ -49,12 +49,12 @@ export interface FieldEntry {
 }
 
 /** Trims float noise from unit conversions: 0.1 + 0.2 shows as 0.3. */
-export function round(n: number) {
+function round(n: number) {
 	return Number(n.toPrecision(10));
 }
 
 /** Converts a number typed in `unit` to the parameter's own unit. */
-export function toOwnUnit(parameter: Parameter, value: number, unit: string) {
+function toOwnUnit(parameter: Parameter, value: number, unit: string) {
 	const alt = parameter.altUnits?.find((u) => u.unit === unit);
 	return alt ? round(value * alt.factor + (alt.offset ?? 0)) : value;
 }

@@ -8,8 +8,6 @@ type Shape =
 	| { cx: number; cy: number; r: number }
 	| { x: number; y: number; width: number; height: number; rx?: number };
 
-export type IconShape = Shape;
-
 /** Icons an admin can pick for a device type or a domain, in picker order. */
 export const REGISTRY_ICONS = {
 	station: [
@@ -159,7 +157,6 @@ export const UI_ICONS = {
 } satisfies Record<string, Shape[]>;
 
 export type RegistryIconName = keyof typeof REGISTRY_ICONS;
-export type IconName = RegistryIconName | keyof typeof UI_ICONS;
 
 export const REGISTRY_ICON_NAMES = Object.keys(REGISTRY_ICONS) as RegistryIconName[];
 

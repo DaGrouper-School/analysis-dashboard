@@ -5,7 +5,7 @@ export function isProfileStepDone(user: User): boolean {
 }
 
 /** Where a user belongs next in the sign-up flow (User Flow / 01 Signup screen). */
-export type FlowRoute =
+type FlowRoute =
 	'/(auth)/signup' | '/onboarding/profile' | '/onboarding/address' | '/(app)/dashboard';
 
 export function nextRoute(user: User | null): FlowRoute {

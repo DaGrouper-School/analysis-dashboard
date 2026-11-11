@@ -26,7 +26,7 @@ const RESEND_AFTER_MS = 30_000;
 const CODE_TTL_MS = 5 * 60_000;
 const MAX_ATTEMPTS = 5;
 
-export interface MockOptions {
+interface MockOptions {
 	/** Simulated network latency in ms: half a second, so loading states are visible. */
 	latency?: number;
 	now?: () => number;

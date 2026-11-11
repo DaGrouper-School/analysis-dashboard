@@ -45,7 +45,7 @@ export function latestOf(series: Pick<PublicParameterSeries, 'points'>[]): strin
 
 const round = (value: number) => Math.round(value * 10) / 10;
 
-export interface DayStats {
+interface DayStats {
 	day: string;
 	low: number;
 	high: number;
@@ -72,7 +72,7 @@ export function dailyStats(points: PublicParameterSeries['points']): DayStats[] 
 		}));
 }
 
-export interface RainDay {
+interface RainDay {
 	day: string;
 	/** Each source's total for the day, by source ID; a source with no reading is missing. */
 	totals: Record<string, number>;
@@ -146,7 +146,7 @@ export function inRange<T extends { observedAt: string }>(
 	return points.filter((p) => dayOf(p.observedAt) >= first);
 }
 
-export const PARAMETER_CSV_COLUMNS = [
+const PARAMETER_CSV_COLUMNS = [
 	'observed_at',
 	'classroom_id',
 	'source',

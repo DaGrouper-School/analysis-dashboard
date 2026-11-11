@@ -14,12 +14,8 @@ export const prerender = false;
  * site stays public, and members always work in the app. Links people are sent (invitations,
  * consent), contributor pages and hosting stay where they are. A value page opens in the app.
  */
-const IN_THE_APP = new Set(['/', '/classrooms', '/explore', '/global-classrooms']);
-const CLASSROOM_PAGES = new Set([
-	'/classrooms/[classroom]',
-	'/explore/[classroom]',
-	'/global-classrooms/[classroom]'
-]);
+const IN_THE_APP = new Set(['/', '/classrooms']);
+const CLASSROOM_PAGES = new Set(['/classrooms/[classroom]']);
 /**
  * A classroom page's `?tab=` as a dashboard section. The members' classroom page, folded into
  * the dashboard, had labs, members, invitations and consent tabs at the same address.

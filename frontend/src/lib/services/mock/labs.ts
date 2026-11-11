@@ -462,11 +462,6 @@ export function createMockLabs({
 			return [...latest.values()];
 		},
 
-		async recentReadings(limit = 20) {
-			await delay();
-			return memberReadings(readDb()).slice(0, limit);
-		},
-
 		async listClassroomDevices(classroomId) {
 			await delay();
 			const state = readDb();

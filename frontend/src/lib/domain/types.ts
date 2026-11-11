@@ -144,7 +144,7 @@ export type ClassroomRole =
 	/** Read-only: sees the classroom's devices and readings, invited by the head. */
 	| 'researcher';
 
-export interface Classroom {
+interface Classroom {
 	id: string;
 	name: string;
 	institutionName: string;

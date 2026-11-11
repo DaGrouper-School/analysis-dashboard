@@ -93,7 +93,7 @@ export function bySeverity(a: AlertRule, b: AlertRule) {
 	);
 }
 
-export function crosses(rule: Pick<AlertRule, 'direction' | 'value'>, value: number) {
+function crosses(rule: Pick<AlertRule, 'direction' | 'value'>, value: number) {
 	return rule.direction === 'above' ? value >= rule.value : value <= rule.value;
 }
 
@@ -143,7 +143,7 @@ export function alertsFor(
 	return alerts.sort(([a], [b]) => bySeverity(a, b)).map(([, alert]) => alert);
 }
 
-export type ThresholdLevel = 'normal' | AlertLevel;
+type ThresholdLevel = 'normal' | AlertLevel;
 
 /**
  * Where a value sits against the levels in force, for a badge beside it. Null when the

@@ -378,15 +378,6 @@ export const routes: Route[] = [
 		response: 'CurrentConditions[]'
 	},
 	{
-		method: 'labs.recentReadings',
-		http: 'GET',
-		path: '/me/readings',
-		access: 'user',
-		query: { limit: { type: 'integer', description: 'Default 20.' } },
-		response: 'CurrentConditions[]',
-		args: [20]
-	},
-	{
 		method: 'labs.listClassroomDevices',
 		http: 'GET',
 		path: '/classrooms/{classroomId}/devices',
