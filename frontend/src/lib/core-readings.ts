@@ -1,4 +1,10 @@
-import type { CoreReadings, Reading, StationCore } from '#lib/domain/types.ts';
+import type {
+	CoreReadings,
+	Reading,
+	StationCharts,
+	StationCore,
+	StationRainDay
+} from '#lib/domain/types.ts';
 
 /** Which registry values feed the shared core readings. Kept with the data, not the page. */
 export interface CoreParameters {
@@ -12,6 +18,9 @@ export interface CoreParameters {
 	rainTolerance: number;
 	/** The manual gauge's value: the reference for a day's rain wherever a gauge reported. */
 	rainReference: string;
+	/** The values the classroom charts follow besides rain and air temperature. */
+	uv: string[];
+	soilMoisture: string[];
 }
 
 type CoreRecord = Pick<Reading, 'observedAt' | 'receivedAt' | 'values'> & {
@@ -31,11 +40,11 @@ function firstNumber(values: Reading['values'], ids: string[]) {
 }
 
 /**
- * A day's rain for the classroom: each source's highest running total that day (the total only
- * grows until midnight). The manual gauge is the reference (AP-23); without a gauge reading
- * that day, the first other source's. Never an average of sources. Null when none reported.
+ * A day's rain with where it came from (AP-23): the reference gauge's total when the gauge
+ * reported, otherwise the first other source's, and whether the sources are further apart than
+ * the protocol allows. Null when no source reported.
  */
-function rainOn(records: CoreRecord[], day: string, parameters: CoreParameters) {
+function rainDayOn(records: CoreRecord[], day: string, parameters: CoreParameters): StationRainDay {
 	const bySource = new Map<string, { value: number; reference: boolean }>();
 	for (const record of records) {
 		if (record.observedAt.slice(0, 10) !== day) continue;
@@ -48,10 +57,23 @@ function rainOn(records: CoreRecord[], day: string, parameters: CoreParameters) 
 			reference: !!seen?.reference || typeof record.values[parameters.rainReference] === 'number'
 		});
 	}
-	const sources = [...bySource.entries()].sort(
-		([a, x], [b, y]) => Number(y.reference) - Number(x.reference) || a.localeCompare(b)
+	const values = [...bySource.values()];
+	const shown = values.find((v) => v.reference) ?? values[0];
+	const spread = spreadOf(values.map((v) => v.value));
+	return {
+		day,
+		value: shown ? round(shown.value) : null,
+		reference: !!shown?.reference,
+		flagged: spread !== null && spread > parameters.rainTolerance
+	};
+}
+
+/** The `count` days up to and including `day`, oldest first, as `YYYY-MM-DD`. */
+function daysUpTo(day: string, count: number) {
+	const end = Date.parse(`${day}T00:00:00.000Z`);
+	return Array.from({ length: count }, (_, i) =>
+		new Date(end - (count - 1 - i) * DAY).toISOString().slice(0, 10)
 	);
-	return sources.length ? round(sources[0][1].value) : null;
 }
 
 /**
@@ -86,7 +108,7 @@ export function coreReadings(
 		new Date(Date.parse(`${day}T00:00:00.000Z`) - i * DAY).toISOString().slice(0, 10)
 	);
 	const totals = week
-		.map((d) => rainOn(released, d, parameters))
+		.map((d) => rainDayOn(released, d, parameters).value)
 		.filter((t): t is number => t !== null);
 	const temperature = released
 		.map((r) => firstNumber(r.values, parameters.airTemperature))
@@ -94,7 +116,7 @@ export function coreReadings(
 
 	return {
 		day,
-		rainToday: rainOn(released, day, parameters),
+		rainToday: rainDayOn(released, day, parameters).value,
 		rainLast7Days: totals.length ? round(totals.reduce((a, b) => a + b, 0)) : null,
 		rainDays: totals.length,
 		airTemperature: temperature ?? null,
@@ -146,7 +168,8 @@ function spreadOf(values: number[]) {
 export function stationCore(
 	records: CoreRecord[],
 	releasedThrough: string | null,
-	parameters: CoreParameters
+	parameters: CoreParameters,
+	nameOf: (sourceId: string) => string | null = () => null
 ): StationCore {
 	const released =
 		releasedThrough === null ? [] : records.filter((r) => r.observedAt <= releasedThrough);
@@ -158,7 +181,20 @@ export function stationCore(
 			)
 			?.slice(0, 10) ?? null;
 
-	const rain = [...bySourceOn(released, day, parameters.rainDaily, 'max').values()];
+	const rainBySource = bySourceOn(released, day, parameters.rainDaily, 'max');
+	const rain = [...rainBySource.values()];
+	const isReference = (sourceId: string) =>
+		released.some(
+			(r) =>
+				(r.deviceId ?? 'field') === sourceId &&
+				typeof r.values[parameters.rainReference] === 'number'
+		);
+	const month = day
+		? released
+				.filter((r) => r.observedAt.slice(0, 10) > daysUpTo(day, 31)[0])
+				.map((r) => firstNumber(r.values, parameters.airTemperature))
+				.filter((t): t is number => t !== null)
+		: [];
 	const temperatures = [...bySourceOn(released, day, parameters.airTemperature, 'latest').values()];
 	const today = released
 		.filter((r) => r.observedAt.slice(0, 10) === day)
@@ -169,14 +205,74 @@ export function stationCore(
 		rain: {
 			review: reviewOf(records, releasedThrough, parameters.rainDaily),
 			sources: rain.length,
-			spread: spreadOf(rain.map((r) => r.value))
+			spread: spreadOf(rain.map((r) => r.value)),
+			bySource: [...rainBySource.entries()]
+				.map(([sourceId, r]) => ({
+					sourceId,
+					name: nameOf(sourceId),
+					value: round(r.value),
+					reference: isReference(sourceId)
+				}))
+				.sort((a, b) => Number(b.reference) - Number(a.reference)),
+			tolerance: parameters.rainTolerance,
+			week: day ? daysUpTo(day, 7).map((d) => rainDayOn(released, d, parameters)) : []
 		},
 		temperature: {
 			review: reviewOf(records, releasedThrough, parameters.airTemperature),
 			sources: temperatures.length,
 			spread: spreadOf(temperatures.map((t) => t.value)),
 			low: today.length ? Math.min(...today) : null,
-			high: today.length ? Math.max(...today) : null
+			high: today.length ? Math.max(...today) : null,
+			monthLow: month.length ? Math.min(...month) : null,
+			monthHigh: month.length ? Math.max(...month) : null
 		}
+	};
+}
+
+/** The day's numbers of one value, from every source, in time order. */
+function dayValues(records: CoreRecord[], day: string, ids: string[]) {
+	return records
+		.filter((r) => r.observedAt.slice(0, 10) === day)
+		.map((r) => firstNumber(r.values, ids))
+		.filter((v): v is number => v !== null);
+}
+
+const mean = (values: number[]) =>
+	values.length ? round(values.reduce((a, b) => a + b, 0) / values.length) : null;
+
+/**
+ * The classroom charts (AP-45): one point a day for the `count` days up to the latest released
+ * reading. Air temperature is the day's average with its low and high, rain the day's total
+ * (the gauge is the reference), UV the day's highest and soil moisture the day's average.
+ * A day without a reading stays empty; it is never filled in.
+ */
+export function stationCharts(
+	records: CoreRecord[],
+	releasedThrough: string | null,
+	parameters: CoreParameters,
+	count = 30
+): StationCharts {
+	const released =
+		releasedThrough === null ? [] : records.filter((r) => r.observedAt <= releasedThrough);
+	const latest = released.reduce<string | null>(
+		(at, r) => (!at || r.observedAt > at ? r.observedAt : at),
+		null
+	);
+	if (!latest) return { days: [], temperature: [], rain: [], uv: [], soilMoisture: [] };
+	const days = daysUpTo(latest.slice(0, 10), count);
+	return {
+		days,
+		temperature: days.map((d) => {
+			const values = dayValues(released, d, parameters.airTemperature);
+			return values.length
+				? { mean: mean(values)!, low: Math.min(...values), high: Math.max(...values) }
+				: null;
+		}),
+		rain: days.map((d) => rainDayOn(released, d, parameters)),
+		uv: days.map((d) => {
+			const values = dayValues(released, d, parameters.uv);
+			return values.length ? Math.max(...values) : null;
+		}),
+		soilMoisture: days.map((d) => mean(dayValues(released, d, parameters.soilMoisture)))
 	};
 }

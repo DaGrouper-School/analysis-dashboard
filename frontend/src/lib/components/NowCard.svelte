@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import Icon from '#lib/components/Icon.svelte';
+	import TrendArea from '#lib/components/TrendArea.svelte';
 	import type { NowTile } from '#lib/domain/types.ts';
 	import { formatValue } from '#lib/key-values.ts';
 	import { timeAgo } from '#lib/station-now.ts';
@@ -52,7 +53,7 @@
 
 	<ul class="mt-5 grid grid-cols-2 gap-3">
 		{#each tiles as tile (tile.id)}
-			<li class="rounded-md border border-line bg-raised p-3.5">
+			<li class="flex flex-col rounded-md border border-line bg-raised p-3.5">
 				<p class="flex items-center gap-2 text-sm">
 					<Icon name={tile.icon} class="size-4 text-teal" />
 					{tile.label}
@@ -65,9 +66,13 @@
 					</p>
 				{/if}
 				{#if tile.caption}<p class="mt-2 text-xs text-muted">{tile.caption}</p>{/if}
+				<div class="mt-auto pt-3"><TrendArea values={tile.last24Hours} /></div>
 			</li>
 		{/each}
 	</ul>
+	{#if tiles.some((t) => t.last24Hours.some((v) => v !== null))}
+		<p class="mt-3 text-xs text-muted">Lines show the last 24 hours.</p>
+	{/if}
 
 	{#if actions}
 		<div class="mt-auto flex flex-wrap gap-3 pt-5">{@render actions()}</div>

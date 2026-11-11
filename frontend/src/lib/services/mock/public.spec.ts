@@ -165,15 +165,15 @@ describe('Explore station page (AP-43)', () => {
 
 	it('shows what is happening now from released values, and no data as null', async () => {
 		const trinity = await services.publicSite.station('cls_trinity');
-		expect(trinity.now.map((t) => t.id)).toEqual(['temperature', 'wind', 'rain', 'pressure']);
+		expect(trinity.now.map((t) => t.id)).toEqual(['temperature', 'wind', 'uv', 'pressure']);
 		const temp = trinity.now.find((t) => t.id === 'temperature')!;
 		expect(typeof temp.value).toBe('number');
 		expect(temp.unit).toBe('°C');
 		expect(temp.observedAt! <= '2026-10-20T06:00:00.000Z').toBe(true);
-		// Rain matches the core strip: the day total over sources, with the week under it.
-		const rain = trinity.now.find((t) => t.id === 'rain')!;
-		expect(rain.value).toBe(trinity.classroom.core.rainToday);
-		expect(rain.caption).toContain('this week');
+		// Each tile carries its last 24 hours, one point an hour.
+		expect(temp.last24Hours).toHaveLength(24);
+		expect(temp.last24Hours.at(-1)).toBe(temp.value);
+		expect(trinity.charts.days).toHaveLength(30);
 		const hargeisa = await services.publicSite.station('cls_hargeisa');
 		expect(hargeisa.now.every((t) => t.value === null && t.observedAt === null)).toBe(true);
 	});

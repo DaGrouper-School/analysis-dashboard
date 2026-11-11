@@ -4200,6 +4200,13 @@ components:
           type:
             - string
             - "null"
+        last24Hours:
+          type: array
+          items:
+            type:
+              - number
+              - "null"
+          description: The 24 hours up to `observedAt`, one value an hour, oldest first; empty without data.
       required:
         - id
         - label
@@ -4209,6 +4216,7 @@ components:
         - unit
         - caption
         - observedAt
+        - last24Hours
       additionalProperties: false
       description: One tile of "What's happening now?" (AP-43), from the latest released reading.
     Observation:
@@ -5135,6 +5143,9 @@ components:
           anyOf:
             - $ref: "#/components/schemas/InstitutionOverview"
             - type: "null"
+        charts:
+          $ref: "#/components/schemas/StationCharts"
+          description: Air temperature, rain, UV and soil moisture by day (AP-45).
       required:
         - content
         - classroom
@@ -5148,6 +5159,7 @@ components:
         - places
         - now
         - institution
+        - charts
       additionalProperties: false
       description: "A classroom's station overview for visitors (AP-21): released data only."
     PublicValue:
@@ -5652,11 +5664,110 @@ components:
         - highland
         - forest
         - other
+    StationCharts:
+      type: object
+      properties:
+        days:
+          type: array
+          items:
+            type: string
+        temperature:
+          type: array
+          items:
+            anyOf:
+              - type: object
+                properties:
+                  mean:
+                    type: number
+                  low:
+                    type: number
+                  high:
+                    type: number
+                required:
+                  - mean
+                  - low
+                  - high
+                additionalProperties: false
+              - type: "null"
+        rain:
+          type: array
+          items:
+            $ref: "#/components/schemas/StationRainDay"
+        uv:
+          type: array
+          items:
+            type:
+              - number
+              - "null"
+        soilMoisture:
+          type: array
+          items:
+            type:
+              - number
+              - "null"
+      required:
+        - days
+        - temperature
+        - rain
+        - uv
+        - soilMoisture
+      additionalProperties: false
+      description: "The classroom charts (AP-45): one point a day, oldest first, for the last 30 days of
+        released data. Each series has one entry per day in `days`; a day with no reading is null."
     StationCore:
       type: object
       properties:
         rain:
-          $ref: "#/components/schemas/StationCoreItem"
+          type: object
+          additionalProperties: false
+          properties:
+            bySource:
+              type: array
+              items:
+                type: object
+                properties:
+                  sourceId:
+                    type: string
+                  name:
+                    type:
+                      - string
+                      - "null"
+                  value:
+                    type: number
+                  reference:
+                    type: boolean
+                required:
+                  - sourceId
+                  - name
+                  - value
+                  - reference
+                additionalProperties: false
+              description: Each source's total on the core day, the reference gauge first.
+            tolerance:
+              type: number
+              description: How far apart sources may be, in mm, from the classroom's protocol.
+            week:
+              type: array
+              items:
+                $ref: "#/components/schemas/StationRainDay"
+              description: The 7 days up to the core day, oldest first.
+            review:
+              $ref: "#/components/schemas/ReviewState"
+            sources:
+              type: number
+              description: Sources with a value on the core day.
+            spread:
+              type:
+                - number
+                - "null"
+              description: How far apart those sources are, in the reading's unit; null with fewer than two.
+          required:
+            - bySource
+            - review
+            - sources
+            - spread
+            - tolerance
+            - week
         temperature:
           type: object
           additionalProperties: false
@@ -5666,6 +5777,15 @@ components:
                 - number
                 - "null"
             high:
+              type:
+                - number
+                - "null"
+            monthLow:
+              type:
+                - number
+                - "null"
+              description: The lowest and highest of the last 30 days.
+            monthHigh:
               type:
                 - number
                 - "null"
@@ -5682,6 +5802,8 @@ components:
           required:
             - high
             - low
+            - monthHigh
+            - monthLow
             - review
             - sources
             - spread
@@ -5690,25 +5812,30 @@ components:
         - temperature
       additionalProperties: false
       description: "The station page's detail on the core readings: review state, sources and today's range."
-    StationCoreItem:
+    StationRainDay:
       type: object
       properties:
-        review:
-          $ref: "#/components/schemas/ReviewState"
-        sources:
-          type: number
-          description: Sources with a value on the core day.
-        spread:
+        day:
+          type: string
+          description: "`YYYY-MM-DD`, UTC."
+        value:
           type:
             - number
             - "null"
-          description: How far apart those sources are, in the reading's unit; null with fewer than two.
+          description: The day's total; null when no source reported.
+        reference:
+          type: boolean
+          description: The total is the manual gauge's, the reference; false when it is another source's.
+        flagged:
+          type: boolean
+          description: The sources are further apart than the protocol allows, so the day goes to review.
       required:
-        - review
-        - sources
-        - spread
+        - day
+        - value
+        - reference
+        - flagged
       additionalProperties: false
-      description: One core reading's detail on a station page (AP-22).
+      description: One day of a classroom's rain (AP-23).
     SyncBatch:
       type: object
       properties:

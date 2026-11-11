@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
+	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
 	import ParameterChart, {
@@ -272,18 +274,26 @@
 >
 
 <PublicShell content={data.content} user={data.user}>
-	<nav aria-label="Breadcrumb" class="text-sm text-muted">
-		<a class="hover:text-ink" href={resolve('/explore')}>{explore?.label ?? 'Explore data'}</a>
-		<span aria-hidden="true" class="px-1">›</span>
-		<a
-			class="hover:text-ink"
-			href={resolve('/explore/[classroom]', { classroom: data.classroom.id })}
-			>{data.classroom.name}</a
-		>
-		<span aria-hidden="true" class="px-1">›</span><span class="text-ink" aria-current="page"
-			>{parameter.label}</span
-		>
-	</nav>
+	<!-- A member goes back to the classroom on their dashboard, not to its public page. -->
+	<Breadcrumbs
+		items={data.member
+			? [
+					{ label: 'Dashboard', href: resolve('/(app)/dashboard') },
+					{
+						label: data.classroom.name,
+						href: resolve('/(app)/dashboard') + sensorQuery(data.classroom.id)
+					},
+					{ label: parameter.label }
+				]
+			: [
+					{ label: explore?.label ?? 'Explore data', href: resolve('/explore') },
+					{
+						label: data.classroom.name,
+						href: resolve('/explore/[classroom]', { classroom: data.classroom.id })
+					},
+					{ label: parameter.label }
+				]}
+	/>
 
 	<header class="mt-4">
 		<div class="flex flex-wrap items-center gap-3">

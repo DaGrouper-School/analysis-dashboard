@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
@@ -121,14 +122,12 @@
 {/snippet}
 
 <PublicShell content={data.content} user={data.user}>
-	<nav aria-label="Breadcrumb" class="text-sm text-muted">
-		<a class="hover:text-ink" href={resolve('/global-classrooms')}
-			>{directory?.label ?? 'Global Classrooms'}</a
-		>
-		<span aria-hidden="true" class="px-1">›</span><span class="text-ink" aria-current="page"
-			>{data.content.hosting.title}</span
-		>
-	</nav>
+	<Breadcrumbs
+		items={[
+			{ label: directory?.label ?? 'Global Classrooms', href: resolve('/global-classrooms') },
+			{ label: data.content.hosting.title }
+		]}
+	/>
 	<h1 class="mt-4 font-display text-4xl">{data.content.hosting.title}</h1>
 	<p class="mt-2 max-w-2xl text-muted">{data.content.hosting.intro}</p>
 

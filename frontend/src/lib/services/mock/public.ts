@@ -1,5 +1,5 @@
 import { monthCompleteness } from '#lib/completeness.ts';
-import { coreReadings, stationCore } from '#lib/core-readings.ts';
+import { coreReadings, stationCharts, stationCore } from '#lib/core-readings.ts';
 import { readDb, type MockDbState, type StoredClassroom } from '#lib/data/mock-db.ts';
 import type {
 	InstitutionOverview,
@@ -14,7 +14,7 @@ import type {
 	Reading
 } from '#lib/domain/types.ts';
 import { coarsen, FIELD_SOURCE } from '#lib/raw-data.ts';
-import { nowTiles } from '#lib/station-now.ts';
+import { last24Hours, nowTiles } from '#lib/station-now.ts';
 import { ServiceError, type PublicService } from '../types';
 import { permissionsFor, roleIn } from './classrooms';
 
@@ -264,7 +264,9 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 				core: stationCore(
 					all.map((r) => r.record),
 					classroom.releasedThrough,
-					state.coreParameters
+					state.coreParameters,
+					(id) =>
+						id === FIELD_SOURCE ? null : (state.devices.find((d) => d.id === id)?.name ?? null)
 				),
 				completeness,
 				siteCodes: member ? sites.map((s) => s.code) : [],
@@ -281,7 +283,26 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 						location,
 						stageId
 					})),
-				now: nowTiles(state.nowTiles, values, state.parameters, publicClassroom.core),
+				now: nowTiles(state.nowTiles, values, state.parameters, publicClassroom.core).map(
+					(tile) => {
+						const shown = values.find(
+							(v) => v.parameterId === tile.parameterId && v.observedAt === tile.observedAt
+						);
+						if (!shown || !tile.observedAt) return tile;
+						const records = shownRecords
+							.filter((r) => r.source.id === shown.source.id)
+							.map((r) => r.record);
+						return {
+							...tile,
+							last24Hours: last24Hours(records, [shown.parameterId], tile.observedAt)
+						};
+					}
+				),
+				charts: stationCharts(
+					all.map((r) => r.record),
+					classroom.releasedThrough,
+					state.coreParameters
+				),
 				institution: institutionFor(
 					state,
 					classroom,

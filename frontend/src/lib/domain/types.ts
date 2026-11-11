@@ -850,10 +850,47 @@ export interface StationCoreItem {
 	spread: number | null;
 }
 
+/** One day of a classroom's rain (AP-23). */
+export interface StationRainDay {
+	/** `YYYY-MM-DD`, UTC. */
+	day: string;
+	/** The day's total; null when no source reported. */
+	value: number | null;
+	/** The total is the manual gauge's, the reference; false when it is another source's. */
+	reference: boolean;
+	/** The sources are further apart than the protocol allows, so the day goes to review. */
+	flagged: boolean;
+}
+
 /** The station page's detail on the core readings: review state, sources and today's range. */
 export interface StationCore {
-	rain: StationCoreItem;
-	temperature: StationCoreItem & { low: number | null; high: number | null };
+	rain: StationCoreItem & {
+		/** Each source's total on the core day, the reference gauge first. */
+		bySource: { sourceId: string; name: string | null; value: number; reference: boolean }[];
+		/** How far apart sources may be, in mm, from the classroom's protocol. */
+		tolerance: number;
+		/** The 7 days up to the core day, oldest first. */
+		week: StationRainDay[];
+	};
+	temperature: StationCoreItem & {
+		low: number | null;
+		high: number | null;
+		/** The lowest and highest of the last 30 days. */
+		monthLow: number | null;
+		monthHigh: number | null;
+	};
+}
+
+/**
+ * The classroom charts (AP-45): one point a day, oldest first, for the last 30 days of released
+ * data. Each series has one entry per day in `days`; a day with no reading is null.
+ */
+export interface StationCharts {
+	days: string[];
+	temperature: ({ mean: number; low: number; high: number } | null)[];
+	rain: StationRainDay[];
+	uv: (number | null)[];
+	soilMoisture: (number | null)[];
 }
 
 /** A classroom as the public sees it: no code, no members, positions rounded. */
@@ -935,6 +972,8 @@ export interface PublicStation {
 	/** "What's happening now?" (AP-43): one tile per configured value. */
 	now: NowTile[];
 	institution: InstitutionOverview | null;
+	/** Air temperature, rain, UV and soil moisture by day (AP-45). */
+	charts: StationCharts;
 }
 
 /**
@@ -961,6 +1000,8 @@ export interface NowTile {
 	/** A plain line under the value, such as "Feels like 28.8°C"; null when there is none. */
 	caption: string | null;
 	observedAt: string | null;
+	/** The 24 hours up to `observedAt`, one value an hour, oldest first; empty without data. */
+	last24Hours: (number | null)[];
 }
 
 /** Which values "What's happening now?" shows, in order (AP-43). Configuration, not code. */

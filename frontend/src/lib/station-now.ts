@@ -98,7 +98,8 @@ export function nowTiles(
 				value,
 				unit,
 				caption: value === null ? null : caption,
-				observedAt: value === null ? null : core.lastSync
+				observedAt: value === null ? null : core.lastSync,
+				last24Hours: []
 			};
 		}
 		const shown = latest(tile.parameterIds);
@@ -124,9 +125,34 @@ export function nowTiles(
 			value: shown?.value ?? null,
 			unit: param?.unit ?? '',
 			caption,
-			observedAt: shown?.observedAt ?? null
+			observedAt: shown?.observedAt ?? null,
+			last24Hours: []
 		};
 	});
+}
+
+const HOUR = 3_600_000;
+
+/**
+ * A value's last 24 hours up to `until`, one point an hour, oldest first (AP-43): the latest
+ * reading in each hour from the source the tile shows. An hour without a reading stays empty.
+ */
+export function last24Hours(
+	records: { observedAt: string; values: Record<string, unknown> }[],
+	parameterIds: string[],
+	until: string
+): (number | null)[] {
+	const end = Date.parse(until);
+	const hours: ({ at: number; value: number } | null)[] = Array(24).fill(null);
+	for (const record of records) {
+		const at = Date.parse(record.observedAt);
+		if (at > end || at <= end - 24 * HOUR) continue;
+		const value = parameterIds.map((id) => record.values[id]).find((v) => typeof v === 'number');
+		if (typeof value !== 'number') continue;
+		const i = 23 - Math.floor((end - at) / HOUR);
+		if (!hours[i] || at > hours[i]!.at) hours[i] = { at, value };
+	}
+	return hours.map((h) => h?.value ?? null);
 }
 
 /** How long ago, in plain words: "5 mins ago", "3 days ago". */
