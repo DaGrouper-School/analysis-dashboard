@@ -6,33 +6,19 @@
 	import AlertsList from '#lib/features/alerts/AlertsList.svelte';
 	import AlertsPanel from '#lib/features/alerts/AlertsPanel.svelte';
 	import CalculationPanel from '#lib/features/measurements/CalculationPanel.svelte';
-	import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
-	import ClassroomAbout from '#lib/features/classroom/ClassroomAbout.svelte';
-	import ClassroomCompleteness from '#lib/features/classroom/ClassroomCompleteness.svelte';
 	import ClassroomOverview, { type ClassroomTab } from '#lib/views/ClassroomOverview.svelte';
-	import ClassroomLabs from '#lib/features/devices/ClassroomLabs.svelte';
-	import ClassroomPeople from '#lib/features/classroom/ClassroomPeople.svelte';
-	import ClassroomSettings from '#lib/features/classroom/ClassroomSettings.svelte';
-	import DomainBrowser from '#lib/features/measurements/DomainBrowser.svelte';
 	import Icon from '#lib/components/Icon.svelte';
-	import PendingInvitations from '#lib/features/classroom/PendingInvitations.svelte';
 	import ReleaseModal from '#lib/features/classroom/ReleaseModal.svelte';
-	import RegisterSensorModal from '#lib/features/devices/RegisterSensorModal.svelte';
-	import Select from '#lib/components/Select.svelte';
+	import PendingInvitations from '#lib/features/classroom/PendingInvitations.svelte';
 	import SyncModal from '#lib/features/devices/SyncModal.svelte';
-	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
-	import { formatValue, keySummary } from '#lib/features/measurements/key-values.ts';
 	import { pickDevice } from '#lib/features/devices/station-now.ts';
-	import {
-		CLASSROOM_ROLE_LABELS,
-		withArticle,
-		deviceTypeColor,
-		deviceTypeIcon,
-		deviceTypeLabel,
-		deviceTypeOf,
-		isManualType
-	} from '#lib/utils/labels.ts';
+	import { CLASSROOM_ROLE_LABELS, withArticle, isManualType } from '#lib/utils/labels.ts';
+	import { givenName } from '#lib/utils/format.ts';
 	import { sensorQuery } from '#lib/utils/sensor-selection.ts';
+	import ClassroomSections from './ClassroomSections.svelte';
+	import DetailsHeader from './DetailsHeader.svelte';
+	import NoClassroom from './NoClassroom.svelte';
+	import { sectionTabs, type Section } from './sections.ts';
 	import type { PageData } from './$types';
 
 	/**
@@ -44,11 +30,7 @@
 	let { data, view }: { data: PageData; view: 'overview' | 'details' } = $props();
 	const details = $derived(view === 'details');
 
-	// Skip a title, so "Dr. Marcus L." is greeted as Marcus.
-	const firstName = $derived(
-		data.user.fullName.split(' ').find((part) => !/^(dr|prof|mr|mrs|ms)\.?$/i.test(part)) ??
-			data.user.fullName
-	);
+	const firstName = $derived(givenName(data.user.fullName));
 	const paramsById = $derived(new Map(data.parameters.map((p) => [p.id, p])));
 	// Another classroom opened in the app shows its public data only, with no member sections.
 	const visiting = $derived(data.visiting);
@@ -58,7 +40,6 @@
 	// A manual measurement has no sensor to sync: it is only ever entered by hand.
 	const manual = $derived(!!device && isManualType(data.deviceTypes, device.type));
 
-	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 	const today = new Intl.DateTimeFormat(undefined, {
 		weekday: 'long',
 		day: 'numeric',
@@ -103,16 +84,6 @@
 	}
 
 	// ---- The section tabs (AP-45) ----------------------------------------------------------
-	type Section =
-		| 'alerts'
-		| 'domains'
-		| 'devices'
-		| 'labs'
-		| 'records'
-		| 'complete'
-		| 'about'
-		| 'people'
-		| 'settings';
 	const role = $derived(data.classrooms.find((c) => c.id === pendingId)?.myRole ?? null);
 	const permissions = $derived(data.detail?.permissions);
 	// People for whoever manages members, invites or consent; Settings for whoever edits.
@@ -129,53 +100,22 @@
 	);
 	// Reviewing and releasing data to the public, from its alert.
 	let reviewing = $state(false);
-	const sections = $derived<TabItem<Section>[]>(
-		visiting
-			? [
-					{ id: 'domains', label: 'Domains', icon: 'layers', count: domains.length },
-					{ id: 'complete', label: 'Completeness', icon: 'check' },
-					{ id: 'about', label: 'About', icon: 'info' }
-				]
-			: [
-					// Domains first; Labs for the institution head only.
-					{ id: 'domains', label: 'Domains', icon: 'layers', count: domains.length },
-					{
-						id: 'alerts',
-						label: 'Alerts',
-						icon: 'alert',
-						...(alertCount
-							? { badge: { text: String(alertCount), title: `${alertCount} need you` } }
-							: { count: 0 })
-					},
-					{ id: 'devices', label: 'Measurements', icon: 'station', count: data.devices.length },
-					...(role === 'institution_head'
-						? [{ id: 'labs' as const, label: 'Labs', icon: 'flask', count: data.labs.length }]
-						: []),
-					{ id: 'records', label: 'Records', icon: 'clipboard', count: data.records.length },
-					{ id: 'complete', label: 'Completeness', icon: 'check' },
-					{ id: 'about', label: 'About', icon: 'info' },
-					...(managesPeople
-						? [
-								{
-									id: 'people' as const,
-									label: 'People',
-									icon: 'users',
-									count: data.detail?.members.length ?? 0
-								}
-							]
-						: []),
-					...(managesSettings
-						? [{ id: 'settings' as const, label: 'Settings', icon: 'sliders' }]
-						: [])
-				]
+	const sections = $derived(
+		sectionTabs(
+			{
+				domains: domains.length,
+				alerts: alertCount,
+				devices: data.devices.length,
+				labs: data.labs.length,
+				records: data.records.length,
+				members: data.detail?.members.length ?? 0
+			},
+			{ visiting: !!visiting, head: role === 'institution_head', managesPeople, managesSettings }
+		)
 	);
 	// ---- Adding a measurement (a device) to one of the classroom's labs ----
 	// Whoever manages the classroom's devices adds them, as on a lab page.
 	const canAddDevice = $derived(!!permissions?.manageDevices && data.labs.length > 0);
-	let adding = $state(false);
-	let addLabId = $state('');
-	const addLab = $derived(data.labs.find((l) => l.id === addLabId) ?? data.labs[0]);
-	const labOptions = $derived(data.labs.map((l) => ({ value: l.id, label: l.name })));
 
 	/** Opens a section: on the details page, its tab; from the overview, the details page on it. */
 	function openSection(id: Section) {
@@ -238,270 +178,43 @@
 	const canSync = $derived(
 		!!classroom && !!device && data.canRecord && !!data.labLocation && !manual
 	);
-	const conditionOf = (id: string) => data.classroomConditions.find((c) => c.device.id === id);
 </script>
 
 <svelte:head
 	><title>{details ? 'Classroom details' : 'Dashboard'} · DaGrouper Analysis</title></svelte:head
 >
 
-{#snippet classroomSections(station: NonNullable<typeof data.station>)}
-	<section class="mt-8" aria-label="Classroom sections">
-		<VerticalTabs tabs={sections} bind:active label="Classroom sections">
-			{#if active === 'alerts'}
-				{@render panelHead(
-					'Alerts',
-					alertCount
-						? `What needs you in ${station.classroom.name}, from each device's latest reading.`
-						: `Nothing needs you in ${station.classroom.name} right now.`
-				)}
-				<AlertsList
-					class="mt-5"
-					alerts={data.alerts}
-					waiting={data.waitingForConsent}
-					release={data.release}
-					parameters={paramsById}
-					classroomId={station.classroom.id}
-					onconsent={() => openSection('people')}
-					onrelease={() => (reviewing = true)}
-				/>
-			{:else if active === 'domains'}
-				<DomainBrowser
-					{domains}
-					parameters={station.parameters}
-					classroomId={station.classroom.id}
-				/>
-			{:else if active === 'devices'}
-				<div class="flex flex-wrap items-end justify-between gap-3">
-					<div>
-						{@render panelHead(
-							'Measurements',
-							`The devices in ${station.classroom.name}'s labs, each with its latest reading.`
-						)}
-					</div>
-					{#if canAddDevice}
-						<div class="flex flex-wrap items-center gap-2">
-							{#if data.labs.length > 1}
-								<Select
-									options={labOptions}
-									value={addLab?.id}
-									label="Lab to add it to"
-									size="compact"
-									onchange={(id) => (addLabId = id)}
-								/>
-							{/if}
-							<button
-								type="button"
-								class="btn btn-primary"
-								aria-haspopup="dialog"
-								onclick={() => (adding = true)}
-							>
-								<Icon name="plus" class="size-4" /> Add measurement
-							</button>
-						</div>
-					{/if}
-				</div>
-				<ul class="mt-5 space-y-2.5">
-					{#each data.devices as option (option.id)}
-						{@const item = conditionOf(option.id)}
-						<li class="card flex flex-wrap items-center gap-x-5 gap-y-3 p-4 sm:px-5">
-							<span
-								class="grid size-11 shrink-0 place-items-center rounded-md border border-line bg-raised"
-								style:color={deviceTypeColor(data.deviceTypes, option.type)}
-							>
-								<Icon name={deviceTypeIcon(data.deviceTypes, option.type)} class="size-5" />
-							</span>
-							<div class="min-w-0 flex-[2_1_14rem]">
-								<p class="font-medium text-ink">{option.name}</p>
-								<p class="text-xs text-muted">
-									{deviceTypeLabel(data.deviceTypes, option.type)} · {option.labName}
-								</p>
-							</div>
-							<div class="min-w-0 flex-[2_1_12rem] text-sm">
-								<p class="text-ink">
-									{item
-										? keySummary(
-												deviceTypeOf(data.deviceTypes, option.type)?.tileParameterIds,
-												item.reading.values,
-												paramsById
-											)
-										: 'No readings yet'}
-								</p>
-								{#if item}
-									<p class="mt-0.5 flex items-center gap-1.5 text-xs">
-										<span class="size-1.5 rounded-full bg-lime" aria-hidden="true"></span>
-										Seen {dateTime.format(new Date(item.reading.observedAt))}
-									</p>
-								{/if}
-							</div>
-							<div class="flex flex-wrap gap-2">
-								{#if data.canRecord && !isManualType(data.deviceTypes, option.type)}
-									<button
-										type="button"
-										class="btn btn-ghost"
-										aria-haspopup="dialog"
-										onclick={() => sync(option.id)}><Icon name="sync" class="size-4" /> Sync</button
-									>
-								{:else if data.canRecord}
-									<!-- eslint-disable svelte/no-navigation-without-resolve -->
-									<a
-										class="btn btn-ghost"
-										href={`${resolve('/(app)/observe')}?lab=${option.labId}&device=${option.id}`}
-										>Enter a reading</a
-									>
-									<!-- eslint-enable svelte/no-navigation-without-resolve -->
-								{/if}
-								<!-- eslint-disable svelte/no-navigation-without-resolve -->
-								<a
-									class="btn btn-ghost"
-									href={resolve('/(app)/dashboard/readings') +
-										sensorQuery(station.classroom.id, option.id)}>Raw data</a
-								>
-								<!-- eslint-enable svelte/no-navigation-without-resolve -->
-							</div>
-						</li>
-					{:else}
-						<li class="text-muted">
-							No devices yet. Ask your facilitator to add one in one of the labs.
-						</li>
-					{/each}
-				</ul>
-			{:else if active === 'labs'}
-				{@render panelHead(
-					'Labs',
-					`${station.classroom.name}'s labs, with their devices and site profile.`
-				)}
-				<div class="mt-5">
-					<ClassroomLabs
-						classroomId={station.classroom.id}
-						labs={data.labs}
-						devices={data.devices}
-						canAdd={!!permissions?.manageDevices}
-					/>
-				</div>
-			{:else if active === 'records'}
-				<div class="flex flex-wrap items-end justify-between gap-3">
-					<div>
-						{@render panelHead(
-							'Records',
-							'Readings entered by hand and field observations in this classroom, newest first.'
-						)}
-					</div>
-					{#if data.canRecord}
-						<a class="btn btn-accent" href={resolve('/(app)/observe')}
-							><Icon name="plus" class="size-4" /> Record observation</a
-						>
-					{/if}
-				</div>
-				{#if data.records.length}
-					<div class="card mt-5 overflow-x-auto px-5 py-1">
-						<table class="w-full min-w-[36rem] text-sm">
-							<thead>
-								<tr class="border-b border-line text-left text-xs text-muted">
-									<th class="py-2.5 pr-3 font-medium">When</th>
-									<th class="py-2.5 pr-3 font-medium">What</th>
-									<th class="py-2.5 pr-3 font-medium">Value</th>
-									<th class="py-2.5 font-medium">From</th>
-								</tr>
-							</thead>
-							<tbody class="divide-y divide-line">
-								{#each data.records as row (row.id)}
-									{@const param = paramsById.get(row.parameterId)}
-									<tr>
-										<td class="py-3 pr-3 whitespace-nowrap text-muted tabular-nums"
-											>{dateTime.format(new Date(row.observedAt))}</td
-										>
-										<td class="py-3 pr-3 text-ink">{param?.label ?? row.parameterId}</td>
-										<td class="py-3 pr-3 font-mono whitespace-nowrap text-ink"
-											>{formatValue(row.value, param?.unit, param?.valueType)}</td
-										>
-										<td class="py-3">
-											{row.sourceKind === 'field'
-												? 'Field observation'
-												: row.sourceName}{row.contributorId
-												? ` · participant ${row.contributorId}`
-												: ''}
-										</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
-					</div>
-				{:else}
-					<p class="mt-4 text-muted">Nothing has been recorded by hand yet.</p>
-				{/if}
-			{:else if active === 'complete'}
-				<ClassroomCompleteness completeness={station.completeness} />
-			{:else if active === 'about' && data.about}
-				<ClassroomAbout about={data.about} />
-			{:else if active === 'people' && data.detail}
-				{@render panelHead(
-					'People',
-					`Who is in ${station.classroom.name}, who is invited, and guardian consent for members under 18.`
-				)}
-				<div class="mt-5">
-					<ClassroomPeople detail={data.detail} consent={data.consent} userId={data.user.id} />
-				</div>
-			{:else if active === 'settings' && data.detail}
-				{@render panelHead(
-					'Settings',
-					`${station.classroom.name}'s name, institution, sharing and code.`
-				)}
-				<div class="mt-5">
-					<ClassroomSettings detail={data.detail} institutionInfo={station.institution} />
-				</div>
-			{/if}
-		</VerticalTabs>
-	</section>
-{/snippet}
-
-{#snippet panelHead(title: string, sub: string)}
-	<h2 class="font-display text-2xl">{title}</h2>
-	<p class="mt-1 max-w-2xl text-sm text-muted">{sub}</p>
-{/snippet}
-
 {#if data.invitations.length}
 	<div class="mb-8"><PendingInvitations invitations={data.invitations} /></div>
 {/if}
 
 {#if !station}
-	<p class="text-sm font-medium text-muted">Hello, {firstName}</p>
-	<div class="card mt-6">
-		<p class="text-sm text-muted">Current conditions</p>
-		<h2 class="mt-1 text-xl font-semibold">You're not in a classroom yet</h2>
-		<p class="mt-2 text-sm text-muted">
-			Conditions come only from devices in your classrooms' labs. Join a classroom with an invite
-			link to see its measurements here.
-		</p>
-		<a class="btn btn-ghost mt-4" href={resolve('/(app)/classrooms/new')}>Start a classroom</a>
-	</div>
+	<NoClassroom {firstName} />
 {:else if details}
-	<Breadcrumbs
-		items={[
-			{ label: 'Dashboard', href: dashboardHref(station.classroom.id, shownDeviceId) },
-			{ label: 'Classroom details' }
-		]}
+	<DetailsHeader
+		dashboardHref={dashboardHref(station.classroom.id, shownDeviceId)}
+		loading={pendingId !== station.classroom.id}
+		{classroomOptions}
+		classroomId={pendingId}
+		{deviceOptions}
+		deviceId={shownDeviceId}
+		onclassroom={(id) => choose(id, undefined, active)}
+		ondevice={pickDeviceShown}
 	/>
-	<header class={['mt-4', pendingId !== station.classroom.id && 'is-loading']}>
-		<h1 class="font-display text-4xl">Classroom details</h1>
-		<div class="mt-5 grid gap-3 sm:grid-cols-2 lg:w-2/3">
-			<Select
-				options={classroomOptions}
-				value={pendingId}
-				label="Classroom"
-				onchange={(id) => choose(id, undefined, active)}
-			/>
-			{#if deviceOptions.length}
-				<Select
-					options={deviceOptions}
-					value={shownDeviceId}
-					label="Device"
-					onchange={pickDeviceShown}
-				/>
-			{/if}
-		</div>
-	</header>
-	{@render classroomSections(station)}
+	<ClassroomSections
+		{data}
+		{station}
+		{sections}
+		bind:active
+		{domains}
+		parameters={paramsById}
+		{alertCount}
+		{canAddDevice}
+		canAddLab={!!permissions?.manageDevices}
+		onsync={sync}
+		onconsent={() => openSection('people')}
+		onrelease={() => (reviewing = true)}
+	/>
 {:else}
 	<!-- What needs the user in this classroom, on top; the full list is its Alerts tab. -->
 	{#if classroom && alertCount}
@@ -601,18 +314,6 @@
 
 {#if classroom && data.release}
 	<ReleaseModal bind:open={reviewing} classroomId={classroom.id} review={data.release} />
-{/if}
-
-{#if canAddDevice && addLab}
-	<RegisterSensorModal
-		bind:open={adding}
-		labId={addLab.id}
-		labName={addLab.name}
-		deviceTypes={data.deviceTypes}
-		domains={data.domains}
-		parameters={data.parameters}
-		onclose={() => invalidateAll()}
-	/>
 {/if}
 
 <CalculationPanel
