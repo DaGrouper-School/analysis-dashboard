@@ -59,6 +59,8 @@ import type {
 	SyncBatch,
 	SyncBatchResult,
 	RegisterDeviceInput,
+	ReleaseReview,
+	SharingInput,
 	UpdateClassroomInput,
 	User
 } from '#lib/domain/types.ts';
@@ -195,6 +197,21 @@ export interface ClassroomService {
 	update(classroomId: string, input: UpdateClassroomInput): Promise<ClassroomSummary>;
 	/** The host institution's photo and its description, or none. Institution head only. */
 	setInstitutionPhoto(classroomId: string, input: InstitutionPhotoInput): Promise<InstitutionInfo>;
+	/**
+	 * Who sees the classroom's data and what its facilitators may do, with its data terms. The
+	 * institution head (and platform admins) only.
+	 */
+	updateSharing(classroomId: string, input: SharingInput): Promise<SharingInput>;
+	/**
+	 * What waits for review before the public sees it: readings and observations observed after
+	 * the release cutoff, by source. Whoever may release data only.
+	 */
+	releaseReview(classroomId: string): Promise<ReleaseReview>;
+	/**
+	 * Releases everything observed up to `through` to the public. Never moves the cutoff back.
+	 * Whoever may release data only: the head, and facilitators when the head allows it.
+	 */
+	releaseData(classroomId: string, through: string): Promise<ReleaseReview>;
 	/** Sends one invitation email per address. */
 	invite(classroomId: string, emails: string[], role: ClassroomRole): Promise<Invitation[]>;
 	revokeInvitation(invitationId: string): Promise<void>;

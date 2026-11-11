@@ -100,20 +100,24 @@ describe('classroom code visibility', () => {
 		expect(detail.classroom.code).toBeNull();
 		expect(detail.members.every((m) => m.email === null)).toBe(true);
 		expect(detail.invitations).toEqual([]);
-		expect(detail.permissions).toEqual({
+		expect(detail.permissions).toMatchObject({
 			invite: [],
 			manageMembers: false,
 			edit: false,
-			viewCode: false,
-			manageConsent: false
+			seeCode: false,
+			manageConsent: false,
+			manageSharing: false,
+			viewSharing: false,
+			releaseData: false
 		});
+		expect(detail.sharing).toBeNull();
 	});
 
 	it('shows it to the institution head', async () => {
 		await signInAs('g-tesfaye');
 		const [classroom] = await services.classrooms.listMine();
 		expect(classroom.code).toBe('DGC-7K3Q9M');
-		expect((await services.classrooms.get(classroom.id)).permissions.viewCode).toBe(true);
+		expect((await services.classrooms.get(classroom.id)).permissions.seeCode).toBe(true);
 	});
 
 	it('hides classrooms from non-members', async () => {
@@ -313,5 +317,56 @@ describe('demo accounts', () => {
 		const mine = await services.classrooms.listMine();
 		expect(mine.map((c) => c.id).sort()).toEqual(['cls_hargeisa', 'cls_nassau']);
 		expect(mine.every((c) => c.myRole === 'community_scientist' && c.code === null)).toBe(true);
+	});
+});
+
+describe('sharing settings', () => {
+	it('lets the head change them, and facilitators follow them', async () => {
+		await signInAs('g-tesfaye');
+		const detail = await services.classrooms.get('cls_trinity');
+		expect(detail.permissions.manageSharing).toBe(true);
+		const saved = await services.classrooms.updateSharing('cls_trinity', {
+			sharing: { ...detail.sharing!.sharing, releasers: 'head', facilitatorsManageDevices: false },
+			terms: detail.sharing!.terms
+		});
+		expect(saved.sharing.releasers).toBe('head');
+		const after = await services.classrooms.get('cls_trinity');
+		expect(after.sharing!.sharing.facilitatorsManageDevices).toBe(false);
+	});
+
+	it('checks the input', async () => {
+		await signInAs('g-tesfaye');
+		const detail = await services.classrooms.get('cls_trinity');
+		await expect(
+			services.classrooms.updateSharing('cls_trinity', {
+				sharing: { ...detail.sharing!.sharing, review: 'auto', autoReleaseDays: 0 },
+				terms: { ...detail.sharing!.terms, licence: ' ' }
+			})
+		).rejects.toMatchObject({ code: 'invalid_input' });
+	});
+
+	it('refuses everyone but the head', async () => {
+		await signInAs('g-marcus');
+		const detail = await services.classrooms.get('cls_trinity');
+		expect(detail.sharing).toBeNull();
+		await expect(
+			services.classrooms.updateSharing('cls_trinity', {
+				sharing: {
+					showPublic: false,
+					review: 'manual',
+					autoReleaseDays: 2,
+					releasers: 'head',
+					facilitatorsInvite: false,
+					facilitatorsManageDevices: false
+				},
+				terms: {
+					licence: 'CC BY 4.0',
+					licenceUrl: null,
+					attribution: 'x',
+					restrictions: [],
+					coordinateDecimals: 2
+				}
+			})
+		).rejects.toMatchObject({ code: 'forbidden' });
 	});
 });

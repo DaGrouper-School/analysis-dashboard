@@ -2,7 +2,7 @@ import type { AlertRuleInput, AlertScope, DeviceAlerts } from '#lib/domain/types
 import { checkAlertRule, effectiveRules, type StoredAlertRule } from '#lib/domain/alerts.ts';
 import { newId, readDb, updateDb, type MockDbState, type StoredDevice } from '#lib/data/mock-db.ts';
 import { ServiceError, type LabService } from '../types';
-import { currentUser, permissionsFor, roleIn } from './classrooms';
+import { canIn, currentUser } from './classrooms';
 
 /**
  * Alert levels per device (AP-08). For each parameter the first layer with rules is in force:
@@ -47,9 +47,9 @@ export function createMockAlerts({
 	function access(state: MockDbState, deviceId: string) {
 		const user = currentUser(state);
 		const device = state.devices.find((d) => d.id === deviceId);
-		const role = device ? roleIn(state, classroomIdOf(state, device), user.id) : null;
-		const can = permissionsFor(user, role);
-		if (!device || !can.view) throw new ServiceError('not_found', 'Device not found.');
+		if (!device) throw new ServiceError('not_found', 'Device not found.');
+		const { can } = canIn(state, user, classroomIdOf(state, device));
+		if (!can.view) throw new ServiceError('not_found', 'Device not found.');
 		return { user, device, can };
 	}
 
@@ -73,7 +73,7 @@ export function createMockAlerts({
 	function result(state: MockDbState, device: StoredDevice): DeviceAlerts {
 		const user = currentUser(state);
 		const lab = state.labs.find((l) => l.id === device.labId)!;
-		const can = permissionsFor(user, roleIn(state, lab.classroomId, user.id));
+		const { can } = canIn(state, user, lab.classroomId);
 		return structuredClone({
 			deviceId: device.id,
 			deviceName: device.name,

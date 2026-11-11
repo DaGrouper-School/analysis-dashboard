@@ -8,18 +8,11 @@
 	import CalculationPanel from '#lib/features/measurements/CalculationPanel.svelte';
 	import ClassroomOverview, { type ClassroomTab } from '#lib/views/ClassroomOverview.svelte';
 	import Icon from '#lib/components/Icon.svelte';
+	import ReleaseModal from '#lib/features/classroom/ReleaseModal.svelte';
 	import PendingInvitations from '#lib/features/classroom/PendingInvitations.svelte';
 	import SyncModal from '#lib/features/devices/SyncModal.svelte';
-	import { keyValues } from '#lib/features/measurements/key-values.ts';
-	import { deviceSummary, pickDevice, readingTiles } from '#lib/features/devices/station-now.ts';
-	import {
-		CLASSROOM_ROLE_LABELS,
-		withArticle,
-		deviceTypeColor,
-		deviceTypeIcon,
-		deviceTypeOf,
-		isManualType
-	} from '#lib/utils/labels.ts';
+	import { pickDevice } from '#lib/features/devices/station-now.ts';
+	import { CLASSROOM_ROLE_LABELS, withArticle, isManualType } from '#lib/utils/labels.ts';
 	import { givenName } from '#lib/utils/format.ts';
 	import { sensorQuery } from '#lib/utils/sensor-selection.ts';
 	import ClassroomSections from './ClassroomSections.svelte';
@@ -69,52 +62,22 @@
 	}
 
 	// ---- Devices: the one picked sets the tiles, the cards, the domains and the colour ----
-	// A member's own classroom: the picked device's raw readings, so a sync shows at once.
-	const domainIcons = $derived(new Map(data.domains.map((d) => [d.id, d.icon])));
-	/** The device's tile or card values, as set for its type in the Registry. */
-	const registryValues = (which: 'tileParameterIds' | 'cardParameterIds') =>
-		device && data.readings[0]
-			? keyValues(
-					deviceTypeOf(data.deviceTypes, device.type)?.[which],
-					data.readings[0].values,
-					paramsById,
-					{ domainIcons, fallback: which === 'tileParameterIds' }
-				)
-			: [];
-	// A device with no readings yet still has its own colour and shows empty states, never
-	// another source's values.
-	const own = $derived.by(() => {
-		if (visiting || !device) return undefined;
-		const icon = deviceTypeIcon(data.deviceTypes, device.type);
-		return {
-			tiles: readingTiles(data.readings, registryValues('tileParameterIds'), icon, paramsById),
-			summary: deviceSummary(data.readings, registryValues('cardParameterIds')),
-			color: deviceTypeColor(data.deviceTypes, device.type)
-		};
-	});
-	// Another classroom: its released devices, picked on the page as on its public page.
+	// The same devices as the classroom's public page, built by the same service from the
+	// database: a member's own classroom with its readings still in review, so a sync shows at
+	// once; another classroom with its released data only.
 	let visitingDeviceId = $state<string>();
-	const visitingDevice = $derived(
-		visiting
-			? pickDevice(visiting.devices, visitingDeviceId ?? page.url.searchParams.get('device'))
+	const shownDevice = $derived(
+		station
+			? pickDevice(
+					station.devices,
+					visiting ? (visitingDeviceId ?? page.url.searchParams.get('device')) : device?.id
+				)
 			: null
 	);
-	const shownDevice = $derived(visiting ? visitingDevice : own);
-	const shownDeviceId = $derived(visiting ? visitingDevice?.id : device?.id);
+	const shownDeviceId = $derived(shownDevice?.id);
 	// The domains of the device shown.
 	const domains = $derived(domainsOf(station?.domains ?? [], shownDeviceId));
-	const pickerDevices = $derived(
-		visiting
-			? visiting.devices
-			: classroom
-				? data.devices.map((d) => ({
-						id: d.id,
-						name: d.name,
-						color: deviceTypeColor(data.deviceTypes, d.type),
-						icon: deviceTypeIcon(data.deviceTypes, d.type)
-					}))
-				: []
-	);
+	const pickerDevices = $derived(station?.devices ?? []);
 	function pickDeviceShown(id: string) {
 		if (visiting) visitingDeviceId = id;
 		else if (classroom) choose(classroom.id, id);
@@ -128,9 +91,15 @@
 		!!permissions &&
 			(permissions.manageMembers || permissions.manageConsent || permissions.invite.length > 0)
 	);
-	const managesSettings = $derived(!!permissions && (permissions.edit || permissions.viewCode));
+	const managesSettings = $derived(
+		!!permissions && (permissions.edit || permissions.seeCode || permissions.viewSharing)
+	);
 	let active = $state<Section>();
-	const alertCount = $derived(data.alerts.length + data.waitingForConsent.length);
+	const alertCount = $derived(
+		data.alerts.length + data.waitingForConsent.length + (data.release ? 1 : 0)
+	);
+	// Reviewing and releasing data to the public, from its alert.
+	let reviewing = $state(false);
 	const sections = $derived(
 		sectionTabs(
 			{
@@ -145,8 +114,8 @@
 		)
 	);
 	// ---- Adding a measurement (a device) to one of the classroom's labs ----
-	// Heads and facilitators add devices, as on a lab page.
-	const canAddDevice = $derived(!!permissions?.invite.length && data.labs.length > 0);
+	// Whoever manages the classroom's devices adds them, as on a lab page.
+	const canAddDevice = $derived(!!permissions?.manageDevices && data.labs.length > 0);
 
 	/** Opens a section: on the details page, its tab; from the overview, the details page on it. */
 	function openSection(id: Section) {
@@ -241,9 +210,10 @@
 		parameters={paramsById}
 		{alertCount}
 		{canAddDevice}
-		canAddLab={!!permissions?.invite.length}
+		canAddLab={!!permissions?.manageDevices}
 		onsync={sync}
 		onconsent={() => openSection('people')}
+		onrelease={() => (reviewing = true)}
 	/>
 {:else}
 	<!-- What needs the user in this classroom, on top; the full list is its Alerts tab. -->
@@ -255,9 +225,11 @@
 			<AlertsList
 				alerts={data.alerts}
 				waiting={data.waitingForConsent}
+				release={data.release}
 				parameters={paramsById}
 				classroomId={station.classroom.id}
 				onconsent={() => openSection('people')}
+				onrelease={() => (reviewing = true)}
 			/>
 		</AlertsPanel>
 	{/if}
@@ -270,7 +242,6 @@
 		now={shownDevice?.tiles}
 		summary={shownDevice?.summary}
 		accent={shownDevice?.color}
-		released={!own}
 		devices={pickerDevices}
 		deviceId={shownDeviceId}
 		onpickdevice={pickDeviceShown}
@@ -339,6 +310,10 @@
 			/>
 		{/key}
 	{/if}
+{/if}
+
+{#if classroom && data.release}
+	<ReleaseModal bind:open={reviewing} classroomId={classroom.id} review={data.release} />
 {/if}
 
 <CalculationPanel

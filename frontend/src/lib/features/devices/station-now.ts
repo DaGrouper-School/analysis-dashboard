@@ -182,8 +182,8 @@ export function deviceSummary(
 	max = Infinity
 ): DeviceSummaryCard[] {
 	const newest = readings[0];
-	if (!newest) return [];
-	const today = newest.observedAt.slice(0, 10);
+	// Nothing yet: the same cards with no data, so the page keeps its layout.
+	const today = (newest?.observedAt ?? new Date().toISOString()).slice(0, 10);
 	const end = Date.parse(`${today}T00:00:00.000Z`);
 	const days = Array.from({ length: 7 }, (_, i) =>
 		new Date(end - (6 - i) * 86_400_000).toISOString().slice(0, 10)
@@ -193,7 +193,7 @@ export function deviceSummary(
 	const range = (list: number[]) =>
 		list.length ? { low: Math.min(...list), high: Math.max(...list) } : { low: null, high: null };
 	return values
-		.filter((v) => typeof v.value === 'number')
+		.filter((v) => typeof v.value === 'number' || (!newest && v.valueType === 'number'))
 		.slice(0, max)
 		.map((v) => {
 			const inWeek = readings.filter((r) => r.observedAt.slice(0, 10) >= days[0]);
@@ -209,8 +209,8 @@ export function deviceSummary(
 				label: v.label,
 				unit: v.unit,
 				icon: v.icon ?? null,
-				latest: numberOf(newest, v.id),
-				observedAt: newest.observedAt,
+				latest: newest ? numberOf(newest, v.id) : null,
+				observedAt: newest?.observedAt ?? null,
 				// The last reading of each day: a day's total for an accumulation, else its close.
 				week: days.map((day) => ({ day, value: numbers(day)[0] ?? null })),
 				todayLow: todays.low,

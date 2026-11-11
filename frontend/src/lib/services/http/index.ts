@@ -15,6 +15,8 @@ import type {
 	DeviceAlerts,
 	ClassroomDetail,
 	ClassroomSummary,
+	ReleaseReview,
+	SharingInput,
 	Invitation,
 	InvitationPreview,
 	AuthResult,
@@ -116,6 +118,14 @@ export function createHttpServices(baseUrl: string): Services {
 					`/classrooms/${encodeURIComponent(id)}/institution/photo`,
 					input
 				),
+			updateSharing: (id, input) =>
+				request<SharingInput>('PUT', `/classrooms/${encodeURIComponent(id)}/sharing`, input),
+			releaseReview: (id) =>
+				request<ReleaseReview>('GET', `/classrooms/${encodeURIComponent(id)}/release`),
+			releaseData: (id, through) =>
+				request<ReleaseReview>('POST', `/classrooms/${encodeURIComponent(id)}/release`, {
+					through
+				}),
 			invite: (id, emails, role) =>
 				request<Invitation[]>('POST', `/classrooms/${encodeURIComponent(id)}/invitations`, {
 					emails,

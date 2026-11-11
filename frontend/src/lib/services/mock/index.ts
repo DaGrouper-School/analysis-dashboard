@@ -315,7 +315,7 @@ export function createMockServices({ latency = 500, now = Date.now }: MockOption
 
 		exports: createMockExports({ delay, now }),
 
-		publicSite: createMockPublic(delay),
+		publicSite: createMockPublic({ delay, now }),
 
 		consent: createMockConsent({ delay, now }),
 		hosting: createMockHosting({ delay, now }),

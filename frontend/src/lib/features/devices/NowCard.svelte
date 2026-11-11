@@ -16,6 +16,7 @@
 	let {
 		tiles,
 		released = true,
+		shared = true,
 		accent,
 		icon,
 		actions,
@@ -27,6 +28,8 @@
 		tiles: NowTile[];
 		/** Released data only (the public view); false for a device's own latest readings. */
 		released?: boolean;
+		/** The classroom shows its data publicly; off, visitors are told so rather than "not yet". */
+		shared?: boolean;
 		/** Tints the card, its icons and lines, such as the picked device's registry colour. */
 		accent?: string;
 		/** The source's registry icon, shown when it has nothing to show yet. */
@@ -75,7 +78,7 @@
 				title={dateTime.format(new Date(latest))}>{timeAgo(latest)}</time
 			>{released ? ' · released data' : ''}
 		{:else}
-			{released ? 'No released data yet' : 'No readings yet'}
+			{!released ? 'No readings yet' : shared ? 'No released data yet' : 'Not shared publicly'}
 		{/if}
 	</p>
 
@@ -88,9 +91,11 @@
 				{#if icon}<Icon name={icon} class="mx-auto size-6 text-(--accent,var(--color-teal))" />{/if}
 				<p class={['font-medium text-ink', icon && 'mt-3']}>No results yet</p>
 				<p class="mt-1 text-sm text-muted">
-					{released
-						? 'Nothing from this device has been released yet.'
-						: 'This device has not sent any readings yet.'}
+					{!released
+						? 'This device has not sent any readings yet.'
+						: shared
+							? 'Nothing from this device has been released yet.'
+							: 'This classroom keeps its data to its members.'}
 				</p>
 			</div>
 		</div>

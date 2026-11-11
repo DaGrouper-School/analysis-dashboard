@@ -27,7 +27,8 @@
 		canAddDevice,
 		canAddLab,
 		onsync,
-		onconsent
+		onconsent,
+		onrelease
 	}: {
 		data: PageData;
 		station: PublicStation;
@@ -40,6 +41,8 @@
 		canAddLab: boolean;
 		onsync: (deviceId: string) => void;
 		onconsent: () => void;
+		/** Opens the review of data waiting to be released. */
+		onrelease: () => void;
 	} = $props();
 </script>
 
@@ -56,9 +59,11 @@
 				class="mt-5"
 				alerts={data.alerts}
 				waiting={data.waitingForConsent}
+				release={data.release}
 				{parameters}
 				classroomId={station.classroom.id}
 				{onconsent}
+				{onrelease}
 			/>
 		{:else if active === 'domains'}
 			<DomainBrowser {domains} parameters={station.parameters} classroomId={station.classroom.id} />
@@ -99,7 +104,10 @@
 				<ClassroomPeople detail={data.detail} consent={data.consent} userId={data.user.id} />
 			</div>
 		{:else if active === 'settings' && data.detail}
-			<PanelHead title="Settings" sub={`${station.classroom.name}'s name, institution and code.`} />
+			<PanelHead
+				title="Settings"
+				sub={`${station.classroom.name}'s name, institution, sharing and code.`}
+			/>
 			<div class="mt-5">
 				<ClassroomSettings detail={data.detail} institutionInfo={station.institution} />
 			</div>

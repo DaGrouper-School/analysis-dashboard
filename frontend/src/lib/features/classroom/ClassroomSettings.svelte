@@ -2,13 +2,15 @@
 	import { invalidate } from '$app/navigation';
 	import CopyButton from '#lib/components/CopyButton.svelte';
 	import InstitutionPhotoForm from '#lib/features/classroom/InstitutionPhotoForm.svelte';
+	import SharingSettings from '#lib/features/classroom/SharingSettings.svelte';
 	import type { ClassroomDetail, InstitutionInfo } from '#lib/domain/types.ts';
 	import { validateClassroomUpdate } from '#lib/domain/validation.ts';
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
 
 	/**
 	 * A classroom's settings (AP-45): its name, institution and the institution's photo, for those
-	 * who may edit them, and its permanent code, for those who may see it. A dashboard tab.
+	 * who may edit them, how it shares its data and what its facilitators may do, and its permanent
+	 * code, for those who may see it. A dashboard tab.
 	 */
 	let {
 		detail,
@@ -83,7 +85,18 @@
 		{/if}
 	{/if}
 
-	{#if permissions.viewCode && classroom.code}
+	{#if detail.sharing}
+		<!-- Keyed by classroom, so switching classrooms starts from the next one's settings. -->
+		{#key classroom.id}
+			<SharingSettings
+				classroomId={classroom.id}
+				initial={detail.sharing}
+				editable={permissions.manageSharing}
+			/>
+		{/key}
+	{/if}
+
+	{#if permissions.seeCode && classroom.code}
 		<section
 			class="card flex flex-wrap items-center justify-between gap-4 border-teal/25 bg-forest text-ink"
 		>

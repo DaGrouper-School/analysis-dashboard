@@ -5,13 +5,16 @@ import type {
 	Invitation,
 	InvitationPreview,
 	MemberConsent,
+	ReleaseReview,
 	User
 } from '#lib/domain/types.ts';
 import {
 	isValidEmail,
 	validateClassroomUpdate,
-	validateInstitutionPhoto
+	validateInstitutionPhoto,
+	validateSharing
 } from '#lib/domain/validation.ts';
+import { DEFAULT_SHARING, permissionsFor, releaseCutoff } from '#lib/domain/permissions.ts';
 import { fillConsentSheet, localDay, validatePaperConsent } from '#lib/domain/consent.ts';
 import {
 	newId,
@@ -48,31 +51,16 @@ export function roleIn(
 	);
 }
 
-/** Who may do what in a classroom. This is the rule the backend must enforce too. */
-export function permissionsFor(user: User, role: ClassroomRole | null) {
-	const isHead = role === 'institution_head';
+/**
+ * What a viewer (null for a visitor) may do in a classroom: the shared rule in
+ * `#lib/domain/permissions.ts`, which the backend must enforce too.
+ */
+export function canIn(state: MockDbState, user: User | null, classroomId: string) {
+	const classroom = state.classrooms.find((c) => c.id === classroomId);
+	const role = user ? roleIn(state, classroomId, user.id) : null;
 	return {
-		view: user.platformAdmin || role !== null,
-		seeCode: user.platformAdmin || isHead || role === 'facilitator',
-		seeEmails: user.platformAdmin || isHead || role === 'facilitator',
-		invite: (user.platformAdmin
-			? ['institution_head', 'facilitator', 'community_scientist', 'researcher']
-			: isHead
-				? ['facilitator', 'community_scientist', 'researcher']
-				: role === 'facilitator'
-					? ['community_scientist']
-					: []) as ClassroomRole[],
-		manageMembers: user.platformAdmin || isHead,
-		// Minors' guardian consent (AP-38): the people who hand out and collect the paper sheets.
-		// Not platform admins: they are not at the classroom.
-		manageConsent: isHead || role === 'facilitator',
-		// Alert levels (AP-08): a classroom's focal people set one device's; only the head sets a
-		// sensor type's for the whole classroom. A platform admin sets the defaults, not these.
-		manageDeviceAlerts: isHead || role === 'facilitator',
-		manageTypeAlerts: isHead,
-		// Connecting an already registered device and recording its readings. Researchers only read.
-		recordReadings:
-			user.platformAdmin || isHead || role === 'facilitator' || role === 'community_scientist'
+		role,
+		can: permissionsFor(user, role, classroom?.sharing ?? DEFAULT_SHARING)
 	};
 }
 
@@ -97,16 +85,16 @@ function generateCode(state: MockDbState): string {
 }
 
 function summarize(state: MockDbState, user: User, classroom: StoredClassroom): ClassroomSummary {
-	const myRole = roleIn(state, classroom.id, user.id);
+	const { role: myRole, can } = canIn(state, user, classroom.id);
 	return {
 		id: classroom.id,
 		name: classroom.name,
 		institutionName: classroom.institutionName,
-		code: permissionsFor(user, myRole).seeCode ? classroom.code : null,
+		code: can.seeCode ? classroom.code : null,
 		setup: classroom.setup,
 		createdAt: classroom.createdAt,
 		myRole,
-		canRecord: myRole !== null && permissionsFor(user, myRole).recordReadings,
+		canRecord: myRole !== null && can.recordReadings,
 		memberCount: state.memberships.filter((m) => m.classroomId === classroom.id).length
 	};
 }
@@ -164,11 +152,55 @@ function minorsIn(state: MockDbState, classroomId: string): User[] {
 		.sort((a, b) => a.fullName.localeCompare(b.fullName));
 }
 
+/**
+ * What waits for review in a classroom: every reading and field observation observed after the
+ * release cutoff, by source, oldest first.
+ */
+export function reviewOf(
+	state: MockDbState,
+	classroom: StoredClassroom,
+	now: number
+): ReleaseReview {
+	const through = releaseCutoff(classroom, now);
+	const labIds = new Set(state.labs.filter((l) => l.classroomId === classroom.id).map((l) => l.id));
+	const waiting = [
+		...state.readings
+			.filter((r) => labIds.has(r.labId))
+			.map((r) => ({ at: r.observedAt, sourceId: r.deviceId })),
+		...state.observations
+			.filter((o) => labIds.has(o.labId))
+			.map((o) => ({ at: o.observedAt, sourceId: null }))
+	].filter((r) => through === null || r.at > through);
+	const sources = new Map<string, ReleaseReview['sources'][number]>();
+	for (const r of waiting) {
+		const key = r.sourceId ?? 'field';
+		const device = r.sourceId ? state.devices.find((d) => d.id === r.sourceId) : null;
+		const source = sources.get(key) ?? {
+			id: key,
+			name: device?.name ?? null,
+			kind: r.sourceId ? ('device' as const) : ('field' as const),
+			count: 0,
+			first: r.at,
+			last: r.at
+		};
+		source.count++;
+		if (r.at < source.first) source.first = r.at;
+		if (r.at > source.last) source.last = r.at;
+		sources.set(key, source);
+	}
+	return {
+		releasedThrough: through,
+		auto: classroom.sharing.review === 'auto',
+		showPublic: classroom.sharing.showPublic,
+		pending: waiting.length,
+		sources: [...sources.values()].sort((a, b) => a.first.localeCompare(b.first))
+	};
+}
+
 /** Loads a classroom the user may see. Hidden classrooms read as not found. */
 function visibleClassroom(state: MockDbState, user: User, classroomId: string) {
 	const classroom = state.classrooms.find((c) => c.id === classroomId);
-	const role = classroom ? roleIn(state, classroom.id, user.id) : null;
-	const can = permissionsFor(user, role);
+	const { role, can } = canIn(state, user, classroomId);
 	if (!classroom || !can.view) throw new ServiceError('not_found', 'Classroom not found.');
 	return { classroom, role, can };
 }
@@ -248,13 +280,10 @@ export function createMockClassrooms({
 				classroom: summarize(state, user, classroom),
 				members,
 				invitations,
-				permissions: {
-					invite: can.invite,
-					manageMembers: can.manageMembers,
-					edit: can.manageMembers,
-					viewCode: can.seeCode,
-					manageConsent: can.manageConsent
-				}
+				permissions: can,
+				sharing: can.viewSharing
+					? { sharing: { ...classroom.sharing }, terms: structuredClone(classroom.terms) }
+					: null
 			};
 		},
 
@@ -267,7 +296,7 @@ export function createMockClassrooms({
 			return updateDb((state) => {
 				const user = currentUser(state);
 				const { classroom, can } = visibleClassroom(state, user, classroomId);
-				if (!can.manageMembers) {
+				if (!can.edit) {
 					throw new ServiceError('forbidden', 'Only the institution head can edit the classroom.');
 				}
 				// The code is the classroom's identifier in SAM, so it is never editable.
@@ -286,7 +315,7 @@ export function createMockClassrooms({
 			return updateDb((state) => {
 				const user = currentUser(state);
 				const { classroom, can } = visibleClassroom(state, user, classroomId);
-				if (!can.manageMembers) {
+				if (!can.edit) {
 					throw new ServiceError(
 						'forbidden',
 						"Only the institution head can change the institution's photo."
@@ -342,6 +371,7 @@ export function createMockClassrooms({
 					stageId: state.siteContent.stages[0].id,
 					regionId: null,
 					releasedThrough: null,
+					sharing: { ...DEFAULT_SHARING },
 					// The profile fills in as the classroom describes itself; no host agreement yet.
 					profile: {
 						areaCode: '',
@@ -366,6 +396,63 @@ export function createMockClassrooms({
 				// The head joins by accepting this invitation, then sets up the lab and invites the rest.
 				createInvitation(state, classroom.id, headEmail, 'institution_head', user.id);
 				return summarize(state, user, classroom);
+			});
+		},
+
+		async updateSharing(classroomId, input) {
+			await delay();
+			const errors = validateSharing(input);
+			if (Object.keys(errors).length) {
+				throw new ServiceError('invalid_input', 'Check the highlighted fields.', errors);
+			}
+			return updateDb((state) => {
+				const user = currentUser(state);
+				const { classroom, can } = visibleClassroom(state, user, classroomId);
+				if (!can.manageSharing) {
+					throw new ServiceError(
+						'forbidden',
+						'Only the institution head can change how the classroom shares its data.'
+					);
+				}
+				classroom.sharing = { ...input.sharing };
+				classroom.terms = {
+					...input.terms,
+					licence: input.terms.licence.trim(),
+					licenceUrl: input.terms.licenceUrl?.trim() || null,
+					attribution: input.terms.attribution.trim(),
+					restrictions: input.terms.restrictions.map((r) => r.trim()).filter(Boolean)
+				};
+				return { sharing: { ...classroom.sharing }, terms: structuredClone(classroom.terms) };
+			});
+		},
+
+		async releaseReview(classroomId) {
+			await delay();
+			const state = readDb();
+			const user = currentUser(state);
+			const { classroom, can } = visibleClassroom(state, user, classroomId);
+			if (!can.releaseData) {
+				throw new ServiceError('forbidden', 'You cannot release this classroom’s data.');
+			}
+			return reviewOf(state, classroom, now());
+		},
+
+		async releaseData(classroomId, through) {
+			await delay();
+			if (Number.isNaN(Date.parse(through))) {
+				throw new ServiceError('invalid_input', 'Choose when to release up to.');
+			}
+			return updateDb((state) => {
+				const user = currentUser(state);
+				const { classroom, can } = visibleClassroom(state, user, classroomId);
+				if (!can.releaseData) {
+					throw new ServiceError('forbidden', 'You cannot release this classroom’s data.');
+				}
+				// Never later than now, and never back: what is public stays public.
+				const at = new Date(Math.min(Date.parse(through), now())).toISOString();
+				const current = classroom.releasedThrough;
+				if (!current || at > current) classroom.releasedThrough = at;
+				return reviewOf(state, classroom, now());
 			});
 		},
 

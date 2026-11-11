@@ -25,7 +25,8 @@ import { recentTrend } from '#lib/features/measurements/indicators.ts';
 import { keyValues } from '#lib/features/measurements/key-values.ts';
 import { deviceTypeColor, deviceTypeIcon, deviceTypeOf } from '#lib/utils/labels.ts';
 import { ServiceError, type PublicService } from '../types';
-import { permissionsFor, roleIn } from './classrooms';
+import { publicCutoff } from '#lib/domain/permissions.ts';
+import { canIn } from './classrooms';
 
 /** A contributor profile lists this many of their latest values. */
 const CONTRIBUTOR_RECENT = 20;
@@ -35,10 +36,11 @@ const PUBLIC_DECIMALS = 2;
 
 /**
  * A classroom's released records, each with its source (AP-20, AP-21). Records observed after
- * `releasedThrough` are still in review and never reach visitors; with nothing released, none do.
- * Its own members see every record, so what they sync shows at once.
+ * the release cutoff are still in review and never reach visitors; with nothing released, or
+ * while the classroom does not share its data, none do. Its own members see every record, so
+ * what they sync shows at once.
  */
-function released(state: MockDbState, classroom: StoredClassroom, member = false) {
+function released(state: MockDbState, classroom: StoredClassroom, now: number, member = false) {
 	const labs = state.labs.filter((l) => l.classroomId === classroom.id);
 	const labIds = new Set(labs.map((l) => l.id));
 	const devices = state.devices.filter((d) => labIds.has(d.labId));
@@ -56,9 +58,10 @@ function released(state: MockDbState, classroom: StoredClassroom, member = false
 				source: { id: FIELD_SOURCE, name: null, kind: 'field' } as PublicSource
 			}))
 	];
-	const through = classroom.releasedThrough;
+	const through = publicCutoff(classroom, now);
 	return {
 		labs,
+		devices,
 		all,
 		released: member
 			? all
@@ -69,55 +72,66 @@ function released(state: MockDbState, classroom: StoredClassroom, member = false
 }
 
 /**
- * Each device with released data (AP-45): its key values from its newest released reading, with
- * their last 24 hours. Colour and icon come from the registry's device types.
+ * Every device of the classroom (AP-45): its key values from its newest reading the viewer may
+ * see, with their last 24 hours. A device with none still lists its registry values, with no
+ * data, so the page keeps its layout. Colour and icon come from the registry's device types.
  */
 function publicDevices(
 	state: MockDbState,
+	devices: MockDbState['devices'],
 	shown: ReturnType<typeof released>['released']
 ): PublicDevice[] {
 	const parameters = new Map(state.parameters.map((p) => [p.id, p]));
 	const domainIcons = new Map(state.domains.map((d) => [d.id, d.icon]));
-	return state.devices.flatMap((device) => {
+	return devices.map((device) => {
 		const readings = shown
 			.filter((r) => r.source.id === device.id)
 			.map((r) => r.record)
 			.sort((a, b) => b.observedAt.localeCompare(a.observedAt));
-		if (!readings.length) return [];
 		const icon = deviceTypeIcon(state.deviceTypes, device.type);
 		const type = deviceTypeOf(state.deviceTypes, device.type);
-		const values = readings[0].values as Reading['values'];
-		return [
-			{
-				id: device.id,
-				name: device.name,
-				type: device.type,
-				color: deviceTypeColor(state.deviceTypes, device.type),
+		const empty = (ids: string[] | undefined) =>
+			Object.fromEntries((ids ?? []).map((id) => [id, null])) as unknown as Reading['values'];
+		const valuesFor = (ids: string[] | undefined) =>
+			readings[0] ? (readings[0].values as Reading['values']) : empty(ids);
+		return {
+			id: device.id,
+			name: device.name,
+			type: device.type,
+			color: deviceTypeColor(state.deviceTypes, device.type),
+			icon,
+			tiles: readingTiles(
+				readings,
+				keyValues(type?.tileParameterIds, valuesFor(type?.tileParameterIds), parameters, {
+					domainIcons
+				}),
 				icon,
-				tiles: readingTiles(
-					readings,
-					keyValues(type?.tileParameterIds, values, parameters, { domainIcons }),
-					icon,
-					parameters
-				),
-				summary: deviceSummary(
-					readings,
-					keyValues(type?.cardParameterIds, values, parameters, { domainIcons, fallback: false })
-				)
-			}
-		];
+				parameters
+			),
+			summary: deviceSummary(
+				readings,
+				keyValues(type?.cardParameterIds, valuesFor(type?.cardParameterIds), parameters, {
+					domainIcons,
+					fallback: false
+				})
+			)
+		};
 	});
 }
 
-function toPublicClassroom(state: MockDbState, classroom: StoredClassroom): PublicClassroom {
-	const { labs, all } = released(state, classroom);
+function toPublicClassroom(
+	state: MockDbState,
+	classroom: StoredClassroom,
+	now: number
+): PublicClassroom {
+	const { labs, all } = released(state, classroom, now);
 	const core = coreReadings(
 		all.map((r) => r.record),
-		classroom.releasedThrough,
+		publicCutoff(classroom, now),
 		state.coreParameters
 	);
 	// Its members see when a device last synced, even while what it sent is in review.
-	if (isMember(state, classroom.id)) {
+	if (permissionsOf(state, classroom.id).seeUnreleased) {
 		const synced = all
 			.map((r) => r.record.receivedAt)
 			.sort()
@@ -155,12 +169,10 @@ function findClassroom(state: MockDbState, classroomId: string) {
 	return classroom;
 }
 
-/** Whether the signed-in viewer, if any, belongs to the classroom. Visitors are never members. */
-function isMember(state: MockDbState, classroomId: string) {
-	const userId = state.session?.userId;
-	return (
-		!!userId && state.memberships.some((m) => m.classroomId === classroomId && m.userId === userId)
-	);
+/** What the signed-in viewer, if any, may do in the classroom. Visitors may do nothing. */
+function permissionsOf(state: MockDbState, classroomId: string) {
+	const user = state.users.find((u) => u.id === state.session?.userId) ?? null;
+	return canIn(state, user, classroomId).can;
 }
 
 function domainOf(state: MockDbState, parameterId: string) {
@@ -218,7 +230,13 @@ function institutionFor(
 }
 
 /** The public site needs no session: everything here is open to visitors (AP-20, AP-21). */
-export function createMockPublic(delay: () => Promise<void>): PublicService {
+export function createMockPublic({
+	delay,
+	now
+}: {
+	delay: () => Promise<void>;
+	now: () => number;
+}): PublicService {
 	return {
 		async home() {
 			await delay();
@@ -227,7 +245,7 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 				content: structuredClone(state.siteContent),
 				units: units(state),
 				classrooms: state.classrooms
-					.map((c) => toPublicClassroom(state, c))
+					.map((c) => toPublicClassroom(state, c, now()))
 					.sort((a, b) => a.name.localeCompare(b.name))
 			};
 		},
@@ -241,8 +259,12 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 			await delay();
 			const state = readDb();
 			const classroom = findClassroom(state, classroomId);
-			const member = isMember(state, classroom.id);
-			const { all, released: shownRecords } = released(state, classroom, member);
+			const can = permissionsOf(state, classroom.id);
+			const {
+				all,
+				devices,
+				released: shownRecords
+			} = released(state, classroom, now(), can.seeUnreleased);
 			// The latest released value of each parameter from each source, and the last reading of
 			// each day for its sparkline.
 			const latest = new Map<string, PublicValue>();
@@ -297,7 +319,7 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 				}))
 				.filter((card) => card.values.length);
 			const shown = new Set(values.map((v) => v.parameterId));
-			const publicClassroom = toPublicClassroom(state, classroom);
+			const publicClassroom = toPublicClassroom(state, classroom, now());
 			const sites = classroom.profile.projects.flatMap((p) => p.sites);
 			const expectations = sites.flatMap((site) =>
 				site.parameterIds.map((parameterId) => ({
@@ -327,16 +349,17 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 				domains: structuredClone(cards),
 				core: stationCore(
 					all.map((r) => r.record),
-					classroom.releasedThrough,
+					publicCutoff(classroom, now()),
 					state.coreParameters,
 					(id) =>
 						id === FIELD_SOURCE ? null : (state.devices.find((d) => d.id === id)?.name ?? null)
 				),
 				completeness,
-				siteCodes: member ? sites.map((s) => s.code) : [],
-				member,
+				siteCodes: can.seeSiteCodes ? sites.map((s) => s.code) : [],
+				can,
+				shared: classroom.sharing.showPublic,
 				places: state.classrooms
-					.map((c) => toPublicClassroom(state, c))
+					.map((c) => toPublicClassroom(state, c, now()))
 					.filter((c) => c.location)
 					.sort((a, b) => a.name.localeCompare(b.name))
 					.map(({ id, name, placeName, country, location, stageId, regionId }) => ({
@@ -365,12 +388,12 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 						};
 					}
 				),
-				devices: publicDevices(state, shownRecords),
+				devices: publicDevices(state, devices, shownRecords),
 				institution: institutionFor(
 					state,
 					classroom,
 					publicClassroom,
-					kitFor(state, released(state, classroom).labs, member)
+					kitFor(state, released(state, classroom, now()).labs, can.seeUnreleased)
 				)
 			};
 		},
@@ -379,10 +402,9 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 			await delay();
 			const state = readDb();
 			const classroom = findClassroom(state, classroomId);
-			const member = isMember(state, classroom.id);
-			const user = state.session && state.users.find((u) => u.id === state.session?.userId);
-			const can = user ? permissionsFor(user, roleIn(state, classroom.id, user.id)) : null;
-			const { labs, released: records } = released(state, classroom);
+			const can = permissionsOf(state, classroom.id);
+			const member = can.seeUnreleased;
+			const { labs, released: records } = released(state, classroom, now());
 			const labelOf = (id: string) => state.parameters.find((p) => p.id === id)?.label ?? id;
 
 			const kit = kitFor(state, labs, member);
@@ -408,11 +430,11 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 						a.participantId - b.participantId
 				);
 
-			const now = new Date().toISOString();
+			const today = new Date(now()).toISOString();
 			const { profile } = classroom;
 			const result: PublicClassroomProfile = {
 				content: structuredClone(state.siteContent),
-				classroom: toPublicClassroom(state, classroom),
+				classroom: toPublicClassroom(state, classroom, now()),
 				profile: {
 					areaCode: profile.areaCode,
 					language: profile.language,
@@ -429,15 +451,20 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 					}))
 				})),
 				kit,
-				institution: institutionFor(state, classroom, toPublicClassroom(state, classroom), kit),
+				institution: institutionFor(
+					state,
+					classroom,
+					toPublicClassroom(state, classroom, now()),
+					kit
+				),
 				custodianRole: member ? profile.custodianRole : null,
 				sessions: profile.sessions
-					.filter((s) => s.startsAt >= now)
+					.filter((s) => s.startsAt >= today)
 					.sort((a, b) => a.startsAt.localeCompare(b.startsAt))
 					.map((s) => ({ ...s })),
 				contributors,
 				member,
-				canManage: !!can && (can.manageMembers || can.invite.length > 0)
+				canManage: can.manageMembers || can.manageDevices || can.invite.length > 0
 			};
 			return result;
 		},
@@ -451,7 +478,7 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 			const contributions: PublicContribution[] = [];
 			const classrooms = new Map<string, string>();
 			for (const classroom of state.classrooms) {
-				for (const { record } of released(state, classroom).released) {
+				for (const { record } of released(state, classroom, now()).released) {
 					if ((record.recordedByUserId ?? record.creditedToUserId) !== user.id) continue;
 					classrooms.set(classroom.id, classroom.name);
 					for (const [parameterId, value] of Object.entries(record.values)) {
@@ -503,8 +530,8 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 				? [parameterId, ...rainIds.filter((id) => id !== parameterId)]
 				: [parameterId];
 			const reports = (values: Reading['values']) => ids.find((id) => values[id] !== undefined);
-			const member = isMember(state, classroom.id);
-			const { labs, all, released: shown } = released(state, classroom, member);
+			const member = permissionsOf(state, classroom.id).seeUnreleased;
+			const { labs, all, released: shown } = released(state, classroom, now(), member);
 			if (!parameter || !shown.some((r) => reports(r.record.values))) {
 				throw new ServiceError('not_found', 'This classroom has no released values for that.');
 			}
@@ -532,13 +559,13 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 						(a.source.name ?? '').localeCompare(b.source.name ?? '')
 				);
 
-			const through = classroom.releasedThrough;
+			const through = publicCutoff(classroom, now());
 			const deviceIds = new Set(series.map((s) => s.source.id));
 			const typeIds = new Set(state.devices.filter((d) => deviceIds.has(d.id)).map((d) => d.type));
 			const domain = domainOf(state, parameterId);
 			return {
 				content: structuredClone(state.siteContent),
-				classroom: toPublicClassroom(state, classroom),
+				classroom: toPublicClassroom(state, classroom, now()),
 				parameter: structuredClone(parameter),
 				domain: domain && { id: domain.id, label: domain.label, icon: domain.icon },
 				note: labs.map((l) => l.siteProfile.parameterNotes?.[parameterId]).find(Boolean) ?? null,
@@ -557,10 +584,10 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 					.filter(
 						(c) =>
 							c.id !== classroom.id &&
-							released(state, c).released.some((r) => reports(r.record.values))
+							released(state, c, now()).released.some((r) => reports(r.record.values))
 					)
 					.map((c) => {
-						const { id, name, placeName, country } = toPublicClassroom(state, c);
+						const { id, name, placeName, country } = toPublicClassroom(state, c, now());
 						return { id, name, placeName, country };
 					})
 					.sort((a, b) => a.name.localeCompare(b.name)),

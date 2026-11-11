@@ -17,7 +17,8 @@
 	 * The classroom's devices as a row of choices (AP-45), each with its registry icon and colour.
 	 * The picked one sets what "What's happening now?" and the domains show, and the page's
 	 * colour. The same on the public classroom page and the dashboard. More than three devices
-	 * become a dropdown, so the card stays one row.
+	 * become a dropdown, so the card stays one row. It always shows, with no devices too, so every
+	 * classroom's page has the same layout.
 	 */
 	let {
 		devices,
@@ -47,7 +48,10 @@
 	>
 		<span class="flex h-full items-center">Devices</span>
 	</h2>
-	{#if devices.length > MOBILE_TABS_MAX}
+	{#if !devices.length}
+		<!-- No devices yet: the same height as a row of choices, so nothing below moves. -->
+		<p class="flex min-h-12 min-w-0 flex-1 items-center px-1 text-sm text-muted">No devices yet</p>
+	{:else if devices.length > MOBILE_TABS_MAX}
 		<Select
 			{options}
 			value={deviceId}

@@ -39,7 +39,7 @@ describe('Explore data (AP-21)', () => {
 	it('shows a station with released values only, grouped by domain, without codes or names', async () => {
 		await services.auth.signOut();
 		const station = await services.publicSite.station('cls_trinity');
-		expect(station.member).toBe(false);
+		expect(station.can.seeUnreleased).toBe(false);
 		expect(station.content.sampleData).toBe(true);
 		const values = station.domains.flatMap((d) => d.values);
 		expect(values.length).toBeGreaterThan(0);
@@ -116,8 +116,8 @@ describe('Explore data (AP-21)', () => {
 	it('tells members they can open the classroom on their dashboard', async () => {
 		const challenge = await services.auth.requestPhoneCode('+251911000001');
 		await services.auth.verifyPhoneCode(challenge.requestId, challenge.devCode!);
-		expect((await services.publicSite.station('cls_trinity')).member).toBe(true);
-		expect((await services.publicSite.station('cls_nassau')).member).toBe(false);
+		expect((await services.publicSite.station('cls_trinity')).can.seeUnreleased).toBe(true);
+		expect((await services.publicSite.station('cls_nassau')).can.seeUnreleased).toBe(false);
 	});
 
 	it('shows site codes to members only', async () => {
@@ -308,5 +308,78 @@ describe('Contributor pages (AP-39)', () => {
 		await expect(services.profile.setPublicProfile(true)).rejects.toMatchObject({
 			code: 'forbidden'
 		});
+	});
+});
+
+describe('the same devices on the public page and the dashboard (AP-45)', () => {
+	it('lists every device, with no values while nothing is released', async () => {
+		await services.auth.signOut();
+		const station = await services.publicSite.station('cls_hargeisa');
+		expect(station.devices.map((d) => d.id)).toEqual(['dev_hargeisa_ws']);
+		const [device] = station.devices;
+		expect(device.tiles.length).toBeGreaterThan(0);
+		expect(device.tiles.every((t) => t.value === null && t.observedAt === null)).toBe(true);
+		expect(device.summary.every((c) => c.latest === null)).toBe(true);
+	});
+
+	it('gives members the readings in review, from the same service', async () => {
+		await services.auth.signInWithGoogle('g-tesfaye');
+		const station = await services.publicSite.station('cls_trinity');
+		expect(station.can.seeUnreleased).toBe(true);
+		const newest = station.devices
+			.flatMap((d) => d.tiles)
+			.map((t) => t.observedAt!)
+			.sort()
+			.at(-1);
+		expect(newest).toBe('2026-10-20T08:00:00.000Z');
+	});
+});
+
+describe('releasing data (AP-20)', () => {
+	it('tells the head what waits, and shows visitors what they release', async () => {
+		await services.auth.signInWithGoogle('g-tesfaye');
+		const review = await services.classrooms.releaseReview('cls_trinity');
+		expect(review.pending).toBeGreaterThan(0);
+		const through = review.sources
+			.map((s) => s.last)
+			.sort()
+			.at(-1)!;
+		const after = await services.classrooms.releaseData('cls_trinity', through);
+		expect(after.pending).toBe(0);
+		expect(after.releasedThrough).toBe(through);
+
+		await services.auth.signOut();
+		const station = await services.publicSite.station('cls_trinity');
+		const newest = station.devices
+			.flatMap((d) => d.tiles)
+			.map((t) => t.observedAt ?? '')
+			.sort()
+			.at(-1);
+		expect(newest).toBe(through);
+	});
+
+	it('refuses researchers and community scientists', async () => {
+		await services.auth.signInWithGoogle('g-marcus');
+		await expect(services.classrooms.releaseReview('cls_trinity')).rejects.toMatchObject({
+			code: 'forbidden'
+		});
+		await expect(
+			services.classrooms.releaseData('cls_trinity', '2026-10-20T08:00:00.000Z')
+		).rejects.toMatchObject({ code: 'forbidden' });
+	});
+
+	it('hides everything from visitors while the classroom does not share', async () => {
+		await services.auth.signInWithGoogle('g-tesfaye');
+		const { sharing } = (await services.classrooms.get('cls_trinity')).sharing!;
+		const { terms } = (await services.classrooms.get('cls_trinity')).sharing!;
+		await services.classrooms.updateSharing('cls_trinity', {
+			sharing: { ...sharing, showPublic: false },
+			terms
+		});
+		await services.auth.signOut();
+		const station = await services.publicSite.station('cls_trinity');
+		expect(station.shared).toBe(false);
+		expect(station.devices.length).toBeGreaterThan(0);
+		expect(station.devices.flatMap((d) => d.tiles).every((t) => t.value === null)).toBe(true);
 	});
 });
