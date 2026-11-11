@@ -3,6 +3,7 @@
 	import { navigating, page } from '$app/state';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import Icon from '#lib/components/Icon.svelte';
+	import NavLinks from '#lib/components/NavLinks.svelte';
 	import Logo from '#lib/components/Logo.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import { outbox } from '#lib/features/devices/outbox.svelte.ts';
@@ -19,25 +20,36 @@
 			.join(' · ')
 	);
 
-	// Everything about your classrooms is on the dashboard (AP-45): the logo opens it. Members
-	// also get Classroom, the details page of the classroom they are on, and Record if they
-	// record (not researchers). Platform admins also manage the registry and host applications.
+	// Everything about your classrooms is on the dashboard (AP-45): the logo and the first link
+	// open it. Members also get Classroom, the details page of the classroom they are on, and
+	// Record if they record (not researchers). Platform admins also manage the registry and host
+	// applications. The links look like the public site's, the current one underlined.
 	const classroomHref = $derived(
 		data.contextClassroom
 			? resolve('/(app)/dashboard/details') + sensorQuery(data.contextClassroom.id)
 			: null
 	);
+	const dashboard = resolve('/(app)/dashboard');
+	const details = resolve('/(app)/dashboard/details');
+	const under = (path: string) =>
+		page.url.pathname === path || page.url.pathname.startsWith(`${path}/`);
 	const nav = $derived([
+		// The dashboard and every page under it, except the classroom's details page.
+		{ href: dashboard, label: 'Dashboard', current: under(dashboard) && !under(details) },
 		...(classroomHref
-			? [{ href: classroomHref, path: resolve('/(app)/dashboard/details'), label: 'Classroom' }]
+			? [{ href: classroomHref, label: 'Classroom', current: under(details) }]
 			: []),
 		...(data.user.platformAdmin
 			? [
-					{ href: resolve('/(app)/registry'), path: resolve('/(app)/registry'), label: 'Registry' },
+					{
+						href: resolve('/(app)/registry'),
+						label: 'Registry',
+						current: under(resolve('/(app)/registry'))
+					},
 					{
 						href: resolve('/(app)/host-applications'),
-						path: resolve('/(app)/host-applications'),
-						label: 'Applications'
+						label: 'Applications',
+						current: under(resolve('/(app)/host-applications'))
 					}
 				]
 			: [])
@@ -50,31 +62,19 @@
 	>
 		<div class="mx-auto flex max-w-6xl items-center gap-2 px-3 py-3 sm:gap-4 sm:px-6">
 			<a href={resolve('/(app)/dashboard')} aria-label="Dashboard"><Logo compact /></a>
+			<nav
+				aria-label="Main"
+				class="-my-2 ml-2 flex min-w-0 items-center gap-4 overflow-x-auto py-2 text-sm sm:ml-4 sm:gap-5"
+			>
+				<NavLinks links={nav} />
+			</nav>
 			<div class="ml-auto"></div>
-			{#if nav.length}
-				<nav
-					aria-label="Main"
-					class="flex items-center gap-0.5 rounded-full border border-line-strong bg-canvas/80 p-1 sm:gap-1"
-				>
-					{#each nav as item (item.href)}
-						{@const current = page.url.pathname.startsWith(item.path)}
-						<!-- Resolved paths, some with the classroom's query. -->
-						<!-- eslint-disable svelte/no-navigation-without-resolve -->
-						<a
-							href={item.href}
-							class={[
-								'rounded-full px-2 py-1.5 text-[13px] font-medium sm:px-4 sm:text-sm',
-								current ? 'bg-ink text-canvas' : 'text-muted hover:text-ink'
-							]}
-							aria-current={current ? 'page' : undefined}>{item.label}</a
-						>
-						<!-- eslint-enable svelte/no-navigation-without-resolve -->
-					{/each}
-				</nav>
-			{/if}
 			{#if data.canRecord}
-				<a class="btn btn-accent shrink-0 rounded-full" href={resolve('/(app)/observe')}
-					><Icon name="plus" class="size-4" /> Record</a
+				<!-- On a phone just the plus, so the links keep their room. -->
+				<a
+					class="btn btn-accent shrink-0 rounded-full max-sm:px-2.5"
+					href={resolve('/(app)/observe')}
+					><Icon name="plus" class="size-4" /><span class="max-sm:sr-only">Record</span></a
 				>
 			{/if}
 			{#if syncNote}
