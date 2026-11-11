@@ -11,7 +11,7 @@
 	let { data }: PageProps = $props();
 
 	const content = $derived(data.content);
-	const explore = $derived(content.sections.find((s) => s.id === 'explore'));
+	const directory = $derived(content.sections.find((s) => s.id === 'classrooms'));
 </script>
 
 <svelte:head>
@@ -27,7 +27,7 @@
 			<p class="mt-5 max-w-xl text-lg">{content.hero.body}</p>
 			<div class="mt-8 flex flex-wrap gap-3">
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-				<a href={explore ? sectionHref(explore) : '#network'} class="btn btn-primary"
+				<a href={directory ? sectionHref(directory) : '#network'} class="btn btn-primary"
 					>Explore the data</a
 				>
 				<a href={resolve('/host')} class="btn btn-ghost">{content.hosting.title}</a>

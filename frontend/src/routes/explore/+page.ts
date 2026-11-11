@@ -1,8 +1,8 @@
-import { services } from '#lib/services/index.ts';
+import { redirect } from '@sveltejs/kit';
+import { resolve } from '$app/paths';
 import type { PageLoad } from './$types';
 
-/** Explore data (AP-21): every classroom on the map with its core readings. No sign-in. */
-export const load: PageLoad = async ({ parent }) => {
-	const [{ user }, home] = await Promise.all([parent(), services.publicSite.home()]);
-	return { user, ...home };
+/** Explore data merged into the public Classrooms page (AP-45); old links keep working. */
+export const load: PageLoad = ({ url }) => {
+	redirect(308, resolve('/classrooms') + url.search);
 };

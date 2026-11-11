@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import CoreReadingsTable from '#lib/components/CoreReadingsTable.svelte';
 	import NetworkMap from '#lib/components/NetworkMap.svelte';
 	import PublicShell from '#lib/components/PublicShell.svelte';
+	import SampleDataBadge from '#lib/components/SampleDataBadge.svelte';
 	import StageBadge from '#lib/components/StageBadge.svelte';
 	import {
 		filterClassrooms,
@@ -28,16 +30,14 @@
 	function set(change: Partial<DirectoryFilter>) {
 		// Only the query is added to a resolved path.
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
-		goto(resolve('/global-classrooms') + filterQuery({ ...data.filter, ...change }), {
+		goto(resolve('/classrooms') + filterQuery({ ...data.filter, ...change }), {
 			replace: true,
 			reset: false
 		});
 	}
 </script>
 
-<svelte:head
-	><title>{section?.label ?? 'Global Classrooms'} · {content.hero.eyebrow}</title></svelte:head
->
+<svelte:head><title>{section?.label ?? 'Classrooms'} · {content.hero.eyebrow}</title></svelte:head>
 
 {#snippet picker(
 	id: keyof DirectoryFilter,
@@ -64,7 +64,10 @@
 <PublicShell {content} user={data.user}>
 	<div class="flex flex-wrap items-end justify-between gap-4">
 		<div>
-			<h1 class="font-display text-4xl">{section?.label ?? 'Global Classrooms'}</h1>
+			<div class="flex flex-wrap items-center gap-3">
+				<h1 class="font-display text-4xl">{section?.label ?? 'Classrooms'}</h1>
+				<SampleDataBadge show={content.sampleData} />
+			</div>
 			{#if section}<p class="mt-2 max-w-2xl text-muted">{section.description}</p>{/if}
 		</div>
 		<a class="btn btn-primary" href={resolve('/host')}>{content.hosting.title}</a>
@@ -98,13 +101,22 @@
 		>
 	</form>
 	<p class="mt-3 text-sm text-muted" aria-live="polite">
-		{shown.length} of {data.classrooms.length} Global Classroom{data.classrooms.length === 1
-			? ''
-			: 's'}
+		{shown.length} of {data.classrooms.length} classroom{data.classrooms.length === 1 ? '' : 's'}
+		· released data only
 	</p>
 
 	<section class="mt-6" aria-label="Map of the classrooms shown">
 		<NetworkMap classrooms={shown} stages={content.stages} />
+	</section>
+
+	<section class="mt-12" aria-labelledby="core-title">
+		<h2 id="core-title" class="font-display text-2xl">Core readings</h2>
+		<p class="mt-1 text-sm text-muted">
+			Rain counts the day of each classroom's latest released reading.
+		</p>
+		<div class="mt-4">
+			<CoreReadingsTable classrooms={shown} units={data.units} />
+		</div>
 	</section>
 
 	{#each groups as group (group.region?.id ?? 'none')}
@@ -122,9 +134,8 @@
 									<h4 class="text-lg font-semibold text-ink">
 										<a
 											class="hover:underline"
-											href={resolve('/global-classrooms/[classroom]', {
-												classroom: classroom.id
-											})}>{classroom.name}</a
+											href={resolve('/classrooms/[classroom]', { classroom: classroom.id })}
+											>{classroom.name}</a
 										>
 									</h4>
 									<p class="text-sm text-muted">
@@ -144,7 +155,7 @@
 							{/if}
 							<a
 								class="link mt-auto self-start text-sm"
-								href={resolve('/explore/[classroom]', { classroom: classroom.id })}
+								href={resolve('/classrooms/[classroom]', { classroom: classroom.id })}
 								>See {classroom.name}'s data</a
 							>
 						</li>

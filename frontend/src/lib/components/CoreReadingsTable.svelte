@@ -46,7 +46,7 @@
 			{#each classrooms as { id, name, core } (id)}
 				<tr class="align-top">
 					<th scope="row" class="px-4 py-3 font-medium text-ink">
-						<a class="link" href={resolve('/explore/[classroom]', { classroom: id })}>{name}</a>
+						<a class="link" href={resolve('/classrooms/[classroom]', { classroom: id })}>{name}</a>
 						{#if core.day}
 							<span class="block text-xs font-normal text-muted"
 								>{dayFormat.format(new Date(`${core.day}T00:00:00Z`))}</span

@@ -59,7 +59,7 @@
 		{#if selected}
 			<a
 				class="btn btn-primary w-full"
-				href={resolve('/explore/[classroom]', { classroom: selected.id })}
+				href={resolve('/classrooms/[classroom]', { classroom: selected.id })}
 				>Open {selected.name}'s station</a
 			>
 		{/if}

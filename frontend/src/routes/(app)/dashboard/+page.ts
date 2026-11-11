@@ -26,6 +26,9 @@ export const load: PageLoad = async ({ url, parent, depends }) => {
 		asked && !selection.classrooms.some((c) => c.id === asked)
 			? await services.publicSite.station(asked).catch(() => null)
 			: null;
+	// The About tab: the classroom shown, whether it is the user's or one they are visiting.
+	const shownId = visiting?.classroom.id ?? classroom?.id;
+	const aboutLoading = shownId ? services.publicSite.profile(shownId).catch(() => null) : null;
 	// Hand-entered devices and field observations are what people record; a station sends its own.
 	const manual = devices.filter((d) => deviceTypes.find((t) => t.id === d.type)?.manual);
 	const [readings, lab, labs, station, consent, records, detail] = await Promise.all([
@@ -56,8 +59,10 @@ export const load: PageLoad = async ({ url, parent, depends }) => {
 		// Members, invitations and settings for the People and Settings tabs.
 		classroom ? services.classrooms.get(classroom.id) : null
 	]);
+	const about = await aboutLoading;
 	return {
 		...selection,
+		about,
 		visiting,
 		readings,
 		// Heads, facilitators and community scientists can record data; researchers can't.

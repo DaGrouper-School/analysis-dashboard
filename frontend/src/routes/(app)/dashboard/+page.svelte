@@ -4,11 +4,12 @@
 	import { navigating } from '$app/state';
 	import { domainOf } from '#lib/domains.ts';
 	import CalculationPanel from '#lib/components/CalculationPanel.svelte';
+	import ClassroomAbout from '#lib/components/ClassroomAbout.svelte';
+	import ClassroomCompleteness from '#lib/components/ClassroomCompleteness.svelte';
 	import ClassroomOverview, { type ClassroomTab } from '#lib/components/ClassroomOverview.svelte';
 	import ClassroomLabs from '#lib/components/ClassroomLabs.svelte';
 	import ClassroomPeople from '#lib/components/ClassroomPeople.svelte';
 	import ClassroomSettings from '#lib/components/ClassroomSettings.svelte';
-	import CompletenessCard from '#lib/components/CompletenessCard.svelte';
 	import DomainBrowser from '#lib/components/DomainBrowser.svelte';
 	import type { GlobeMarker } from '#lib/components/Globe.svelte';
 	import Icon from '#lib/components/Icon.svelte';
@@ -60,7 +61,15 @@
 
 	// ---- The section tabs (AP-45) ----------------------------------------------------------
 	type Section =
-		'alerts' | 'domains' | 'devices' | 'labs' | 'records' | 'complete' | 'people' | 'settings';
+		| 'alerts'
+		| 'domains'
+		| 'devices'
+		| 'labs'
+		| 'records'
+		| 'complete'
+		| 'about'
+		| 'people'
+		| 'settings';
 	const permissions = $derived(data.detail?.permissions);
 	// People for whoever manages members, invites or consent; Settings for whoever edits.
 	const managesPeople = $derived(
@@ -74,7 +83,8 @@
 		visiting
 			? [
 					{ id: 'domains', label: 'Domains', icon: 'layers', count: visiting.domains.length },
-					{ id: 'complete', label: 'Completeness', icon: 'check' }
+					{ id: 'complete', label: 'Completeness', icon: 'check' },
+					{ id: 'about', label: 'About', icon: 'info' }
 				]
 			: [
 					{
@@ -90,6 +100,7 @@
 					{ id: 'labs', label: 'Labs', icon: 'flask', count: data.labs.length },
 					{ id: 'records', label: 'Records', icon: 'clipboard', count: data.records.length },
 					{ id: 'complete', label: 'Completeness', icon: 'check' },
+					{ id: 'about', label: 'About', icon: 'info' },
 					...(managesPeople
 						? [
 								{
@@ -205,8 +216,8 @@
 		tabsLabel="Your classrooms"
 		{pendingId}
 		{markers}
-		charts={false}
 		{now}
+		accent={now && device ? deviceTypeColor(data.deviceTypes, device.type) : undefined}
 		onexplain={explain}
 		onpick={(id) => choose(id, undefined, active)}
 	>
@@ -480,15 +491,9 @@
 						<p class="mt-4 text-muted">Nothing has been recorded by hand yet.</p>
 					{/if}
 				{:else if active === 'complete'}
-					{@render panelHead(
-						'How complete is this month?',
-						"Readings received this month, as a share of what the classroom's research protocol expects. Missing days stay empty; they are never filled in."
-					)}
-					{#if station.completeness}
-						<CompletenessCard class="mt-5" domains={station.completeness.domains} />
-					{:else}
-						<p class="mt-4 text-muted">This classroom has no research protocol yet.</p>
-					{/if}
+					<ClassroomCompleteness completeness={station.completeness} />
+				{:else if active === 'about' && data.about}
+					<ClassroomAbout about={data.about} />
 				{:else if active === 'people' && data.detail}
 					{@render panelHead(
 						'People',

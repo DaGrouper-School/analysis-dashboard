@@ -233,16 +233,11 @@ const siteContent: MockDbState['siteContent'] = {
 	},
 	sections: [
 		{
-			id: 'explore',
-			label: 'Explore data',
-			description: 'Maps and stations open to everyone.',
-			href: '/explore'
-		},
-		{
 			id: 'classrooms',
-			label: 'Global Classrooms',
-			description: 'Who measures where, and how to host one.',
-			href: '/global-classrooms'
+			label: 'Classrooms',
+			description:
+				'Every classroom on the map: what it measures, who runs it, and how to host one.',
+			href: '/classrooms'
 		},
 		{ id: 'learn', label: 'Learn', description: 'What the measurements mean.', href: null },
 		{

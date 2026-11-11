@@ -124,7 +124,7 @@
 <PublicShell content={data.content} user={data.user}>
 	<Breadcrumbs
 		items={[
-			{ label: directory?.label ?? 'Global Classrooms', href: resolve('/global-classrooms') },
+			{ label: directory?.label ?? 'Classrooms', href: resolve('/classrooms') },
 			{ label: data.content.hosting.title }
 		]}
 	/>

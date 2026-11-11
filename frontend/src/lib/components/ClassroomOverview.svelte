@@ -18,7 +18,6 @@
 
 <script lang="ts">
 	import { untrack, type Snippet } from 'svelte';
-	import ClassroomCharts from '#lib/components/ClassroomCharts.svelte';
 	import CoreStrip from '#lib/components/CoreStrip.svelte';
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import InstitutionOverview from '#lib/components/InstitutionOverview.svelte';
@@ -28,8 +27,8 @@
 
 	/**
 	 * A classroom at a glance (AP-43, AP-45), the same on its public page and on the dashboard:
-	 * the header, the classroom tabs, what's happening now, the globe, the institution, the core
-	 * readings and the charts. Switching classrooms keeps the page: the underline slides, the
+	 * the header, the classroom tabs, what's happening now, the globe, the institution and the core
+	 * readings. Switching classrooms keeps the page: the underline slides, the
 	 * globe turns and the title changes at once, and the cards show a skeleton until the next
 	 * classroom's data arrives. What differs between the pages comes in as snippets.
 	 */
@@ -47,10 +46,10 @@
 		nowActions,
 		nowControls,
 		now,
+		accent,
 		onexplain,
 		institutionActions,
 		onpick,
-		charts = true,
 		children
 	}: {
 		station: PublicStation;
@@ -72,14 +71,14 @@
 		nowControls?: Snippet;
 		/** The tiles of one device, in place of the classroom's (the dashboard's picked device). */
 		now?: NowTile[];
+		/** Tints "What's happening now?", such as with the picked device's colour. */
+		accent?: string;
 		/** Opens how a value is calculated; signed-in pages only. */
 		onexplain?: (parameterId: string) => void;
 		institutionActions?: Snippet;
 		/** A classroom picked on the globe. */
 		onpick?: (id: string) => void;
-		/** The charts under the core readings; the public page has them, the dashboard does not. */
-		charts?: boolean;
-		/** The rest of the page, under the charts; it shows the skeleton too. */
+		/** The rest of the page, under the core readings; it shows the skeleton too. */
 		children?: Snippet;
 	} = $props();
 
@@ -192,7 +191,13 @@
 				: 'lg:grid-cols-2'
 		]}
 	>
-		<NowCard tiles={now ?? station.now} actions={nowActions} controls={nowControls} {onexplain} />
+		<NowCard
+			tiles={now ?? station.now}
+			{accent}
+			actions={nowActions}
+			controls={nowControls}
+			{onexplain}
+		/>
 		{#if classroom.location}
 			<section
 				class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] sm:h-96 lg:h-full"
@@ -229,7 +234,6 @@
 	</div>
 
 	<CoreStrip class="mt-5" {station} />
-	{#if charts}<ClassroomCharts class="mt-12" {station} />{/if}
 
 	{@render children?.()}
 </div>

@@ -81,7 +81,7 @@
 		<span class="min-w-0">
 			<a
 				class="link"
-				href={resolve('/explore/[classroom]/[parameter]', {
+				href={resolve('/classrooms/[classroom]/[parameter]', {
 					classroom: classroomId,
 					parameter: value.parameterId
 				})}>{param?.label ?? value.parameterId}</a

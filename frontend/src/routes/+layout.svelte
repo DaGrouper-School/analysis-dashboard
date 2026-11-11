@@ -19,9 +19,9 @@
 	// motion, get the plain swap.
 	onNavigate((navigation) => {
 		if (!document.startViewTransition) return;
-		// Switching classrooms on an Explore station or the dashboard keeps the page and shows a
+		// Switching classrooms on a public classroom page or the dashboard keeps the page and shows a
 		// skeleton while the next one loads (AP-43, AP-45), so it is not faded as a whole.
-		for (const kept of ['/explore/[classroom]', '/(app)/dashboard']) {
+		for (const kept of ['/classrooms/[classroom]', '/(app)/dashboard']) {
 			if (navigation.from?.route.id === kept && navigation.to?.route.id === kept) return;
 		}
 		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;

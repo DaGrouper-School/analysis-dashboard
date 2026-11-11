@@ -11,7 +11,6 @@ describe('public home', () => {
 		await services.auth.signOut();
 		const home = await services.publicSite.home();
 		expect(home.content.sections.map((s) => s.id)).toEqual([
-			'explore',
 			'classrooms',
 			'learn',
 			'train',
