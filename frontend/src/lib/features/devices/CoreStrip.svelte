@@ -1,4 +1,5 @@
 <script lang="ts">
+	import RollingNumber from '#lib/components/RollingNumber.svelte';
 	import ReviewChip from '#lib/components/ReviewChip.svelte';
 	import StripCard from '#lib/features/devices/StripCard.svelte';
 	import type { PublicStation } from '#lib/domain/types.ts';
@@ -72,9 +73,9 @@
 	<StripCard label="Rain today" note={rainNote}>
 		{#snippet chip()}<ReviewChip state={rain.review} />{/snippet}
 		{#snippet value()}
-			{#if core.rainToday === null}{@render noData()}{:else}{formatValue(core.rainToday)}<span
-					class="ml-1 text-sm text-muted">{units.rain}</span
-				>{/if}
+			{#if core.rainToday === null}{@render noData()}{:else}<RollingNumber
+					value={formatValue(core.rainToday)}
+				/><span class="ml-1 text-sm text-muted">{units.rain}</span>{/if}
 		{/snippet}
 		{#snippet picture()}
 			{#if rain.bySource.length}
@@ -107,9 +108,9 @@
 
 	<StripCard label="Rain, last 7 days" note={weekNote}>
 		{#snippet value()}
-			{#if core.rainLast7Days === null}{@render noData()}{:else}{formatValue(
-					core.rainLast7Days
-				)}<span class="ml-1 text-sm text-muted">{units.rain}</span>{/if}
+			{#if core.rainLast7Days === null}{@render noData()}{:else}<RollingNumber
+					value={formatValue(core.rainLast7Days)}
+				/><span class="ml-1 text-sm text-muted">{units.rain}</span>{/if}
 		{/snippet}
 		{#snippet picture()}
 			{#if rain.week.length}
@@ -164,8 +165,11 @@
 	<StripCard label="Air temperature today" note={tempNote}>
 		{#snippet chip()}<ReviewChip state={temp.review} />{/snippet}
 		{#snippet value()}
-			{#if temp.low === null || temp.high === null}{@render noData()}{:else}{formatValue(temp.low)} to
-				{formatValue(temp.high)}<span class="ml-1 text-sm text-muted">{units.temperature}</span
+			{#if temp.low === null || temp.high === null}{@render noData()}{:else}<RollingNumber
+					value={formatValue(temp.low)}
+				/> to
+				<RollingNumber value={formatValue(temp.high)} /><span class="ml-1 text-sm text-muted"
+					>{units.temperature}</span
 				>{/if}
 		{/snippet}
 		{#snippet picture()}
