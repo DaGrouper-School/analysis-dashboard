@@ -443,7 +443,10 @@
 					<ClassroomPeople detail={data.detail} consent={data.consent} userId={data.user.id} />
 				</div>
 			{:else if active === 'settings' && data.detail}
-				{@render panelHead('Settings', `${station.classroom.name}'s name, institution, sharing and code.`)}
+				{@render panelHead(
+					'Settings',
+					`${station.classroom.name}'s name, institution, sharing and code.`
+				)}
 				<div class="mt-5">
 					<ClassroomSettings detail={data.detail} institutionInfo={station.institution} />
 				</div>
