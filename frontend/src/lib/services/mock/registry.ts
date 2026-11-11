@@ -6,6 +6,7 @@ import type {
 	Parameter
 } from '#lib/domain/types.ts';
 import { checkAlertRule, ruleText } from '#lib/domain/alerts.ts';
+import { CHARTS, CHART_LABELS, chartOf } from '#lib/domain/charts.ts';
 import {
 	PARAMETER_ID,
 	checkExplanation,
@@ -331,6 +332,31 @@ export function createMockRegistry({
 				if (parameter.domain === domainId) return parameter;
 				move(state, parameter, domainId, user.fullName);
 				return parameter;
+			});
+		},
+
+		async chartParameter(parameterId, chart) {
+			await delay();
+			return updateDb((state) => {
+				const user = asAdmin(state);
+				const parameter = state.parameters.find((p) => p.id === parameterId);
+				if (!parameter) throw new ServiceError('not_found', 'That value is not in the registry.');
+				if (!chartOf(parameter)) {
+					throw new ServiceError('invalid_input', 'Only numbers are charted.', {
+						chart: 'Only numbers are charted.'
+					});
+				}
+				if (!CHARTS.includes(chart)) {
+					throw new ServiceError('invalid_input', 'Pick a chart.', { chart: 'Pick a chart.' });
+				}
+				if (chartOf(parameter) === chart) return structuredClone(parameter);
+				parameter.chart = chart;
+				log(
+					state,
+					user.fullName,
+					`Set the ${parameter.label} chart to ${CHART_LABELS[chart].toLowerCase()}.`
+				);
+				return structuredClone(parameter);
 			});
 		},
 

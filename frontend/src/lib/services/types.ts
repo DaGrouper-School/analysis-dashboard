@@ -1,4 +1,5 @@
 import type {
+	Chart,
 	DialCode,
 	InstitutionInfo,
 	InstitutionPhotoInput,
@@ -172,6 +173,8 @@ export interface RegistryService {
 	updateDeviceType(id: string, input: DeviceTypeInput): Promise<DeviceTypeDefinition>;
 	/** Puts a parameter under a domain, or takes it out with null. */
 	mapParameter(parameterId: string, domain: string | null): Promise<Parameter>;
+	/** Sets a number's main chart (AP-23), which its page and sparklines draw. */
+	chartParameter(parameterId: string, chart: Chart): Promise<Parameter>;
 	/** Sets what a value means and how it is calculated (AP-07). */
 	explainParameter(parameterId: string, input: ExplanationInput): Promise<Parameter>;
 	/**

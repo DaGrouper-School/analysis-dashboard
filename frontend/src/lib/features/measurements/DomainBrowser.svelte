@@ -108,7 +108,7 @@
 			</span>
 		</span>
 		<span class="flex shrink-0 items-center gap-3">
-			<Sparkline values={value.last7Days} />
+			<Sparkline values={value.last7Days} chart={param?.chart} />
 			<span
 				class={[
 					'max-w-40 min-w-20 text-right font-mono text-ink tabular-nums',
@@ -189,7 +189,9 @@
 					{#if openCard.domain?.description}
 						<p class="mt-1 text-sm text-muted">{openCard.domain.description}</p>
 					{/if}
-					<p class="mt-3 text-xs text-muted">Sparklines show the last reading of each of 7 days.</p>
+					<p class="mt-3 text-xs text-muted">
+						The small charts show the last reading of each of 7 days.
+					</p>
 					<ul class="mt-2 divide-y divide-line">
 						{#each openCard.values as value (valueKey(value))}
 							{@render reading(value, false)}

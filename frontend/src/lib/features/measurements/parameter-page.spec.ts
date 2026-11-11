@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PublicParameterSeries } from '#lib/domain/types.ts';
+import { chartOf } from '#lib/domain/charts.ts';
 import {
-	chartOf,
 	dailyStats,
 	daysOf,
 	inRange,

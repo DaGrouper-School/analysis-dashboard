@@ -2450,6 +2450,43 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /registry/parameters/{parameterId}/chart:
+    put:
+      tags:
+        - Registry
+      operationId: registry.chartParameter
+      summary: Chart parameter
+      description: |-
+        Sets a number's main chart (AP-23), which its page and sparklines draw.
+
+        Access: platform admins only.
+      parameters:
+        - name: parameterId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistryChartParameterBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Parameter"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /registry/parameters/{parameterId}/explanation:
     put:
       tags:
@@ -5963,6 +6000,14 @@ components:
         - summary
       additionalProperties: false
       description: One change to the registry, kept so stewards can see who changed what.
+    RegistryChartParameterBody:
+      type: object
+      properties:
+        chart:
+          $ref: "#/components/schemas/Chart"
+      required:
+        - chart
+      additionalProperties: false
     RegistryMapParameterBody:
       type: object
       properties:

@@ -761,6 +761,16 @@ export const routes: Route[] = [
 		args: ['x1', null]
 	},
 	{
+		method: 'registry.chartParameter',
+		http: 'PUT',
+		path: '/registry/parameters/{parameterId}/chart',
+		access: 'admin',
+		body: '{ chart: Chart }',
+		response: 'Parameter',
+		errors: [400],
+		args: ['x1', 'line']
+	},
+	{
 		method: 'registry.explainParameter',
 		http: 'PUT',
 		path: '/registry/parameters/{parameterId}/explanation',

@@ -1,9 +1,4 @@
-import type {
-	Parameter,
-	Chart,
-	PublicParameterPage,
-	PublicParameterSeries
-} from '#lib/domain/types.ts';
+import type { PublicParameterPage, PublicParameterSeries } from '#lib/domain/types.ts';
 import { csvField } from '#lib/features/measurements/raw-data.ts';
 
 /** The time ranges of a value's main chart (AP-23), newest data last. */
@@ -18,12 +13,6 @@ export const RANGES: { id: RangeId; label: string; days: number }[] = [
 	// A season is three months: long enough for the rains, short enough to read day by day.
 	{ id: 'season', label: 'Season', days: 91 }
 ];
-
-/** The chart a value gets: its registry choice, a line for other numbers, none for text. */
-export function chartOf(parameter: Pick<Parameter, 'chart' | 'valueType'>): Chart | null {
-	if ((parameter.valueType ?? 'number') !== 'number') return null;
-	return parameter.chart ?? 'line';
-}
 
 /** UTC day of an ISO time, like the core readings, so a day means the same everywhere. */
 export const dayOf = (iso: string) => iso.slice(0, 10);
