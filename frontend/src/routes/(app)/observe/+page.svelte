@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ParticipantIdNote from '#lib/components/ParticipantIdNote.svelte';
 	import ContributorId from '#lib/components/ContributorId.svelte';
 	import { resolve } from '$app/paths';
 	import type { GeoPoint, ObservationTemplate, Parameter } from '#lib/domain/types.ts';
@@ -88,7 +89,6 @@
 
 	let entries = $state<Record<string, FieldEntry>>({});
 	let observedAt = $state(localNow());
-	let credit = $state(false);
 	let location = $state<GeoPoint | null>(null);
 	let gps = $state<'idle' | 'locating' | 'fix' | 'none'>('idle');
 	let touched = $state<Record<string, boolean>>({});
@@ -232,7 +232,8 @@
 					values: checked.values,
 					location
 				},
-				credit
+				// Credited by participant ID, never by name: a public profile is set in Settings.
+				false
 			);
 			if (entry.status === 'failed') {
 				// Refused while the person is still here: fix it in the form, not in the outbox.
@@ -317,9 +318,7 @@
 			</dd>
 		</div>
 	</dl>
-	<p class="mt-3 text-sm text-muted">
-		{credit ? 'Credited to you.' : 'Not credited to anyone: public outputs show it without a name.'}
-	</p>
+	<ParticipantIdNote class="mt-3" />
 	{#if formError}<p class="field-error mt-3" role="alert">{formError}</p>{/if}
 {/snippet}
 
@@ -681,21 +680,7 @@
 							</div>
 						</div>
 
-						<label class="flex items-start gap-2 text-sm">
-							<input
-								id="observe-credit"
-								type="checkbox"
-								class="mt-0.5 rounded-sm border-line-strong bg-transparent text-teal checked:bg-current focus:ring-teal"
-								bind:checked={credit}
-							/>
-							<span>
-								Credit this observation to me
-								<span class="block text-xs text-muted"
-									>Your name is shown on it to people in {target.classroomName} and in public outputs.
-									Leave it off and it is stored without your name.</span
-								>
-							</span>
-						</label>
+						<ParticipantIdNote />
 					</div>
 				{:else}
 					{@render review(template, target)}

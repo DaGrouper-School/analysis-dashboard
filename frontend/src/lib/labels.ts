@@ -63,7 +63,7 @@ export function stageColor(stages: ClassroomStage[], id: string) {
 	return stages.find((s) => s.id === id)?.color ?? UNKNOWN_TYPE_COLOR;
 }
 
-/** A device type's registry entry, for its featured values and the rest. */
+/** A device type's registry entry, for its tile and card values and the rest. */
 export function deviceTypeOf(types: DeviceTypeDefinition[], id: DeviceType) {
 	return types.find((t) => t.id === id);
 }

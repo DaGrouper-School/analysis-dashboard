@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { replaceState } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import Icon from '#lib/components/Icon.svelte';
+	import Select from '#lib/components/Select.svelte';
+	import { MOBILE_TABS_MAX } from '#lib/tabs.ts';
 	import Sparkline from '#lib/components/Sparkline.svelte';
 	import type {
 		Parameter,
@@ -13,6 +14,7 @@
 	} from '#lib/domain/types.ts';
 	import { FALLBACK_DOMAIN_ICON } from '#lib/icons.ts';
 	import { formatValue } from '#lib/key-values.ts';
+	import { valueHref } from '#lib/site.ts';
 
 	/**
 	 * "What this device measures" (AP-22), the same on the public classroom page and the
@@ -53,6 +55,15 @@
 			count: card.values.length
 		}))
 	]);
+	const dropdown = $derived(tabs.length > MOBILE_TABS_MAX);
+	const options = $derived(
+		tabs.map((t) => ({
+			value: t.id,
+			label: t.label,
+			icon: t.icon,
+			badge: t.count !== undefined ? String(t.count) : undefined
+		}))
+	);
 	const openCard = $derived(domains.find((c) => domainKey(c.domain) === active));
 
 	function open(id: string) {
@@ -79,13 +90,17 @@
 	{@const param = paramsById.get(value.parameterId)}
 	<li class="flex items-center justify-between gap-3 py-2.5">
 		<span class="min-w-0">
+			<!-- valueHref resolves. -->
+			<!-- eslint-disable svelte/no-navigation-without-resolve -->
 			<a
 				class="link"
-				href={resolve('/classrooms/[classroom]/[parameter]', {
-					classroom: classroomId,
-					parameter: value.parameterId
-				})}>{param?.label ?? value.parameterId}</a
+				href={valueHref(
+					classroomId,
+					value.parameterId,
+					value.source.kind === 'device' ? value.source.id : null
+				)}>{param?.label ?? value.parameterId}</a
 			>
+			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 			<span class="block truncate text-xs text-muted">
 				{sourceName(value.source)}{compact
 					? ''
@@ -118,7 +133,17 @@
 <section class={className} aria-labelledby="domains-heading">
 	<h2 id="domains-heading" class="font-display text-2xl">What this device measures</h2>
 	{#if domains.length}
+		{#if dropdown}
+			<Select
+				{options}
+				value={active}
+				label="Domain"
+				class="mt-4 w-full lg:hidden"
+				onchange={open}
+			/>
+		{/if}
 		<div
+			class:max-lg:hidden={dropdown}
 			class="mt-4 flex gap-1 overflow-x-auto border-b border-line"
 			role="tablist"
 			aria-label="Domains"

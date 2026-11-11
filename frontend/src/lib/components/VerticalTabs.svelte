@@ -15,9 +15,12 @@
 	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import Icon from '#lib/components/Icon.svelte';
+	import Select from '#lib/components/Select.svelte';
+	import { MOBILE_TABS_MAX } from '#lib/tabs.ts';
 
 	/**
-	 * Tabs down the left on wide screens, a scrolling row on narrow ones. The open tab is kept in
+	 * Tabs down the left on wide screens, a scrolling row on narrow ones, or a dropdown there when
+	 * there are more than three. The open tab is kept in
 	 * the URL (`?tab=`), so a reload or a shared link opens the same one. The panel is `children`.
 	 */
 	let {
@@ -48,6 +51,16 @@
 		replaceState(url, page.state);
 	}
 
+	const dropdown = $derived(tabs.length > MOBILE_TABS_MAX);
+	const options = $derived(
+		tabs.map((t) => ({
+			value: t.id,
+			label: t.label,
+			icon: t.icon,
+			badge: t.badge?.text ?? (t.count !== undefined ? String(t.count) : undefined)
+		}))
+	);
+
 	/** Arrow keys move between tabs, as in any tab list. */
 	function keys(event: KeyboardEvent) {
 		const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key];
@@ -60,7 +73,11 @@
 </script>
 
 <div class="grid gap-6 lg:grid-cols-[13rem_minmax(0,1fr)]">
+	{#if dropdown}
+		<Select {options} value={active} {label} class="w-full lg:hidden" onchange={open} />
+	{/if}
 	<div
+		class:max-lg:hidden={dropdown}
 		class="flex gap-1 overflow-x-auto border-b border-line lg:sticky lg:top-28 lg:flex-col lg:self-start lg:border-r lg:border-b-0 lg:pr-3"
 		role="tablist"
 		aria-label={label}

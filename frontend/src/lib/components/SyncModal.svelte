@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ParticipantIdNote from '#lib/components/ParticipantIdNote.svelte';
 	import ContributorId from '#lib/components/ContributorId.svelte';
 	import type {
 		Device,
@@ -89,8 +90,6 @@
 	};
 
 	let phase = $state<Phase>('ready');
-	/** Opt-in: put the recorder's name on these readings. Otherwise they carry no personal credit. */
-	let credit = $state(false);
 	let sent = $state<Reading[]>([]);
 	let error = $state('');
 	let run = 0;
@@ -157,7 +156,7 @@
 					values: sampleValues(target.type, expected, parameters),
 					location: NO_FIX.has(i) ? null : points[i]
 				};
-				const [reading] = await services.labs.uploadReadings(target.id, [input], { credit });
+				const [reading] = await services.labs.uploadReadings(target.id, [input]);
 				if (!live()) return;
 				sent = [reading, ...sent];
 				await wait(600);
@@ -222,20 +221,7 @@
 						to {classroomName}. Demo: the sensor is simulated.
 					</p>
 				{/if}
-				<label class="mt-4 flex items-start gap-2 text-sm">
-					<input
-						type="checkbox"
-						class="mt-0.5 rounded-sm border-line-strong bg-transparent text-teal checked:bg-current focus:ring-teal"
-						bind:checked={credit}
-					/>
-					<span>
-						Credit these readings to me
-						<span class="block text-xs text-muted"
-							>Your name is shown on them to people in {classroomName}. Leave it off to record them
-							without your name.</span
-						>
-					</span>
-				</label>
+				<ParticipantIdNote class="mt-4" />
 			{:else if phase === 'scanning'}
 				<p class="text-sm text-ink">Scanning for {device?.identifier}…</p>
 				<p class="text-sm text-muted">Keep the sensor powered on and close by.</p>
@@ -275,7 +261,11 @@
 							>
 						</div>
 						<p class="text-muted">
-							{keySummary(deviceTypeOf(deviceTypes, device.type), reading.values, paramsById)}
+							{keySummary(
+								deviceTypeOf(deviceTypes, device.type)?.tileParameterIds,
+								reading.values,
+								paramsById
+							)}
 						</p>
 						<p>
 							{formatPoint(reading.location)}

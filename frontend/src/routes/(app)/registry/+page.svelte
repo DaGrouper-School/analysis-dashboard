@@ -210,7 +210,8 @@
 		unit: '',
 		valueType: 'number',
 		domain: null,
-		featured: false
+		tile: false,
+		card: false
 	});
 
 	let editingType = $state<string | null>(null);
@@ -264,7 +265,8 @@
 				unit: p?.unit ?? '',
 				valueType: p?.valueType ?? 'number',
 				domain: p?.domain ?? null,
-				featured: type.featuredParameterIds.includes(id)
+				tile: type.tileParameterIds.includes(id),
+				card: type.cardParameterIds.includes(id)
 			};
 		});
 		if (!rows.length) rows = [blankRow()];
@@ -309,7 +311,8 @@
 				unit: r.unit,
 				valueType: r.valueType,
 				domain: r.domain,
-				featured: r.featured
+				tile: r.tile,
+				card: r.card
 			}))
 		};
 	}
@@ -394,7 +397,8 @@
 							>{row.label}{row.unit ? ` (${row.unit})` : ''}
 							<span class="font-mono text-xs text-muted">{row.id}</span></span
 						>
-						{#if row.featured}<span class="chip">Featured</span>{/if}
+						{#if row.tile}<span class="chip">Tile</span>{/if}
+						{#if row.card}<span class="chip">Card</span>{/if}
 						{#if domain}
 							<span class="chip"
 								><Icon name={domain.icon} fallback="tag" class="size-3.5" /> {domain.label}</span
@@ -860,9 +864,8 @@
 				<h4 class="text-sm font-semibold text-ink">Expected values</h4>
 				<p class="text-xs text-muted">
 					Use an ID from the registry to share an existing value, or a new ID to add one. Station
-					values can't be edited here. Featured values lead a classroom page when this device is
-					picked, in this order: the first four under "What's happening now?", the first three
-					numbers charted under it.
+					values can't be edited here. When this device is picked on a classroom page, "Tile" values
+					show in "What's happening now?" and "Card" numbers are charted under it, in this order.
 				</p>
 				{#if typeErrors.values}<p class="field-error">{typeErrors.values}</p>{/if}
 				<datalist id="parameter-ids">
@@ -935,10 +938,17 @@
 								<div class="flex items-end gap-2">
 									<label
 										class="flex h-10 items-center gap-1.5 text-xs whitespace-nowrap text-muted"
-										title="Shown first on classroom pages when this device is picked, in this order"
+										title="A tile in &quot;What's happening now?&quot; when this device is picked"
 									>
-										<input type="checkbox" bind:checked={row.featured} />
-										Featured
+										<input type="checkbox" bind:checked={row.tile} />
+										Tile
+									</label>
+									<label
+										class="flex h-10 items-center gap-1.5 text-xs whitespace-nowrap text-muted"
+										title="A card under &quot;What's happening now?&quot; when this device is picked"
+									>
+										<input type="checkbox" bind:checked={row.card} />
+										Card
 									</label>
 									<button
 										type="button"

@@ -245,7 +245,10 @@
 	bind:this={root}
 	class={[
 		'select relative',
-		size === 'field' ? 'block w-full' : 'inline-block max-w-full',
+		// A field fills its row unless the caller sets a width (`w-36`), which would lose to it.
+		size === 'field'
+			? ['block', !/(^|\s)([\w-]+:)?w-/.test(className) && 'w-full']
+			: 'inline-block max-w-full',
 		className
 	]}
 	data-size={size}

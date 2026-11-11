@@ -17,6 +17,7 @@
 		accent,
 		actions,
 		onexplain,
+		href,
 		class: className = ''
 	}: {
 		tiles: NowTile[];
@@ -28,6 +29,8 @@
 		actions?: Snippet;
 		/** Opens what a value means and how it is calculated. */
 		onexplain?: (parameterId: string) => void;
+		/** Each tile's value page; the whole tile is the link. */
+		href?: (parameterId: string) => string;
 		class?: string;
 	} = $props();
 
@@ -74,8 +77,9 @@
 		{#each tiles as tile (tile.id)}
 			<li
 				class={[
-					'flex min-w-0 flex-col rounded-md border p-4',
-					accent ? 'accent-tile' : 'border-line bg-raised'
+					'relative flex min-w-0 flex-col rounded-md border p-4',
+					accent ? 'accent-tile' : 'border-line bg-raised',
+					href && tile.parameterId && 'transition-colors hover:border-line-strong'
 				]}
 			>
 				<!-- The icon and the info button on one line, the label under them at full width. -->
@@ -85,14 +89,26 @@
 						{@const id = tile.parameterId}
 						<button
 							type="button"
-							class="grid size-5 shrink-0 place-items-center rounded-full text-muted hover:text-ink focus-visible:ring-2 focus-visible:ring-teal focus-visible:outline-none"
+							class="relative z-10 grid size-5 shrink-0 place-items-center rounded-full text-muted hover:text-ink focus-visible:ring-2 focus-visible:ring-teal focus-visible:outline-none"
 							aria-label="What {tile.label.toLowerCase()} means and how it is calculated"
 							aria-haspopup="dialog"
 							onclick={() => onexplain(id)}><Icon name="info" class="size-4" /></button
 						>
 					{/if}
 				</div>
-				<p class="mt-2 text-sm leading-5">{tile.label}</p>
+				<p class="mt-2 text-sm leading-5">
+					{#if href && tile.parameterId}
+						<!-- Callers pass resolved paths. The link covers the tile. -->
+						<!-- eslint-disable svelte/no-navigation-without-resolve -->
+						<a
+							class="after:absolute after:inset-0 after:rounded-[inherit] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-teal"
+							href={href(tile.parameterId)}>{tile.label}</a
+						>
+						<!-- eslint-enable svelte/no-navigation-without-resolve -->
+					{:else}
+						{tile.label}
+					{/if}
+				</p>
 				{#if tile.value === null}
 					<p class="mt-3 text-sm text-muted italic">no data</p>
 				{:else}

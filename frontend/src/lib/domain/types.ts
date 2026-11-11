@@ -151,6 +151,8 @@ export interface Classroom {
 export interface ClassroomSummary extends Classroom {
 	/** The viewer's role; null for a platform admin who is not a member. */
 	myRole: ClassroomRole | null;
+	/** Whether the viewer records readings here: members other than researchers, who only read. */
+	canRecord: boolean;
 	memberCount: number;
 }
 
@@ -390,11 +392,15 @@ export interface DeviceTypeDefinition {
 	/** Registry parameters the device sends, in display order. */
 	parameterIds: string[];
 	/**
-	 * The values a classroom page leads with when this device is picked (AP-45), in order: the
-	 * first four on "What's happening now?", the first three charted under it. Set in the
-	 * Registry; a subset of `parameterIds`.
+	 * The values shown as tiles in "What's happening now?" when this device is picked (AP-45), in
+	 * order. Set in the Registry; a subset of `parameterIds`. None shows whatever the device sends.
 	 */
-	featuredParameterIds: string[];
+	tileParameterIds: string[];
+	/**
+	 * The numbers charted as cards under "What's happening now?" when this device is picked
+	 * (AP-45), in order. Set in the Registry; a subset of `parameterIds`. None shows no cards.
+	 */
+	cardParameterIds: string[];
 	/**
 	 * Entered by hand, with no sensor: added to a lab without pairing, with a generated
 	 * identifier, and recorded with "Enter measurement" instead of a sync.
@@ -425,8 +431,10 @@ export interface ExpectedValueInput {
 	valueType: ValueType;
 	/** Used when the value is new to the registry; existing values keep their mapping. */
 	domain: EnvironmentalDomain | null;
-	/** Featured on classroom pages when a device of this type is picked, in row order. */
-	featured?: boolean;
+	/** A tile in "What's happening now?" when a device of this type is picked, in row order. */
+	tile?: boolean;
+	/** A card under "What's happening now?" when a device of this type is picked, in row order. */
+	card?: boolean;
 }
 
 export interface DeviceTypeInput {
@@ -987,12 +995,12 @@ export interface PublicDevice {
 	color: string;
 	icon: string;
 	tiles: NowTile[];
-	/** Its first three featured numbers, charted under "What's happening now?". */
+	/** Its card values from the Registry, charted under "What's happening now?". */
 	summary: DeviceSummaryCard[];
 }
 
 /**
- * One featured value of a device over its last 7 days (AP-45): the newest value, the last value
+ * One card value of a device over its last 7 days (AP-45): the newest value, the last value
  * of each day, and today's and the week's range. Days without a reading stay empty.
  */
 export interface DeviceSummaryCard {

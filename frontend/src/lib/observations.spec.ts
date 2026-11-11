@@ -63,7 +63,8 @@ describe('observation templates (AP-16)', () => {
 					color: '#d4b72c',
 					icon: 'flask',
 					parameterIds: ['h2s', 'pm10'],
-					featuredParameterIds: []
+					tileParameterIds: [],
+					cardParameterIds: []
 				}
 			],
 			[]

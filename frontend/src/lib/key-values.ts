@@ -1,4 +1,4 @@
-import type { DeviceTypeDefinition, Parameter, Reading, ValueType } from '#lib/domain/types.ts';
+import type { Parameter, Reading, ValueType } from '#lib/domain/types.ts';
 
 export interface KeyValue {
 	id: string;
@@ -33,20 +33,23 @@ function fallbackLabel(id: string) {
 }
 
 /**
- * The values a reading leads with (AP-45): its device type's featured values, in the order a
- * platform admin set in the Registry. A type with none featured, or a reading with none of
- * them, shows what it sent. Labels and units come from the registry; each value's icon is its
+ * The values a reading leads with (AP-45): `ids` from its device type in the Registry (its tiles
+ * or its cards), in the order a platform admin set there. With `fallback`, a type with none set,
+ * or a reading with none of them, shows what it sent; without, it shows nothing. Labels and units come from the registry; each value's icon is its
  * domain's, when `domainIcons` is given.
  */
 export function keyValues(
-	type: Pick<DeviceTypeDefinition, 'featuredParameterIds'> | undefined,
+	ids: readonly string[] | undefined,
 	values: Reading['values'],
 	parameters: ReadonlyMap<string, Parameter>,
-	max = 4,
-	domainIcons?: ReadonlyMap<string, string>
+	{
+		max = Infinity,
+		domainIcons,
+		fallback = true
+	}: { max?: number; domainIcons?: ReadonlyMap<string, string>; fallback?: boolean } = {}
 ): KeyValue[] {
-	const featured = (type?.featuredParameterIds ?? []).filter((id) => values[id] !== undefined);
-	const chosen = featured.length ? featured : Object.keys(values);
+	const set = (ids ?? []).filter((id) => values[id] !== undefined);
+	const chosen = set.length || !fallback ? set : Object.keys(values);
 	return chosen.slice(0, max).map((id) => {
 		const param = parameters.get(id);
 		return {
@@ -62,12 +65,12 @@ export function keyValues(
 
 /** "Air temperature 27°C · Average wind speed 3.5 m/s", for compact lists. */
 export function keySummary(
-	type: Pick<DeviceTypeDefinition, 'featuredParameterIds'> | undefined,
+	ids: readonly string[] | undefined,
 	values: Reading['values'],
 	parameters: ReadonlyMap<string, Parameter>,
 	max = 3
 ) {
-	return keyValues(type, values, parameters, max)
+	return keyValues(ids, values, parameters, { max })
 		.map((v) => `${v.label} ${formatValue(v.value, v.unit, v.valueType)}`)
 		.join(' · ');
 }

@@ -2,7 +2,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { navigating, page } from '$app/state';
-	import { domainOf, domainsOf } from '#lib/domains.ts';
+	import { domainsOf } from '#lib/domains.ts';
 	import CalculationPanel from '#lib/components/CalculationPanel.svelte';
 	import ClassroomAbout from '#lib/components/ClassroomAbout.svelte';
 	import ClassroomCompleteness from '#lib/components/ClassroomCompleteness.svelte';
@@ -13,6 +13,8 @@
 	import DomainBrowser from '#lib/components/DomainBrowser.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
+	import RegisterSensorModal from '#lib/components/RegisterSensorModal.svelte';
+	import Select from '#lib/components/Select.svelte';
 	import SyncModal from '#lib/components/SyncModal.svelte';
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
 	import { formatValue, keySummary, keyValues } from '#lib/key-values.ts';
@@ -26,7 +28,8 @@
 		deviceTypeOf,
 		isManualType
 	} from '#lib/labels.ts';
-	import { domainQuery, sensorQuery } from '#lib/sensor-selection.ts';
+	import { sensorQuery } from '#lib/sensor-selection.ts';
+	import { valueHref } from '#lib/site.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -54,7 +57,7 @@
 
 	/** The dashboard on a classroom (and sensor), keeping the open section tab. */
 	const dashboardHref = (classroomId: string, deviceId?: string, tab = active) =>
-		resolve('/(app)/dashboard') + sensorQuery(classroomId, deviceId) + `&tab=${tab ?? 'alerts'}`;
+		resolve('/(app)/dashboard') + sensorQuery(classroomId, deviceId) + `&tab=${tab ?? 'domains'}`;
 	function choose(classroomId: string, deviceId?: string, tab = active) {
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		return goto(dashboardHref(classroomId, deviceId, tab), { replace: true, reset: false });
@@ -63,22 +66,22 @@
 	// ---- Devices: the one picked sets the tiles, the cards, the domains and the colour ----
 	// A member's own classroom: the picked device's raw readings, so a sync shows at once.
 	const domainIcons = $derived(new Map(data.domains.map((d) => [d.id, d.icon])));
-	const featured = (max: number) =>
+	/** The device's tile or card values, as set for its type in the Registry. */
+	const registryValues = (which: 'tileParameterIds' | 'cardParameterIds') =>
 		device && data.readings[0]
 			? keyValues(
-					deviceTypeOf(data.deviceTypes, device.type),
+					deviceTypeOf(data.deviceTypes, device.type)?.[which],
 					data.readings[0].values,
 					paramsById,
-					max,
-					domainIcons
+					{ domainIcons, fallback: which === 'tileParameterIds' }
 				)
 			: [];
 	const own = $derived.by(() => {
 		if (visiting || !device || !data.readings.length) return undefined;
 		const icon = deviceTypeIcon(data.deviceTypes, device.type);
 		return {
-			tiles: readingTiles(data.readings, featured(4), icon),
-			summary: deviceSummary(data.readings, featured(8)),
+			tiles: readingTiles(data.readings, registryValues('tileParameterIds'), icon),
+			summary: deviceSummary(data.readings, registryValues('cardParameterIds')),
 			color: deviceTypeColor(data.deviceTypes, device.type)
 		};
 	});
@@ -121,6 +124,7 @@
 		| 'about'
 		| 'people'
 		| 'settings';
+	const role = $derived(data.classrooms.find((c) => c.id === pendingId)?.myRole ?? null);
 	const permissions = $derived(data.detail?.permissions);
 	// People for whoever manages members, invites or consent; Settings for whoever edits.
 	const managesPeople = $derived(
@@ -138,6 +142,8 @@
 					{ id: 'about', label: 'About', icon: 'info' }
 				]
 			: [
+					// Domains first; Labs for the institution head only.
+					{ id: 'domains', label: 'Domains', icon: 'layers', count: domains.length },
 					{
 						id: 'alerts',
 						label: 'Alerts',
@@ -146,9 +152,10 @@
 							? { badge: { text: String(alertCount), title: `${alertCount} need you` } }
 							: { count: 0 })
 					},
-					{ id: 'domains', label: 'Domains', icon: 'layers', count: domains.length },
-					{ id: 'devices', label: 'Devices', icon: 'station', count: data.devices.length },
-					{ id: 'labs', label: 'Labs', icon: 'flask', count: data.labs.length },
+					{ id: 'devices', label: 'Measurements', icon: 'station', count: data.devices.length },
+					...(role === 'institution_head'
+						? [{ id: 'labs' as const, label: 'Labs', icon: 'flask', count: data.labs.length }]
+						: []),
 					{ id: 'records', label: 'Records', icon: 'clipboard', count: data.records.length },
 					{ id: 'complete', label: 'Completeness', icon: 'check' },
 					{ id: 'about', label: 'About', icon: 'info' },
@@ -167,6 +174,14 @@
 						: [])
 				]
 	);
+	// ---- Adding a measurement (a device) to one of the classroom's labs ----
+	// Heads and facilitators add devices, as on a lab page.
+	const canAddDevice = $derived(!!permissions?.invite.length && data.labs.length > 0);
+	let adding = $state(false);
+	let addLabId = $state('');
+	const addLab = $derived(data.labs.find((l) => l.id === addLabId) ?? data.labs[0]);
+	const labOptions = $derived(data.labs.map((l) => ({ value: l.id, label: l.name })));
+
 	let sectionsEl = $state<HTMLElement>();
 	function openSection(id: Section) {
 		active = id;
@@ -198,7 +213,6 @@
 			station?.classroom.id ||
 			''
 	);
-	const role = $derived(data.classrooms.find((c) => c.id === pendingId)?.myRole ?? null);
 
 	// ---- What's happening now: the picked device's values, as it used to be (AP-45) --------
 	// "How is this calculated?" (AP-07) behind each value's info icon.
@@ -281,13 +295,6 @@
 				<span class="chip">Public data only</span>
 			{/if}
 		{/snippet}
-		{#snippet tabsEnd()}
-			<a
-				href={resolve('/(app)/classrooms/new')}
-				class="flex items-center gap-1.5 pb-2 text-muted hover:text-ink"
-				><Icon name="plus" class="size-4" /> Join or start one</a
-			>
-		{/snippet}
 		{#snippet nowActions()}
 			{#if canSync && device}
 				{@const id = device.id}
@@ -344,15 +351,12 @@
 									<p class="mt-2 font-medium text-ink">{alert.title} at {alert.device.name}</p>
 									<p class="mt-1 text-sm">{alert.message}</p>
 								</div>
-								<!-- Opens the alert's value in its domain; the search can be cleared there. -->
+								<!-- Opens the value's page on this device, with its alert levels. valueHref resolves. -->
 								<!-- eslint-disable svelte/no-navigation-without-resolve -->
 								<a
 									class="btn btn-ghost"
-									href={resolve('/(app)/dashboard/domains') +
-										domainQuery(station.classroom.id, alert.device.id, {
-											domain: domainOf(alert.parameterId, paramsById, data.domains),
-											search: label
-										})}>Open {label}</a
+									href={valueHref(station.classroom.id, alert.parameterId, alert.device.id)}
+									>Open {label}</a
 								>
 								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 							</li>
@@ -388,10 +392,31 @@
 					<div class="flex flex-wrap items-end justify-between gap-3">
 						<div>
 							{@render panelHead(
-								'Devices',
+								'Measurements',
 								`The devices in ${station.classroom.name}'s labs, each with its latest reading.`
 							)}
 						</div>
+						{#if canAddDevice}
+							<div class="flex flex-wrap items-center gap-2">
+								{#if data.labs.length > 1}
+									<Select
+										options={labOptions}
+										value={addLab?.id}
+										label="Lab to add it to"
+										size="compact"
+										onchange={(id) => (addLabId = id)}
+									/>
+								{/if}
+								<button
+									type="button"
+									class="btn btn-primary"
+									aria-haspopup="dialog"
+									onclick={() => (adding = true)}
+								>
+									<Icon name="plus" class="size-4" /> Add measurement
+								</button>
+							</div>
+						{/if}
 					</div>
 					<ul class="mt-5 space-y-2.5">
 						{#each data.devices as option (option.id)}
@@ -413,7 +438,7 @@
 									<p class="text-ink">
 										{item
 											? keySummary(
-													deviceTypeOf(data.deviceTypes, option.type),
+													deviceTypeOf(data.deviceTypes, option.type)?.tileParameterIds,
 													item.reading.values,
 													paramsById
 												)
@@ -559,6 +584,18 @@
 			/>
 		{/key}
 	{/if}
+{/if}
+
+{#if canAddDevice && addLab}
+	<RegisterSensorModal
+		bind:open={adding}
+		labId={addLab.id}
+		labName={addLab.name}
+		deviceTypes={data.deviceTypes}
+		domains={data.domains}
+		parameters={data.parameters}
+		onclose={() => invalidateAll()}
+	/>
 {/if}
 
 <CalculationPanel

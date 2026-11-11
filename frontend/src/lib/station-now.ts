@@ -180,13 +180,13 @@ export function readingTiles(
 }
 
 /**
- * A device's featured numbers over the 7 days up to its newest reading (AP-45), for the cards
+ * A device's card numbers over the 7 days up to its newest reading (AP-45), for the cards
  * under "What's happening now?". `readings` are the device's own, newest first.
  */
 export function deviceSummary(
 	readings: { observedAt: string; values: Record<string, unknown> }[],
 	values: KeyValue[],
-	max = 3
+	max = Infinity
 ): DeviceSummaryCard[] {
 	const newest = readings[0];
 	if (!newest) return [];

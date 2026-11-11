@@ -129,6 +129,7 @@ export const UI_ICONS = {
 	alert: [{ d: 'M12 3 2 20.5h20L12 3ZM12 10v4.5M12 17.5v.5' }],
 	info: [{ cx: 12, cy: 12, r: 9 }, { d: 'M12 11v5.5M12 7.5v.5' }],
 	arrow: [{ d: 'M5 12h14M13 6l6 6-6 6' }],
+	chevron: [{ d: 'M6 9l6 6 6-6' }],
 	back: [{ d: 'M19 12H5M11 6l-6 6 6 6' }],
 	user: [{ cx: 12, cy: 8, r: 4 }, { d: 'M4.5 21a7.5 7.5 0 0 1 15 0' }],
 	users: [

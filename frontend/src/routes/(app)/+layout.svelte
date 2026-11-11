@@ -19,7 +19,7 @@
 	);
 
 	// Everything about your classrooms is on the dashboard (AP-45): the logo opens it, and the
-	// header holds only Record. Platform admins also manage the registry and host applications.
+	// header holds only Record, for those who record (not researchers). Platform admins also manage the registry and host applications.
 	const nav = $derived(
 		data.user.platformAdmin
 			? [
@@ -55,9 +55,11 @@
 					{/each}
 				</nav>
 			{/if}
-			<a class="btn btn-accent shrink-0 rounded-full" href={resolve('/(app)/observe')}
-				><Icon name="plus" class="size-4" /> Record</a
-			>
+			{#if data.canRecord}
+				<a class="btn btn-accent shrink-0 rounded-full" href={resolve('/(app)/observe')}
+					><Icon name="plus" class="size-4" /> Record</a
+				>
+			{/if}
 			{#if syncNote}
 				<a
 					href="{resolve('/(app)/observe')}#sync"

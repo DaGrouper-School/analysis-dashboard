@@ -1,5 +1,9 @@
 <script lang="ts">
+	import { invalidateAll } from '$app/navigation';
 	import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
+	import ChartAlerts from '#lib/components/ChartAlerts.svelte';
+	import { thresholdStatus, thresholdsFor } from '#lib/domain/alerts.ts';
+	import { deviceTypeLabel } from '#lib/labels.ts';
 	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
@@ -61,10 +65,34 @@
 
 	let range = $state<RangeId>('7d');
 	/** Values other than rain show one source at a time; rain shows every source together. */
-	let sourceId = $state<string | null>(null);
+	// svelte-ignore state_referenced_locally
+	let sourceId = $state<string | null>(data.device);
 	const series = $derived(
 		data.series.find((s) => s.source.id === sourceId) ?? data.series[0] ?? null
 	);
+
+	// ---- Alert levels: members of the classroom only, for the device shown ----
+	const alerts = $derived(
+		data.alerts.find((a) => a.deviceId === (rain ? data.device : series?.source.id)) ??
+			data.alerts.find((a) => thresholdsFor(a.rules, parameter.id).length) ??
+			null
+	);
+	const levels = $derived(alerts ? thresholdsFor(alerts.rules, parameter.id) : []);
+	const alertNow = $derived(
+		alerts
+			? thresholdStatus(
+					alerts.rules,
+					parameter.id,
+					data.series.find((s) => s.source.id === alerts.deviceId)?.points.at(-1)?.value ??
+						undefined
+				)
+			: null
+	);
+	const ALERT_BADGE = {
+		normal: 'bg-lime/15 text-lime ring-lime/40',
+		caution: 'bg-orange/15 text-orange ring-orange/40',
+		warning: 'bg-danger/15 text-danger ring-danger/40'
+	};
 	const latest = $derived(latestOf(data.series));
 	const rangeDays = $derived(
 		latest ? daysOf(dayOf(latest), RANGES.find((r) => r.id === range)!.days) : []
@@ -321,7 +349,20 @@
 	{#if now}
 		<section class="mt-6" aria-labelledby="now-heading">
 			<h2 id="now-heading" class="sr-only">Value now</h2>
-			<p class="font-mono text-5xl text-ink tabular-nums">{now.value}</p>
+			<p class="flex flex-wrap items-center gap-x-4 gap-y-2">
+				<span class="font-mono text-5xl text-ink tabular-nums">{now.value}</span>
+				{#if alertNow}
+					<span
+						class={[
+							'rounded-full px-2.5 py-0.5 text-sm font-medium ring-1',
+							ALERT_BADGE[alertNow.level]
+						]}
+					>
+						{#if alertNow.level !== 'normal'}<span aria-hidden="true">▲</span>{/if}
+						{alertNow.title}
+					</span>
+				{/if}
+			</p>
 			<p class="mt-1 text-sm text-muted">{now.caption}</p>
 			{#if 'range' in now && now.range}<p class="text-sm text-muted">{now.range}</p>{/if}
 			{#if now.review}
@@ -428,6 +469,7 @@
 					from={window.from}
 					to={window.to}
 					hourly={range === '24h'}
+					thresholds={levels}
 				/>
 			{:else if series}
 				<ul class="divide-y divide-line text-sm">
@@ -440,6 +482,14 @@
 				</ul>
 			{/if}
 		</div>
+		{#if alerts && parameter.valueType !== 'text' && parameter.valueType !== 'time'}
+			<ChartAlerts
+				{alerts}
+				{parameter}
+				typeName={deviceTypeLabel(data.typeDefinitions, alerts.deviceType)}
+				onchange={() => invalidateAll()}
+			/>
+		{/if}
 		{#if rain && data.rain}
 			<p class="mt-3 text-sm text-muted">
 				{#if data.rain.referenceSourceId}

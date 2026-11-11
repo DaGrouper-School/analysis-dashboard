@@ -22,6 +22,8 @@ export const load: LayoutLoad = async ({ parent, url, depends }) => {
 		deviceTypes,
 		domains,
 		memberClassrooms,
+		// Record is for members who record readings; researchers only read.
+		canRecord: memberClassrooms.some((c) => c.canRecord),
 		contextClassroom: contextClassroom(memberClassrooms, url)
 	};
 };
