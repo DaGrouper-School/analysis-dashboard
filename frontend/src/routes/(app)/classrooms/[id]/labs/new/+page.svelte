@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { sectionQuery } from '#lib/sensor-selection.ts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import LabForm from '#lib/components/LabForm.svelte';
@@ -21,10 +22,12 @@
 
 <svelte:head><title>Add a lab · DaGrouper Analysis</title></svelte:head>
 
+<!-- eslint-disable svelte/no-navigation-without-resolve -->
 <a
-	href={resolve('/(app)/classrooms/[id]', { id: data.classroom.id })}
+	href={resolve('/(app)/dashboard') + sectionQuery(data.classroom.id, 'labs')}
 	class="text-sm text-muted hover:text-ink">← {data.classroom.name}</a
 >
+<!-- eslint-enable svelte/no-navigation-without-resolve -->
 <div class="mt-4">
 	{#if data.onboarding}<SetupSteps current={2} />{/if}
 	<h1 class="font-display text-3xl sm:text-4xl">Register your lab</h1>

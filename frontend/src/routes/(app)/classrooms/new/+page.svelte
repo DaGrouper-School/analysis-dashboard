@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { sectionQuery } from '#lib/sensor-selection.ts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
@@ -60,7 +61,8 @@
 				...(application && { applicationId: application.id })
 			});
 			// The head takes it from here: they accept, set up the lab and invite the rest.
-			await goto(resolve('/(app)/classrooms/[id]?tab=invitations', { id: classroom.id }));
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
+			await goto(resolve('/(app)/dashboard') + sectionQuery(classroom.id, 'people'));
 		} catch (e) {
 			if (e instanceof ServiceError) errors = e.fields;
 			const fields = Object.keys(errors);
@@ -74,7 +76,7 @@
 
 <svelte:head><title>New classroom · DaGrouper Analysis</title></svelte:head>
 
-<a href={resolve('/(app)/classrooms')} class="text-sm text-muted hover:text-ink">← Classrooms</a>
+<a href={resolve('/(app)/dashboard')} class="text-sm text-muted hover:text-ink">← Dashboard</a>
 <h1 class="mt-4 font-display text-3xl sm:text-4xl">New classroom</h1>
 <p class="mt-1 max-w-xl text-muted">
 	The classroom gets a unique global classroom code. It is registered in SAM as the source

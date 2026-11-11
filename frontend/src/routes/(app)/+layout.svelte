@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import { navigating, page } from '$app/state';
 	import Avatar from '#lib/components/Avatar.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import Logo from '#lib/components/Logo.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import { outbox } from '#lib/outbox.svelte.ts';
@@ -17,19 +18,16 @@
 			.join(' · ')
 	);
 
-	// Platform admins also manage the shared registry and review host applications.
-	const nav = $derived([
-		{ href: resolve('/(app)/dashboard'), label: 'Dashboard' },
-		{ href: resolve('/(app)/classrooms'), label: 'Classrooms' },
-		{ href: resolve('/(app)/labs'), label: 'Labs' },
-		...(data.user.platformAdmin
+	// Everything about your classrooms is on the dashboard (AP-45): the logo opens it, and the
+	// header holds only Record. Platform admins also manage the registry and host applications.
+	const nav = $derived(
+		data.user.platformAdmin
 			? [
 					{ href: resolve('/(app)/registry'), label: 'Registry' },
 					{ href: resolve('/(app)/host-applications'), label: 'Applications' }
 				]
-			: []),
-		{ href: resolve('/(app)/settings'), label: 'Settings' }
-	]);
+			: []
+	);
 </script>
 
 <div class="min-h-dvh">
@@ -38,21 +36,28 @@
 	>
 		<div class="mx-auto flex max-w-6xl items-center gap-2 px-3 py-3 sm:gap-4 sm:px-6">
 			<a href={resolve('/(app)/dashboard')} aria-label="Dashboard"><Logo compact /></a>
-			<nav
-				class="ml-auto flex items-center gap-0.5 rounded-full border border-line-strong bg-canvas/80 p-1 sm:gap-1"
+			<div class="ml-auto"></div>
+			{#if nav.length}
+				<nav
+					aria-label="Admin"
+					class="flex items-center gap-0.5 rounded-full border border-line-strong bg-canvas/80 p-1 sm:gap-1"
+				>
+					{#each nav as item (item.href)}
+						{@const current = page.url.pathname.startsWith(item.href)}
+						<a
+							href={item.href}
+							class={[
+								'rounded-full px-2 py-1.5 text-[13px] font-medium sm:px-4 sm:text-sm',
+								current ? 'bg-ink text-canvas' : 'text-muted hover:text-ink'
+							]}
+							aria-current={current ? 'page' : undefined}>{item.label}</a
+						>
+					{/each}
+				</nav>
+			{/if}
+			<a class="btn btn-accent shrink-0 rounded-full" href={resolve('/(app)/observe')}
+				><Icon name="plus" class="size-4" /> Record</a
 			>
-				{#each nav as item (item.href)}
-					{@const current = page.url.pathname.startsWith(item.href)}
-					<a
-						href={item.href}
-						class={[
-							'rounded-full px-2 py-1.5 text-[13px] font-medium sm:px-4 sm:text-sm',
-							current ? 'bg-ink text-canvas' : 'text-muted hover:text-ink'
-						]}
-						aria-current={current ? 'page' : undefined}>{item.label}</a
-					>
-				{/each}
-			</nav>
 			{#if syncNote}
 				<a
 					href="{resolve('/(app)/observe')}#sync"
@@ -69,7 +74,7 @@
 				</a>
 			{/if}
 			<ThemeToggle />
-			<a href={resolve('/(app)/settings')} class="hidden sm:block" aria-label="Settings">
+			<a href={resolve('/(app)/settings')} class="shrink-0" aria-label="Your account">
 				<Avatar name={data.user.fullName} src={data.user.avatarUrl} />
 			</a>
 		</div>

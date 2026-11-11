@@ -39,6 +39,14 @@ export async function selectSensor(url: URL) {
 }
 
 /** The query that keeps a classroom and sensor picked across pages. */
+/**
+ * A classroom's section on the dashboard (AP-45), such as its People or Labs tab: everything about
+ * a classroom lives there. The path is the caller's to resolve, like `sensorQuery`.
+ */
+export function sectionQuery(classroomId: string, section: string) {
+	return `${sensorQuery(classroomId)}&tab=${encodeURIComponent(section)}`;
+}
+
 export function sensorQuery(classroomId: string, deviceId?: string) {
 	let query = `?classroom=${encodeURIComponent(classroomId)}`;
 	if (deviceId) query += `&device=${encodeURIComponent(deviceId)}`;

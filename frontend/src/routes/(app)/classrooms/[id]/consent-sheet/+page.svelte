@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { sectionQuery } from '#lib/sensor-selection.ts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
@@ -26,10 +27,12 @@
 <svelte:head><title>Consent sheet · {sheet.classroomName} · DaGrouper Analysis</title></svelte:head>
 
 <div class="print:hidden">
+	<!-- eslint-disable svelte/no-navigation-without-resolve -->
 	<a
-		href={resolve('/(app)/classrooms/[id]', { id: data.classroomId })}
+		href={resolve('/(app)/dashboard') + sectionQuery(data.classroomId, 'people')}
 		class="text-sm text-muted hover:text-ink">← {sheet.classroomName}</a
 	>
+	<!-- eslint-enable svelte/no-navigation-without-resolve -->
 	<div class="mt-4 flex flex-wrap items-end justify-between gap-4">
 		<div>
 			<h1 class="font-display text-3xl">Guardian consent sheet</h1>

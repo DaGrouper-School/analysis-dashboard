@@ -1,3 +1,4 @@
+import { sensorQuery } from '#lib/sensor-selection.ts';
 import { resolve } from '$app/paths';
 import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
@@ -7,6 +8,6 @@ export const load: PageLoad = ({ url }) => {
 	const classroom = url.searchParams.get('classroom');
 	redirect(
 		307,
-		classroom ? resolve('/(app)/classrooms/[id]', { id: classroom }) : resolve('/(app)/classrooms')
+		classroom ? resolve('/(app)/dashboard') + sensorQuery(classroom) : resolve('/(app)/dashboard')
 	);
 };

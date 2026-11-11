@@ -2786,6 +2786,12 @@ components:
         - version
       additionalProperties: false
       description: 'What "How is this calculated?" shows: the calculation with its inputs named.'
+    Chart:
+      type: string
+      enum:
+        - daily_bars
+        - line_band
+        - line
     ClassroomDetail:
       type: object
       properties:
@@ -4431,7 +4437,7 @@ components:
           $ref: "#/components/schemas/Calculation"
           description: "How SAM gets the value: measured, derived from other values, or entered by hand."
         chart:
-          $ref: "#/components/schemas/ParameterChart"
+          $ref: "#/components/schemas/Chart"
           description: "The main chart on the value's page (AP-23): daily bars for totals such as rain, a line
             with each day's low to high for values such as temperature, or a plain line. Numbers
             only; a value without one charts as a line."
@@ -4443,12 +4449,6 @@ components:
         - domain
         - source
       additionalProperties: false
-    ParameterChart:
-      type: string
-      enum:
-        - daily_bars
-        - line_band
-        - line
     PhoneChallenge:
       type: object
       properties:

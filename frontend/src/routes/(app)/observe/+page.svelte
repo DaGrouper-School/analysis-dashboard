@@ -354,7 +354,7 @@
 				Community scientists, facilitators and institution heads record observations in their
 				classrooms' labs. Researchers read the data only.
 			</p>
-			<a class="btn btn-ghost mt-4" href={resolve('/(app)/classrooms')}>Your classrooms</a>
+			<a class="btn btn-ghost mt-4" href={resolve('/(app)/dashboard')}>Your dashboard</a>
 		</div>
 	{:else if sentEntry && template && target}
 		{@const stored = sentEntry.stored}

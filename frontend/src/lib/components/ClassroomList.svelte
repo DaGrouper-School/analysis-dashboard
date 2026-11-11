@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { sectionQuery } from '#lib/sensor-selection.ts';
 	import { resolve } from '$app/paths';
 	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
 	import Icon from '#lib/components/Icon.svelte';
@@ -52,8 +53,9 @@
 	<ul class="mt-6 grid gap-4 md:grid-cols-2">
 		{#each classrooms as classroom (classroom.id)}
 			<li>
+				<!-- eslint-disable svelte/no-navigation-without-resolve -->
 				<a
-					href={resolve('/(app)/classrooms/[id]', { id: classroom.id })}
+					href={resolve('/(app)/dashboard') + sectionQuery(classroom.id, 'people')}
 					class="card block transition hover:border-line-strong"
 				>
 					<div class="flex items-start justify-between gap-3">
@@ -75,6 +77,7 @@
 						{#if classroom.code}<span class="font-mono text-ink">{classroom.code}</span>{/if}
 					</p>
 				</a>
+				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 			</li>
 		{/each}
 	</ul>
