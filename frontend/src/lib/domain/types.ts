@@ -863,13 +863,22 @@ export interface RawRow {
 	contributorId: number | null;
 }
 
+/** Which page of raw values to fetch: `page` counts from 1. */
+export interface RawPaging {
+	page: number;
+	pageSize: number;
+}
+
 /** A page of raw values from one classroom, with the filters it can offer and its terms. */
 export interface RawPage {
 	classroomId: string;
 	classroomName: string;
 	rows: RawRow[];
-	/** Rows matching the filters, before the page limit. */
+	/** Rows matching the filters, across every page. */
 	total: number;
+	/** The page these rows are, from 1, and how many rows a page holds. */
+	page: number;
+	pageSize: number;
 	terms: DataTerms;
 	options: {
 		parameterIds: string[];

@@ -6,7 +6,7 @@ import type { MemberConsent, RawRow, ReleaseReview } from '#lib/domain/types.ts'
 import type { PageLoad } from './$types';
 import type { PageLoad as DetailsLoad } from './details/$types';
 
-/** How many recent records the Records tab lists. */
+/** How many recent records the Manual records tab lists. */
 const RECORDS = 8;
 
 /**
@@ -62,7 +62,7 @@ export async function loadDashboard({
 						services.exports
 							.rawValues(
 								{ classroomId: classroom.id, sourceId, sort: 'time', order: 'desc' },
-								RECORDS
+								{ page: 1, pageSize: RECORDS }
 							)
 							.then((page) => page.rows)
 							.catch((): RawRow[] => [])

@@ -37,7 +37,7 @@
 	);
 </script>
 
-<!-- The "Devices" label sits in the card, beside the choices, as part of the selector. On a wide
+<!-- The "Device" label sits in the card, beside the choices, as part of the selector. On a wide
      screen the card is as wide as what is in it; narrower, it spans the row like the cards below. -->
 <section
 	class={[
@@ -50,7 +50,7 @@
 		id="devices-heading"
 		class="shrink-0 self-stretch border-r border-line pr-3 pl-1 text-sm font-medium text-muted"
 	>
-		<span class="flex h-full items-center">Devices</span>
+		<span class="flex h-full items-center">Device</span>
 	</h2>
 	{#if !devices.length}
 		<!-- No devices yet: the same height as a row of choices, so nothing below moves. -->

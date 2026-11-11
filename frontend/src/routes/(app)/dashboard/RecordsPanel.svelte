@@ -6,7 +6,7 @@
 	import PanelHead from './PanelHead.svelte';
 	import type { PageData } from './$types';
 
-	/** The Records section (AP-45): readings entered by hand and field observations, newest first. */
+	/** The Manual records section (AP-45): readings entered by hand and field observations, newest first. */
 	let {
 		records,
 		canRecord,
@@ -23,7 +23,7 @@
 <div class="flex flex-wrap items-end justify-between gap-3">
 	<div>
 		<PanelHead
-			title="Records"
+			title="Manual records"
 			sub="Readings entered by hand and field observations in this classroom, newest first."
 		/>
 	</div>
