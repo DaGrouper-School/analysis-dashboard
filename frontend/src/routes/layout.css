@@ -257,3 +257,12 @@
 		margin: 16mm;
 	}
 }
+
+/* Sideways scrollers (tabs, device picker, wide tables) scroll by touch, trackpad or shift and
+   the wheel, with no visible bar. */
+.overflow-x-auto {
+	scrollbar-width: none;
+}
+.overflow-x-auto::-webkit-scrollbar {
+	display: none;
+}
