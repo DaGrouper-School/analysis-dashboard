@@ -298,6 +298,10 @@ export function createHttpServices(baseUrl: string): Services {
 				request<Parameter>('PATCH', `/registry/parameters/${encodeURIComponent(parameterId)}`, {
 					domain
 				}),
+			chartParameter: (parameterId, chart) =>
+				request<Parameter>('PUT', `/registry/parameters/${encodeURIComponent(parameterId)}/chart`, {
+					chart
+				}),
 			explainParameter: (parameterId, input) =>
 				request<Parameter>(
 					'PUT',

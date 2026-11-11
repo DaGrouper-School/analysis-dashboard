@@ -1,7 +1,9 @@
 <script lang="ts">
+	import Collapse from '#lib/components/Collapse.svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import type { Snippet } from 'svelte';
+	import NavLinks from '#lib/components/NavLinks.svelte';
 	import Logo from '#lib/components/Logo.svelte';
 	import Select from '#lib/components/Select.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
@@ -26,6 +28,13 @@
 		return path === base || path.startsWith(`${base}/`);
 	}
 
+	const sectionLinks = $derived(
+		content.sections.map((section) => {
+			const href = sectionHref(section);
+			return { href, label: section.label, current: isCurrent(href) };
+		})
+	);
+
 	// Signed-in people go on to their dashboard, or to the next step of sign-up.
 	const account = $derived(
 		user
@@ -37,36 +46,18 @@
 	);
 </script>
 
-{#snippet sectionLinks(extra: string)}
-	{#each content.sections as section (section.id)}
-		{@const href = sectionHref(section)}
-		{@const current = isCurrent(href)}
-		<!-- sectionHref resolves. -->
-		<!-- eslint-disable svelte/no-navigation-without-resolve -->
-		<a
-			{href}
-			aria-current={current ? 'page' : undefined}
-			class={[
-				'underline-offset-[6px] hover:text-ink',
-				current ? 'text-ink underline decoration-teal decoration-2' : 'text-muted',
-				extra
-			]}>{section.label}</a
-		>
-		<!-- eslint-enable svelte/no-navigation-without-resolve -->
-	{/each}
-{/snippet}
-
 <div class="flex min-h-dvh flex-col">
 	<header class="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur">
 		<div class="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
 			<a href={resolve('/')} aria-label="Home"><Logo compact /></a>
 			<nav aria-label="Sections" class="ml-4 hidden items-center gap-5 text-sm lg:flex">
-				{@render sectionLinks('')}
+				<NavLinks links={sectionLinks} />
 			</nav>
 			<div class="ml-auto flex items-center gap-2">
 				<Select
 					id="site-language"
 					label="Language"
+					labelHidden
 					size="compact"
 					align="end"
 					options={content.languages.map((language) => ({
@@ -89,17 +80,16 @@
 				>
 			</div>
 		</div>
-		{#if menuOpen}
+		<Collapse id="site-menu" open={menuOpen}>
 			<nav
-				id="site-menu"
 				aria-label="Sections"
 				class="mx-auto flex max-w-6xl flex-col gap-3 border-t border-line px-4 py-4 sm:px-6 lg:hidden"
 			>
-				{@render sectionLinks('py-1')}
+				<NavLinks links={sectionLinks} extra="py-1" />
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 				<a href={account.href} class="btn btn-primary mt-2 sm:hidden">{account.label}</a>
 			</nav>
-		{/if}
+		</Collapse>
 		{#if isMockDataSource}
 			<p class="border-t border-line bg-raised py-1 text-center text-xs text-muted">
 				Demo mode: data is mock and saved only in this browser.

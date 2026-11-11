@@ -5,10 +5,10 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import SampleDataBadge from '#lib/components/SampleDataBadge.svelte';
 	import { thresholdStatus, thresholdsFor } from '#lib/domain/alerts.ts';
+	import { chartOf } from '#lib/domain/charts.ts';
 	import type { PublicParameterPage } from '#lib/domain/types.ts';
 	import ChartAlerts from '#lib/features/alerts/ChartAlerts.svelte';
 	import {
-		chartOf,
 		dailyStats,
 		dayOf,
 		daysOf,

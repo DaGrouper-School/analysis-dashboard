@@ -113,6 +113,7 @@
 									align="end"
 									class="w-24 shrink-0"
 									label="{param.label} unit"
+									labelHidden
 									options={toOptions(units)}
 									bind:value={entry.unit}
 								/>

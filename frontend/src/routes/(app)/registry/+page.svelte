@@ -11,6 +11,7 @@
 	import TypeModal from './TypeModal.svelte';
 	import TypesPanel from './TypesPanel.svelte';
 	import ValuesPanel from './ValuesPanel.svelte';
+	import { CHART_LABELS } from '#lib/domain/charts.ts';
 	import { domainOptions, NEW_DOMAIN } from './type-form.ts';
 	import type { PageProps } from './$types';
 
@@ -182,6 +183,11 @@
 					{pickers}
 					icon={ICONS.values}
 					onmap={mapTo}
+					onchart={(parameter, chart) =>
+						run(
+							() => services.registry.chartParameter(parameter.id, chart),
+							`${parameter.label} now charts as ${CHART_LABELS[chart].toLowerCase()}.`
+						)}
 					onexplain={(id) => {
 						explainId = id;
 						explaining = true;

@@ -7,6 +7,7 @@
 	import ClassroomPeople from '#lib/features/classroom/ClassroomPeople.svelte';
 	import ClassroomSettings from '#lib/features/classroom/ClassroomSettings.svelte';
 	import ClassroomLabs from '#lib/features/devices/ClassroomLabs.svelte';
+	import DevicePicker, { type PickableDevice } from '#lib/features/devices/DevicePicker.svelte';
 	import DomainBrowser from '#lib/features/measurements/DomainBrowser.svelte';
 	import type { domainsOf } from '#lib/features/measurements/domains.ts';
 	import MeasurementsPanel from './MeasurementsPanel.svelte';
@@ -22,6 +23,9 @@
 		sections,
 		active = $bindable(),
 		domains,
+		devices,
+		deviceId,
+		onpickdevice,
 		parameters,
 		alertCount,
 		canAddDevice,
@@ -35,6 +39,10 @@
 		sections: TabItem<Section>[];
 		active: Section | undefined;
 		domains: ReturnType<typeof domainsOf>;
+		/** The classroom's devices; the one picked sets the domains shown. */
+		devices: PickableDevice[];
+		deviceId: string | undefined;
+		onpickdevice: (id: string) => void;
 		parameters: Map<string, Parameter>;
 		alertCount: number;
 		canAddDevice: boolean;
@@ -66,7 +74,13 @@
 				{onrelease}
 			/>
 		{:else if active === 'domains'}
-			<DomainBrowser {domains} parameters={station.parameters} classroomId={station.classroom.id} />
+			<DevicePicker {devices} {deviceId} onpick={onpickdevice} />
+			<DomainBrowser
+				class="mt-6"
+				{domains}
+				parameters={station.parameters}
+				classroomId={station.classroom.id}
+			/>
 		{:else if active === 'devices'}
 			<MeasurementsPanel
 				{data}

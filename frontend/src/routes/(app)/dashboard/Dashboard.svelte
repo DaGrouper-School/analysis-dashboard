@@ -123,9 +123,6 @@
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		else goto(detailsHref(station!.classroom.id, shownDeviceId, id));
 	}
-	const deviceOptions = $derived(
-		pickerDevices.map((d) => ({ value: d.id, label: d.name, icon: d.icon, color: d.color }))
-	);
 
 	// ---- The shared overview ---------------------------------------------------------------
 	const mine = $derived(new Set(data.classrooms.map((c) => c.id)));
@@ -196,10 +193,7 @@
 		loading={pendingId !== station.classroom.id}
 		{classroomOptions}
 		classroomId={pendingId}
-		{deviceOptions}
-		deviceId={shownDeviceId}
 		onclassroom={(id) => choose(id, undefined, active)}
-		ondevice={pickDeviceShown}
 	/>
 	<ClassroomSections
 		{data}
@@ -207,6 +201,9 @@
 		{sections}
 		bind:active
 		{domains}
+		devices={pickerDevices}
+		deviceId={shownDeviceId}
+		onpickdevice={pickDeviceShown}
 		parameters={paramsById}
 		{alertCount}
 		{canAddDevice}

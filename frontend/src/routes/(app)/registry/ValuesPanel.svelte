@@ -1,11 +1,17 @@
 <script lang="ts">
 	import Icon from '#lib/components/Icon.svelte';
-	import Select, { type SelectOption } from '#lib/components/Select.svelte';
-	import type { DeviceTypeDefinition, DomainDefinition, Parameter } from '#lib/domain/types.ts';
+	import Select, { toOptions, type SelectOption } from '#lib/components/Select.svelte';
+	import { CHARTS, CHART_LABELS, chartOf } from '#lib/domain/charts.ts';
+	import type {
+		Chart,
+		DeviceTypeDefinition,
+		DomainDefinition,
+		Parameter
+	} from '#lib/domain/types.ts';
 
 	/**
 	 * Values and domains (AP-09): every value with the types that send it and the domain it shows
-	 * under. Values in no domain are listed first, to place.
+	 * under, and each number's chart (AP-23). Values in no domain are listed first, to place.
 	 */
 	let {
 		parameters,
@@ -15,6 +21,7 @@
 		pickers,
 		icon,
 		onmap,
+		onchart,
 		onexplain
 	}: {
 		parameters: Parameter[];
@@ -25,9 +32,11 @@
 		pickers: number;
 		icon: string;
 		onmap: (parameter: Parameter, value: string) => void;
+		onchart: (parameter: Parameter, chart: Chart) => void;
 		onexplain: (parameterId: string) => void;
 	} = $props();
 
+	const chartOptions = toOptions(CHARTS, CHART_LABELS);
 	const domainsById = $derived(new Map(domains.map((d) => [d.id, d])));
 	const unmapped = $derived(parameters.filter((p) => !p.domain || !domainsById.has(p.domain)));
 	const typesFor = (parameterId: string) =>
@@ -73,6 +82,7 @@
 							<Select
 								id="unmapped-{parameter.id}"
 								label="Domain for {parameter.label}"
+								labelHidden
 								class="w-full sm:w-56"
 								options={domainChoices}
 								value=""
@@ -107,12 +117,13 @@
 			</div>
 		</div>
 		<div class="card mt-4 overflow-x-auto p-0">
-			<table class="w-full min-w-[40rem] text-left text-sm">
+			<table class="w-full min-w-[52rem] text-left text-sm">
 				<thead class="text-xs text-muted">
 					<tr class="border-b border-line">
 						<th class="px-4 py-3 font-medium">Value</th>
 						<th class="px-4 py-3 font-medium">Sent by</th>
 						<th class="px-4 py-3 font-medium">Domain</th>
+						<th class="px-4 py-3 font-medium">Chart</th>
 						<th class="px-4 py-3 font-medium"><span class="sr-only">Meaning</span></th>
 					</tr>
 				</thead>
@@ -136,12 +147,28 @@
 									<Select
 										id="map-{parameter.id}"
 										label="Domain for {parameter.label}"
+										labelHidden
 										size="compact"
 										warn={loose}
 										options={domainChoices}
 										value={loose ? '' : (parameter.domain ?? '')}
 										onchange={(value) => onmap(parameter, value)}
 									/>
+								</td>
+								<td class="px-4 py-2">
+									{#if chartOf(parameter)}
+										<Select
+											id="chart-{parameter.id}"
+											label="Chart for {parameter.label}"
+											labelHidden
+											size="compact"
+											options={chartOptions}
+											value={chartOf(parameter)!}
+											onchange={(chart) => onchart(parameter, chart)}
+										/>
+									{:else}
+										<span class="text-xs text-muted">Not charted</span>
+									{/if}
 								</td>
 								<td class="px-4 py-2 text-right">
 									<button
@@ -158,7 +185,7 @@
 								</td>
 							</tr>
 						{:else}
-							<tr><td colspan="4" class="px-4 py-6 text-center text-muted">No values match.</td></tr
+							<tr><td colspan="5" class="px-4 py-6 text-center text-muted">No values match.</td></tr
 							>
 						{/each}
 					</tbody>

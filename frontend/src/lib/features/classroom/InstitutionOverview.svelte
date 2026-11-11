@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import Collapse from '#lib/components/Collapse.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import type { InstitutionOverview } from '#lib/domain/types.ts';
 	import { formatCoordinates } from '#lib/features/map/geo.ts';
@@ -64,7 +65,13 @@
 		</button>
 	</div>
 
-	<div id="institution-body" class={['flex flex-1 flex-col', !open && 'max-lg:hidden']}>
+	<Collapse
+		id="institution-body"
+		{open}
+		openFrom="(min-width: 64rem)"
+		fill
+		class="flex flex-1 flex-col"
+	>
 		{#if overview.location}
 			<p class="mt-3 font-mono text-xs text-muted lg:hidden">
 				{formatCoordinates(overview.location)}
@@ -116,5 +123,5 @@
 				{@render actions?.()}
 			</div>
 		{/if}
-	</div>
+	</Collapse>
 </section>

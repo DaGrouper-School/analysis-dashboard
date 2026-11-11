@@ -317,6 +317,24 @@ describe('value explanations', () => {
 		});
 	});
 
+	it('sets a number’s chart, logs it, and refuses text', async () => {
+		await signInAs('g-tesfaye');
+		await expect(services.registry.chartParameter('air_temperature', 'line')).rejects.toMatchObject(
+			{ code: 'forbidden' }
+		);
+		await signInAs('g-leila');
+		const saved = await services.registry.chartParameter('air_temperature', 'daily_bars');
+		expect(saved.chart).toBe('daily_bars');
+		const changes = await services.registry.listChanges();
+		expect(changes.map((c) => c.summary)).toContain(`Set the ${saved.label} chart to daily bars.`);
+		const text = (await services.registry.listParameters()).find((p) => p.valueType === 'text');
+		if (text) {
+			await expect(services.registry.chartParameter(text.id, 'line')).rejects.toMatchObject({
+				code: 'invalid_input'
+			});
+		}
+	});
+
 	it('saves the meaning and calculation, and logs the change', async () => {
 		await signInAs('g-leila');
 		const target = (await services.registry.listParameters()).find(
