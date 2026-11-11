@@ -145,7 +145,7 @@
 				{/key}
 			</div>
 		{:else}
-			<PhoneInput bind:value={phone} id="phone" error={errors.phone} />
+			<PhoneInput bind:value={phone} countries={data.dialCodes} id="phone" error={errors.phone} />
 			<button
 				type="button"
 				class="btn btn-ghost mt-3"

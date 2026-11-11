@@ -3,7 +3,7 @@
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import StageBadge from '#lib/components/StageBadge.svelte';
 	import type { ClassroomStage, PublicClassroom } from '#lib/domain/types.ts';
-	import { stageColor } from '#lib/labels.ts';
+	import { classroomMarkers } from '#lib/globe-markers.ts';
 
 	/**
 	 * Every Global Classroom on the globe, colored by stage, with a list beside it (AP-20, AP-21).
@@ -15,17 +15,7 @@
 	const byId = $derived(new Map(stages.map((s) => [s.id, s])));
 	let selectedId = $state('');
 	const selected = $derived(classrooms.find((c) => c.id === selectedId) ?? null);
-	const markers = $derived<GlobeMarker[]>(
-		classrooms
-			.filter((c) => c.location)
-			.map((c) => ({
-				id: c.id,
-				lat: c.location!.lat,
-				lng: c.location!.lng,
-				color: stageColor(stages, c.stageId),
-				label: `${c.name} · ${byId.get(c.stageId)?.label ?? c.stageId}`
-			}))
-	);
+	const markers = $derived<GlobeMarker[]>(classroomMarkers(classrooms, stages));
 </script>
 
 <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr]">

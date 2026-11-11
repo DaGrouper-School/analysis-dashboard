@@ -11,7 +11,7 @@
 	]);
 </script>
 
-<AuthShell>
+<AuthShell markers={data.markers}>
 	<ol class="mb-8 flex gap-2" aria-label="Onboarding steps">
 		{#each steps as step, i (step.id)}
 			{@const current = page.route.id === step.id}
