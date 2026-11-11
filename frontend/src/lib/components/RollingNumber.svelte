@@ -2,9 +2,19 @@
 	/**
 	 * A formatted value whose digits roll to their new place when it changes, like the wheels
 	 * of a mechanical counter. Other characters (the unit, a sign, the decimal point) stay put.
+	 * It also rolls up from zero when it first shows, so freshly loaded numbers roll in.
 	 * Screen readers get the plain value; reduced motion swaps the digits without rolling.
 	 */
+	import { onMount } from 'svelte';
+
 	let { value }: { value: string } = $props();
+
+	// Every wheel starts at 0 and turns to its digit on the next frame.
+	let shown = $state(false);
+	onMount(() => {
+		const frame = requestAnimationFrame(() => (shown = true));
+		return () => cancelAnimationFrame(frame);
+	});
 
 	// Keyed from the right, so the units and the last digits keep their wheels when the
 	// number grows a digit, and only the new leading digit appears. Grouped by word, so a long
@@ -26,7 +36,7 @@
 				>{#each word.chars as item (item.key)}
 					{#if item.digit}
 						<span class="wheel">
-							<span class="reel" style:--digit={Number(item.char)}>
+							<span class="reel" style:--digit={shown ? Number(item.char) : 0}>
 								{#each [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as n (n)}<span>{n}</span>{/each}
 							</span>
 						</span>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import RollingNumber from '#lib/components/RollingNumber.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
 	import ChartAlerts from '#lib/features/alerts/ChartAlerts.svelte';
@@ -339,7 +340,9 @@
 	<section class="mt-6" aria-labelledby="now-heading">
 		<h2 id="now-heading" class="sr-only">Value now</h2>
 		<p class="flex flex-wrap items-center gap-x-4 gap-y-2">
-			<span class="font-mono text-5xl text-ink tabular-nums">{now.value}</span>
+			<span class="font-mono text-5xl text-ink tabular-nums"
+				><RollingNumber value={now.value} /></span
+			>
 			{#if alertNow}
 				<span
 					class={[
@@ -579,7 +582,9 @@
 		<div class="card">
 			<dt class="text-sm text-muted">Days with readings, last 30</dt>
 			<dd class="mt-1 font-mono text-2xl text-ink tabular-nums">
-				{quality.received}<span class="text-base text-muted"> / {quality.expected}</span>
+				<RollingNumber value={String(quality.received)} /><span class="text-base text-muted">
+					/ {quality.expected}</span
+				>
 			</dd>
 		</div>
 		<div class="card">
@@ -600,7 +605,7 @@
 						quality.flagged ? 'text-orange' : 'text-ink'
 					]}
 				>
-					{quality.flagged}
+					<RollingNumber value={String(quality.flagged)} />
 				</dd>
 			</div>
 		{:else}

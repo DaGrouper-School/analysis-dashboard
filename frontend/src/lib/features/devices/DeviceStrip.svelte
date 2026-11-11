@@ -1,4 +1,5 @@
 <script lang="ts">
+	import RollingNumber from '#lib/components/RollingNumber.svelte';
 	import StripCard from '#lib/features/devices/StripCard.svelte';
 	import type { DeviceSummaryCard } from '#lib/domain/types.ts';
 	import { formatValue } from '#lib/features/measurements/key-values.ts';
@@ -60,7 +61,9 @@
 				{#if card.latest === null}
 					<span class="font-sans text-base text-muted italic">no data</span>
 				{:else}
-					{formatValue(card.latest)}<span class="ml-1 text-sm text-muted">{card.unit}</span>
+					<RollingNumber value={formatValue(card.latest)} /><span class="ml-1 text-sm text-muted"
+						>{card.unit}</span
+					>
 				{/if}
 			{/snippet}
 			{#snippet picture()}
