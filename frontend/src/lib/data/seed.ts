@@ -311,7 +311,9 @@ const coreParameters: MockDbState['coreParameters'] = {
 	rainDaily: ['precip_accum_local_day', 'rain_gauge_daily_accumulation'],
 	airTemperature: ['air_temperature'],
 	rainTolerance: 2,
-	rainReference: 'rain_gauge_daily_accumulation'
+	rainReference: 'rain_gauge_daily_accumulation',
+	uv: ['uv'],
+	soilMoisture: ['soil_moisture']
 };
 
 /**
@@ -334,12 +336,11 @@ const nowTiles: MockDbState['nowTiles'] = [
 		caption: { parameterIds: ['wind_direction'], text: 'From the {value}', format: 'compass' }
 	},
 	{
-		id: 'rain',
-		label: 'Rain today',
-		icon: 'rain',
-		parameterIds: ['precip_accum_local_day', 'rain_gauge_daily_accumulation'],
-		zeroText: 'No rain today',
-		core: { value: 'rainToday', caption: { value: 'rainLast7Days', text: '{value} this week' } }
+		id: 'uv',
+		label: 'UV index',
+		icon: 'sun',
+		parameterIds: ['uv'],
+		caption: { parameterIds: ['solar_radiation'], text: 'Solar radiation {value}' }
 	},
 	{
 		id: 'pressure',

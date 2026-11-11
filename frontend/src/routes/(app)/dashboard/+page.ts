@@ -7,8 +7,9 @@ import type { PageLoad } from './$types';
 const RECORDS = 8;
 
 /**
- * The dashboard (AP-45): one classroom at a time, laid out like its public page, with alerts,
- * domains, devices, labs, records and completeness as tabs. Sync follows the picked device.
+ * The dashboard (AP-45): one classroom at a time, with the same overview as its public page and
+ * alerts, domains, devices, labs, records and completeness as tabs. Sync follows the picked
+ * device. Another classroom (`?classroom=` one the user is not in) shows its public data only.
  */
 export const load: PageLoad = async ({ url, parent }) => {
 	const [{ deviceTypes }, selection, parameters, invitations] = await Promise.all([
@@ -18,6 +19,12 @@ export const load: PageLoad = async ({ url, parent }) => {
 		services.classrooms.listMyInvitations()
 	]);
 	const { device, classroom, devices } = selection;
+	// Another classroom, opened from the globe or a public link: its public data, in the app.
+	const asked = url.searchParams.get('classroom');
+	const visiting =
+		asked && !selection.classrooms.some((c) => c.id === asked)
+			? await services.publicSite.station(asked).catch(() => null)
+			: null;
 	// Hand-entered devices and field observations are what people record; a station sends its own.
 	const manual = devices.filter((d) => deviceTypes.find((t) => t.id === d.type)?.manual);
 	const [readings, lab, labs, station, consent, records] = await Promise.all([
@@ -48,6 +55,7 @@ export const load: PageLoad = async ({ url, parent }) => {
 	]);
 	return {
 		...selection,
+		visiting,
 		readings,
 		// Heads, facilitators and community scientists can record data; researchers can't.
 		canRecord: lab?.canRecord ?? false,

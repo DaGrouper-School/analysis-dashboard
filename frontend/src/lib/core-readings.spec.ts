@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { coreReadings, stationCore, type CoreParameters } from './core-readings';
+import { coreReadings, stationCharts, stationCore, type CoreParameters } from './core-readings';
 
 const parameters: CoreParameters = {
 	rainDaily: ['precip_accum_local_day', 'rain_gauge_daily_accumulation'],
 	airTemperature: ['air_temperature'],
 	rainTolerance: 2,
-	rainReference: 'rain_gauge_daily_accumulation'
+	rainReference: 'rain_gauge_daily_accumulation',
+	uv: ['uv'],
+	soilMoisture: ['soil_moisture']
 };
 
 const at = (observedAt: string, values: Record<string, number | string>, deviceId = 'ws') => ({
@@ -75,8 +77,20 @@ describe('station core detail', () => {
 	it('gives each core reading its review state, sources and spread', () => {
 		const core = stationCore(records, '2026-10-20T07:00:00.000Z', parameters);
 		// Released through 07:00: the station's 06:00 total and the gauge's 07:00 one.
-		expect(core.rain).toEqual({ review: 'in_review', sources: 2, spread: 3 });
-		expect(core.temperature).toEqual({
+		expect(core.rain).toMatchObject({ review: 'in_review', sources: 2, spread: 3 });
+		// The gauge is the reference and comes first; 3 mm apart is past the 2 mm tolerance.
+		expect(core.rain.bySource.map((s) => [s.sourceId, s.value, s.reference])).toEqual([
+			['gauge', 6, true],
+			['ws', 3, false]
+		]);
+		expect(core.rain.week).toHaveLength(7);
+		expect(core.rain.week.at(-1)).toEqual({
+			day: '2026-10-20',
+			value: 6,
+			reference: true,
+			flagged: true
+		});
+		expect(core.temperature).toMatchObject({
 			review: 'in_review',
 			sources: 1,
 			spread: null,
@@ -91,10 +105,26 @@ describe('station core detail', () => {
 			low: 25,
 			high: 27
 		});
-		expect(stationCore(records, null, parameters).rain).toEqual({
+		expect(stationCore(records, null, parameters).rain).toMatchObject({
 			review: 'not_released',
 			sources: 0,
 			spread: null
 		});
+	});
+});
+
+describe('classroom charts', () => {
+	it('gives one point a day for 30 days, empty where nothing was read', () => {
+		const charts = stationCharts(records, '2026-10-21T00:00:00.000Z', parameters);
+		expect(charts.days).toHaveLength(30);
+		expect(charts.days.at(-1)).toBe('2026-10-20');
+		expect(charts.temperature.at(-1)).toEqual({ mean: 26, low: 25, high: 27 });
+		expect(charts.temperature[0]).toBeNull();
+		expect(charts.rain.at(-1)).toMatchObject({ value: 6, reference: true });
+		expect(charts.uv.every((v) => v === null)).toBe(true);
+	});
+
+	it('is empty before anything is released', () => {
+		expect(stationCharts(records, null, parameters).days).toEqual([]);
 	});
 });

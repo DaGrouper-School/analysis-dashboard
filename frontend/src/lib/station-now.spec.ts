@@ -4,6 +4,7 @@ import {
 	compassPoint,
 	formatCoordinates,
 	initials,
+	last24Hours,
 	nowTiles,
 	placeLabel,
 	timeAgo
@@ -78,5 +79,25 @@ describe('station now helpers (AP-43)', () => {
 		expect(tiles[0]).toMatchObject({ value: 3.2, unit: 'm/s', caption: 'From the east' });
 		expect(tiles[1]).toMatchObject({ parameterId: 'rain_b', value: 0, caption: 'No rain today' });
 		expect(tiles[2]).toMatchObject({ value: null, unit: 'hPa', caption: null, observedAt: null });
+	});
+});
+
+describe('last 24 hours', () => {
+	it('keeps the latest reading of each hour, oldest first, and leaves quiet hours empty', () => {
+		const at = (observedAt: string, value: number) => ({ observedAt, values: { t: value } });
+		const hours = last24Hours(
+			[
+				at('2026-10-20T06:00:00.000Z', 20),
+				at('2026-10-20T05:10:00.000Z', 18),
+				at('2026-10-20T04:50:00.000Z', 19),
+				at('2026-10-19T06:00:00.000Z', 5)
+			],
+			['t'],
+			'2026-10-20T06:00:00.000Z'
+		);
+		expect(hours).toHaveLength(24);
+		expect(hours.at(-1)).toBe(20);
+		expect(hours.at(-2)).toBe(19);
+		expect(hours[0]).toBeNull();
 	});
 });

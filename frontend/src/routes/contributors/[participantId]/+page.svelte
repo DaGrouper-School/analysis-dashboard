@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
 	import { resolve } from '$app/paths';
 	import PublicShell from '#lib/components/PublicShell.svelte';
 	import SampleDataBadge from '#lib/components/SampleDataBadge.svelte';
@@ -21,14 +22,12 @@
 <svelte:head><title>{title} · {data.content.hero.eyebrow}</title></svelte:head>
 
 <PublicShell content={data.content} user={data.user}>
-	<nav aria-label="Breadcrumb" class="text-sm text-muted">
-		<a class="hover:text-ink" href={resolve('/global-classrooms')}
-			>{directory?.label ?? 'Global Classrooms'}</a
-		>
-		<span aria-hidden="true" class="px-1">›</span><span class="text-ink" aria-current="page"
-			>{title}</span
-		>
-	</nav>
+	<Breadcrumbs
+		items={[
+			{ label: directory?.label ?? 'Global Classrooms', href: resolve('/global-classrooms') },
+			{ label: title }
+		]}
+	/>
 
 	<header class="mt-4">
 		<div class="flex flex-wrap items-center gap-3">
