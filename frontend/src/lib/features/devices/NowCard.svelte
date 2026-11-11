@@ -11,7 +11,7 @@
 	 * "What's happening now?" (AP-43): a few current values as large tiles with a plain line
 	 * each, and when the newest of them was measured. Missing data reads "no data", never zero.
 	 * With `onexplain`, each value has an info button for how it is calculated (AP-07). Values
-	 * roll to their new digits when they change, and each says which way it went (AP-07).
+	 * roll in from zero whenever they load or change, and each says which way it went (AP-07).
 	 */
 	let {
 		tiles,
@@ -103,7 +103,8 @@
 				tiles.length > 2 ? 'flex-1 auto-rows-fr' : 'content-start'
 			]}
 		>
-			<!-- Keyed by position, so picking another device rolls the numbers in place. -->
+			<!-- Keyed by position, so the tiles stay in place when another device is picked; each value
+			     rolls in again from zero, even when it reads the same as the last device's. -->
 			{#each tiles as tile, i (i)}
 				<li
 					class={[
@@ -143,8 +144,8 @@
 						<p class="mt-3 text-sm text-muted italic">no data</p>
 					{:else}
 						<p class="mt-3 font-mono text-3xl leading-none text-ink tabular-nums">
-							<RollingNumber value={bare(tile)} /><span class="ml-1 text-sm text-muted"
-								>{tile.unit}</span
+							{#key tile}<RollingNumber value={bare(tile)} />{/key}<span
+								class="ml-1 text-sm text-muted">{tile.unit}</span
 							>
 						</p>
 					{/if}
