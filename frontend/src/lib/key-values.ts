@@ -5,6 +5,8 @@ interface KeyParameter {
 	label: string;
 	/** Used when the parameter registry has no entry for it. */
 	unit?: string;
+	/** A registry icon name for its tile; the device type's icon when there is none. */
+	icon?: string;
 }
 
 /**
@@ -14,23 +16,23 @@ interface KeyParameter {
  */
 export const KEY_PARAMETERS: Partial<Record<DeviceType, KeyParameter[]>> = {
 	weather_station: [
-		{ id: 'air_temperature', label: 'Temperature' },
-		{ id: 'wind_avg', label: 'Wind' },
-		{ id: 'precip_accum_local_day', label: 'Rain today' },
-		{ id: 'uv', label: 'UV index' }
+		{ id: 'air_temperature', label: 'Temperature', icon: 'thermometer' },
+		{ id: 'wind_avg', label: 'Wind', icon: 'wind' },
+		{ id: 'precip_accum_local_day', label: 'Rain today', icon: 'rain' },
+		{ id: 'uv', label: 'UV index', icon: 'sun' }
 	],
-	rain_gauge: [{ id: 'rain_gauge_daily_accumulation', label: 'Rain today' }],
+	rain_gauge: [{ id: 'rain_gauge_daily_accumulation', label: 'Rain today', icon: 'rain' }],
 	soil_sensor: [
-		{ id: 'soil_moisture', label: 'Soil moisture', unit: '%' },
-		{ id: 'soil_temperature', label: 'Soil temperature', unit: '°C' }
+		{ id: 'soil_moisture', label: 'Soil moisture', unit: '%', icon: 'droplet' },
+		{ id: 'soil_temperature', label: 'Soil temperature', unit: '°C', icon: 'thermometer' }
 	],
 	water_probe: [
-		{ id: 'water_temperature', label: 'Water temperature', unit: '°C' },
-		{ id: 'water_ph', label: 'pH' }
+		{ id: 'water_temperature', label: 'Water temperature', unit: '°C', icon: 'thermometer' },
+		{ id: 'water_ph', label: 'pH', icon: 'water' }
 	],
 	air_quality_sensor: [
-		{ id: 'pm2_5', label: 'PM2.5', unit: 'µg/m³' },
-		{ id: 'pm10', label: 'PM10', unit: 'µg/m³' }
+		{ id: 'pm2_5', label: 'PM2.5', unit: 'µg/m³', icon: 'particles' },
+		{ id: 'pm10', label: 'PM10', unit: 'µg/m³', icon: 'particles' }
 	],
 	other: []
 };
@@ -41,6 +43,7 @@ export interface KeyValue {
 	unit: string;
 	valueType: ValueType;
 	value: number | string;
+	icon?: string;
 }
 
 // The browser's own language and time zone.
@@ -85,7 +88,8 @@ export function keyValues(
 		label: k.label,
 		unit: parameters.get(k.id)?.unit ?? k.unit ?? '',
 		valueType: parameters.get(k.id)?.valueType ?? 'number',
-		value: values[k.id]
+		value: values[k.id],
+		icon: k.icon
 	}));
 }
 

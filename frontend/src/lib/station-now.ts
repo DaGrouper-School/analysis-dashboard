@@ -5,7 +5,7 @@ import type {
 	Parameter,
 	PublicValue
 } from '#lib/domain/types.ts';
-import { formatValue } from '#lib/key-values.ts';
+import { formatValue, type KeyValue } from '#lib/key-values.ts';
 
 /** The 16 compass points, clockwise from north, in words. */
 const POINTS = [
@@ -153,6 +153,29 @@ export function last24Hours(
 		if (!hours[i] || at > hours[i]!.at) hours[i] = { at, value };
 	}
 	return hours.map((h) => h?.value ?? null);
+}
+
+/**
+ * "What's happening now?" tiles for one device (AP-45): its key values from its newest reading,
+ * each with its last 24 hours. `readings` are the device's own, newest first.
+ */
+export function readingTiles(
+	readings: { observedAt: string; values: Record<string, unknown> }[],
+	values: KeyValue[],
+	icon: string
+): NowTile[] {
+	const at = readings[0]?.observedAt ?? null;
+	return values.map((v) => ({
+		id: v.id,
+		label: v.label,
+		icon: v.icon ?? icon,
+		parameterId: v.id,
+		value: v.value ?? null,
+		unit: v.unit,
+		caption: null,
+		observedAt: at,
+		last24Hours: at && typeof v.value === 'number' ? last24Hours(readings, [v.id], at) : []
+	}));
 }
 
 /** How long ago, in plain words: "5 mins ago", "3 days ago". */

@@ -32,9 +32,17 @@ describe('key values per sensor type', () => {
 	it('shows soil values for a soil sensor, and nothing about rain', () => {
 		const values = { soil_moisture: 31, soil_temperature: 18.4, precip_accum_local_day: 2 };
 		expect(keyValues('soil_sensor', values, parameters)).toEqual([
-			{ id: 'soil_moisture', label: 'Soil moisture', unit: '%', valueType: 'number', value: 31 },
+			{
+				id: 'soil_moisture',
+				label: 'Soil moisture',
+				unit: '%',
+				valueType: 'number',
+				value: 31,
+				icon: 'droplet'
+			},
 			{
 				id: 'soil_temperature',
+				icon: 'thermometer',
 				label: 'Soil temperature',
 				unit: '°C',
 				valueType: 'number',

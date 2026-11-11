@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { sectionQuery } from '#lib/sensor-selection.ts';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { InvitationPreview } from '#lib/domain/types.ts';
@@ -17,7 +18,8 @@
 		try {
 			const classroom = await services.classrooms.acceptInvitation(token);
 			await invalidateAll();
-			await goto(resolve('/(app)/classrooms/[id]', { id: classroom.id }));
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
+			await goto(resolve('/(app)/dashboard') + sectionQuery(classroom.id, 'people'));
 		} catch (e) {
 			error = errorMessage(e);
 		} finally {

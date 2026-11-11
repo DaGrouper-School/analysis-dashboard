@@ -9,15 +9,22 @@
 	/**
 	 * "What's happening now?" (AP-43): a few current values as large tiles with a plain line
 	 * each, and when the newest of them was measured. Missing data reads "no data", never zero.
+	 * With `onexplain`, each value has an info button for how it is calculated (AP-07).
 	 */
 	let {
 		tiles,
 		actions,
+		controls,
+		onexplain,
 		class: className = ''
 	}: {
 		tiles: NowTile[];
 		/** Buttons under the tiles, such as "View domains". */
 		actions?: Snippet;
+		/** Beside the heading, such as the device picker. */
+		controls?: Snippet;
+		/** Opens what a value means and how it is calculated. */
+		onexplain?: (parameterId: string) => void;
 		class?: string;
 	} = $props();
 
@@ -37,7 +44,10 @@
 </script>
 
 <section class={['card flex flex-col', className]} aria-labelledby="now-heading">
-	<h2 id="now-heading" class="text-xl font-medium">What's happening now?</h2>
+	<div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+		<h2 id="now-heading" class="text-xl font-medium">What's happening now?</h2>
+		{@render controls?.()}
+	</div>
 	<p class="text-xs text-muted">
 		{#if latest}
 			Last update
@@ -51,12 +61,22 @@
 		{/if}
 	</p>
 
-	<ul class="mt-5 grid grid-cols-2 gap-3">
+	<ul class="mt-5 grid grid-cols-2 gap-3 [&>:last-child:nth-child(odd)]:col-span-2">
 		{#each tiles as tile (tile.id)}
 			<li class="flex flex-col rounded-md border border-line bg-raised p-3.5">
 				<p class="flex items-center gap-2 text-sm">
-					<Icon name={tile.icon} class="size-4 text-teal" />
-					{tile.label}
+					<Icon name={tile.icon} class="size-4 shrink-0 text-teal" />
+					<span class="min-w-0 flex-1 leading-tight">{tile.label}</span>
+					{#if onexplain && tile.parameterId}
+						{@const id = tile.parameterId}
+						<button
+							type="button"
+							class="-m-1.5 grid size-7 shrink-0 place-items-center rounded-full text-muted hover:text-ink focus-visible:ring-2 focus-visible:ring-teal focus-visible:outline-none"
+							aria-label="What {tile.label.toLowerCase()} means and how it is calculated"
+							aria-haspopup="dialog"
+							onclick={() => onexplain(id)}><Icon name="info" class="size-4" /></button
+						>
+					{/if}
 				</p>
 				{#if tile.value === null}
 					<p class="mt-3 text-sm text-muted italic">no data</p>

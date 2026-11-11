@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { sectionQuery } from '#lib/sensor-selection.ts';
 	import { resolve } from '$app/paths';
 	import { HOST_STATUS_LABELS } from '#lib/domain/hosting.ts';
 	import type { HostApplication } from '#lib/domain/types.ts';
@@ -100,9 +101,13 @@
 							onclick={() => decide(a.id, false)}>Decline</button
 						>
 					{:else if a.status === 'accepted' && a.classroomId}
-						<a class="link text-sm" href={resolve('/(app)/classrooms/[id]', { id: a.classroomId })}
+						<!-- eslint-disable svelte/no-navigation-without-resolve -->
+						<a
+							class="link text-sm"
+							href={resolve('/(app)/dashboard') + sectionQuery(a.classroomId, 'people')}
 							>Open its classroom</a
 						>
+						<!-- eslint-enable svelte/no-navigation-without-resolve -->
 					{:else if a.status === 'accepted'}
 						<!-- eslint-disable svelte/no-navigation-without-resolve -->
 						<a

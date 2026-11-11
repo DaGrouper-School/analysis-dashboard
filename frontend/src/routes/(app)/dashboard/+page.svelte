@@ -3,7 +3,11 @@
 	import { resolve } from '$app/paths';
 	import { navigating } from '$app/state';
 	import { domainOf } from '#lib/domains.ts';
+	import CalculationPanel from '#lib/components/CalculationPanel.svelte';
 	import ClassroomOverview, { type ClassroomTab } from '#lib/components/ClassroomOverview.svelte';
+	import ClassroomLabs from '#lib/components/ClassroomLabs.svelte';
+	import ClassroomPeople from '#lib/components/ClassroomPeople.svelte';
+	import ClassroomSettings from '#lib/components/ClassroomSettings.svelte';
 	import CompletenessCard from '#lib/components/CompletenessCard.svelte';
 	import DomainBrowser from '#lib/components/DomainBrowser.svelte';
 	import type { GlobeMarker } from '#lib/components/Globe.svelte';
@@ -11,7 +15,8 @@
 	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
 	import SyncModal from '#lib/components/SyncModal.svelte';
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
-	import { formatValue, keySummary } from '#lib/key-values.ts';
+	import { formatValue, keySummary, keyValues } from '#lib/key-values.ts';
+	import { readingTiles } from '#lib/station-now.ts';
 	import {
 		CLASSROOM_ROLE_LABELS,
 		deviceTypeColor,
@@ -54,7 +59,15 @@
 	}
 
 	// ---- The section tabs (AP-45) ----------------------------------------------------------
-	type Section = 'alerts' | 'domains' | 'devices' | 'labs' | 'records' | 'complete';
+	type Section =
+		'alerts' | 'domains' | 'devices' | 'labs' | 'records' | 'complete' | 'people' | 'settings';
+	const permissions = $derived(data.detail?.permissions);
+	// People for whoever manages members, invites or consent; Settings for whoever edits.
+	const managesPeople = $derived(
+		!!permissions &&
+			(permissions.manageMembers || permissions.manageConsent || permissions.invite.length > 0)
+	);
+	const managesSettings = $derived(!!permissions && (permissions.edit || permissions.viewCode));
 	let active = $state<Section>();
 	const alertCount = $derived(data.alerts.length + data.waitingForConsent.length);
 	const sections = $derived<TabItem<Section>[]>(
@@ -76,7 +89,20 @@
 					{ id: 'devices', label: 'Devices', icon: 'station', count: data.devices.length },
 					{ id: 'labs', label: 'Labs', icon: 'flask', count: data.labs.length },
 					{ id: 'records', label: 'Records', icon: 'clipboard', count: data.records.length },
-					{ id: 'complete', label: 'Completeness', icon: 'check' }
+					{ id: 'complete', label: 'Completeness', icon: 'check' },
+					...(managesPeople
+						? [
+								{
+									id: 'people' as const,
+									label: 'People',
+									icon: 'users',
+									count: data.detail?.members.length ?? 0
+								}
+							]
+						: []),
+					...(managesSettings
+						? [{ id: 'settings' as const, label: 'Settings', icon: 'sliders' }]
+						: [])
 				]
 	);
 	let sectionsEl = $state<HTMLElement>();
@@ -118,6 +144,24 @@
 			''
 	);
 	const role = $derived(data.classrooms.find((c) => c.id === pendingId)?.myRole ?? null);
+
+	// ---- What's happening now: the picked device's values, as it used to be (AP-45) --------
+	const now = $derived.by(() => {
+		const latest = data.readings[0];
+		if (visiting || !device || !latest) return undefined;
+		return readingTiles(
+			data.readings,
+			keyValues(device.type, latest.values, paramsById),
+			deviceTypeIcon(data.deviceTypes, device.type)
+		);
+	});
+	// "How is this calculated?" (AP-07) behind each value's info icon.
+	let calculating = $state(false);
+	let calculationId = $state('');
+	function explain(id: string) {
+		calculationId = id;
+		calculating = true;
+	}
 
 	// ---- Devices ---------------------------------------------------------------------------
 	let syncing = $state(false);
@@ -161,6 +205,9 @@
 		tabsLabel="Your classrooms"
 		{pendingId}
 		{markers}
+		charts={false}
+		{now}
+		onexplain={explain}
 		onpick={(id) => choose(id, undefined, active)}
 	>
 		{#snippet eyebrow()}
@@ -194,12 +241,23 @@
 				><span class="size-2 rounded-full bg-muted"></span>Public data only</span
 			>
 		{/snippet}
-		{#snippet nowActions()}
-			{#if data.canRecord && !visiting}
-				<a class="btn btn-accent flex-1 rounded-full" href={resolve('/(app)/observe')}
-					><Icon name="plus" class="size-4" /> Record</a
-				>
+		{#snippet nowControls()}
+			{#if classroom && data.devices.length}
+				<label class="flex items-center gap-2 text-xs text-muted">
+					<span class="sr-only sm:not-sr-only">Device</span>
+					<select
+						class="input w-auto max-w-60 py-1.5 pr-9 text-sm"
+						value={device?.id ?? ''}
+						onchange={(e) => choose(classroom.id, e.currentTarget.value)}
+					>
+						{#each data.devices as option (option.id)}
+							<option value={option.id}>{option.name}</option>
+						{/each}
+					</select>
+				</label>
 			{/if}
+		{/snippet}
+		{#snippet nowActions()}
 			<button
 				type="button"
 				class="btn btn-ghost flex-1 rounded-full"
@@ -208,9 +266,10 @@
 		{/snippet}
 		{#snippet institutionActions()}
 			{#if classroom && role === 'institution_head'}
-				<a
+				<button
+					type="button"
 					class="btn btn-ghost flex-1 rounded-full"
-					href={resolve('/(app)/classrooms/[id]', { id: classroom.id })}>Edit overview</a
+					onclick={() => openSection('settings')}>Edit overview</button
 				>
 			{/if}
 		{/snippet}
@@ -273,13 +332,9 @@
 											: '.'}
 									</p>
 								</div>
-								<!-- eslint-disable svelte/no-navigation-without-resolve -->
-								<a
-									class="btn btn-ghost"
-									href={`${resolve('/(app)/classrooms/[id]', { id: station.classroom.id })}?tab=consent`}
-									>Record paper consent</a
+								<button type="button" class="btn btn-ghost" onclick={() => openSection('people')}
+									>Record paper consent</button
 								>
-								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 							</li>
 						{/each}
 					</ul>
@@ -365,28 +420,14 @@
 						'Labs',
 						`${station.classroom.name}'s labs, with their devices and site profile.`
 					)}
-					<ul class="mt-5 grid gap-3 sm:grid-cols-2">
-						{#each data.labs as lab (lab.id)}
-							{@const count = data.devices.filter((d) => d.labId === lab.id).length}
-							<li>
-								<a
-									class="card block h-full p-5 transition hover:border-line-strong"
-									href={resolve('/(app)/labs/[labId]', { labId: lab.id })}
-								>
-									<Icon name="flask" class="size-6 text-teal" />
-									<p class="mt-3 font-medium text-ink">{lab.name}</p>
-									<p class="text-sm text-muted">
-										{lab.placeName}, {lab.country} · {count} device{count === 1 ? '' : 's'}
-									</p>
-									{#if lab.siteProfile?.description}
-										<p class="mt-2 text-sm">{lab.siteProfile.description}</p>
-									{/if}
-								</a>
-							</li>
-						{:else}
-							<li class="text-muted">No labs yet.</li>
-						{/each}
-					</ul>
+					<div class="mt-5">
+						<ClassroomLabs
+							classroomId={station.classroom.id}
+							labs={data.labs}
+							devices={data.devices}
+							canAdd={!!permissions?.invite.length}
+						/>
+					</div>
 				{:else if active === 'records'}
 					<div class="flex flex-wrap items-end justify-between gap-3">
 						<div>
@@ -448,6 +489,17 @@
 					{:else}
 						<p class="mt-4 text-muted">This classroom has no research protocol yet.</p>
 					{/if}
+				{:else if active === 'people' && data.detail}
+					{@render panelHead(
+						'People',
+						`Who is in ${station.classroom.name}, who is invited, and guardian consent for members under 18.`
+					)}
+					<div class="mt-5">
+						<ClassroomPeople detail={data.detail} consent={data.consent} userId={data.user.id} />
+					</div>
+				{:else if active === 'settings' && data.detail}
+					{@render panelHead('Settings', `${station.classroom.name}'s name, institution and code.`)}
+					<div class="mt-5"><ClassroomSettings detail={data.detail} /></div>
 				{/if}
 			</VerticalTabs>
 		</section>
@@ -469,3 +521,9 @@
 		{/key}
 	{/if}
 {/if}
+
+<CalculationPanel
+	bind:open={calculating}
+	parameterId={calculationId}
+	onpick={(id) => (calculationId = id)}
+/>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { sectionQuery } from '#lib/sensor-selection.ts';
 	import ContributorId from '#lib/components/ContributorId.svelte';
 	import { invalidate } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -96,10 +97,12 @@
 
 <svelte:head><title>{lab.name} · DaGrouper Analysis</title></svelte:head>
 
+<!-- eslint-disable svelte/no-navigation-without-resolve -->
 <a
-	href={resolve('/(app)/classrooms/[id]', { id: lab.classroomId })}
+	href={resolve('/(app)/dashboard') + sectionQuery(lab.classroomId, 'labs')}
 	class="text-sm text-muted hover:text-ink">← {data.detail.classroomName}</a
 >
+<!-- eslint-enable svelte/no-navigation-without-resolve -->
 <div class="mt-4">
 	{#if data.onboarding}<SetupSteps current={3} />{/if}
 	<div class="flex flex-wrap items-end justify-between gap-4">
@@ -143,9 +146,13 @@
 				{#if justAdded}
 					<p class="mt-3 rounded-md bg-lime/25 p-3 text-sm" role="status">
 						{justAdded} is added. Add another, or
-						<a class="link" href={resolve('/(app)/classrooms/[id]', { id: lab.classroomId })}
+						<!-- eslint-disable svelte/no-navigation-without-resolve -->
+						<a
+							class="link"
+							href={resolve('/(app)/dashboard') + sectionQuery(lab.classroomId, 'labs')}
 							>finish setup</a
 						>.
+						<!-- eslint-enable svelte/no-navigation-without-resolve -->
 					</p>
 				{/if}
 				<ul class="mt-4 divide-y divide-line">

@@ -11,7 +11,8 @@ const RECORDS = 8;
  * alerts, domains, devices, labs, records and completeness as tabs. Sync follows the picked
  * device. Another classroom (`?classroom=` one the user is not in) shows its public data only.
  */
-export const load: PageLoad = async ({ url, parent }) => {
+export const load: PageLoad = async ({ url, parent, depends }) => {
+	depends('app:classroom');
 	const [{ deviceTypes }, selection, parameters, invitations] = await Promise.all([
 		parent(),
 		selectSensor(url),
@@ -27,7 +28,7 @@ export const load: PageLoad = async ({ url, parent }) => {
 			: null;
 	// Hand-entered devices and field observations are what people record; a station sends its own.
 	const manual = devices.filter((d) => deviceTypes.find((t) => t.id === d.type)?.manual);
-	const [readings, lab, labs, station, consent, records] = await Promise.all([
+	const [readings, lab, labs, station, consent, records, detail] = await Promise.all([
 		device ? services.labs.deviceReadings(device.id, 60) : [],
 		device ? services.labs.get(device.labId) : null,
 		classroom ? services.labs.listForClassroom(classroom.id) : [],
@@ -51,7 +52,9 @@ export const load: PageLoad = async ({ url, parent }) => {
 						.sort((a, b) => b.observedAt.localeCompare(a.observedAt))
 						.slice(0, RECORDS)
 				)
-			: []
+			: [],
+		// Members, invitations and settings for the People and Settings tabs.
+		classroom ? services.classrooms.get(classroom.id) : null
 	]);
 	return {
 		...selection,
@@ -68,6 +71,8 @@ export const load: PageLoad = async ({ url, parent }) => {
 		invitations,
 		labs,
 		station,
+		detail,
+		consent,
 		waitingForConsent: consent.filter((m) => m.status === 'pending'),
 		records
 	};

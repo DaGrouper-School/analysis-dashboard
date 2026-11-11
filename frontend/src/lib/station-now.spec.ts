@@ -7,6 +7,7 @@ import {
 	last24Hours,
 	nowTiles,
 	placeLabel,
+	readingTiles,
 	timeAgo
 } from './station-now.ts';
 
@@ -99,5 +100,34 @@ describe('last 24 hours', () => {
 		expect(hours.at(-1)).toBe(20);
 		expect(hours.at(-2)).toBe(19);
 		expect(hours[0]).toBeNull();
+	});
+});
+
+describe('one device now', () => {
+	it("shows the device's newest values, with its icon where a value has none", () => {
+		const readings = [
+			{ observedAt: '2026-10-20T06:00:00.000Z', values: { soil_moisture: 31, ph: 6.5 } },
+			{ observedAt: '2026-10-20T05:00:00.000Z', values: { soil_moisture: 30, ph: 6.4 } }
+		];
+		const tiles = readingTiles(
+			readings,
+			[
+				{
+					id: 'soil_moisture',
+					label: 'Soil moisture',
+					unit: '%',
+					valueType: 'number',
+					value: 31,
+					icon: 'droplet'
+				},
+				{ id: 'ph', label: 'pH', unit: '', valueType: 'number', value: 6.5 }
+			],
+			'soil'
+		);
+		expect(tiles.map((t) => [t.parameterId, t.icon, t.value, t.observedAt])).toEqual([
+			['soil_moisture', 'droplet', 31, '2026-10-20T06:00:00.000Z'],
+			['ph', 'soil', 6.5, '2026-10-20T06:00:00.000Z']
+		]);
+		expect(tiles[0].last24Hours.slice(-2)).toEqual([30, 31]);
 	});
 });

@@ -24,7 +24,7 @@
 	import InstitutionOverview from '#lib/components/InstitutionOverview.svelte';
 	import NowCard from '#lib/components/NowCard.svelte';
 	import StageBadge from '#lib/components/StageBadge.svelte';
-	import type { InstitutionOverview as InstitutionInfo } from '#lib/domain/types.ts';
+	import type { InstitutionOverview as InstitutionInfo, NowTile } from '#lib/domain/types.ts';
 
 	/**
 	 * A classroom at a glance (AP-43, AP-45), the same on its public page and on the dashboard:
@@ -45,8 +45,12 @@
 		tabsEnd,
 		globeLegend,
 		nowActions,
+		nowControls,
+		now,
+		onexplain,
 		institutionActions,
 		onpick,
+		charts = true,
 		children
 	}: {
 		station: PublicStation;
@@ -64,9 +68,17 @@
 		tabsEnd?: Snippet;
 		globeLegend?: Snippet;
 		nowActions?: Snippet;
+		/** Beside "What's happening now?", such as the dashboard's device picker. */
+		nowControls?: Snippet;
+		/** The tiles of one device, in place of the classroom's (the dashboard's picked device). */
+		now?: NowTile[];
+		/** Opens how a value is calculated; signed-in pages only. */
+		onexplain?: (parameterId: string) => void;
 		institutionActions?: Snippet;
 		/** A classroom picked on the globe. */
 		onpick?: (id: string) => void;
+		/** The charts under the core readings; the public page has them, the dashboard does not. */
+		charts?: boolean;
 		/** The rest of the page, under the charts; it shows the skeleton too. */
 		children?: Snippet;
 	} = $props();
@@ -180,7 +192,7 @@
 				: 'lg:grid-cols-2'
 		]}
 	>
-		<NowCard tiles={station.now} actions={nowActions} />
+		<NowCard tiles={now ?? station.now} actions={nowActions} controls={nowControls} {onexplain} />
 		{#if classroom.location}
 			<section
 				class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] sm:h-96 lg:h-full"
@@ -217,7 +229,7 @@
 	</div>
 
 	<CoreStrip class="mt-5" {station} />
-	<ClassroomCharts class="mt-12" {station} />
+	{#if charts}<ClassroomCharts class="mt-12" {station} />{/if}
 
 	{@render children?.()}
 </div>
