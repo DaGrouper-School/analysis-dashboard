@@ -92,8 +92,10 @@
 					{ domainIcons, fallback: which === 'tileParameterIds' }
 				)
 			: [];
+	// A device with no readings yet still has its own colour and shows empty states, never
+	// another source's values.
 	const own = $derived.by(() => {
-		if (visiting || !device || !data.readings.length) return undefined;
+		if (visiting || !device) return undefined;
 		const icon = deviceTypeIcon(data.deviceTypes, device.type);
 		return {
 			tiles: readingTiles(data.readings, registryValues('tileParameterIds'), icon),

@@ -1933,6 +1933,28 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /places/dial-codes:
+    get:
+      tags:
+        - Places
+      operationId: places.dialCodes
+      summary: Dial codes
+      description: |-
+        The countries a phone number can be from, pilot countries first.
+
+        The countries a phone number can be from, pilot countries first.
+
+        Access: public, no session needed.
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DialCode"
   /places/{placeId}:
     get:
       tags:
@@ -3499,6 +3521,23 @@ components:
         - color
         - values
       additionalProperties: false
+    DialCode:
+      type: object
+      properties:
+        code:
+          type: string
+          description: ISO 3166-1 alpha-2.
+        name:
+          type: string
+        dial:
+          type: string
+          description: With its plus, as in "+251".
+      required:
+        - code
+        - name
+        - dial
+      additionalProperties: false
+      description: A country's calling code, for phone numbers stored in E.164.
     DomainCompleteness:
       type: object
       properties:

@@ -1,4 +1,5 @@
 import type {
+	DialCode,
 	HostApplication,
 	HostApplicationInput,
 	HostApplicationReceipt,
@@ -133,6 +134,8 @@ export interface HostingService {
 export interface PlacesService {
 	autocomplete(query: string): Promise<PlaceSuggestion[]>;
 	getAddress(placeId: string): Promise<Address>;
+	/** The countries a phone number can be from, pilot countries first. */
+	dialCodes(): Promise<DialCode[]>;
 }
 
 /**
