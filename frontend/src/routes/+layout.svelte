@@ -1,11 +1,15 @@
 <script lang="ts">
 	import './layout.css';
 	import { invalidateAll, onNavigate } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import appleTouchIcon from '#lib/assets/apple-touch-icon.png';
 	import favicon from '#lib/assets/favicon.svg';
 	import faviconPng from '#lib/assets/favicon-32.png';
 	import { watchOtherTabs } from '#lib/data/mock-db.ts';
+	import { watchInstall } from '#lib/features/app/install.svelte.ts';
+	import UpdateToast from '#lib/features/app/UpdateToast.svelte';
 	import { isMockDataSource } from '#lib/services/index.ts';
+	import { theme } from '#lib/utils/theme.svelte.ts';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
@@ -13,6 +17,18 @@
 	// Every account in this browser shares the mock data: when another tab records a reading or
 	// changes a classroom, reload this page's data so it shows up here too.
 	$effect(() => (isMockDataSource ? watchOtherTabs(() => invalidateAll()) : undefined));
+
+	// The browser offers to install the app once, early: catch the offer on any page.
+	$effect(watchInstall);
+
+	// The installed app's title bar takes the page's canvas colour, and follows the theme toggle.
+	let themeColor = $state('');
+	$effect(() => {
+		void theme.current;
+		themeColor = getComputedStyle(document.documentElement)
+			.getPropertyValue('--color-canvas')
+			.trim();
+	});
 
 	// Crossfade between pages, and between sensors on the same page, instead of swapping the
 	// content in one frame. Browsers without view transitions, and people who ask for reduced
@@ -61,6 +77,13 @@
 	<link rel="icon" href={favicon} type="image/svg+xml" />
 	<link rel="icon" href={faviconPng} type="image/png" sizes="32x32" />
 	<link rel="apple-touch-icon" href={appleTouchIcon} />
+	<!-- Installable app: the manifest, title bar colour and the iPhone home screen app. -->
+	<link rel="manifest" href={resolve('/manifest.webmanifest')} />
+	{#if themeColor}<meta name="theme-color" content={themeColor} />{/if}
+	<meta name="mobile-web-app-capable" content="yes" />
+	<meta name="apple-mobile-web-app-title" content="DaGrouper" />
 </svelte:head>
 
 {@render children()}
+
+<UpdateToast />

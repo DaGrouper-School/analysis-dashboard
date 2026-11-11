@@ -19,7 +19,12 @@ export default defineConfig({
 			// GitHub Pages serves 404.html for unknown paths, which boots the app on any route.
 			adapter: adapter({ fallback: '404.html' }),
 			// Set by the Pages workflow to the repo path, e.g. /analysis-dashboard.
-			paths: { base: (process.env.BASE_PATH ?? '') as '' | `/${string}` }
+			// Absolute asset paths: the offline app shell is one saved page served at every address,
+			// so its script links must not depend on the address it is shown at.
+			paths: { base: (process.env.BASE_PATH ?? '') as '' | `/${string}`, relative: false },
+			// Look for a newly published version every 10 minutes, so open and installed apps offer to
+			// reload (as well as when the tab comes back into view).
+			version: { pollInterval: 10 * 60_000 }
 		})
 	],
 	test: {

@@ -4,6 +4,7 @@
 	import AddressForm from '#lib/features/places/AddressForm.svelte';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import ClassroomList from '#lib/features/classroom/ClassroomList.svelte';
+	import InstallAppCard from '#lib/features/app/InstallAppCard.svelte';
 	import GuardianConsentCard from '#lib/features/consent/GuardianConsentCard.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
@@ -17,13 +18,20 @@
 	const user = $derived(data.user);
 
 	/** Each tab's icon, also drawn by its section title. */
-	const ICONS = { profile: 'user', address: 'pin', classrooms: 'users', demo: 'database' };
+	const ICONS = {
+		profile: 'user',
+		address: 'pin',
+		classrooms: 'users',
+		app: 'device',
+		demo: 'database'
+	};
 	type Tab = keyof typeof ICONS;
 	let tab = $state<Tab>();
 	const tabs: TabItem<Tab>[] = [
 		{ id: 'profile', label: 'Profile & contact', icon: ICONS.profile },
 		{ id: 'address', label: 'Address', icon: ICONS.address },
 		{ id: 'classrooms', label: 'Classrooms', icon: ICONS.classrooms },
+		{ id: 'app', label: 'App', icon: ICONS.app },
 		...(isMockDataSource ? [{ id: 'demo' as const, label: 'Demo data', icon: ICONS.demo }] : [])
 	];
 
@@ -234,6 +242,8 @@
 				head={user.role === 'institution_head'}
 				icon={ICONS.classrooms}
 			/>
+		{:else if tab === 'app'}
+			<InstallAppCard icon={ICONS.app} />
 		{:else}
 			<section
 				class="card flex max-w-2xl flex-wrap items-center justify-between gap-4 border-dashed"
