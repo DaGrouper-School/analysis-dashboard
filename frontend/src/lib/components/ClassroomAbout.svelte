@@ -1,86 +1,53 @@
 <script lang="ts">
-	import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
-	import InstitutionOverview from '#lib/components/InstitutionOverview.svelte';
-	import ContributorId from '#lib/components/ContributorId.svelte';
 	import { resolve } from '$app/paths';
+	import ContributorId from '#lib/components/ContributorId.svelte';
 	import Icon from '#lib/components/Icon.svelte';
-	import PublicShell from '#lib/components/PublicShell.svelte';
-	import SampleDataBadge from '#lib/components/SampleDataBadge.svelte';
-	import StageBadge from '#lib/components/StageBadge.svelte';
+	import type { PublicClassroomProfile } from '#lib/domain/types.ts';
 	import { CLASSROOM_ROLE_LABELS } from '#lib/labels.ts';
-	import type { PageProps } from './$types';
 
-	/** A classroom's public profile (AP-29): who they are, what they study, their kit. */
-	let { data }: PageProps = $props();
+	/**
+	 * A classroom's About (AP-29): who they are, what they study, their kit, their next sessions
+	 * and who contributes. The same on the public classroom page and the dashboard. `join` asks a
+	 * signed-out visitor to join.
+	 */
+	let {
+		about,
+		join = false,
+		class: className = ''
+	}: { about: PublicClassroomProfile; join?: boolean; class?: string } = $props();
 
-	const classroom = $derived(data.classroom);
-	const profile = $derived(data.profile);
-	const stage = $derived(data.content.stages.find((s) => s.id === classroom.stageId));
-	const directory = $derived(data.content.sections.find((s) => s.id === 'classrooms'));
-	const place = $derived([classroom.placeName, classroom.country].filter(Boolean).join(', '));
+	const profile = $derived(about.profile);
 	const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeStyle: 'short' });
 	const years = (n: number) => `${n} ${n === 1 ? 'year' : 'years'}`;
 </script>
 
-<svelte:head><title>{classroom.name} · {data.content.hero.eyebrow}</title></svelte:head>
-
-<PublicShell content={data.content} user={data.user}>
-	<Breadcrumbs
-		items={[
-			{ label: directory?.label ?? 'Global Classrooms', href: resolve('/global-classrooms') },
-			{ label: classroom.name }
-		]}
-	/>
-
-	<header class="mt-4 flex flex-wrap items-start justify-between gap-4">
-		<div class="max-w-3xl">
-			<div class="flex flex-wrap items-center gap-3">
-				<h1 class="font-display text-4xl">{classroom.name}</h1>
-				<SampleDataBadge show={data.content.sampleData} />
-			</div>
-			<p class="mt-2 flex flex-wrap items-center gap-2 text-muted">
-				{#if place}<span>{place}</span>{/if}
-				{#if profile.areaCode}<span class="chip font-mono">{profile.areaCode}</span>{/if}
-				<StageBadge {stage} stageId={classroom.stageId} />
-			</p>
-			<dl class="mt-3 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
-				{#if profile.language}
-					<dt class="text-muted">Language</dt>
-					<dd>{profile.language}</dd>
-				{/if}
-				{#if classroom.institutionName}
-					<dt class="text-muted">Host institution</dt>
-					<dd>{classroom.institutionName}</dd>
-				{/if}
-				{#if profile.ecosystems.length}
-					<dt class="text-muted">Ecosystems</dt>
-					<dd>{profile.ecosystems.join(', ')}</dd>
-				{/if}
-			</dl>
-			{#if profile.description}<p class="mt-4 text-ink">{profile.description}</p>{/if}
-		</div>
-		<div class="flex flex-wrap gap-2">
-			<a class="btn btn-primary" href={resolve('/explore/[classroom]', { classroom: classroom.id })}
-				>See this classroom's data</a
-			>
-			{#if !data.member}
-				<a class="btn btn-ghost" href="#join">{data.content.joinClassroom.title}</a>
+<div class={className}>
+	<section aria-labelledby="about-heading">
+		<h2 id="about-heading" class="font-display text-2xl">About {about.classroom.name}</h2>
+		{#if profile.description}<p class="mt-2 max-w-3xl text-ink">{profile.description}</p>{/if}
+		<dl class="mt-4 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
+			{#if about.classroom.institutionName}
+				<dt class="text-muted">Host institution</dt>
+				<dd>{about.classroom.institutionName}</dd>
 			{/if}
-			{#if data.canManage}
-				<a class="btn btn-ghost" href={resolve('/(app)/classrooms/[id]', { id: classroom.id })}
-					>Manage classroom</a
-				>
+			{#if profile.language}
+				<dt class="text-muted">Language</dt>
+				<dd>{profile.language}</dd>
 			{/if}
-		</div>
-	</header>
-
-	{#if data.institution}
-		<InstitutionOverview overview={data.institution} class="mt-8 max-w-xl" />
-	{/if}
+			{#if profile.ecosystems.length}
+				<dt class="text-muted">Ecosystems</dt>
+				<dd>{profile.ecosystems.join(', ')}</dd>
+			{/if}
+			{#if profile.areaCode}
+				<dt class="text-muted">Area code</dt>
+				<dd class="font-mono">{profile.areaCode}</dd>
+			{/if}
+		</dl>
+	</section>
 
 	<section class="mt-10" aria-labelledby="projects-heading">
 		<h2 id="projects-heading" class="font-display text-2xl">Research projects</h2>
-		{#each data.projects as project (project.id)}
+		{#each about.projects as project (project.id)}
 			<article class="card mt-4">
 				<h3 class="text-lg font-semibold">{project.title}</h3>
 				<p class="mt-1 text-muted">{project.question}</p>
@@ -111,14 +78,14 @@
 
 	<section class="mt-10" aria-labelledby="kit-heading">
 		<h2 id="kit-heading" class="font-display text-2xl">Lab in a Bag here</h2>
-		{#if data.custodianRole}
+		{#if about.custodianRole}
 			<p class="mt-1 text-sm text-muted">
-				Looked after by the {CLASSROOM_ROLE_LABELS[data.custodianRole].toLowerCase()}.
+				Looked after by the {CLASSROOM_ROLE_LABELS[about.custodianRole].toLowerCase()}.
 			</p>
 		{/if}
-		{#if data.kit.length}
+		{#if about.kit.length}
 			<ul class="mt-4 grid gap-4 md:grid-cols-2">
-				{#each data.kit as item (item.deviceType.id)}
+				{#each about.kit as item (item.deviceType.id)}
 					<li class="card">
 						<p class="flex items-center gap-2 font-semibold text-ink">
 							<Icon name={item.deviceType.icon} class="size-5 text-muted" />
@@ -142,9 +109,9 @@
 
 	<section class="mt-10" aria-labelledby="sessions-heading">
 		<h2 id="sessions-heading" class="font-display text-2xl">Next sessions</h2>
-		{#if data.sessions.length}
+		{#if about.sessions.length}
 			<ul class="mt-4 divide-y divide-line rounded-md border border-line">
-				{#each data.sessions as session (session.id)}
+				{#each about.sessions as session (session.id)}
 					<li class="p-4">
 						<p class="font-medium text-ink">{session.title}</p>
 						<p class="text-sm text-muted">
@@ -161,12 +128,12 @@
 
 	<section class="mt-10" aria-labelledby="people-heading">
 		<h2 id="people-heading" class="font-display text-2xl">Community scientists and contributors</h2>
-		{#if data.contributors.length}
+		{#if about.contributors.length}
 			<p class="mt-1 text-sm text-muted">
 				Every value is credited to a participant ID. Open one to check what they recorded.
 			</p>
 			<ul class="mt-3 flex flex-wrap gap-2">
-				{#each data.contributors as person (person.participantId)}
+				{#each about.contributors as person (person.participantId)}
 					<li class="chip gap-2">
 						{#if person.name}{person.name}{/if}
 						<ContributorId participantId={person.participantId} />
@@ -178,15 +145,13 @@
 		{/if}
 	</section>
 
-	{#if !data.member}
+	{#if join}
 		<section id="join" class="card mt-10 scroll-mt-24" aria-labelledby="join-heading">
-			<h2 id="join-heading" class="text-lg font-semibold">{data.content.joinClassroom.title}</h2>
-			<p class="mt-1 text-muted">{data.content.joinClassroom.body}</p>
-			{#if !data.user}
-				<a class="btn btn-primary mt-4" href={resolve('/(auth)/signup')}
-					>{data.content.joinClassroom.action}</a
-				>
-			{/if}
+			<h2 id="join-heading" class="text-lg font-semibold">{about.content.joinClassroom.title}</h2>
+			<p class="mt-1 text-muted">{about.content.joinClassroom.body}</p>
+			<a class="btn btn-primary mt-4" href={resolve('/(auth)/signup')}
+				>{about.content.joinClassroom.action}</a
+			>
 		</section>
 	{/if}
-</PublicShell>
+</div>

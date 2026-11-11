@@ -4,6 +4,7 @@
 	import AuthShell from '#lib/components/AuthShell.svelte';
 	import { CLASSROOM_ROLE_LABELS } from '#lib/labels.ts';
 	import { savePendingInvite } from '#lib/pending-invite.ts';
+	import { sensorQuery } from '#lib/sensor-selection.ts';
 	import { nextRoute } from '#lib/routing.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
@@ -24,7 +25,9 @@
 		try {
 			const classroom = await services.classrooms.acceptInvitation(params.token);
 			await invalidate('app:session');
-			await goto(resolve('/(app)/classrooms/[id]', { id: classroom.id }), { replaceState: true });
+			// The path is resolved; only the query is added to it.
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
+			await goto(resolve('/(app)/dashboard') + sensorQuery(classroom.id), { replaceState: true });
 		} catch (e) {
 			error = errorMessage(e);
 		} finally {

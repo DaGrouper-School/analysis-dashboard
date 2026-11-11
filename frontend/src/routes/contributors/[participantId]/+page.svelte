@@ -24,7 +24,7 @@
 <PublicShell content={data.content} user={data.user}>
 	<Breadcrumbs
 		items={[
-			{ label: directory?.label ?? 'Global Classrooms', href: resolve('/global-classrooms') },
+			{ label: directory?.label ?? 'Classrooms', href: resolve('/classrooms') },
 			{ label: title }
 		]}
 	/>
@@ -55,7 +55,7 @@
 				{#each data.classrooms as classroom (classroom.id)}
 					<a
 						class="chip hover:border-ink hover:text-ink"
-						href={resolve('/global-classrooms/[classroom]', { classroom: classroom.id })}
+						href={resolve('/classrooms/[classroom]', { classroom: classroom.id })}
 						>{classroom.name}</a
 					>
 				{/each}
@@ -89,7 +89,7 @@
 							<td class="px-4 py-2.5">
 								<a
 									class="link"
-									href={resolve('/explore/[classroom]/[parameter]', {
+									href={resolve('/classrooms/[classroom]/[parameter]', {
 										classroom: c.classroomId,
 										parameter: c.parameterId
 									})}>{c.parameterLabel}</a
@@ -101,7 +101,7 @@
 							<td class="px-4 py-2.5">
 								<a
 									class="hover:text-ink"
-									href={resolve('/explore/[classroom]', { classroom: c.classroomId })}
+									href={resolve('/classrooms/[classroom]', { classroom: c.classroomId })}
 									>{c.classroomName}</a
 								>
 							</td>

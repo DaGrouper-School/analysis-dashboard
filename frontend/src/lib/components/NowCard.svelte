@@ -13,12 +13,18 @@
 	 */
 	let {
 		tiles,
+		released = true,
+		accent,
 		actions,
 		controls,
 		onexplain,
 		class: className = ''
 	}: {
 		tiles: NowTile[];
+		/** Released data only (the public view); false for a device's own latest readings. */
+		released?: boolean;
+		/** Tints the card, its icons and lines, such as the picked device's registry colour. */
+		accent?: string;
 		/** Buttons under the tiles, such as "View domains". */
 		actions?: Snippet;
 		/** Beside the heading, such as the device picker. */
@@ -43,7 +49,11 @@
 	}
 </script>
 
-<section class={['card flex flex-col', className]} aria-labelledby="now-heading">
+<section
+	class={['card flex flex-col', accent && 'accent-panel', className]}
+	style:--accent={accent}
+	aria-labelledby="now-heading"
+>
 	<div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
 		<h2 id="now-heading" class="text-xl font-medium">What's happening now?</h2>
 		{@render controls?.()}
@@ -55,33 +65,42 @@
 				class="font-semibold text-text"
 				datetime={latest}
 				title={dateTime.format(new Date(latest))}>{timeAgo(latest)}</time
-			> · released data
+			>{released ? ' · released data' : ''}
 		{:else}
-			No released data yet
+			{released ? 'No released data yet' : 'No readings yet'}
 		{/if}
 	</p>
 
-	<ul class="mt-5 grid grid-cols-2 gap-3 [&>:last-child:nth-child(odd)]:col-span-2">
+	<!-- The tiles share the card's height evenly, with the same gap between them every way. -->
+	<ul
+		class="mt-5 grid flex-1 auto-rows-fr grid-cols-2 gap-3 [&>:last-child:nth-child(odd)]:col-span-2"
+	>
 		{#each tiles as tile (tile.id)}
-			<li class="flex flex-col rounded-md border border-line bg-raised p-3.5">
-				<p class="flex items-center gap-2 text-sm">
-					<Icon name={tile.icon} class="size-4 shrink-0 text-teal" />
-					<span class="min-w-0 flex-1 leading-tight">{tile.label}</span>
+			<li
+				class={[
+					'flex min-w-0 flex-col rounded-md border p-4',
+					accent ? 'accent-tile' : 'border-line bg-raised'
+				]}
+			>
+				<!-- The icon and the info button on one line, the label under them at full width. -->
+				<div class="flex items-center justify-between gap-2">
+					<Icon name={tile.icon} class="size-4 shrink-0 text-(--accent,var(--color-teal))" />
 					{#if onexplain && tile.parameterId}
 						{@const id = tile.parameterId}
 						<button
 							type="button"
-							class="-m-1.5 grid size-7 shrink-0 place-items-center rounded-full text-muted hover:text-ink focus-visible:ring-2 focus-visible:ring-teal focus-visible:outline-none"
+							class="grid size-5 shrink-0 place-items-center rounded-full text-muted hover:text-ink focus-visible:ring-2 focus-visible:ring-teal focus-visible:outline-none"
 							aria-label="What {tile.label.toLowerCase()} means and how it is calculated"
 							aria-haspopup="dialog"
 							onclick={() => onexplain(id)}><Icon name="info" class="size-4" /></button
 						>
 					{/if}
-				</p>
+				</div>
+				<p class="mt-2 text-sm leading-5">{tile.label}</p>
 				{#if tile.value === null}
 					<p class="mt-3 text-sm text-muted italic">no data</p>
 				{:else}
-					<p class="mt-2 font-mono text-3xl leading-none text-ink tabular-nums">
+					<p class="mt-3 font-mono text-3xl leading-none text-ink tabular-nums">
 						{bare(tile)}<span class="ml-1 text-sm text-muted">{tile.unit}</span>
 					</p>
 				{/if}
@@ -95,6 +114,6 @@
 	{/if}
 
 	{#if actions}
-		<div class="mt-auto flex flex-wrap gap-3 pt-5">{@render actions()}</div>
+		<div class="flex flex-wrap gap-3 pt-5">{@render actions()}</div>
 	{/if}
 </section>

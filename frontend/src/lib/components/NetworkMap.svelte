@@ -3,6 +3,7 @@
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import StageBadge from '#lib/components/StageBadge.svelte';
 	import type { ClassroomStage, PublicClassroom } from '#lib/domain/types.ts';
+	import { stageColor } from '#lib/labels.ts';
 
 	/**
 	 * Every Global Classroom on the globe, colored by stage, with a list beside it (AP-20, AP-21).
@@ -21,7 +22,7 @@
 				id: c.id,
 				lat: c.location!.lat,
 				lng: c.location!.lng,
-				color: byId.get(c.stageId)?.color ?? '#8e98a3',
+				color: stageColor(stages, c.stageId),
 				label: `${c.name} · ${byId.get(c.stageId)?.label ?? c.stageId}`
 			}))
 	);
@@ -59,7 +60,7 @@
 		{#if selected}
 			<a
 				class="btn btn-primary w-full"
-				href={resolve('/explore/[classroom]', { classroom: selected.id })}
+				href={resolve('/classrooms/[classroom]', { classroom: selected.id })}
 				>Open {selected.name}'s station</a
 			>
 		{/if}

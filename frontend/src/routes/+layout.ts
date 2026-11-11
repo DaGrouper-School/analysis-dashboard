@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import { resolve } from '$app/paths';
 import { services } from '#lib/services/index.ts';
-import { sensorQuery } from '#lib/sensor-selection.ts';
+import { sectionQuery, sensorQuery } from '#lib/sensor-selection.ts';
 import type { LayoutLoad } from './$types';
 
 // Front-end only for now: render in the browser so the mock layer can use localStorage.
@@ -14,15 +14,37 @@ export const prerender = false;
  * site stays public, and members always work in the app. Links people are sent (invitations,
  * consent), contributor pages, hosting and value pages stay where they are.
  */
-const IN_THE_APP = new Set(['/', '/explore', '/global-classrooms']);
-const CLASSROOM_PAGES = new Set(['/explore/[classroom]', '/global-classrooms/[classroom]']);
+const IN_THE_APP = new Set(['/', '/classrooms', '/explore', '/global-classrooms']);
+const CLASSROOM_PAGES = new Set([
+	'/classrooms/[classroom]',
+	'/explore/[classroom]',
+	'/global-classrooms/[classroom]'
+]);
+/**
+ * A classroom page's `?tab=` as a dashboard section. The members' classroom page, folded into
+ * the dashboard, had labs, members, invitations and consent tabs at the same address.
+ */
+const SECTION: Record<string, string> = {
+	about: 'about',
+	domains: 'domains',
+	complete: 'complete',
+	labs: 'labs',
+	members: 'people',
+	invitations: 'people',
+	consent: 'people'
+};
 
-export const load: LayoutLoad = async ({ depends, route, params }) => {
+export const load: LayoutLoad = async ({ depends, route, params, url }) => {
 	depends('app:session');
 	const user = await services.auth.getCurrentUser();
 	if (user && route.id && IN_THE_APP.has(route.id)) redirect(307, resolve('/(app)/dashboard'));
 	if (user && route.id && CLASSROOM_PAGES.has(route.id) && params.classroom) {
-		redirect(307, resolve('/(app)/dashboard') + sensorQuery(params.classroom));
+		const section = SECTION[url.searchParams.get('tab') ?? ''];
+		redirect(
+			307,
+			resolve('/(app)/dashboard') +
+				(section ? sectionQuery(params.classroom, section) : sensorQuery(params.classroom))
+		);
 	}
 	return { user };
 };

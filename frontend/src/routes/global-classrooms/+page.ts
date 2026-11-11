@@ -1,9 +1,8 @@
-import { readFilter } from '#lib/directory.ts';
-import { services } from '#lib/services/index.ts';
+import { redirect } from '@sveltejs/kit';
+import { resolve } from '$app/paths';
 import type { PageLoad } from './$types';
 
-/** The Global Classrooms directory (AP-28): every classroom by region. No sign-in. */
-export const load: PageLoad = async ({ parent, url }) => {
-	const [{ user }, home] = await Promise.all([parent(), services.publicSite.home()]);
-	return { user, ...home, filter: readFilter(url.searchParams) };
+/** Global Classrooms merged into the public Classrooms page (AP-45); old links keep working. */
+export const load: PageLoad = ({ url }) => {
+	redirect(308, resolve('/classrooms') + url.search);
 };

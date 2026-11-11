@@ -3,7 +3,7 @@
 	 * Recent values at a glance, oldest first: a domain card's last 7 days (AP-22), or a tile's
 	 * last 24 hours, filled and as wide as its box (`fill`, AP-43). A gap in the values breaks the
 	 * line instead of being drawn through, and the latest gets a dot. Decorative: the value is
-	 * always written next to it.
+	 * always written next to it. Drawn in `--accent` where a card sets one, else teal.
 	 */
 	let {
 		values,
@@ -43,7 +43,11 @@
 
 {#if numbers.length > 1}
 	<svg
-		class={['overflow-visible text-teal', fill ? 'block h-8 w-full' : 'shrink-0', className]}
+		class={[
+			'overflow-visible text-(--accent,var(--color-teal))',
+			fill ? 'block h-8 w-full' : 'shrink-0',
+			className
+		]}
 		width={fill ? undefined : W}
 		height={fill ? undefined : H}
 		viewBox="0 0 {W} {H}"

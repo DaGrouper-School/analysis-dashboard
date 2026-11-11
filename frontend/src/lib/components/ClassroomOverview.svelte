@@ -18,18 +18,18 @@
 
 <script lang="ts">
 	import { untrack, type Snippet } from 'svelte';
-	import ClassroomCharts from '#lib/components/ClassroomCharts.svelte';
 	import CoreStrip from '#lib/components/CoreStrip.svelte';
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import InstitutionOverview from '#lib/components/InstitutionOverview.svelte';
 	import NowCard from '#lib/components/NowCard.svelte';
 	import StageBadge from '#lib/components/StageBadge.svelte';
 	import type { InstitutionOverview as InstitutionInfo, NowTile } from '#lib/domain/types.ts';
+	import { stageColor } from '#lib/labels.ts';
 
 	/**
 	 * A classroom at a glance (AP-43, AP-45), the same on its public page and on the dashboard:
-	 * the header, the classroom tabs, what's happening now, the globe, the institution, the core
-	 * readings and the charts. Switching classrooms keeps the page: the underline slides, the
+	 * the header, the classroom tabs, what's happening now, the globe, the institution and the core
+	 * readings. Switching classrooms keeps the page: the underline slides, the
 	 * globe turns and the title changes at once, and the cards show a skeleton until the next
 	 * classroom's data arrives. What differs between the pages comes in as snippets.
 	 */
@@ -38,19 +38,18 @@
 		tabs,
 		tabsLabel,
 		pendingId,
-		markers,
+		markerLabel,
 		eyebrow,
 		badges,
 		headerActions,
 		tabsEnd,
-		globeLegend,
 		nowActions,
 		nowControls,
 		now,
+		accent,
 		onexplain,
 		institutionActions,
 		onpick,
-		charts = true,
 		children
 	}: {
 		station: PublicStation;
@@ -58,7 +57,8 @@
 		tabsLabel: string;
 		/** The classroom being opened, or the one shown when nothing is loading. */
 		pendingId: string;
-		markers: GlobeMarker[];
+		/** A classroom's name on the globe, such as "· yours" on the dashboard. */
+		markerLabel?: (place: ShownPlace) => string;
 		/** Above the title: a breadcrumb or a greeting, for the classroom being opened. */
 		eyebrow?: Snippet<[ShownPlace]>;
 		/** Beside the stage, such as the viewer's role. */
@@ -66,20 +66,19 @@
 		headerActions?: Snippet;
 		/** After the classroom tabs, such as "Join or start one". */
 		tabsEnd?: Snippet;
-		globeLegend?: Snippet;
 		nowActions?: Snippet;
 		/** Beside "What's happening now?", such as the dashboard's device picker. */
 		nowControls?: Snippet;
 		/** The tiles of one device, in place of the classroom's (the dashboard's picked device). */
 		now?: NowTile[];
+		/** Tints "What's happening now?", such as with the picked device's colour. */
+		accent?: string;
 		/** Opens how a value is calculated; signed-in pages only. */
 		onexplain?: (parameterId: string) => void;
 		institutionActions?: Snippet;
 		/** A classroom picked on the globe. */
 		onpick?: (id: string) => void;
-		/** The charts under the core readings; the public page has them, the dashboard does not. */
-		charts?: boolean;
-		/** The rest of the page, under the charts; it shows the skeleton too. */
+		/** The rest of the page, under the core readings; it shows the skeleton too. */
 		children?: Snippet;
 	} = $props();
 
@@ -126,6 +125,20 @@
 		const id = globeSelected;
 		if (id && id !== untrack(() => pendingId)) onpick?.(id);
 	});
+	// Every classroom with a place, in its stage's colour from the site's stages, with a legend.
+	const stages = $derived(station.content.stages);
+	const markers = $derived<GlobeMarker[]>(
+		station.places
+			.filter((p) => p.location)
+			.map((p) => ({
+				id: p.id,
+				lat: p.location!.lat,
+				lng: p.location!.lng,
+				color: stageColor(stages, p.stageId),
+				label: markerLabel?.(p) ?? p.name
+			}))
+	);
+	const legend = $derived(stages.filter((s) => station.places.some((p) => p.stageId === s.id)));
 	const pill = $derived(markers.find((m) => m.id === globeSelected)?.label ?? shown.name);
 </script>
 
@@ -192,7 +205,14 @@
 				: 'lg:grid-cols-2'
 		]}
 	>
-		<NowCard tiles={now ?? station.now} actions={nowActions} controls={nowControls} {onexplain} />
+		<NowCard
+			tiles={now ?? station.now}
+			released={!now}
+			{accent}
+			actions={nowActions}
+			controls={nowControls}
+			{onexplain}
+		/>
 		{#if classroom.location}
 			<section
 				class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] sm:h-96 lg:h-full"
@@ -206,13 +226,18 @@
 						ariaLabel="Globe of classrooms, turned to {shown.name}"
 					/>
 				</div>
-				{#if globeLegend}
-					<div
+				{#if legend.length}
+					<ul
 						class="pointer-events-none absolute top-4 left-4 flex flex-wrap gap-3 text-xs text-text"
-						aria-hidden="true"
+						aria-label="Stages"
 					>
-						{@render globeLegend()}
-					</div>
+						{#each legend as stage (stage.id)}
+							<li class="flex items-center gap-1.5">
+								<span class="size-2.5 rounded-full" style:background-color={stage.color}></span>
+								{stage.label}
+							</li>
+						{/each}
+					</ul>
 				{/if}
 				<span
 					class="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-line-strong bg-surface px-3 py-1 text-xs whitespace-nowrap text-ink"
@@ -229,7 +254,6 @@
 	</div>
 
 	<CoreStrip class="mt-5" {station} />
-	{#if charts}<ClassroomCharts class="mt-12" {station} />{/if}
 
 	{@render children?.()}
 </div>

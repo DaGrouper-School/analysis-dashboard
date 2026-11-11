@@ -1,14 +1,8 @@
-import { error } from '@sveltejs/kit';
-import { services, ServiceError } from '#lib/services/index.ts';
+import { redirect } from '@sveltejs/kit';
+import { resolve } from '$app/paths';
 import type { PageLoad } from './$types';
 
-/** A classroom's public profile (AP-29). */
-export const load: PageLoad = async ({ params, parent }) => {
-	const { user } = await parent();
-	try {
-		return { user, ...(await services.publicSite.profile(params.classroom)) };
-	} catch (e) {
-		if (e instanceof ServiceError && e.code === 'not_found') error(404, e.message);
-		throw e;
-	}
+/** A classroom's profile, now the About tab of its public classroom page (AP-45). */
+export const load: PageLoad = ({ params }) => {
+	redirect(308, resolve('/classrooms/[classroom]', { classroom: params.classroom }) + '?tab=about');
 };

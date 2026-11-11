@@ -36,7 +36,7 @@
 	const parameter = $derived(data.parameter);
 	const chart = $derived(chartOf(parameter));
 	const unit = $derived(parameter.unit);
-	const explore = $derived(data.content.sections.find((s) => s.id === 'explore'));
+	const directory = $derived(data.content.sections.find((s) => s.id === 'classrooms'));
 	const learn = $derived(data.content.sections.find((s) => s.id === 'learn'));
 	const COLORS = ['var(--color-series-1)', 'var(--color-series-2)'];
 	const COMPARE_COLOR = 'var(--color-series-3)';
@@ -283,10 +283,10 @@
 					{ label: parameter.label }
 				]
 			: [
-					{ label: explore?.label ?? 'Explore data', href: resolve('/explore') },
+					{ label: directory?.label ?? 'Classrooms', href: resolve('/classrooms') },
 					{
 						label: data.classroom.name,
-						href: resolve('/explore/[classroom]', { classroom: data.classroom.id })
+						href: resolve('/classrooms/[classroom]', { classroom: data.classroom.id })
 					},
 					{ label: parameter.label }
 				]}

@@ -130,7 +130,8 @@
 		@apply text-sm font-medium text-muted;
 	}
 	/* A device's panel, tinted with its registry color (set --accent from deviceTypeColor):
-	   a tinted face, a stronger edge, and value tiles split by accent lines. */
+	   a tinted face and a stronger edge; its tiles are tinted more lightly. Without --accent,
+	   teal. */
 	.accent-panel {
 		border-color: color-mix(in oklab, var(--accent, var(--color-teal)) 55%, transparent);
 		background: color-mix(in oklab, var(--accent, var(--color-teal)) 12%, var(--color-canvas));
@@ -138,13 +139,12 @@
 			border-color 300ms ease,
 			background-color 300ms ease;
 	}
-	.accent-tiles {
-		border-color: color-mix(in oklab, var(--accent, var(--color-teal)) 30%, transparent);
-		background: color-mix(in oklab, var(--accent, var(--color-teal)) 30%, transparent);
-	}
 	.accent-tile {
-		background: color-mix(in oklab, var(--accent, var(--color-teal)) 12%, var(--color-canvas));
-		transition: background-color 300ms ease;
+		border-color: color-mix(in oklab, var(--accent, var(--color-teal)) 28%, var(--color-line));
+		background: color-mix(in oklab, var(--accent, var(--color-teal)) 7%, var(--color-raised));
+		transition:
+			border-color 300ms ease,
+			background-color 300ms ease;
 	}
 }
 

@@ -4,13 +4,13 @@
 	import { navigating } from '$app/state';
 	import { domainOf } from '#lib/domains.ts';
 	import CalculationPanel from '#lib/components/CalculationPanel.svelte';
+	import ClassroomAbout from '#lib/components/ClassroomAbout.svelte';
+	import ClassroomCompleteness from '#lib/components/ClassroomCompleteness.svelte';
 	import ClassroomOverview, { type ClassroomTab } from '#lib/components/ClassroomOverview.svelte';
 	import ClassroomLabs from '#lib/components/ClassroomLabs.svelte';
 	import ClassroomPeople from '#lib/components/ClassroomPeople.svelte';
 	import ClassroomSettings from '#lib/components/ClassroomSettings.svelte';
-	import CompletenessCard from '#lib/components/CompletenessCard.svelte';
 	import DomainBrowser from '#lib/components/DomainBrowser.svelte';
-	import type { GlobeMarker } from '#lib/components/Globe.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import PendingInvitations from '#lib/components/PendingInvitations.svelte';
 	import SyncModal from '#lib/components/SyncModal.svelte';
@@ -60,7 +60,15 @@
 
 	// ---- The section tabs (AP-45) ----------------------------------------------------------
 	type Section =
-		'alerts' | 'domains' | 'devices' | 'labs' | 'records' | 'complete' | 'people' | 'settings';
+		| 'alerts'
+		| 'domains'
+		| 'devices'
+		| 'labs'
+		| 'records'
+		| 'complete'
+		| 'about'
+		| 'people'
+		| 'settings';
 	const permissions = $derived(data.detail?.permissions);
 	// People for whoever manages members, invites or consent; Settings for whoever edits.
 	const managesPeople = $derived(
@@ -74,7 +82,8 @@
 		visiting
 			? [
 					{ id: 'domains', label: 'Domains', icon: 'layers', count: visiting.domains.length },
-					{ id: 'complete', label: 'Completeness', icon: 'check' }
+					{ id: 'complete', label: 'Completeness', icon: 'check' },
+					{ id: 'about', label: 'About', icon: 'info' }
 				]
 			: [
 					{
@@ -90,6 +99,7 @@
 					{ id: 'labs', label: 'Labs', icon: 'flask', count: data.labs.length },
 					{ id: 'records', label: 'Records', icon: 'clipboard', count: data.records.length },
 					{ id: 'complete', label: 'Completeness', icon: 'check' },
+					{ id: 'about', label: 'About', icon: 'info' },
 					...(managesPeople
 						? [
 								{
@@ -114,15 +124,8 @@
 
 	// ---- The shared overview ---------------------------------------------------------------
 	const mine = $derived(new Set(data.classrooms.map((c) => c.id)));
-	const markers = $derived<GlobeMarker[]>(
-		(station?.places ?? []).map((p) => ({
-			id: p.id,
-			lat: p.location!.lat,
-			lng: p.location!.lng,
-			color: mine.has(p.id) ? '#3cc04b' : '#8e98a3',
-			label: mine.has(p.id) ? `${p.name} · yours` : `${p.name} · public data only`
-		}))
-	);
+	const markerLabel = (p: { id: string; name: string }) =>
+		`${p.name} · ${mine.has(p.id) ? 'yours' : 'public data only'}`;
 	const tabs = $derived<ClassroomTab[]>([
 		...data.classrooms.map((c) => ({ id: c.id, label: c.name, href: dashboardHref(c.id) })),
 		...(visiting
@@ -173,6 +176,10 @@
 	function lastGps() {
 		return data.readings.find((r) => r.locationSource === 'device')?.location ?? null;
 	}
+	// The sensor shown can be synced here: a recorder, a lab to fall back on, not entered by hand.
+	const canSync = $derived(
+		!!classroom && !!device && data.canRecord && !!data.labLocation && !manual
+	);
 	const conditionOf = (id: string) => data.classroomConditions.find((c) => c.device.id === id);
 </script>
 
@@ -204,9 +211,9 @@
 		{tabs}
 		tabsLabel="Your classrooms"
 		{pendingId}
-		{markers}
-		charts={false}
+		{markerLabel}
 		{now}
+		accent={now && device ? deviceTypeColor(data.deviceTypes, device.type) : undefined}
 		onexplain={explain}
 		onpick={(id) => choose(id, undefined, active)}
 	>
@@ -233,14 +240,6 @@
 				><Icon name="plus" class="size-4" /> Join or start one</a
 			>
 		{/snippet}
-		{#snippet globeLegend()}
-			<span class="flex items-center gap-1.5"
-				><span class="size-2.5 rounded-full bg-lime"></span>Your classrooms</span
-			>
-			<span class="flex items-center gap-1.5"
-				><span class="size-2 rounded-full bg-muted"></span>Public data only</span
-			>
-		{/snippet}
 		{#snippet nowControls()}
 			{#if classroom && data.devices.length}
 				<label class="flex items-center gap-2 text-xs text-muted">
@@ -258,6 +257,15 @@
 			{/if}
 		{/snippet}
 		{#snippet nowActions()}
+			{#if canSync && device}
+				{@const id = device.id}
+				<button
+					type="button"
+					class="btn btn-primary w-full rounded-full"
+					aria-haspopup="dialog"
+					onclick={() => sync(id)}><Icon name="sync" class="size-4" /> Sync this device</button
+				>
+			{/if}
 			<button
 				type="button"
 				class="btn btn-ghost flex-1 rounded-full"
@@ -480,15 +488,9 @@
 						<p class="mt-4 text-muted">Nothing has been recorded by hand yet.</p>
 					{/if}
 				{:else if active === 'complete'}
-					{@render panelHead(
-						'How complete is this month?',
-						"Readings received this month, as a share of what the classroom's research protocol expects. Missing days stay empty; they are never filled in."
-					)}
-					{#if station.completeness}
-						<CompletenessCard class="mt-5" domains={station.completeness.domains} />
-					{:else}
-						<p class="mt-4 text-muted">This classroom has no research protocol yet.</p>
-					{/if}
+					<ClassroomCompleteness completeness={station.completeness} />
+				{:else if active === 'about' && data.about}
+					<ClassroomAbout about={data.about} />
 				{:else if active === 'people' && data.detail}
 					{@render panelHead(
 						'People',
@@ -505,7 +507,7 @@
 		</section>
 	</ClassroomOverview>
 
-	{#if classroom && device && data.canRecord && data.labLocation && !manual}
+	{#if canSync && classroom && device && data.labLocation}
 		<!-- Keyed by sensor, so a new pick never syncs to the sensor the user moved away from. -->
 		{#key device.id}
 			<SyncModal
@@ -516,6 +518,7 @@
 				labLocation={data.labLocation}
 				{lastGps}
 				parameters={data.parameters}
+				onsynced={() => invalidateAll()}
 				onclose={() => invalidateAll()}
 			/>
 		{/key}
