@@ -31,7 +31,10 @@
 	/**
 	 * The app's dropdown. It looks like our inputs, opens a list under (or over) itself, and on
 	 * phones rises from the bottom as a sheet. It is used like a native select: `bind:value`,
-	 * `onchange`, `id` for a `<label for>`, and `name` for a form. Choices with an empty value
+	 * `onchange`, and `name` for a form. `label` is shown above it, so a dropdown always says what
+	 * it picks; `labelHidden` keeps it for screen readers only, where the label already in view
+	 * names it (a unit beside its field, a row of a table). Or pass `id` and write your own
+	 * `<label for>`, as a form does. Choices with an empty value
 	 * ("All sources", "Leave blank") lead the list, set apart by a line. Long lists get a filter.
 	 */
 	let {
@@ -42,6 +45,7 @@
 		id,
 		name,
 		label,
+		labelHidden = false,
 		placeholder = 'Choose',
 		size = 'field',
 		align = 'start',
@@ -60,8 +64,10 @@
 		/** Goes on the button, so `<label for={id}>` names it. */
 		id?: string;
 		name?: string;
-		/** Names the select when no `<label>` does. */
+		/** Shown above the select, unless a `<label for={id}>` of the caller's names it. */
 		label?: string;
+		/** Keeps `label` for screen readers only, where something in view already names it. */
+		labelHidden?: boolean;
 		/** Shown while the value matches no option. */
 		placeholder?: string;
 		/** `field` for forms, `compact` (a pill) for toolbars, `mini` for a unit beside an input. */
@@ -254,6 +260,11 @@
 	data-size={size}
 	onfocusout={focusout}
 >
+	{#if label && !labelHidden}
+		<label class={size === 'field' ? 'label' : 'mb-1 block text-xs text-muted'} for={buttonId}
+			>{label}</label
+		>
+	{/if}
 	<button
 		bind:this={button}
 		id={buttonId}
@@ -262,7 +273,7 @@
 		aria-haspopup="listbox"
 		aria-expanded={open}
 		aria-controls="{uid}-list"
-		aria-label={label}
+		aria-label={labelHidden ? label : undefined}
 		aria-describedby={describedBy}
 		{disabled}
 		onclick={() => (open ? hide() : show())}

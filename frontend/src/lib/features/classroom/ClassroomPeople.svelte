@@ -70,9 +70,10 @@
 						{#if member.email}<p class="truncate text-sm text-muted">{member.email}</p>{/if}
 					</div>
 					{#if editable}
-						<label class="sr-only" for="role-{member.userId}">Role for {member.fullName}</label>
 						<Select
 							id="role-{member.userId}"
+							label="Role for {member.fullName}"
+							labelHidden
 							size="compact"
 							align="end"
 							options={toOptions(MEMBER_ROLES, CLASSROOM_ROLE_LABELS)}
