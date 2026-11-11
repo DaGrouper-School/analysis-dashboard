@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
+	import Select from '#lib/components/Select.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -45,17 +46,16 @@
 			{#if sheet.minors.length}
 				<div>
 					<label class="label" for="sheet-member">Name on the sheet</label>
-					<select
+					<Select
 						id="sheet-member"
-						class="input w-auto pr-9"
+						class="min-w-56"
+						options={[
+							{ value: '', label: 'Leave blank' },
+							...sheet.minors.map((m) => ({ value: m.userId, label: m.fullName }))
+						]}
 						value={minor?.userId ?? ''}
-						onchange={(e) => pick(e.currentTarget.value)}
-					>
-						<option value="">Leave blank</option>
-						{#each sheet.minors as m (m.userId)}
-							<option value={m.userId}>{m.fullName}</option>
-						{/each}
-					</select>
+						onchange={pick}
+					/>
 				</div>
 			{/if}
 			<button class="btn btn-primary" onclick={() => window.print()}

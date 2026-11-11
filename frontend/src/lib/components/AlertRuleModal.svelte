@@ -15,6 +15,7 @@
 		checkAlertRule
 	} from '#lib/domain/alerts.ts';
 	import Modal from '#lib/components/Modal.svelte';
+	import Select, { toOptions } from '#lib/components/Select.svelte';
 	import { rangeText, readEntries, unitsFor } from '#lib/observations.ts';
 	import { errorMessage, ServiceError } from '#lib/services/index.ts';
 
@@ -179,11 +180,11 @@
 		<div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
 			<div>
 				<label class="label" for="alert-direction">When the value is</label>
-				<select id="alert-direction" class="input" bind:value={direction}>
-					{#each ALERT_DIRECTIONS as option (option)}
-						<option value={option}>{DIRECTION_LABELS[option]}</option>
-					{/each}
-				</select>
+				<Select
+					id="alert-direction"
+					options={toOptions(ALERT_DIRECTIONS, DIRECTION_LABELS)}
+					bind:value={direction}
+				/>
 			</div>
 			<div>
 				<label class="label" for="alert-value">Threshold</label>
@@ -197,11 +198,13 @@
 			{#if unitsFor(parameter).length > 1}
 				<div>
 					<label class="label" for="alert-unit">Unit</label>
-					<select id="alert-unit" class="input w-auto pr-9" bind:value={unit}>
-						{#each unitsFor(parameter) as option (option)}
-							<option value={option}>{option}</option>
-						{/each}
-					</select>
+					<Select
+						id="alert-unit"
+						size="mini"
+						align="end"
+						options={toOptions(unitsFor(parameter))}
+						bind:value={unit}
+					/>
 				</div>
 			{:else if parameter.unit}
 				<p class="self-end pb-2.5 text-sm text-muted">{parameter.unit}</p>

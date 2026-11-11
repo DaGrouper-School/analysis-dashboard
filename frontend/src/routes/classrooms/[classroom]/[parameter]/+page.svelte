@@ -10,6 +10,7 @@
 	import Chart, { type ChartBars, type ChartLine } from '#lib/components/Chart.svelte';
 	import PublicShell from '#lib/components/PublicShell.svelte';
 	import SampleDataBadge from '#lib/components/SampleDataBadge.svelte';
+	import Select from '#lib/components/Select.svelte';
 	import type { PublicParameterPage, PublicParameterSeries } from '#lib/domain/types.ts';
 	import { FALLBACK_DOMAIN_ICON } from '#lib/icons.ts';
 	import { formatValue } from '#lib/key-values.ts';
@@ -384,16 +385,21 @@
 			</h2>
 			<div class="flex flex-wrap items-center gap-2">
 				{#if data.compare.length}
-					<select
-						class="input w-auto max-w-72 truncate py-1 pr-8 text-sm"
-						aria-label="Compare with another classroom"
+					<Select
+						size="compact"
+						align="end"
+						class="max-w-72"
+						label="Compare with another classroom"
+						options={[
+							{ value: '', label: 'Compare with…' },
+							...data.compare.map((c) => ({
+								value: c.id,
+								label: c.name,
+								hint: c.placeName || undefined
+							}))
+						]}
 						bind:value={compareId}
-					>
-						<option value="">Compare with…</option>
-						{#each data.compare as c (c.id)}
-							<option value={c.id}>{c.name}{c.placeName ? `, ${c.placeName}` : ''}</option>
-						{/each}
-					</select>
+					/>
 				{/if}
 				{#if chart}
 					<div
@@ -420,11 +426,11 @@
 		{#if !rain && data.series.length > 1}
 			<label class="mt-3 flex items-center gap-2 text-sm text-muted">
 				Source
-				<select class="input w-auto py-1" bind:value={sourceId}>
-					{#each data.series as s (s.source.id)}
-						<option value={s.source.id}>{sourceName(s)}</option>
-					{/each}
-				</select>
+				<Select
+					size="compact"
+					options={data.series.map((s) => ({ value: s.source.id, label: sourceName(s) }))}
+					bind:value={sourceId}
+				/>
 			</label>
 		{/if}
 		{#if legend.length}

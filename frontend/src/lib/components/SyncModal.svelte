@@ -11,10 +11,17 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import Modal from '#lib/components/Modal.svelte';
 	import PairingVisual, { type PairingState } from '#lib/components/PairingVisual.svelte';
+	import Select from '#lib/components/Select.svelte';
 	import StepTrack from '#lib/components/StepTrack.svelte';
 	import { formatPoint } from '#lib/geo.ts';
 	import { keySummary } from '#lib/key-values.ts';
-	import { deviceTypeColor, deviceTypeIcon, deviceTypeLabel, deviceTypeOf } from '#lib/labels.ts';
+	import {
+		deviceOptions,
+		deviceTypeColor,
+		deviceTypeIcon,
+		deviceTypeLabel,
+		deviceTypeOf
+	} from '#lib/labels.ts';
 	import { sampleValues } from '#lib/sample-readings.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
 
@@ -201,12 +208,12 @@
 			{#if phase === 'ready'}
 				{#if devices.length > 1}
 					<label class="label" for="sync-device">Sensor</label>
-					<select id="sync-device" class="input" bind:value={deviceId}>
-						<option value="" disabled>Choose a sensor</option>
-						{#each devices as d (d.id)}
-							<option value={d.id}>{d.name}</option>
-						{/each}
-					</select>
+					<Select
+						id="sync-device"
+						placeholder="Choose a sensor"
+						options={deviceOptions(devices, deviceTypes)}
+						bind:value={deviceId}
+					/>
 				{/if}
 				{#if device}
 					<p class={['text-sm text-muted', devices.length > 1 && 'mt-3']}>

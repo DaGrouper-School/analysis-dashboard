@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Icon from '#lib/components/Icon.svelte';
 	import LocationInput from '#lib/components/LocationInput.svelte';
+	import Select, { toOptions } from '#lib/components/Select.svelte';
 	import Wizard from '#lib/components/Wizard.svelte';
 	import type { CreateLabInput, SiteSetting } from '#lib/domain/types.ts';
 	import { validateLab } from '#lib/domain/validation.ts';
@@ -147,11 +148,14 @@
 				</h2>
 				<div>
 					<label class="label" for="setting">Setting</label>
-					<select id="setting" class="input" bind:value={setting}>
-						{#each Object.entries(SITE_SETTING_LABELS) as [value, label] (value)}
-							<option {value}>{label}</option>
-						{/each}
-					</select>
+					<Select
+						id="setting"
+						options={toOptions(
+							Object.keys(SITE_SETTING_LABELS) as SiteSetting[],
+							SITE_SETTING_LABELS
+						)}
+						bind:value={setting}
+					/>
 				</div>
 				<div>
 					<label class="label" for="description">Describe the site</label>

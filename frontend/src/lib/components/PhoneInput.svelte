@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import Select from '#lib/components/Select.svelte';
 
 	/** Pilot countries first; the number is stored in E.164. */
 	const COUNTRIES = [
@@ -40,18 +41,16 @@
 </script>
 
 <div class="flex gap-2">
-	<label class="sr-only" for="{id}-country">Country code</label>
-	<select
+	<Select
 		id="{id}-country"
-		class={['input w-36 shrink-0', error && 'input-error']}
+		label="Country code"
+		class="w-36 shrink-0"
+		options={COUNTRIES.map((c) => ({ value: c.dial, label: `${c.name} ${c.dial}` }))}
 		bind:value={dial}
 		onchange={sync}
+		error={Boolean(error)}
 		{disabled}
-	>
-		{#each COUNTRIES as country (country.code)}
-			<option value={country.dial}>{country.name} {country.dial}</option>
-		{/each}
-	</select>
+	/>
 	<input
 		{id}
 		class={['input', error && 'input-error']}

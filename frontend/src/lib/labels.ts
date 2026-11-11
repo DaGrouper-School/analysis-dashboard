@@ -5,6 +5,7 @@ import type {
 	DeviceTypeDefinition,
 	SiteSetting
 } from '#lib/domain/types.ts';
+import type { SelectOption } from '#lib/components/Select.svelte';
 import { FALLBACK_TYPE_ICON } from '#lib/icons.ts';
 
 export const CLASSROOM_ROLE_LABELS: Record<ClassroomRole, string> = {
@@ -72,4 +73,22 @@ export function deviceTypeIcon(types: DeviceTypeDefinition[], id: DeviceType) {
 /** Whether a type is entered by hand, with no sensor to pair or sync. */
 export function isManualType(types: DeviceTypeDefinition[], id: DeviceType) {
 	return types.find((t) => t.id === id)?.manual === true;
+}
+
+/**
+ * Devices as dropdown choices, each with its type's registry color and icon, and the type's
+ * name (or the device's identifier) under it.
+ */
+export function deviceOptions(
+	devices: readonly { id: string; name: string; type: DeviceType; identifier?: string }[],
+	types: DeviceTypeDefinition[],
+	hint: 'type' | 'identifier' = 'type'
+): SelectOption[] {
+	return devices.map((d) => ({
+		value: d.id,
+		label: d.name,
+		hint: hint === 'type' ? deviceTypeLabel(types, d.type) : d.identifier,
+		color: deviceTypeColor(types, d.type),
+		icon: deviceTypeIcon(types, d.type)
+	}));
 }

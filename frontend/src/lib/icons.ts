@@ -113,6 +113,7 @@ export const UI_ICONS = {
 	readings: [{ d: 'M4 5h16M4 10h16M4 15h10M4 20h7' }, { cx: 18.5, cy: 18.5, r: 2.5 }],
 	plus: [{ d: 'M12 5v14M5 12h14' }],
 	check: [{ d: 'm5 12.5 4.5 4.5L19 7.5' }],
+	search: [{ cx: 11, cy: 11, r: 6.5 }, { d: 'm20 20-4.2-4.2' }],
 	close: [{ d: 'M6 6l12 12M18 6 6 18' }],
 	download: [{ d: 'M12 4v11M7 10l5 5 5-5M5 20h14' }],
 	printer: [
