@@ -147,13 +147,18 @@
 		};
 		const points = track(start);
 		const now = Date.now();
-		const expected = deviceTypes.find((t) => t.id === target.type)?.parameterIds;
+		const expected = deviceTypes.find((t) => t.id === target.type)?.parameterIds ?? [];
 		try {
+			// Each simulated reading moves on from the one before, starting at the device's last.
+			let last = (await services.labs.deviceReadings(target.id, 1))[0]?.values ?? {};
+			if (!live()) return;
 			for (let i = 0; i < COUNT; i++) {
+				const values = sampleValues(expected, parameters, last);
+				last = { ...last, ...values };
 				const input: ReadingInput = {
 					// Buffered readings, ten minutes apart, oldest first.
 					observedAt: new Date(now - (COUNT - 1 - i) * 10 * 60_000).toISOString(),
-					values: sampleValues(target.type, expected, parameters),
+					values,
 					location: NO_FIX.has(i) ? null : points[i]
 				};
 				const [reading] = await services.labs.uploadReadings(target.id, [input]);

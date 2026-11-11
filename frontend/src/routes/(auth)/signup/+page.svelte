@@ -89,7 +89,7 @@
 	<form class="space-y-4" onsubmit={continueWithPhone} novalidate>
 		<div>
 			<label class="label" for="phone">Phone number</label>
-			<PhoneInput bind:value={phone} error={phoneError} />
+			<PhoneInput bind:value={phone} countries={data.dialCodes} error={phoneError} />
 		</div>
 		<button class="btn btn-primary w-full py-3" disabled={sendingCode}>
 			{sendingCode ? 'Sending code…' : 'Continue with phone'}
