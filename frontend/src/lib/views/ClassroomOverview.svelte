@@ -269,7 +269,8 @@
 		{/if}
 		<div
 			class={[
-				'contents lg:grid lg:h-[38rem] lg:gap-5',
+				// At least 38rem, so most devices keep one height; taller content grows the row, never overflows.
+				'contents lg:grid lg:min-h-[38rem] lg:gap-5',
 				onpickdevice && 'lg:mt-6',
 				classroom.location
 					? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,1fr)]'
