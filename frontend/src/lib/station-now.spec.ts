@@ -122,12 +122,21 @@ describe('one device now', () => {
 				},
 				{ id: 'ph', label: 'pH', unit: '', valueType: 'number', value: 6.5 }
 			],
-			'soil'
+			'soil',
+			new Map([
+				['soil_moisture', { id: 'soil_moisture', unit: '%', noise: 0.5 } as Parameter],
+				['ph', { id: 'ph', unit: '', noise: 0.2 } as Parameter]
+			])
 		);
 		expect(tiles.map((t) => [t.parameterId, t.icon, t.value, t.observedAt])).toEqual([
 			['soil_moisture', 'droplet', 31, '2026-10-20T06:00:00.000Z'],
 			['ph', 'soil', 6.5, '2026-10-20T06:00:00.000Z']
 		]);
 		expect(tiles[0].last24Hours.slice(-2)).toEqual([30, 31]);
+		// Up 1 % in an hour is past the sensor's wobble; pH's 0.1 is within it.
+		expect(tiles.map((t) => t.trend)).toEqual([
+			{ direction: 'rising', label: 'Rising', text: 'Rising, up 1 % over 1 hour' },
+			{ direction: 'steady', label: 'Steady', text: 'Steady over 1 hour' }
+		]);
 	});
 });

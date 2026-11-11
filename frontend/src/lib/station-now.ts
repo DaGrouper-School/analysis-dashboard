@@ -7,6 +7,7 @@ import type {
 	PublicValue
 } from '#lib/domain/types.ts';
 import { formatValue, type KeyValue } from '#lib/key-values.ts';
+import { recentTrend } from '#lib/indicators.ts';
 
 /** The 16 compass points, clockwise from north, in words. */
 const POINTS = [
@@ -100,7 +101,8 @@ export function nowTiles(
 				unit,
 				caption: value === null ? null : caption,
 				observedAt: value === null ? null : core.lastSync,
-				last24Hours: []
+				last24Hours: [],
+				trend: null
 			};
 		}
 		const shown = latest(tile.parameterIds);
@@ -127,7 +129,8 @@ export function nowTiles(
 			unit: param?.unit ?? '',
 			caption,
 			observedAt: shown?.observedAt ?? null,
-			last24Hours: []
+			last24Hours: [],
+			trend: null
 		};
 	});
 }
@@ -158,25 +161,31 @@ export function last24Hours(
 
 /**
  * "What's happening now?" tiles for one device (AP-45): its key values from its newest reading,
- * each with its last 24 hours. `readings` are the device's own, newest first.
+ * each with its last 24 hours and which way it went. `readings` are the device's own, newest first.
  */
 export function readingTiles(
 	readings: { observedAt: string; values: Record<string, unknown> }[],
 	values: KeyValue[],
-	icon: string
+	icon: string,
+	parameters: ReadonlyMap<string, Parameter>
 ): NowTile[] {
 	const at = readings[0]?.observedAt ?? null;
-	return values.map((v) => ({
-		id: v.id,
-		label: v.label,
-		icon: v.icon ?? icon,
-		parameterId: v.id,
-		value: v.value ?? null,
-		unit: v.unit,
-		caption: null,
-		observedAt: at,
-		last24Hours: at && typeof v.value === 'number' ? last24Hours(readings, [v.id], at) : []
-	}));
+	return values.map((v) => {
+		const parameter = parameters.get(v.id);
+		const numeric = !!at && typeof v.value === 'number';
+		return {
+			id: v.id,
+			label: v.label,
+			icon: v.icon ?? icon,
+			parameterId: v.id,
+			value: v.value ?? null,
+			unit: v.unit,
+			caption: null,
+			observedAt: at,
+			last24Hours: numeric ? last24Hours(readings, [v.id], at!) : [],
+			trend: numeric && parameter ? recentTrend(readings, parameter, at!) : null
+		};
+	});
 }
 
 /**

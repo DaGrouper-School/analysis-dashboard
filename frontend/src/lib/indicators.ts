@@ -1,4 +1,4 @@
-import type { Parameter, Reading } from '#lib/domain/types.ts';
+import type { NowTileTrend, Parameter } from '#lib/domain/types.ts';
 import { formatValue } from '#lib/key-values.ts';
 
 /**
@@ -6,7 +6,7 @@ import { formatValue } from '#lib/key-values.ts';
  * here compares values or says why one changed.
  */
 
-export type TrendDirection = 'rising' | 'steady' | 'falling';
+export type TrendDirection = NowTileTrend['direction'];
 
 export interface Trend {
 	direction: TrendDirection;
@@ -29,7 +29,7 @@ export const TREND_LABELS: Record<TrendDirection, string> = {
  * Null with fewer than two numeric readings.
  */
 export function trendOf(
-	readings: Pick<Reading, 'observedAt' | 'values'>[],
+	readings: { observedAt: string; values: Record<string, unknown> }[],
 	parameter: Pick<Parameter, 'id' | 'noise'>
 ): Trend | null {
 	const points = readings
@@ -75,4 +75,30 @@ export function trendText(trend: Trend, unit: string) {
 	if (trend.direction === 'steady') return `Steady ${over}`;
 	const by = formatValue(Math.abs(trend.change), unit);
 	return `${TREND_LABELS[trend.direction]}, ${trend.direction === 'rising' ? 'up' : 'down'} ${by} ${over}`;
+}
+
+const HOUR = 3_600_000;
+
+/**
+ * A tile's trend over the `hours` up to `until` (AP-07): which way the value went, as a short
+ * label and as a sentence. Null with fewer than two numeric readings in that time.
+ */
+export function recentTrend(
+	readings: { observedAt: string; values: Record<string, unknown> }[],
+	parameter: Pick<Parameter, 'id' | 'noise' | 'unit'>,
+	until: string,
+	hours = 24
+): NowTileTrend | null {
+	const end = Date.parse(until);
+	const recent = readings.filter((r) => {
+		const at = Date.parse(r.observedAt);
+		return at <= end && at > end - hours * HOUR;
+	});
+	const trend = trendOf(recent, parameter);
+	if (!trend) return null;
+	return {
+		direction: trend.direction,
+		label: TREND_LABELS[trend.direction],
+		text: trendText(trend, parameter.unit)
+	};
 }

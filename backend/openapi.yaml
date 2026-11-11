@@ -4440,6 +4440,11 @@ components:
               - number
               - "null"
           description: The 24 hours up to `observedAt`, one value an hour, oldest first; empty without data.
+        trend:
+          anyOf:
+            - $ref: "#/components/schemas/NowTileTrend"
+            - type: "null"
+          description: Which way the value went over those 24 hours (AP-07); null with fewer than two readings.
       required:
         - id
         - label
@@ -4450,8 +4455,30 @@ components:
         - caption
         - observedAt
         - last24Hours
+        - trend
       additionalProperties: false
       description: One tile of "What's happening now?" (AP-43), from the latest released reading.
+    NowTileTrend:
+      type: object
+      properties:
+        direction:
+          type: string
+          enum:
+            - rising
+            - steady
+            - falling
+        label:
+          type: string
+          description: "`Rising`"
+        text:
+          type: string
+          description: "`Rising, up 2.1 °C over 7 hours`"
+      required:
+        - direction
+        - label
+        - text
+      additionalProperties: false
+      description: "A tile's trend: a short label under the value, and the full sentence for its tooltip."
     Observation:
       type: object
       properties:

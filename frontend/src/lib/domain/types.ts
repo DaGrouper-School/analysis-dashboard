@@ -1062,6 +1062,17 @@ export interface NowTile {
 	observedAt: string | null;
 	/** The 24 hours up to `observedAt`, one value an hour, oldest first; empty without data. */
 	last24Hours: (number | null)[];
+	/** Which way the value went over those 24 hours (AP-07); null with fewer than two readings. */
+	trend: NowTileTrend | null;
+}
+
+/** A tile's trend: a short label under the value, and the full sentence for its tooltip. */
+export interface NowTileTrend {
+	direction: 'rising' | 'steady' | 'falling';
+	/** `Rising` */
+	label: string;
+	/** `Rising, up 2.1 °C over 7 hours` */
+	text: string;
 }
 
 /** Which values "What's happening now?" shows, in order (AP-43). Configuration, not code. */
