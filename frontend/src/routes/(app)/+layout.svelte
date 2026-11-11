@@ -37,7 +37,14 @@
 		// The dashboard and every page under it, except the classroom's details page.
 		{ href: dashboard, label: 'Dashboard', current: under(dashboard) && !under(details) },
 		...(classroomHref
-			? [{ href: classroomHref, label: 'Classroom', current: under(details) }]
+			? [
+					{
+						href: classroomHref,
+						// The page has a classroom picker: plural for people in more than one.
+						label: data.memberClassrooms.length > 1 ? 'Classrooms' : 'Classroom',
+						current: under(details)
+					}
+				]
 			: []),
 		...(data.user.platformAdmin
 			? [
