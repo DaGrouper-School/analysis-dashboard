@@ -49,10 +49,6 @@
 				}))
 			: []
 	);
-	// The map opens on the same classroom and sensor.
-	const mapHref = $derived(
-		resolve('/(app)/map') + (data.classroom ? sensorQuery(data.classroom.id, data.device?.id) : '')
-	);
 
 	const device = $derived(data.device);
 	// AP-16: a manual reading for this sensor, on the guided form.
@@ -144,6 +140,23 @@
 			role="group"
 			aria-label="Show data for"
 		>
+			<div class="w-full sm:w-64">
+				<label class="label" for="pick-classroom">Classroom</label>
+				{#if data.memberClassrooms.length > 1}
+					<select
+						id="pick-classroom"
+						class="input"
+						value={data.classroom.id}
+						onchange={(e) => choose(e.currentTarget.value)}
+					>
+						{#each data.memberClassrooms as classroom (classroom.id)}
+							<option value={classroom.id}>{classroom.name}</option>
+						{/each}
+					</select>
+				{:else}
+					<p id="pick-classroom" class="input truncate text-muted">{data.classroom.name}</p>
+				{/if}
+			</div>
 			<div class="w-full sm:w-72">
 				<label class="label" for="pick-device">Measurement</label>
 				<select
@@ -345,15 +358,13 @@
 			</div>
 		{/if}
 
-		<!-- The path is resolved; only the query is added to it. -->
-		<!-- eslint-disable svelte/no-navigation-without-resolve -->
 		<a
-			href={mapHref}
+			href={resolve('/(app)/classrooms/[id]', { id: data.classroom.id })}
 			class="card group relative flex min-h-80 flex-col overflow-hidden p-0 transition hover:border-line-strong"
 		>
 			<div class="flex items-baseline justify-between gap-3 p-5 pb-0">
 				<h2 class="font-medium">Measurements in this classroom</h2>
-				<span class="text-sm text-muted group-hover:text-ink">Open the map →</span>
+				<span class="text-sm text-muted group-hover:text-ink">Classroom →</span>
 			</div>
 			<div class="pointer-events-none relative min-h-64 flex-1">
 				{#key data.classroom.id}
@@ -367,7 +378,6 @@
 				{/key}
 			</div>
 		</a>
-		<!-- eslint-enable svelte/no-navigation-without-resolve -->
 	</section>
 
 	{#if device && data.canRecord && data.labLocation}
@@ -490,6 +500,32 @@
 						<p class="mt-3 font-semibold">{domain.label}</p>
 						<p class="text-xs text-muted">
 							{domain.parameterIds.length} value{domain.parameterIds.length === 1 ? '' : 's'} →
+						</p>
+					</a>
+				</li>
+			{/each}
+		</ul>
+	</section>
+{/if}
+
+{#if data.classroom && data.labs.length}
+	<section class="mt-8">
+		<h2 class="text-lg font-semibold">Labs</h2>
+		<p class="text-sm text-muted">
+			{data.classroom.name}'s labs, with their devices and site profile.
+		</p>
+		<ul class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+			{#each data.labs as lab (lab.id)}
+				{@const count = data.devices.filter((d) => d.labId === lab.id).length}
+				<li>
+					<a
+						class="card block h-full p-4 transition hover:border-line-strong"
+						href={resolve('/(app)/labs/[labId]', { labId: lab.id })}
+					>
+						<Icon name="flask" class="size-7 text-ink" />
+						<p class="mt-3 font-semibold">{lab.name}</p>
+						<p class="text-xs text-muted">
+							{lab.placeName}, {lab.country} · {count} device{count === 1 ? '' : 's'} →
 						</p>
 					</a>
 				</li>

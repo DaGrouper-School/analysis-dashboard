@@ -1,15 +1,12 @@
-import { services } from '#lib/services/index.ts';
+import { resolve } from '$app/paths';
+import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 
-export const load: PageLoad = async ({ url }) => {
-	const [conditions, parameters] = await Promise.all([
-		services.labs.currentConditions(),
-		services.registry.listParameters()
-	]);
-	return {
-		conditions,
-		parameters,
-		selected: url.searchParams.get('device'),
-		classroom: url.searchParams.get('classroom')
-	};
+/** The map gave way to Classrooms in the nav. Old links open the classroom they named. */
+export const load: PageLoad = ({ url }) => {
+	const classroom = url.searchParams.get('classroom');
+	redirect(
+		307,
+		classroom ? resolve('/(app)/classrooms/[id]', { id: classroom }) : resolve('/(app)/classrooms')
+	);
 };
