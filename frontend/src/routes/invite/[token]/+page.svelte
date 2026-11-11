@@ -44,7 +44,7 @@
 
 <svelte:head><title>Classroom invitation · DaGrouper Analysis</title></svelte:head>
 
-<AuthShell>
+<AuthShell markers={data.markers}>
 	{#if !data.invitation}
 		<h1 class="font-display text-3xl">Invitation not found</h1>
 		<p class="mt-2 text-muted">{data.error} Ask the person who invited you for a new link.</p>

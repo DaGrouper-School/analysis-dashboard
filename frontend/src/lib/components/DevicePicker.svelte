@@ -36,12 +36,31 @@
 	);
 </script>
 
-<section class={['card min-w-0 overflow-hidden p-3', className]} aria-labelledby="devices-heading">
-	<h2 id="devices-heading" class="sr-only">Devices</h2>
+<!-- The "Devices" label sits in the card, beside the choices, as part of the selector. -->
+<section
+	class={['card flex min-w-0 items-center gap-3 overflow-hidden p-3', className]}
+	aria-labelledby="devices-heading"
+>
+	<h2
+		id="devices-heading"
+		class="shrink-0 self-stretch border-r border-line pr-3 pl-1 text-sm font-medium text-muted"
+	>
+		<span class="flex h-full items-center">Devices</span>
+	</h2>
 	{#if devices.length > MOBILE_TABS_MAX}
-		<Select {options} value={deviceId} label="Device" class="w-full sm:w-96" onchange={onpick} />
+		<Select
+			{options}
+			value={deviceId}
+			label="Device"
+			class="min-w-0 flex-1 sm:w-96 sm:flex-none"
+			onchange={onpick}
+		/>
 	{:else}
-		<div class="-m-1 flex gap-2 overflow-x-auto p-1" role="group" aria-labelledby="devices-heading">
+		<div
+			class="-m-1 flex min-w-0 flex-1 gap-2 overflow-x-auto p-1"
+			role="group"
+			aria-labelledby="devices-heading"
+		>
 			{#each devices as device (device.id)}
 				{@const picked = device.id === deviceId}
 				<button

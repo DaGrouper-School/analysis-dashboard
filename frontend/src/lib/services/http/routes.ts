@@ -624,6 +624,14 @@ export const routes: Route[] = [
 		notes: 'Proxies the places provider; the API key stays on the server.'
 	},
 	{
+		method: 'places.dialCodes',
+		http: 'GET',
+		path: '/places/dial-codes',
+		access: 'public',
+		response: 'DialCode[]',
+		notes: 'The countries a phone number can be from, pilot countries first.'
+	},
+	{
 		method: 'places.getAddress',
 		http: 'GET',
 		path: '/places/{placeId}',

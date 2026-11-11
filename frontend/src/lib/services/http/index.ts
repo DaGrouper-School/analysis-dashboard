@@ -1,4 +1,5 @@
 import type {
+	DialCode,
 	InstitutionInfo,
 	HostApplication,
 	HostApplicationInput,
@@ -258,7 +259,8 @@ export function createHttpServices(baseUrl: string): Services {
 		places: {
 			autocomplete: (q) =>
 				request<PlaceSuggestion[]>('GET', `/places/autocomplete?q=${encodeURIComponent(q)}`),
-			getAddress: (placeId) => request<Address>('GET', `/places/${encodeURIComponent(placeId)}`)
+			getAddress: (placeId) => request<Address>('GET', `/places/${encodeURIComponent(placeId)}`),
+			dialCodes: () => request<DialCode[]>('GET', '/places/dial-codes')
 		},
 		registry: {
 			listParameters: () => request<Parameter[]>('GET', '/registry/parameters'),
