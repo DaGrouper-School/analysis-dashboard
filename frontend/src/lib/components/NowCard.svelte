@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import Icon from '#lib/components/Icon.svelte';
-	import TrendArea from '#lib/components/TrendArea.svelte';
+	import Sparkline from '#lib/components/Sparkline.svelte';
 	import type { NowTile } from '#lib/domain/types.ts';
 	import { formatValue } from '#lib/key-values.ts';
 	import { timeAgo } from '#lib/station-now.ts';
@@ -66,7 +66,7 @@
 					</p>
 				{/if}
 				{#if tile.caption}<p class="mt-2 text-xs text-muted">{tile.caption}</p>{/if}
-				<div class="mt-auto pt-3"><TrendArea values={tile.last24Hours} /></div>
+				<div class="mt-auto pt-3"><Sparkline fill values={tile.last24Hours} /></div>
 			</li>
 		{/each}
 	</ul>

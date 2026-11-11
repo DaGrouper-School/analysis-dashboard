@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 	import CalculationPanel from '#lib/components/CalculationPanel.svelte';
 	import Icon from '#lib/components/Icon.svelte';
-	import ReadingChart from '#lib/components/ReadingChart.svelte';
+	import Chart from '#lib/components/Chart.svelte';
 	import ChartAlerts from '#lib/components/ChartAlerts.svelte';
 	import { thresholdStatus, thresholdsFor } from '#lib/domain/alerts.ts';
 	import { TIME_RANGES, withinRange } from '#lib/domains.ts';
@@ -280,15 +280,29 @@
 					<p class="mt-1 text-sm text-muted">{trendText(trend, param.unit)}</p>
 				{/if}
 				{#if numeric}
+					{@const points = shown
+						.map((r) => ({ at: Date.parse(r.observedAt), value: r.values[id] }))
+						.filter((p): p is { at: number; value: number } => typeof p.value === 'number')
+						.sort((a, b) => a.at - b.at)}
 					<div class="mt-3">
-						<ReadingChart
-							readings={shown}
-							parameterId={id}
+						<Chart
 							label={param.label}
 							unit={param.unit}
 							height={160}
-							color={deviceTypeColor(data.deviceTypes, device.type)}
+							lines={[
+								{
+									id,
+									label: param.label,
+									color: deviceTypeColor(data.deviceTypes, device.type),
+									points,
+									wash: true
+								}
+							]}
+							from={points[0]?.at ?? 0}
+							to={points.at(-1)?.at ?? 0}
+							hourly={points.length > 1 && points.at(-1)!.at - points[0].at <= 36 * 3_600_000}
 							thresholds={levels}
+							endLabel
 						/>
 					</div>
 				{/if}
