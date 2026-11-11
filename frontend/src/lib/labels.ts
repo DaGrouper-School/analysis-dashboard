@@ -15,6 +15,9 @@ export const CLASSROOM_ROLE_LABELS: Record<ClassroomRole, string> = {
 	researcher: 'Researcher'
 };
 
+/** "a researcher", "an institution head". */
+export const withArticle = (noun: string) => `${/^[aeiou]/i.test(noun) ? 'an' : 'a'} ${noun}`;
+
 export const SITE_SETTING_LABELS: Record<SiteSetting, string> = {
 	coastal: 'Coastal',
 	urban: 'Urban',
