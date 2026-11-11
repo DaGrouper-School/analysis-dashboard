@@ -14,7 +14,7 @@
 	import StepTrack from '#lib/components/StepTrack.svelte';
 	import { formatPoint } from '#lib/geo.ts';
 	import { keySummary } from '#lib/key-values.ts';
-	import { deviceTypeColor, deviceTypeIcon, deviceTypeLabel } from '#lib/labels.ts';
+	import { deviceTypeColor, deviceTypeIcon, deviceTypeLabel, deviceTypeOf } from '#lib/labels.ts';
 	import { sampleValues } from '#lib/sample-readings.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
 
@@ -267,7 +267,9 @@
 								><Icon name="check" class="size-3" /> Synced</span
 							>
 						</div>
-						<p class="text-muted">{keySummary(device.type, reading.values, paramsById)}</p>
+						<p class="text-muted">
+							{keySummary(deviceTypeOf(deviceTypes, device.type), reading.values, paramsById)}
+						</p>
 						<p>
 							{formatPoint(reading.location)}
 							{#if reading.locationSource === 'device'}

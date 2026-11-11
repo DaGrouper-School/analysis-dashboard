@@ -1,40 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { resetDb } from '#lib/data/mock-db.ts';
 import { createMockServices } from '#lib/services/mock/index.ts';
-import {
-	filterClassrooms,
-	filterOptions,
-	filterQuery,
-	groupClassrooms,
-	NO_FILTER,
-	readFilter
-} from './directory';
+import { filterClassrooms, filterOptions, filterQuery, NO_FILTER, readFilter } from './directory';
 
 const services = createMockServices({ latency: 0 });
 
 beforeEach(() => resetDb());
 
 describe('Global Classrooms directory (AP-28)', () => {
-	it('groups classrooms by region in content order, then by country', async () => {
-		const { classrooms, content } = await services.publicSite.home();
-		const groups = groupClassrooms(classrooms, content.regions);
-		expect(groups.map((g) => g.region?.id)).toEqual(['caribbean', 'east_africa']);
-		const eastAfrica = groups[1].countries.map((c) => [c.country, c.classrooms.map((x) => x.id)]);
-		expect(eastAfrica).toEqual([
-			['Ethiopia', ['cls_trinity']],
-			['Somalia', ['cls_hargeisa']]
-		]);
-	});
-
-	it('puts classrooms with no region last', async () => {
-		const { classrooms, content } = await services.publicSite.home();
-		const groups = groupClassrooms(
-			[...classrooms, { ...classrooms[0], id: 'x', regionId: null }],
-			content.regions
-		);
-		expect(groups.at(-1)?.region).toBeNull();
-	});
-
 	it('filters by region, country and stage, offering only values the classrooms use', async () => {
 		const { classrooms, content } = await services.publicSite.home();
 		expect(filterClassrooms(classrooms, NO_FILTER)).toHaveLength(classrooms.length);

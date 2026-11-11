@@ -28,8 +28,8 @@
 
 	/**
 	 * One value of one classroom (AP-23), always in the same order: what it means here, the value
-	 * now, the main chart, the daily summary, compare, data quality, how it is measured, the
-	 * curriculum link and the download. Released values only.
+	 * now, the main chart (compare in its header), the daily summary (download in its header), data
+	 * quality, and how it is measured (the curriculum link in its header). Released values only.
 	 */
 	let { data }: PageProps = $props();
 
@@ -331,7 +331,7 @@
 		</section>
 	{/if}
 
-	<!-- 3. Main chart -->
+	<!-- 3. Main chart, with compare -->
 	<section class="card mt-6" aria-labelledby="chart-heading">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<h2 id="chart-heading" class="font-semibold">
@@ -341,26 +341,41 @@
 						? 'Readings, with each day’s low to high'
 						: 'Readings'}
 			</h2>
-			{#if chart}
-				<div
-					class="flex rounded-lg border border-line p-0.5 text-sm"
-					role="group"
-					aria-label="Time range"
-				>
-					{#each RANGES as r (r.id)}
-						<button
-							type="button"
-							class={[
-								'rounded-md px-3 py-1',
-								range === r.id ? 'bg-raised text-ink' : 'text-muted hover:text-ink'
-							]}
-							aria-pressed={range === r.id}
-							onclick={() => (range = r.id)}>{r.label}</button
-						>
-					{/each}
-				</div>
-			{/if}
+			<div class="flex flex-wrap items-center gap-2">
+				{#if data.compare.length}
+					<select
+						class="input w-auto max-w-72 truncate py-1 pr-8 text-sm"
+						aria-label="Compare with another classroom"
+						bind:value={compareId}
+					>
+						<option value="">Compare with…</option>
+						{#each data.compare as c (c.id)}
+							<option value={c.id}>{c.name}{c.placeName ? `, ${c.placeName}` : ''}</option>
+						{/each}
+					</select>
+				{/if}
+				{#if chart}
+					<div
+						class="flex rounded-lg border border-line p-0.5 text-sm"
+						role="group"
+						aria-label="Time range"
+					>
+						{#each RANGES as r (r.id)}
+							<button
+								type="button"
+								class={[
+									'rounded-md px-3 py-1',
+									range === r.id ? 'bg-raised text-ink' : 'text-muted hover:text-ink'
+								]}
+								aria-pressed={range === r.id}
+								onclick={() => (range = r.id)}>{r.label}</button
+							>
+						{/each}
+					</div>
+				{/if}
+			</div>
 		</div>
+		{#if compareError}<p class="mt-2 text-sm text-danger" role="alert">{compareError}</p>{/if}
 		{#if !rain && data.series.length > 1}
 			<label class="mt-3 flex items-center gap-2 text-sm text-muted">
 				Source
@@ -432,10 +447,15 @@
 		{/if}
 	</section>
 
-	<!-- 4. Daily summary -->
-	{#if chart}
-		<section class="mt-8" aria-labelledby="daily-heading">
+	<!-- 4. Daily summary, with download -->
+	<section class="mt-8" aria-labelledby="daily-heading">
+		<div class="flex flex-wrap items-center justify-between gap-3">
 			<h2 id="daily-heading" class="font-display text-2xl">Daily summary</h2>
+			<button type="button" class="btn btn-ghost" onclick={download}>
+				<Icon name="download" class="size-4" /> Download CSV
+			</button>
+		</div>
+		{#if chart}
 			<div class="card mt-3 overflow-x-auto p-0">
 				<table class="w-full min-w-[32rem] text-left text-sm">
 					<thead class="text-xs text-muted">
@@ -501,36 +521,13 @@
 					</tbody>
 				</table>
 			</div>
-		</section>
-	{/if}
-
-	<!-- 5. Compare with another classroom -->
-	<section class="mt-8" aria-labelledby="compare-heading">
-		<h2 id="compare-heading" class="font-display text-2xl">Compare with another classroom</h2>
-		{#if data.compare.length}
-			<label class="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
-				Show on the chart
-				<select class="input w-auto py-1" bind:value={compareId}>
-					<option value="">No other classroom</option>
-					{#each data.compare as c (c.id)}
-						<option value={c.id}>{c.name}{c.placeName ? `, ${c.placeName}` : ''}</option>
-					{/each}
-				</select>
-			</label>
-			{#if compareError}<p class="mt-2 text-sm text-danger" role="alert">{compareError}</p>{/if}
-			{#if compared}
-				<p class="mt-2 text-sm text-muted">
-					{compared.classroom.name} shows as
-					{rain ? 'a third bar each day' : 'a dashed line'} on the chart above, from
-					{comparedSeries ? sourceName(comparedSeries) : 'its readings'}.
-				</p>
-			{/if}
-		{:else}
-			<p class="mt-2 text-sm text-muted">No other classroom has released values of this yet.</p>
 		{/if}
+		<p class="mt-2 text-xs text-muted">
+			The CSV carries the licence ({data.terms.licence}) and how to credit {data.classroom.name}.
+		</p>
 	</section>
 
-	<!-- 6. Data quality -->
+	<!-- 5. Data quality -->
 	<section class="mt-8" aria-labelledby="quality-heading">
 		<h2 id="quality-heading" class="font-display text-2xl">Data quality</h2>
 		<dl class="mt-3 grid gap-3 sm:grid-cols-3">
@@ -570,10 +567,19 @@
 		</dl>
 	</section>
 
-	<!-- 7. How it is measured -->
-	<section class="mt-8 max-w-2xl" aria-labelledby="measured-heading">
-		<h2 id="measured-heading" class="font-display text-2xl">How it is measured</h2>
-		<dl class="mt-3 space-y-2 text-sm">
+	<!-- 6. How it is measured, with the curriculum link -->
+	<section class="mt-8" aria-labelledby="measured-heading">
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<h2 id="measured-heading" class="font-display text-2xl">How it is measured</h2>
+			{#if learn}
+				<!-- eslint-disable svelte/no-navigation-without-resolve -- sectionHref resolves -->
+				<a class="link inline-flex items-center gap-1.5 text-sm" href={sectionHref(learn)}
+					>Learn about it <Icon name="arrow" class="size-4" /></a
+				>
+				<!-- eslint-enable svelte/no-navigation-without-resolve -->
+			{/if}
+		</div>
+		<dl class="mt-3 max-w-2xl space-y-2 text-sm">
 			<div class="flex gap-2">
 				<dt class="w-32 shrink-0 text-muted">Taken by</dt>
 				<dd>
@@ -607,36 +613,5 @@
 				</dd>
 			</div>
 		</dl>
-	</section>
-
-	<!-- 8. Curriculum link -->
-	{#if learn}
-		<section class="mt-8" aria-labelledby="learn-heading">
-			<h2 id="learn-heading" class="font-display text-2xl">Learn about it</h2>
-			<!-- eslint-disable svelte/no-navigation-without-resolve -- sectionHref resolves -->
-			<a
-				class="card mt-3 flex items-center justify-between gap-3 hover:border-ink"
-				href={sectionHref(learn)}
-			>
-				<span>
-					<span class="block font-medium text-ink">{parameter.label}: learning nugget</span>
-					<span class="text-sm text-muted">{learn.description}</span>
-				</span>
-				<Icon name="arrow" class="size-4 text-muted" />
-			</a>
-			<!-- eslint-enable svelte/no-navigation-without-resolve -->
-		</section>
-	{/if}
-
-	<!-- 9. Download -->
-	<section class="mt-8" aria-labelledby="download-heading">
-		<h2 id="download-heading" class="font-display text-2xl">Download</h2>
-		<p class="mt-2 max-w-2xl text-sm text-muted">
-			Every released reading on this page as CSV. Each row carries the licence ({data.terms
-				.licence}) and how to credit {data.classroom.name}.
-		</p>
-		<button type="button" class="btn btn-ghost mt-3" onclick={download}>
-			<Icon name="download" class="size-4" /> Download CSV
-		</button>
 	</section>
 </PublicShell>

@@ -3345,6 +3345,76 @@ components:
         - canEditDevice
         - canEditType
       additionalProperties: false
+    DeviceSummaryCard:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        unit:
+          type: string
+        icon:
+          type:
+            - string
+            - "null"
+          description: The value's domain icon from the registry, when it has a domain.
+        latest:
+          type:
+            - number
+            - "null"
+        observedAt:
+          type:
+            - string
+            - "null"
+        week:
+          type: array
+          items:
+            type: object
+            properties:
+              day:
+                type: string
+              value:
+                type:
+                  - number
+                  - "null"
+            required:
+              - day
+              - value
+            additionalProperties: false
+          description: Seven days up to the newest reading, oldest first.
+        todayLow:
+          type:
+            - number
+            - "null"
+        todayHigh:
+          type:
+            - number
+            - "null"
+        weekLow:
+          type:
+            - number
+            - "null"
+        weekHigh:
+          type:
+            - number
+            - "null"
+      required:
+        - id
+        - label
+        - unit
+        - icon
+        - latest
+        - observedAt
+        - week
+        - todayLow
+        - todayHigh
+        - weekLow
+        - weekHigh
+      additionalProperties: false
+      description: "One featured value of a device over its last 7 days (AP-45): the newest value, the
+        last value of each day, and today's and the week's range. Days without a reading stay
+        empty."
     DeviceType:
       type: string
       description: "A device type's ID. Built in: weather_station, soil_sensor, rain_gauge, water_probe,
@@ -3370,6 +3440,13 @@ components:
           items:
             type: string
           description: Registry parameters the device sends, in display order.
+        featuredParameterIds:
+          type: array
+          items:
+            type: string
+          description: "The values a classroom page leads with when this device is picked (AP-45), in order:
+            the first four on \"What's happening now?\", the first three charted under it. Set in
+            the Registry; a subset of `parameterIds`."
         manual:
           type: boolean
           description: 'Entered by hand, with no sensor: added to a lab without pairing, with a generated
@@ -3381,6 +3458,7 @@ components:
         - color
         - icon
         - parameterIds
+        - featuredParameterIds
       additionalProperties: false
       description: A kind of device and the values it is expected to send (SAM-23). Shared by every classroom.
     DeviceTypeInput:
@@ -3561,6 +3639,9 @@ components:
             - $ref: "#/components/schemas/EnvironmentalDomain"
             - type: "null"
           description: Used when the value is new to the registry; existing values keep their mapping.
+        featured:
+          type: boolean
+          description: Featured on classroom pages when a device of this type is picked, in row order.
       required:
         - id
         - label
@@ -4800,6 +4881,39 @@ components:
       additionalProperties: false
       description: "A contributor's page, found by participant ID (AP-39): the released values they
         recorded. Who they are shows only when they consented to a public profile in Settings."
+    PublicDevice:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/DeviceType"
+        color:
+          type: string
+          description: From the registry's device types.
+        icon:
+          type: string
+        tiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/NowTile"
+        summary:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeviceSummaryCard"
+          description: Its first three featured numbers, charted under "What's happening now?".
+      required:
+        - id
+        - name
+        - type
+        - color
+        - icon
+        - tiles
+        - summary
+      additionalProperties: false
+      description: A device on a public classroom page, with its registry colour and icon (AP-45).
     PublicDomainCard:
       type: object
       properties:
@@ -5125,6 +5239,11 @@ components:
                   - type: "null"
               stageId:
                 type: string
+              regionId:
+                type:
+                  - string
+                  - "null"
+                description: Its region in `SiteContent.regions`; null until one is set.
             required:
               - id
               - name
@@ -5132,6 +5251,7 @@ components:
               - country
               - location
               - stageId
+              - regionId
             additionalProperties: false
           description: Every public classroom with a lab, for the location tabs and the globe (AP-43).
         now:
@@ -5139,13 +5259,17 @@ components:
           items:
             $ref: "#/components/schemas/NowTile"
           description: "\"What's happening now?\" (AP-43): one tile per configured value."
+        devices:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicDevice"
+          description: "The classroom's devices with released data, for the device picker on \"What's
+            happening now?\" (AP-45). Each has its own tiles: its key values and their last 24
+            hours."
         institution:
           anyOf:
             - $ref: "#/components/schemas/InstitutionOverview"
             - type: "null"
-        charts:
-          $ref: "#/components/schemas/StationCharts"
-          description: Air temperature, rain, UV and soil moisture by day (AP-45).
       required:
         - content
         - classroom
@@ -5158,8 +5282,8 @@ components:
         - member
         - places
         - now
+        - devices
         - institution
-        - charts
       additionalProperties: false
       description: "A classroom's station overview for visitors (AP-21): released data only."
     PublicValue:
@@ -5664,56 +5788,6 @@ components:
         - highland
         - forest
         - other
-    StationCharts:
-      type: object
-      properties:
-        days:
-          type: array
-          items:
-            type: string
-        temperature:
-          type: array
-          items:
-            anyOf:
-              - type: object
-                properties:
-                  mean:
-                    type: number
-                  low:
-                    type: number
-                  high:
-                    type: number
-                required:
-                  - mean
-                  - low
-                  - high
-                additionalProperties: false
-              - type: "null"
-        rain:
-          type: array
-          items:
-            $ref: "#/components/schemas/StationRainDay"
-        uv:
-          type: array
-          items:
-            type:
-              - number
-              - "null"
-        soilMoisture:
-          type: array
-          items:
-            type:
-              - number
-              - "null"
-      required:
-        - days
-        - temperature
-        - rain
-        - uv
-        - soilMoisture
-      additionalProperties: false
-      description: "The classroom charts (AP-45): one point a day, oldest first, for the last 30 days of
-        released data. Each series has one entry per day in `days`; a day with no reading is null."
     StationCore:
       type: object
       properties:

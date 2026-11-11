@@ -1,37 +1,67 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, replaceState } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { navigating } from '$app/state';
+	import { navigating, page } from '$app/state';
 	import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
 	import ClassroomAbout from '#lib/components/ClassroomAbout.svelte';
-	import ClassroomCharts from '#lib/components/ClassroomCharts.svelte';
 	import ClassroomCompleteness from '#lib/components/ClassroomCompleteness.svelte';
+	import ClassroomFilter from '#lib/components/ClassroomFilter.svelte';
 	import ClassroomOverview from '#lib/components/ClassroomOverview.svelte';
 	import DomainBrowser from '#lib/components/DomainBrowser.svelte';
 	import PublicShell from '#lib/components/PublicShell.svelte';
 	import SampleDataBadge from '#lib/components/SampleDataBadge.svelte';
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
-	import { placeLabel } from '#lib/station-now.ts';
+	import { filterClassrooms, filterQuery, type DirectoryFilter } from '#lib/directory.ts';
+	import { domainsOf } from '#lib/domains.ts';
+	import { pickDevice, placeLabel } from '#lib/station-now.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	const classroom = $derived(data.classroom);
 	const directory = $derived(data.content.sections.find((s) => s.id === 'classrooms'));
-	/** A classroom's page, keeping the open section tab. */
-	const withTab = (id: string) =>
-		resolve('/classrooms/[classroom]', { classroom: id }) + (active ? `?tab=${active}` : '');
+	/** A classroom's page, keeping the filter and the open section tab. */
+	function hrefOf(id: string, filter: DirectoryFilter = data.filter) {
+		const query = filterQuery(filter);
+		const tab = active ? `${query ? '&' : '?'}tab=${active}` : '';
+		return resolve('/classrooms/[classroom]', { classroom: id }) + query + tab;
+	}
 	function pick(id: string) {
 		// The path is resolved; only the query is added to it.
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
-		goto(withTab(id));
+		goto(hrefOf(id));
+	}
+
+	// ---- The filter: it narrows the classroom tabs and the globe -------------------------
+	const sorted = $derived([...data.places].sort((a, b) => a.name.localeCompare(b.name)));
+	const kept = $derived(filterClassrooms(sorted, data.filter));
+	/** A new filter stays on this classroom while it is kept, else opens the first one kept. */
+	function refilter(filter: DirectoryFilter) {
+		const matches = filterClassrooms(sorted, filter);
+		const next = matches.some((p) => p.id === classroom.id) ? classroom.id : matches[0]?.id;
+		// The path is resolved; only the query is added to it.
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		goto(hrefOf(next ?? classroom.id, filter), { replace: true, reset: false });
+	}
+
+	// ---- Devices: the one picked sets the tiles, the domains and the page's colour -------
+	let deviceId = $state(page.url.searchParams.get('device'));
+	const device = $derived(pickDevice(data.devices, deviceId));
+	const domains = $derived(domainsOf(data.domains, device?.id));
+	function pickDeviceShown(id: string) {
+		deviceId = id;
+		const url = new URL(page.url.href);
+		url.searchParams.set('device', id);
+		// The current page's own URL, with only the device changed.
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		replaceState(url, page.state);
 	}
 
 	// The same section tabs as the dashboard, with what a visitor may see.
 	type Section = 'domains' | 'complete' | 'about';
 	let active = $state<Section>();
 	const sections = $derived<TabItem<Section>[]>([
-		{ id: 'domains', label: 'Domains', icon: 'layers', count: data.domains.length },
+		{ id: 'domains', label: 'Domains', icon: 'layers', count: domains.length },
 		{ id: 'complete', label: 'Completeness', icon: 'check' },
 		{ id: 'about', label: 'About', icon: 'info' }
 	]);
@@ -42,13 +72,16 @@
 		sectionsEl?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
 	}
 
-	// Every public classroom as a tab.
+	// Every classroom the filter keeps as a tab, and this one while a new filter loads.
 	const tabs = $derived(
-		data.places.map((p) => ({
+		(kept.some((p) => p.id === classroom.id)
+			? kept
+			: [...kept, ...sorted.filter((p) => p.id === classroom.id)]
+		).map((p) => ({
 			id: p.id,
 			label: placeLabel(p.placeName, p.country) || p.name,
 			title: p.name,
-			href: withTab(p.id)
+			href: hrefOf(p.id)
 		}))
 	);
 	// The classroom being opened: the shared overview moves to it at once and shows a skeleton.
@@ -61,7 +94,20 @@
 <svelte:head><title>{classroom.name} · {data.content.hero.eyebrow}</title></svelte:head>
 
 <PublicShell content={data.content} user={data.user}>
-	<ClassroomOverview station={data} {tabs} tabsLabel="Locations" {pendingId} onpick={pick}>
+	<ClassroomOverview
+		station={data}
+		{tabs}
+		tabsLabel="Classrooms"
+		{pendingId}
+		places={kept}
+		onpick={pick}
+		devices={data.devices}
+		deviceId={device?.id}
+		onpickdevice={pickDeviceShown}
+		now={device?.tiles}
+		summary={device?.summary}
+		accent={device?.color}
+	>
 		{#snippet eyebrow(shown)}
 			<div class="flex flex-wrap items-center justify-between gap-3">
 				<Breadcrumbs
@@ -73,6 +119,23 @@
 				/>
 				<SampleDataBadge show={data.content.sampleData} />
 			</div>
+		{/snippet}
+		{#snippet headerActions()}
+			<a class="btn btn-ghost" href={resolve('/host')}>{data.content.hosting.title}</a>
+		{/snippet}
+		{#snippet tabsStart()}
+			<ClassroomFilter
+				class="mb-4 justify-center"
+				places={data.places}
+				content={data.content}
+				filter={data.filter}
+				onchange={refilter}
+			/>
+			{#if !kept.length}
+				<p class="mb-4 text-center text-sm text-muted" aria-live="polite">
+					No classroom matches these filters.
+				</p>
+			{/if}
 		{/snippet}
 		{#snippet nowActions()}
 			<button
@@ -90,16 +153,10 @@
 			>
 		{/snippet}
 
-		<ClassroomCharts class="mt-12" station={data} />
-
 		<section bind:this={sectionsEl} class="mt-14 scroll-mt-28" aria-label="Classroom sections">
 			<VerticalTabs tabs={sections} bind:active label="Classroom sections">
 				{#if active === 'domains'}
-					<DomainBrowser
-						domains={data.domains}
-						parameters={data.parameters}
-						classroomId={classroom.id}
-					/>
+					<DomainBrowser {domains} parameters={data.parameters} classroomId={classroom.id} />
 				{:else if active === 'complete'}
 					<ClassroomCompleteness completeness={data.completeness} />
 				{:else if active === 'about'}

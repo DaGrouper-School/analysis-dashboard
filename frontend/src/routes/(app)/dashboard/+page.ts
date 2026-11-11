@@ -32,7 +32,8 @@ export const load: PageLoad = async ({ url, parent, depends }) => {
 	// Hand-entered devices and field observations are what people record; a station sends its own.
 	const manual = devices.filter((d) => deviceTypes.find((t) => t.id === d.type)?.manual);
 	const [readings, lab, labs, station, consent, records, detail] = await Promise.all([
-		device ? services.labs.deviceReadings(device.id, 60) : [],
+		// A week of readings: the tiles' last 24 hours and the cards' last 7 days.
+		device ? services.labs.deviceReadings(device.id, 400) : [],
 		device ? services.labs.get(device.labId) : null,
 		classroom ? services.labs.listForClassroom(classroom.id) : [],
 		classroom ? services.publicSite.station(classroom.id) : null,

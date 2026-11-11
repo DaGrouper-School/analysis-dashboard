@@ -172,7 +172,6 @@ describe('Explore station page (AP-43)', () => {
 		// Each tile carries its last 24 hours, one point an hour.
 		expect(temp.last24Hours).toHaveLength(24);
 		expect(temp.last24Hours.at(-1)).toBe(temp.value);
-		expect(trinity.charts.days).toHaveLength(30);
 		const hargeisa = await services.publicSite.station('cls_hargeisa');
 		expect(hargeisa.now.every((t) => t.value === null && t.observedAt === null)).toBe(true);
 	});

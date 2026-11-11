@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DomainDefinition, Parameter, Reading } from '#lib/domain/types.ts';
-import { domainTabs, withinRange } from './domains';
+import { domainsOf, domainTabs, withinRange } from './domains';
 
 const param = (id: string, domain: Parameter['domain']): Parameter => ({
 	id,
@@ -87,5 +87,25 @@ describe('time ranges', () => {
 		expect(withinRange(readings, '7d').length).toBe(3);
 		expect(withinRange(readings, '30d').length).toBe(4);
 		expect(withinRange([], '7d')).toEqual([]);
+	});
+});
+
+describe('domains of one device', () => {
+	it("keeps only the device's values and drops empty cards", () => {
+		const value = (sourceId: string, parameterId: string) => ({
+			parameterId,
+			value: 1,
+			observedAt: '2026-10-20T06:00:00.000Z',
+			source: { id: sourceId, name: sourceId, kind: 'device' as const },
+			last7Days: []
+		});
+		const cards = [
+			{ domain: null, values: [value('ws', 'air_temperature'), value('soil', 'soil_moisture')] },
+			{ domain: null, values: [value('ws', 'wind_avg')] }
+		];
+		expect(domainsOf(cards, 'soil')).toEqual([
+			{ domain: null, values: [value('soil', 'soil_moisture')] }
+		]);
+		expect(domainsOf(cards, null)).toBe(cards);
 	});
 });

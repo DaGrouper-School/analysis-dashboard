@@ -19,11 +19,17 @@
 <script lang="ts">
 	import { untrack, type Snippet } from 'svelte';
 	import CoreStrip from '#lib/components/CoreStrip.svelte';
+	import DeviceStrip from '#lib/components/DeviceStrip.svelte';
+	import DevicePicker, { type PickableDevice } from '#lib/components/DevicePicker.svelte';
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import InstitutionOverview from '#lib/components/InstitutionOverview.svelte';
 	import NowCard from '#lib/components/NowCard.svelte';
 	import StageBadge from '#lib/components/StageBadge.svelte';
-	import type { InstitutionOverview as InstitutionInfo, NowTile } from '#lib/domain/types.ts';
+	import type {
+		DeviceSummaryCard,
+		InstitutionOverview as InstitutionInfo,
+		NowTile
+	} from '#lib/domain/types.ts';
 	import { stageColor } from '#lib/labels.ts';
 
 	/**
@@ -39,14 +45,20 @@
 		tabsLabel,
 		pendingId,
 		markerLabel,
+		places,
 		eyebrow,
 		badges,
 		headerActions,
+		tabsStart,
 		tabsEnd,
 		nowActions,
-		nowControls,
+		devices,
+		deviceId,
+		onpickdevice,
 		now,
 		accent,
+		summary,
+		released = true,
 		onexplain,
 		institutionActions,
 		onpick,
@@ -59,20 +71,30 @@
 		pendingId: string;
 		/** A classroom's name on the globe, such as "· yours" on the dashboard. */
 		markerLabel?: (place: ShownPlace) => string;
+		/** The classrooms on the globe, such as the ones a filter keeps; all of them by default. */
+		places?: PublicStation['places'];
 		/** Above the title: a breadcrumb or a greeting, for the classroom being opened. */
 		eyebrow?: Snippet<[ShownPlace]>;
 		/** Beside the stage, such as the viewer's role. */
 		badges?: Snippet;
 		headerActions?: Snippet;
+		/** Above the classroom tabs, such as the public page's filter. */
+		tabsStart?: Snippet;
 		/** After the classroom tabs, such as "Join or start one". */
 		tabsEnd?: Snippet;
 		nowActions?: Snippet;
-		/** Beside "What's happening now?", such as the dashboard's device picker. */
-		nowControls?: Snippet;
-		/** The tiles of one device, in place of the classroom's (the dashboard's picked device). */
+		/** The device picker on "What's happening now?": its devices, the one shown, and a pick. */
+		devices?: PickableDevice[];
+		deviceId?: string;
+		onpickdevice?: (id: string) => void;
+		/** The tiles of the picked device, in place of the classroom's. */
 		now?: NowTile[];
 		/** Tints "What's happening now?", such as with the picked device's colour. */
 		accent?: string;
+		/** The picked device's featured numbers, charted in place of the classroom's core readings. */
+		summary?: DeviceSummaryCard[];
+		/** The tiles are released data only; false for a member's raw readings. */
+		released?: boolean;
 		/** Opens how a value is calculated; signed-in pages only. */
 		onexplain?: (parameterId: string) => void;
 		institutionActions?: Snippet;
@@ -128,7 +150,7 @@
 	// Every classroom with a place, in its stage's colour from the site's stages, with a legend.
 	const stages = $derived(station.content.stages);
 	const markers = $derived<GlobeMarker[]>(
-		station.places
+		(places ?? station.places)
 			.filter((p) => p.location)
 			.map((p) => ({
 				id: p.id,
@@ -138,7 +160,9 @@
 				label: markerLabel?.(p) ?? p.name
 			}))
 	);
-	const legend = $derived(stages.filter((s) => station.places.some((p) => p.stageId === s.id)));
+	const legend = $derived(
+		stages.filter((s) => (places ?? station.places).some((p) => p.stageId === s.id))
+	);
 	const pill = $derived(markers.find((m) => m.id === globeSelected)?.label ?? shown.name);
 </script>
 
@@ -162,7 +186,9 @@
 	{@render headerActions?.()}
 </header>
 
-{#if tabs.length > 1 || tabsEnd}
+{#if tabsStart}<div class="mt-6">{@render tabsStart()}</div>{/if}
+
+{#if tabs.length > 1 || tabsEnd || tabsStart}
 	<nav
 		aria-label={tabsLabel}
 		class="relative -mx-4 mt-6 flex gap-7 overflow-x-auto px-4 text-sm font-medium whitespace-nowrap sm:justify-center"
@@ -196,7 +222,15 @@
 	</nav>
 {/if}
 
-<div class={['contents', loading && 'is-loading']} aria-busy={loading}>
+<!-- The picked device's colour runs through every card below (AP-45). -->
+<div
+	class={['contents', loading && 'is-loading', accent && 'accent-scope']}
+	style:--accent={accent}
+	aria-busy={loading}
+>
+	{#if devices?.length && onpickdevice}
+		<DevicePicker class="mt-6" {devices} {deviceId} onpick={onpickdevice} />
+	{/if}
 	<div
 		class={[
 			'mt-6 grid gap-5 lg:h-[38rem]',
@@ -205,14 +239,7 @@
 				: 'lg:grid-cols-2'
 		]}
 	>
-		<NowCard
-			tiles={now ?? station.now}
-			released={!now}
-			{accent}
-			actions={nowActions}
-			controls={nowControls}
-			{onexplain}
-		/>
+		<NowCard tiles={now ?? station.now} {released} {accent} actions={nowActions} {onexplain} />
 		{#if classroom.location}
 			<section
 				class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] sm:h-96 lg:h-full"
@@ -253,7 +280,11 @@
 		/>
 	</div>
 
-	<CoreStrip class="mt-5" {station} />
+	{#if summary?.length}
+		<DeviceStrip class="mt-5" cards={summary} />
+	{:else}
+		<CoreStrip class="mt-5" {station} />
+	{/if}
 
 	{@render children?.()}
 </div>

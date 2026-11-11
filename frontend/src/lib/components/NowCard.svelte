@@ -16,7 +16,6 @@
 		released = true,
 		accent,
 		actions,
-		controls,
 		onexplain,
 		class: className = ''
 	}: {
@@ -27,8 +26,6 @@
 		accent?: string;
 		/** Buttons under the tiles, such as "View domains". */
 		actions?: Snippet;
-		/** Beside the heading, such as the device picker. */
-		controls?: Snippet;
 		/** Opens what a value means and how it is calculated. */
 		onexplain?: (parameterId: string) => void;
 		class?: string;
@@ -56,7 +53,6 @@
 >
 	<div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
 		<h2 id="now-heading" class="text-xl font-medium">What's happening now?</h2>
-		{@render controls?.()}
 	</div>
 	<p class="text-xs text-muted">
 		{#if latest}

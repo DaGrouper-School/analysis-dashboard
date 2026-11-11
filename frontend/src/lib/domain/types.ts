@@ -390,6 +390,12 @@ export interface DeviceTypeDefinition {
 	/** Registry parameters the device sends, in display order. */
 	parameterIds: string[];
 	/**
+	 * The values a classroom page leads with when this device is picked (AP-45), in order: the
+	 * first four on "What's happening now?", the first three charted under it. Set in the
+	 * Registry; a subset of `parameterIds`.
+	 */
+	featuredParameterIds: string[];
+	/**
 	 * Entered by hand, with no sensor: added to a lab without pairing, with a generated
 	 * identifier, and recorded with "Enter measurement" instead of a sync.
 	 */
@@ -419,6 +425,8 @@ export interface ExpectedValueInput {
 	valueType: ValueType;
 	/** Used when the value is new to the registry; existing values keep their mapping. */
 	domain: EnvironmentalDomain | null;
+	/** Featured on classroom pages when a device of this type is picked, in row order. */
+	featured?: boolean;
 }
 
 export interface DeviceTypeInput {
@@ -881,18 +889,6 @@ export interface StationCore {
 	};
 }
 
-/**
- * The classroom charts (AP-45): one point a day, oldest first, for the last 30 days of released
- * data. Each series has one entry per day in `days`; a day with no reading is null.
- */
-export interface StationCharts {
-	days: string[];
-	temperature: ({ mean: number; low: number; high: number } | null)[];
-	rain: StationRainDay[];
-	uv: (number | null)[];
-	soilMoisture: (number | null)[];
-}
-
 /** A classroom as the public sees it: no code, no members, positions rounded. */
 export interface PublicClassroom {
 	id: string;
@@ -968,12 +964,51 @@ export interface PublicStation {
 	/** The viewer belongs to this classroom, so their dashboard shows it with raw values too. */
 	member: boolean;
 	/** Every public classroom with a lab, for the location tabs and the globe (AP-43). */
-	places: Pick<PublicClassroom, 'id' | 'name' | 'placeName' | 'country' | 'location' | 'stageId'>[];
+	places: Pick<
+		PublicClassroom,
+		'id' | 'name' | 'placeName' | 'country' | 'location' | 'stageId' | 'regionId'
+	>[];
 	/** "What's happening now?" (AP-43): one tile per configured value. */
 	now: NowTile[];
+	/**
+	 * The classroom's devices with released data, for the device picker on "What's happening
+	 * now?" (AP-45). Each has its own tiles: its key values and their last 24 hours.
+	 */
+	devices: PublicDevice[];
 	institution: InstitutionOverview | null;
-	/** Air temperature, rain, UV and soil moisture by day (AP-45). */
-	charts: StationCharts;
+}
+
+/** A device on a public classroom page, with its registry colour and icon (AP-45). */
+export interface PublicDevice {
+	id: string;
+	name: string;
+	type: DeviceType;
+	/** From the registry's device types. */
+	color: string;
+	icon: string;
+	tiles: NowTile[];
+	/** Its first three featured numbers, charted under "What's happening now?". */
+	summary: DeviceSummaryCard[];
+}
+
+/**
+ * One featured value of a device over its last 7 days (AP-45): the newest value, the last value
+ * of each day, and today's and the week's range. Days without a reading stay empty.
+ */
+export interface DeviceSummaryCard {
+	id: string;
+	label: string;
+	unit: string;
+	/** The value's domain icon from the registry, when it has a domain. */
+	icon: string | null;
+	latest: number | null;
+	observedAt: string | null;
+	/** Seven days up to the newest reading, oldest first. */
+	week: { day: string; value: number | null }[];
+	todayLow: number | null;
+	todayHigh: number | null;
+	weekLow: number | null;
+	weekHigh: number | null;
 }
 
 /**

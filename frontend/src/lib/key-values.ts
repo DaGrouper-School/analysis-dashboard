@@ -1,41 +1,4 @@
-import type { DeviceType, Parameter, Reading, ValueType } from '#lib/domain/types.ts';
-
-interface KeyParameter {
-	id: string;
-	label: string;
-	/** Used when the parameter registry has no entry for it. */
-	unit?: string;
-	/** A registry icon name for its tile; the device type's icon when there is none. */
-	icon?: string;
-}
-
-/**
- * The values that matter for each kind of sensor, in display order. A weather station leads
- * with temperature, wind, rain and UV (AP-06); a soil sensor shows soil values and nothing about
- * rain. Other types, and a device that sends none of its type's values, show what it sent.
- */
-export const KEY_PARAMETERS: Partial<Record<DeviceType, KeyParameter[]>> = {
-	weather_station: [
-		{ id: 'air_temperature', label: 'Temperature', icon: 'thermometer' },
-		{ id: 'wind_avg', label: 'Wind', icon: 'wind' },
-		{ id: 'precip_accum_local_day', label: 'Rain today', icon: 'rain' },
-		{ id: 'uv', label: 'UV index', icon: 'sun' }
-	],
-	rain_gauge: [{ id: 'rain_gauge_daily_accumulation', label: 'Rain today', icon: 'rain' }],
-	soil_sensor: [
-		{ id: 'soil_moisture', label: 'Soil moisture', unit: '%', icon: 'droplet' },
-		{ id: 'soil_temperature', label: 'Soil temperature', unit: '°C', icon: 'thermometer' }
-	],
-	water_probe: [
-		{ id: 'water_temperature', label: 'Water temperature', unit: '°C', icon: 'thermometer' },
-		{ id: 'water_ph', label: 'pH', icon: 'water' }
-	],
-	air_quality_sensor: [
-		{ id: 'pm2_5', label: 'PM2.5', unit: 'µg/m³', icon: 'particles' },
-		{ id: 'pm10', label: 'PM10', unit: 'µg/m³', icon: 'particles' }
-	],
-	other: []
-};
+import type { DeviceTypeDefinition, Parameter, Reading, ValueType } from '#lib/domain/types.ts';
 
 export interface KeyValue {
 	id: string;
@@ -69,33 +32,37 @@ function fallbackLabel(id: string) {
 	return id.replaceAll('_', ' ').replace(/^./, (c) => c.toUpperCase());
 }
 
-/** The key values a reading carries for its device type, labelled and with units. */
+/**
+ * The values a reading leads with (AP-45): its device type's featured values, in the order a
+ * platform admin set in the Registry. A type with none featured, or a reading with none of
+ * them, shows what it sent. Labels and units come from the registry; each value's icon is its
+ * domain's, when `domainIcons` is given.
+ */
 export function keyValues(
-	type: DeviceType,
+	type: Pick<DeviceTypeDefinition, 'featuredParameterIds'> | undefined,
 	values: Reading['values'],
 	parameters: ReadonlyMap<string, Parameter>,
-	max = 4
+	max = 4,
+	domainIcons?: ReadonlyMap<string, string>
 ): KeyValue[] {
-	const keys = (KEY_PARAMETERS[type] ?? []).filter((k) => values[k.id] !== undefined);
-	const chosen: KeyParameter[] = keys.length
-		? keys
-		: Object.keys(values).map((id) => ({
-				id,
-				label: parameters.get(id)?.label ?? fallbackLabel(id)
-			}));
-	return chosen.slice(0, max).map((k) => ({
-		id: k.id,
-		label: k.label,
-		unit: parameters.get(k.id)?.unit ?? k.unit ?? '',
-		valueType: parameters.get(k.id)?.valueType ?? 'number',
-		value: values[k.id],
-		icon: k.icon
-	}));
+	const featured = (type?.featuredParameterIds ?? []).filter((id) => values[id] !== undefined);
+	const chosen = featured.length ? featured : Object.keys(values);
+	return chosen.slice(0, max).map((id) => {
+		const param = parameters.get(id);
+		return {
+			id,
+			label: param?.label ?? fallbackLabel(id),
+			unit: param?.unit ?? '',
+			valueType: param?.valueType ?? 'number',
+			value: values[id],
+			icon: param?.domain ? domainIcons?.get(param.domain) : undefined
+		};
+	});
 }
 
-/** "Temperature 27°C · Wind 3.5 m/s", for compact lists. */
+/** "Air temperature 27°C · Average wind speed 3.5 m/s", for compact lists. */
 export function keySummary(
-	type: DeviceType,
+	type: Pick<DeviceTypeDefinition, 'featuredParameterIds'> | undefined,
 	values: Reading['values'],
 	parameters: ReadonlyMap<string, Parameter>,
 	max = 3
@@ -105,21 +72,14 @@ export function keySummary(
 		.join(' · ');
 }
 
-/** A parameter's label and unit: from the registry, else from the key values above. */
+/** A parameter's label and unit from the registry, or its ID made readable. */
 export function describeParameter(id: string, parameters: ReadonlyMap<string, Parameter>) {
 	const registered = parameters.get(id);
 	if (registered) {
 		const { label, unit, valueType = 'number' } = registered;
 		return { label, unit, valueType };
 	}
-	const key = Object.values(KEY_PARAMETERS)
-		.flatMap((keys) => keys ?? [])
-		.find((k) => k.id === id);
-	return {
-		label: key?.label ?? fallbackLabel(id),
-		unit: key?.unit ?? '',
-		valueType: 'number' as ValueType
-	};
+	return { label: fallbackLabel(id), unit: '', valueType: 'number' as ValueType };
 }
 
 const relative = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });

@@ -1,5 +1,5 @@
 import { monthCompleteness } from '#lib/completeness.ts';
-import { coreReadings, stationCharts, stationCore } from '#lib/core-readings.ts';
+import { coreReadings, stationCore } from '#lib/core-readings.ts';
 import { readDb, type MockDbState, type StoredClassroom } from '#lib/data/mock-db.ts';
 import type {
 	InstitutionOverview,
@@ -7,6 +7,7 @@ import type {
 	PublicClassroom,
 	PublicClassroomProfile,
 	PublicContribution,
+	PublicDevice,
 	PublicDomainCard,
 	PublicParameterSeries,
 	PublicSource,
@@ -14,7 +15,9 @@ import type {
 	Reading
 } from '#lib/domain/types.ts';
 import { coarsen, FIELD_SOURCE } from '#lib/raw-data.ts';
-import { last24Hours, nowTiles } from '#lib/station-now.ts';
+import { deviceSummary, last24Hours, nowTiles, readingTiles } from '#lib/station-now.ts';
+import { keyValues } from '#lib/key-values.ts';
+import { deviceTypeColor, deviceTypeIcon, deviceTypeOf } from '#lib/labels.ts';
 import { ServiceError, type PublicService } from '../types';
 import { permissionsFor, roleIn } from './classrooms';
 
@@ -52,6 +55,45 @@ function released(state: MockDbState, classroom: StoredClassroom) {
 		all,
 		released: through === null ? [] : all.filter((r) => r.record.observedAt <= through)
 	};
+}
+
+/**
+ * Each device with released data (AP-45): its key values from its newest released reading, with
+ * their last 24 hours. Colour and icon come from the registry's device types.
+ */
+function publicDevices(
+	state: MockDbState,
+	shown: ReturnType<typeof released>['released']
+): PublicDevice[] {
+	const parameters = new Map(state.parameters.map((p) => [p.id, p]));
+	const domainIcons = new Map(state.domains.map((d) => [d.id, d.icon]));
+	return state.devices.flatMap((device) => {
+		const readings = shown
+			.filter((r) => r.source.id === device.id)
+			.map((r) => r.record)
+			.sort((a, b) => b.observedAt.localeCompare(a.observedAt));
+		if (!readings.length) return [];
+		const icon = deviceTypeIcon(state.deviceTypes, device.type);
+		const featured = (max: number) =>
+			keyValues(
+				deviceTypeOf(state.deviceTypes, device.type),
+				readings[0].values as Reading['values'],
+				parameters,
+				max,
+				domainIcons
+			);
+		return [
+			{
+				id: device.id,
+				name: device.name,
+				type: device.type,
+				color: deviceTypeColor(state.deviceTypes, device.type),
+				icon,
+				tiles: readingTiles(readings, featured(4), icon),
+				summary: deviceSummary(readings, featured(8))
+			}
+		];
+	});
 }
 
 function toPublicClassroom(state: MockDbState, classroom: StoredClassroom): PublicClassroom {
@@ -275,13 +317,14 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 					.map((c) => toPublicClassroom(state, c))
 					.filter((c) => c.location)
 					.sort((a, b) => a.name.localeCompare(b.name))
-					.map(({ id, name, placeName, country, location, stageId }) => ({
+					.map(({ id, name, placeName, country, location, stageId, regionId }) => ({
 						id,
 						name,
 						placeName,
 						country,
 						location,
-						stageId
+						stageId,
+						regionId
 					})),
 				now: nowTiles(state.nowTiles, values, state.parameters, publicClassroom.core).map(
 					(tile) => {
@@ -298,11 +341,7 @@ export function createMockPublic(delay: () => Promise<void>): PublicService {
 						};
 					}
 				),
-				charts: stationCharts(
-					all.map((r) => r.record),
-					classroom.releasedThrough,
-					state.coreParameters
-				),
+				devices: publicDevices(state, shownRecords),
 				institution: institutionFor(
 					state,
 					classroom,
