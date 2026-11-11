@@ -9,11 +9,12 @@ export const load: PageLoad = async ({ url }) => {
 		services.registry.listParameters(),
 		services.classrooms.listMyInvitations()
 	]);
-	const { device } = selection;
-	const [readings, lab, deviceAlerts] = await Promise.all([
+	const { device, classroom } = selection;
+	const [readings, lab, deviceAlerts, labs] = await Promise.all([
 		device ? services.labs.deviceReadings(device.id, 60) : [],
 		device ? services.labs.get(device.labId) : null,
-		device ? services.labs.listDeviceAlerts(device.id) : null
+		device ? services.labs.listDeviceAlerts(device.id) : null,
+		classroom ? services.labs.listForClassroom(classroom.id) : []
 	]);
 	return {
 		...selection,
@@ -25,6 +26,8 @@ export const load: PageLoad = async ({ url }) => {
 		alerts: selection.classroomConditions.find((c) => c.device.id === device?.id)?.alerts ?? [],
 		alertRules: deviceAlerts?.rules ?? [],
 		parameters,
-		invitations
+		invitations,
+		// The classroom's labs, under the domains (AP-05).
+		labs
 	};
 };
