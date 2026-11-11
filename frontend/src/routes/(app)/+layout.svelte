@@ -19,6 +19,16 @@
 			.filter(Boolean)
 			.join(' · ')
 	);
+	// The header chip always shows the connection: "Online" when there is nothing to report.
+	const syncChip = $derived(
+		syncNote
+			? {
+					text: syncNote,
+					class: outbox.online ? 'border-orange/50 text-orange' : 'text-muted',
+					dot: outbox.online ? 'bg-orange' : 'bg-muted'
+				}
+			: { text: 'Online', class: 'border-lime/50 text-lime', dot: 'bg-lime' }
+	);
 
 	// Everything about your classrooms is on the dashboard (AP-45): the logo and the first link
 	// open it. Members also get Classroom, the details page of the classroom they are on, and
@@ -84,21 +94,13 @@
 					><Icon name="plus" class="size-4" /><span class="max-sm:sr-only">Record</span></a
 				>
 			{/if}
-			{#if syncNote}
-				<a
-					href="{resolve('/(app)/observe')}#sync"
-					class={[
-						'chip hidden shrink-0 gap-1.5 text-xs sm:inline-flex',
-						outbox.online ? 'border-orange/50 text-orange' : 'text-muted'
-					]}
-				>
-					<span
-						class={['size-2 rounded-full', outbox.online ? 'bg-orange' : 'bg-muted']}
-						aria-hidden="true"
-					></span>
-					{syncNote}
-				</a>
-			{/if}
+			<a
+				href="{resolve('/(app)/observe')}#sync"
+				class={['chip hidden shrink-0 gap-1.5 text-xs sm:inline-flex', syncChip.class]}
+			>
+				<span class={['size-2 rounded-full', syncChip.dot]} aria-hidden="true"></span>
+				{syncChip.text}
+			</a>
 			<ThemeToggle />
 			<a href={resolve('/(app)/settings')} class="shrink-0" aria-label="Your account">
 				<Avatar name={data.user.fullName} src={data.user.avatarUrl} />

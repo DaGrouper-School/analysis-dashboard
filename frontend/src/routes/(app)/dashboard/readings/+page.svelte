@@ -2,14 +2,13 @@
 	import ContributorId from '#lib/features/consent/ContributorId.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import Icon from '#lib/components/Icon.svelte';
-	import Select from '#lib/components/Select.svelte';
+	import Pagination from '#lib/components/Pagination.svelte';
+	import ExportCsvButton from '#lib/features/measurements/ExportCsvButton.svelte';
+	import RawFilters from '#lib/features/measurements/RawFilters.svelte';
 	import type { RawSortKey } from '#lib/domain/types.ts';
 	import { formatPoint } from '#lib/features/map/geo.ts';
 	import { describeParameter, formatValue } from '#lib/features/measurements/key-values.ts';
-	import { PAGE_SIZE, UTF8_BOM } from '#lib/features/measurements/raw-data.ts';
 	import { sensorQuery } from '#lib/utils/sensor-selection.ts';
-	import { errorMessage, services } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -20,13 +19,8 @@
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 	const count = new Intl.NumberFormat();
 
-	const parameterOptions = $derived(
-		(page?.options.parameterIds ?? [])
-			.map((id) => ({ id, label: describeParameter(id, paramsById).label }))
-			.sort((a, b) => a.label.localeCompare(b.label))
-	);
 	const filtered = $derived(
-		!!query && !!(query.from || query.to || query.parameterId || query.sourceId || query.labId)
+		!!query && !!(query.from || query.to || query.parameterId || query.sourceId)
 	);
 	const pickedDevice = $derived(
 		page?.options.sources.find((s) => s.id === query?.sourceId && s.kind === 'device')
@@ -36,6 +30,7 @@
 	);
 
 	type Filters = {
+		classroom?: string;
 		from?: string;
 		to?: string;
 		param?: string;
@@ -43,10 +38,11 @@
 		site?: string;
 		sort?: RawSortKey;
 		order?: 'asc' | 'desc';
-		n?: number;
+		/** Left out, every change goes back to the first page. */
+		page?: number;
 	};
 
-	/** The address for these filters: what is set stays, `change` replaces it. */
+	/** The address for these filters: what is set stays, `change` replaces it, page 1 again. */
 	function address(change: Filters) {
 		const next: Filters = {
 			from: query?.from,
@@ -58,8 +54,9 @@
 			order: query?.order,
 			...change
 		};
-		const pairs: [string, string][] = query ? [['classroom', query.classroomId]] : [];
-		for (const [key, value] of Object.entries(next)) {
+		const { classroom = query?.classroomId, ...rest } = next;
+		const pairs: [string, string][] = classroom ? [['classroom', classroom]] : [];
+		for (const [key, value] of Object.entries(rest)) {
 			if (value !== undefined && value !== '') pairs.push([key, String(value)]);
 		}
 		const params = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
@@ -88,36 +85,6 @@
 		if (key !== current) return 'none';
 		const order = query?.order ?? (current === 'time' ? 'desc' : 'asc');
 		return order === 'asc' ? 'ascending' : 'descending';
-	}
-
-	let exporting = $state(false);
-	let exportError = $state('');
-
-	/** Asks SAM for the matching rows as CSV and saves the file. */
-	async function exportCsv() {
-		if (!query) return;
-		exporting = true;
-		exportError = '';
-		try {
-			const file = await services.exports.rawCsv(query);
-			const url = URL.createObjectURL(
-				new Blob(
-					// Excel reads a CSV without the mark as a local code page and mangles `°C`.
-					[file.content.startsWith(UTF8_BOM) ? '' : UTF8_BOM, file.content],
-					{ type: 'text/csv;charset=utf-8' }
-				)
-			);
-			const link = Object.assign(document.createElement('a'), {
-				href: url,
-				download: file.filename
-			});
-			link.click();
-			setTimeout(() => URL.revokeObjectURL(url), 1000);
-		} catch (e) {
-			exportError = errorMessage(e);
-		} finally {
-			exporting = false;
-		}
 	}
 </script>
 
@@ -152,18 +119,7 @@
 		{/if}
 	</div>
 	{#if page}
-		<div class="flex flex-col items-end gap-1">
-			<button
-				type="button"
-				class="btn btn-primary"
-				disabled={exporting || !page.total}
-				onclick={exportCsv}
-			>
-				<Icon name="download" class="size-4" />
-				{exporting ? 'Exporting…' : `Export CSV (${count.format(page.total)})`}
-			</button>
-			{#if exportError}<p class="field-error" role="alert">{exportError}</p>{/if}
-		</div>
+		{#if query}<ExportCsvButton {query} classrooms={data.memberClassrooms} />{/if}
 	{/if}
 </div>
 
@@ -217,64 +173,21 @@
 		aria-label="Filter raw measurements"
 		onsubmit={(e) => e.preventDefault()}
 	>
-		<div>
-			<label class="label" for="raw-from">From</label>
-			<input
-				id="raw-from"
-				type="date"
-				class="input"
-				value={query.from ?? ''}
-				max={query.to}
-				onchange={(e) => apply({ from: e.currentTarget.value, n: undefined })}
-			/>
-		</div>
-		<div>
-			<label class="label" for="raw-to">To</label>
-			<input
-				id="raw-to"
-				type="date"
-				class="input"
-				value={query.to ?? ''}
-				min={query.from}
-				onchange={(e) => apply({ to: e.currentTarget.value, n: undefined })}
-			/>
-		</div>
-		<div>
-			<label class="label" for="raw-param">Parameter</label>
-			<Select
-				id="raw-param"
-				options={[
-					{ value: '', label: 'All parameters' },
-					...parameterOptions.map((o) => ({ value: o.id, label: o.label }))
-				]}
-				value={query.parameterId ?? ''}
-				onchange={(value) => apply({ param: value, n: undefined })}
-			/>
-		</div>
-		<div>
-			<label class="label" for="raw-source">Source</label>
-			<Select
-				id="raw-source"
-				options={[
-					{ value: '', label: 'All sources' },
-					...page.options.sources.map((o) => ({ value: o.id, label: o.name }))
-				]}
-				value={query.sourceId ?? ''}
-				onchange={(value) => apply({ source: value, n: undefined })}
-			/>
-		</div>
-		<div>
-			<label class="label" for="raw-site">Site</label>
-			<Select
-				id="raw-site"
-				options={[
-					{ value: '', label: 'All sites' },
-					...page.options.sites.map((o) => ({ value: o.id, label: o.name }))
-				]}
-				value={query.labId ?? ''}
-				onchange={(value) => apply({ site: value, n: undefined })}
-			/>
-		</div>
+		<RawFilters
+			{query}
+			classrooms={data.memberClassrooms}
+			options={page.options}
+			looks={data.looks}
+			parameters={paramsById}
+			onchange={(change) =>
+				apply({
+					...('classroomId' in change && { classroom: change.classroomId, site: undefined }),
+					...('sourceId' in change && { source: change.sourceId }),
+					...('parameterId' in change && { param: change.parameterId }),
+					...('from' in change && { from: change.from }),
+					...('to' in change && { to: change.to })
+				})}
+		/>
 		<div class="flex items-end">
 			<button
 				type="button"
@@ -286,8 +199,7 @@
 						to: undefined,
 						param: undefined,
 						source: undefined,
-						site: undefined,
-						n: undefined
+						site: undefined
 					})}>Clear filters</button
 			>
 		</div>
@@ -306,10 +218,8 @@
 		</div>
 	{:else}
 		<p class="mt-6 text-sm text-muted" aria-live="polite">
-			{page.rows.length < page.total
-				? `Showing ${count.format(page.rows.length)} of ${count.format(page.total)} values.`
-				: `${count.format(page.total)} value${page.total === 1 ? '' : 's'}.`}
-			Dates are in your time zone; the date filters count whole days in UTC.
+			{count.format(page.total)} value{page.total === 1 ? '' : 's'}. Dates are in your time zone;
+			the date filters count whole days in UTC.
 		</p>
 		<div class="card mt-3 overflow-x-auto p-0">
 			<table class="w-full min-w-[52rem] text-left text-sm">
@@ -318,7 +228,7 @@
 						{@render sortHeader('time', 'Observed')}
 						{@render sortHeader('parameter', 'Parameter')}
 						<th class="px-4 py-3 text-right font-medium">Value</th>
-						{@render sortHeader('source', 'Source')}
+						{@render sortHeader('source', 'Measurement')}
 						{@render sortHeader('site', 'Site')}
 						<th class="px-4 py-3 font-medium">Location</th>
 					</tr>
@@ -365,14 +275,12 @@
 				</tbody>
 			</table>
 		</div>
-		{#if page.rows.length < page.total}
-			<div class="mt-4 text-center">
-				<button
-					type="button"
-					class="btn btn-ghost"
-					onclick={() => apply({ n: data.limit + PAGE_SIZE })}>Show more</button
-				>
-			</div>
-		{/if}
+		<Pagination
+			class="mt-4"
+			page={page.page}
+			pageSize={page.pageSize}
+			total={page.total}
+			onpage={(p) => apply({ page: p })}
+		/>
 	{/if}
 {/if}

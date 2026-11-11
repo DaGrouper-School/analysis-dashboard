@@ -7,6 +7,7 @@
 	import { thresholdStatus, thresholdsFor } from '#lib/domain/alerts.ts';
 	import { chartOf } from '#lib/domain/charts.ts';
 	import type { PublicParameterPage } from '#lib/domain/types.ts';
+	import ExportCsvButton from '#lib/features/measurements/ExportCsvButton.svelte';
 	import ChartAlerts from '#lib/features/alerts/ChartAlerts.svelte';
 	import {
 		dailyStats,
@@ -150,23 +151,46 @@
 		{ label: 'Dashboard', href: resolve('/(app)/dashboard') },
 		{
 			label: data.classroom.name,
-			href: resolve('/(app)/dashboard') + sensorQuery(data.classroom.id)
+			href: resolve('/(app)/dashboard/details') + sensorQuery(data.classroom.id)
 		},
+		// The device shown, to its domains on the details page. Rain shows every source at once.
+		...(!rain && series?.source.kind === 'device'
+			? [
+					{
+						label: sourceName(series),
+						href:
+							resolve('/(app)/dashboard/details') +
+							sensorQuery(data.classroom.id, series.source.id) +
+							'&tab=domains'
+					}
+				]
+			: []),
 		{ label: parameter.label }
 	]}
 />
 
-<header class="mt-4">
-	<div class="flex flex-wrap items-center gap-3">
-		<h1 class="font-display text-4xl">{parameter.label}</h1>
-		<SampleDataBadge show={data.content.sampleData} />
+<header class="mt-4 flex flex-wrap items-start justify-between gap-4">
+	<div>
+		<div class="flex flex-wrap items-center gap-3">
+			<h1 class="font-display text-4xl">{parameter.label}</h1>
+			<SampleDataBadge show={data.content.sampleData} />
+		</div>
+		{#if data.domain}
+			<p class="mt-2 flex items-center gap-1.5 text-sm text-muted">
+				<Icon name={data.domain.icon} fallback={FALLBACK_DOMAIN_ICON} class="size-4" />
+				{data.domain.label}
+			</p>
+		{/if}
 	</div>
-	{#if data.domain}
-		<p class="mt-2 flex items-center gap-1.5 text-sm text-muted">
-			<Icon name={data.domain.icon} fallback={FALLBACK_DOMAIN_ICON} class="size-4" />
-			{data.domain.label}
-		</p>
-	{/if}
+	<!-- Every raw value of this measurement, from the device shown (rain: every source). -->
+	<ExportCsvButton
+		query={{
+			classroomId: data.classroom.id,
+			parameterId: parameter.id,
+			sourceId: !rain && series?.source.kind === 'device' ? series.source.id : undefined
+		}}
+		classrooms={data.memberClassrooms}
+	/>
 </header>
 
 <!-- 1. What it means here -->

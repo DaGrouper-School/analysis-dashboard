@@ -132,7 +132,8 @@
 							>
 						{/if}
 					</div>
-					<p class="mt-2 text-sm leading-5">
+					<!-- Room for a two-line label on every tile, so the values line up across a row. -->
+					<p class="mt-2 min-h-10 text-sm leading-5">
 						{#if href && tile.parameterId}
 							<!-- Callers pass resolved paths. The link covers the tile. -->
 							<!-- eslint-disable svelte/no-navigation-without-resolve -->

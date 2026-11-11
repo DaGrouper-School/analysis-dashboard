@@ -10,8 +10,13 @@ import type {
 /** The source ID that stands for every field observation, which has no device. */
 export const FIELD_SOURCE = 'field';
 
-/** Rows the raw data table shows at first, and adds with each "Show more". */
-export const PAGE_SIZE = 200;
+/** Rows on each page of the raw data table. */
+export const PAGE_SIZE = 50;
+
+/** What a raw data filter change sets; a filter left out stays as it is. */
+export type RawFilterChange = Partial<
+	Pick<RawQuery, 'classroomId' | 'sourceId' | 'parameterId' | 'from' | 'to'>
+>;
 
 export const SORT_KEYS: RawSortKey[] = ['time', 'parameter', 'source', 'site'];
 

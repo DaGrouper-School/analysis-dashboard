@@ -166,8 +166,8 @@ export function createHttpServices(baseUrl: string): Services {
 		},
 		// SAM's export service filters, sorts and applies each classroom's terms on the server.
 		exports: {
-			rawValues: (query, limit = 200) =>
-				request<RawPage>('POST', '/exports/raw', { ...query, limit }),
+			rawValues: (query, paging) =>
+				request<RawPage>('POST', '/exports/raw', { ...query, ...paging }),
 			rawCsv: (query) => request<CsvExport>('POST', '/exports/raw.csv', query)
 		},
 		// Open to visitors: the backend serves these without a session, released data only.

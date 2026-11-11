@@ -8,6 +8,7 @@
 	import ClassroomSettings from '#lib/features/classroom/ClassroomSettings.svelte';
 	import ClassroomLabs from '#lib/features/devices/ClassroomLabs.svelte';
 	import DevicePicker, { type PickableDevice } from '#lib/features/devices/DevicePicker.svelte';
+	import RawDataLink from '#lib/features/devices/RawDataLink.svelte';
 	import DomainBrowser from '#lib/features/measurements/DomainBrowser.svelte';
 	import type { domainsOf } from '#lib/features/measurements/domains.ts';
 	import MeasurementsPanel from './MeasurementsPanel.svelte';
@@ -74,7 +75,15 @@
 				{onrelease}
 			/>
 		{:else if active === 'domains'}
-			<DevicePicker {devices} {deviceId} onpick={onpickdevice} />
+			<!-- The picked device's raw data beside the picker, as on its card in Measurements. -->
+			<div class="flex flex-wrap items-center justify-between gap-3 lg:flex-nowrap">
+				<DevicePicker {devices} {deviceId} onpick={onpickdevice} />
+				{#if deviceId}<RawDataLink
+						class="shrink-0"
+						classroomId={station.classroom.id}
+						{deviceId}
+					/>{/if}
+			</div>
 			<DomainBrowser
 				class="mt-6"
 				{domains}

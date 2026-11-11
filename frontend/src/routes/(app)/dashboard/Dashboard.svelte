@@ -290,23 +290,24 @@
 			{/if}
 		{/snippet}
 	</ClassroomOverview>
+{/if}
 
-	{#if canSync && classroom && device && data.labLocation}
-		<!-- Keyed by sensor, so a new pick never syncs to the sensor the user moved away from. -->
-		{#key device.id}
-			<SyncModal
-				bind:open={syncing}
-				devices={[device]}
-				deviceTypes={data.deviceTypes}
-				classroomName={classroom.name}
-				labLocation={data.labLocation}
-				{lastGps}
-				parameters={data.parameters}
-				onsynced={() => invalidateAll()}
-				onclose={() => invalidateAll()}
-			/>
-		{/key}
-	{/if}
+<!-- On the dashboard and on the details page, where Measurements opens it. -->
+{#if canSync && classroom && device && data.labLocation}
+	<!-- Keyed by sensor, so a new pick never syncs to the sensor the user moved away from. -->
+	{#key device.id}
+		<SyncModal
+			bind:open={syncing}
+			devices={[device]}
+			deviceTypes={data.deviceTypes}
+			classroomName={classroom.name}
+			labLocation={data.labLocation}
+			{lastGps}
+			parameters={data.parameters}
+			onsynced={() => invalidateAll()}
+			onclose={() => invalidateAll()}
+		/>
+	{/key}
 {/if}
 
 {#if classroom && data.release}

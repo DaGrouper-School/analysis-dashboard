@@ -56,7 +56,7 @@ export function sectionTabs(
 		...(who.head
 			? [{ id: 'labs' as const, label: 'Labs', icon: 'flask', count: counts.labs }]
 			: []),
-		{ id: 'records', label: 'Records', icon: 'clipboard', count: counts.records },
+		{ id: 'records', label: 'Manual records', icon: 'clipboard', count: counts.records },
 		...common,
 		...(who.managesPeople
 			? [{ id: 'people' as const, label: 'People', icon: 'users', count: counts.members }]

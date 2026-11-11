@@ -82,25 +82,31 @@ export function createMockExports({
 	now: () => number;
 }): ExportService {
 	return {
-		async rawValues(query, limit = 200) {
+		async rawValues(query, { page, pageSize }) {
 			await delay();
 			const state = readDb();
 			const { classroom, all, rows } = matching(state, query);
 			const sources = new Map<string, RawPage['options']['sources'][number]>();
 			const sites = new Map<string, string>();
-			for (const row of all) {
+			// The filters narrow in order, site then source then parameter: each offers only what
+			// the ones before it leave.
+			const inSite = all.filter((r) => !query.labId || r.labId === query.labId);
+			const inSource = inSite.filter((r) => !query.sourceId || r.sourceId === query.sourceId);
+			for (const row of all) sites.set(row.labId, row.siteName);
+			for (const row of inSite) {
 				sources.set(row.sourceId, { id: row.sourceId, name: row.sourceName, kind: row.sourceKind });
-				sites.set(row.labId, row.siteName);
 			}
 			const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
 			return {
 				classroomId: classroom.id,
 				classroomName: classroom.name,
-				rows: structuredClone(rows.slice(0, limit)),
+				rows: structuredClone(rows.slice((page - 1) * pageSize, page * pageSize)),
 				total: rows.length,
+				page,
+				pageSize,
 				terms: structuredClone(classroom.terms),
 				options: {
-					parameterIds: [...new Set(all.map((r) => r.parameterId))],
+					parameterIds: [...new Set(inSource.map((r) => r.parameterId))],
 					sources: [...sources.values()].sort(byName),
 					sites: [...sites].map(([id, name]) => ({ id, name })).sort(byName)
 				}

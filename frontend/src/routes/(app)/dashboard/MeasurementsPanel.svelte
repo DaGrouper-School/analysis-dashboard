@@ -4,6 +4,7 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import Select from '#lib/components/Select.svelte';
 	import type { Parameter } from '#lib/domain/types.ts';
+	import RawDataLink from '#lib/features/devices/RawDataLink.svelte';
 	import RegisterSensorModal from '#lib/features/devices/RegisterSensorModal.svelte';
 	import { keySummary } from '#lib/features/measurements/key-values.ts';
 	import {
@@ -13,7 +14,6 @@
 		deviceTypeOf,
 		isManualType
 	} from '#lib/utils/labels.ts';
-	import { sensorQuery } from '#lib/utils/sensor-selection.ts';
 	import PanelHead from './PanelHead.svelte';
 	import type { PageData } from './$types';
 
@@ -134,13 +134,7 @@
 					>
 					<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				{/if}
-				<!-- eslint-disable svelte/no-navigation-without-resolve -->
-				<a
-					class="btn btn-ghost"
-					href={resolve('/(app)/dashboard/readings') + sensorQuery(classroomId, option.id)}
-					>Raw data</a
-				>
-				<!-- eslint-enable svelte/no-navigation-without-resolve -->
+				<RawDataLink {classroomId} deviceId={option.id} />
 			</div>
 		</li>
 	{:else}

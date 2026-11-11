@@ -17,21 +17,38 @@ async function signInAbebe() {
 	await services.auth.verifyPhoneCode(challenge.requestId, challenge.devCode!);
 }
 
+/** Every row on one page. */
+const ALL = { page: 1, pageSize: 10_000 };
+
 describe('raw data export', () => {
 	it('only serves classrooms the user belongs to, platform admins included', async () => {
 		await signInAs('g-leila');
-		await expect(services.exports.rawValues({ classroomId: 'cls_trinity' })).rejects.toMatchObject({
+		await expect(
+			services.exports.rawValues({ classroomId: 'cls_trinity' }, ALL)
+		).rejects.toMatchObject({
 			code: 'not_found'
 		});
 		await expect(services.exports.rawCsv({ classroomId: 'cls_trinity' })).rejects.toMatchObject({
 			code: 'not_found'
 		});
 		await signInAs('g-marcus');
-		const page = await services.exports.rawValues({ classroomId: 'cls_trinity' }, 5);
+		const page = await services.exports.rawValues(
+			{ classroomId: 'cls_trinity' },
+			{ page: 1, pageSize: 5 }
+		);
 		expect(page.rows).toHaveLength(5);
 		expect(page.total).toBeGreaterThan(5);
 		expect(page.rows.every((r) => r.labId === 'lab_trinity')).toBe(true);
 		expect(page.terms.licence).toBe('CC BY 4.0');
+	});
+
+	it('pages the values: each page starts where the last one ended', async () => {
+		await signInAs('g-marcus');
+		const query = { classroomId: 'cls_trinity' };
+		const all = await services.exports.rawValues(query, ALL);
+		const second = await services.exports.rawValues(query, { page: 2, pageSize: 5 });
+		expect(second.rows.map((r) => r.id)).toEqual(all.rows.slice(5, 10).map((r) => r.id));
+		expect([second.page, second.pageSize, second.total]).toEqual([2, 5, all.total]);
 	});
 
 	it('includes field observations as their own source', async () => {
@@ -44,10 +61,13 @@ describe('raw data export', () => {
 			values: { species_name: 'Hooded vulture', species_count: 3 },
 			location: { lat: 9.05, lng: 38.76 }
 		});
-		const page = await services.exports.rawValues({
-			classroomId: 'cls_trinity',
-			sourceId: 'field'
-		});
+		const page = await services.exports.rawValues(
+			{
+				classroomId: 'cls_trinity',
+				sourceId: 'field'
+			},
+			ALL
+		);
 		const mine = page.rows.filter((r) => r.observedAt === '2026-10-20T07:00:00.000Z');
 		expect(mine.map((r) => [r.parameterId, r.value, r.sourceName])).toEqual([
 			['species_count', 3, 'Field observation'],
@@ -62,7 +82,7 @@ describe('raw data export', () => {
 
 	it('rounds positions where the terms ask, in the table and the file', async () => {
 		await signInAs('g-marcus');
-		const page = await services.exports.rawValues({ classroomId: 'cls_hargeisa' });
+		const page = await services.exports.rawValues({ classroomId: 'cls_hargeisa' }, ALL);
 		expect(page.terms.coordinateDecimals).toBe(2);
 		for (const { location } of page.rows) {
 			expect(Math.round(location.lat * 100) / 100).toBe(location.lat);
@@ -73,7 +93,7 @@ describe('raw data export', () => {
 	it('exports the filtered rows as CSV with the licence, credit and restrictions', async () => {
 		await signInAs('g-marcus');
 		const query = { classroomId: 'cls_nassau', parameterId: 'air_temperature' };
-		const page = await services.exports.rawValues(query);
+		const page = await services.exports.rawValues(query, ALL);
 		const file = await services.exports.rawCsv(query);
 		expect(file.filename).toMatch(
 			/^dagrouper-bay-street-classroom-all-sources-20261022-0900-[a-z0-9]{6}\.csv$/

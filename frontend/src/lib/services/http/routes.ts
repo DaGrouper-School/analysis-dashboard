@@ -511,10 +511,10 @@ export const routes: Route[] = [
 		http: 'POST',
 		path: '/exports/raw',
 		access: 'user',
-		body: 'RawQuery & { limit: number }',
+		body: 'RawQuery & RawPaging',
 		response: 'RawPage',
 		errors: [400],
-		args: [{ classroomId: 'x1' }, 200]
+		args: [{ classroomId: 'x1' }, { page: 1, pageSize: 50 }]
 	},
 	{
 		method: 'exports.rawCsv',

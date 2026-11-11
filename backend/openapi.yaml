@@ -1642,7 +1642,7 @@ paths:
       operationId: exports.rawValues
       summary: Raw values
       description: |-
-        Up to `limit` matching values, with the classroom's data terms.
+        One page of matching values, with the total and the classroom's data terms.
 
         Access: signed-in users. Classroom roles are checked on the server.
       requestBody:
@@ -4006,7 +4006,9 @@ components:
       type: object
       additionalProperties: false
       properties:
-        limit:
+        page:
+          type: number
+        pageSize:
           type: number
         classroomId:
           type: string
@@ -4032,7 +4034,8 @@ components:
             - desc
       required:
         - classroomId
-        - limit
+        - page
+        - pageSize
     GeoPoint:
       type: object
       properties:
@@ -5736,7 +5739,12 @@ components:
             $ref: "#/components/schemas/RawRow"
         total:
           type: number
-          description: Rows matching the filters, before the page limit.
+          description: Rows matching the filters, across every page.
+        page:
+          type: number
+          description: The page these rows are, from 1, and how many rows a page holds.
+        pageSize:
+          type: number
         terms:
           $ref: "#/components/schemas/DataTerms"
         options:
@@ -5788,6 +5796,8 @@ components:
         - classroomName
         - rows
         - total
+        - page
+        - pageSize
         - terms
         - options
       additionalProperties: false

@@ -45,6 +45,7 @@ import type {
 	PublicStation,
 	SiteContent,
 	RawPage,
+	RawPaging,
 	RawQuery,
 	CurrentConditions,
 	Device,
@@ -315,8 +316,8 @@ export interface LabService {
  * and the same as a CSV file. Only classrooms the user belongs to; platform admins included.
  */
 export interface ExportService {
-	/** Up to `limit` matching values, with the classroom's data terms. */
-	rawValues(query: RawQuery, limit?: number): Promise<RawPage>;
+	/** One page of matching values, with the total and the classroom's data terms. */
+	rawValues(query: RawQuery, paging: RawPaging): Promise<RawPage>;
 	/** Every matching value as CSV. Each row carries the licence, attribution and restrictions. */
 	rawCsv(query: RawQuery): Promise<CsvExport>;
 }
