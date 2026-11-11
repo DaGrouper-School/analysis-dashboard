@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { contextClassroom, rememberClassroom } from '#lib/features/classroom/classroom-context.ts';
+import { contextClassroom, rememberClassroom } from '#lib/utils/classroom-context.ts';
 
 const classrooms = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
 const at = (query = '') => new URL(`https://example.test/dashboard${query}`);

@@ -8,7 +8,7 @@
 	import { formatPoint } from '#lib/features/map/geo.ts';
 	import { describeParameter, formatValue } from '#lib/features/measurements/key-values.ts';
 	import { PAGE_SIZE, UTF8_BOM } from '#lib/features/measurements/raw-data.ts';
-	import { sensorQuery } from '#lib/features/devices/sensor-selection.ts';
+	import { sensorQuery } from '#lib/utils/sensor-selection.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
 	import type { PageProps } from './$types';
 

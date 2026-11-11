@@ -4,7 +4,7 @@
 	import ChartAlerts from '#lib/features/alerts/ChartAlerts.svelte';
 	import { thresholdStatus, thresholdsFor } from '#lib/domain/alerts.ts';
 	import { deviceTypeLabel } from '#lib/utils/labels.ts';
-	import { sensorQuery } from '#lib/features/devices/sensor-selection.ts';
+	import { sensorQuery } from '#lib/utils/sensor-selection.ts';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
 	import Chart, { type ChartBars, type ChartLine } from '#lib/components/Chart.svelte';

@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import { resolve } from '$app/paths';
-import { sensorQuery } from '#lib/features/devices/sensor-selection.ts';
+import { sensorQuery } from '#lib/utils/sensor-selection.ts';
 import { loadDashboard } from '../+page.ts';
 import type { PageLoad } from './$types';
 

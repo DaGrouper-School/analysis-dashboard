@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { sectionQuery } from '#lib/features/devices/sensor-selection.ts';
+	import { sectionQuery } from '#lib/utils/sensor-selection.ts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import LabForm from '#lib/features/devices/LabForm.svelte';

@@ -31,7 +31,7 @@
 		deviceTypeOf,
 		isManualType
 	} from '#lib/utils/labels.ts';
-	import { sensorQuery } from '#lib/features/devices/sensor-selection.ts';
+	import { sensorQuery } from '#lib/utils/sensor-selection.ts';
 	import type { PageData } from './$types';
 
 	/**

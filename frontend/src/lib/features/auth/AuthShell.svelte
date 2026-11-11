@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import Globe, { type GlobeMarker } from '#lib/features/map/Globe.svelte';
+	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import Logo from '#lib/components/Logo.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 

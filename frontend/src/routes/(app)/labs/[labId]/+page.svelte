@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { sectionQuery } from '#lib/features/devices/sensor-selection.ts';
+	import { sectionQuery } from '#lib/utils/sensor-selection.ts';
 	import ContributorId from '#lib/features/consent/ContributorId.svelte';
 	import { invalidate } from '$app/navigation';
 	import { resolve } from '$app/paths';

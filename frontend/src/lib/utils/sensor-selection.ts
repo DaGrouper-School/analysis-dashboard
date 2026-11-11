@@ -1,4 +1,4 @@
-import { contextClassroom, rememberClassroom } from '#lib/features/classroom/classroom-context.ts';
+import { contextClassroom, rememberClassroom } from '#lib/utils/classroom-context.ts';
 import { services } from '#lib/services/index.ts';
 
 /**

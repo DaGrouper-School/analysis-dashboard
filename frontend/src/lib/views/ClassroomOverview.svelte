@@ -21,7 +21,7 @@
 	import CoreStrip from '#lib/features/devices/CoreStrip.svelte';
 	import DeviceStrip from '#lib/features/devices/DeviceStrip.svelte';
 	import DevicePicker, { type PickableDevice } from '#lib/features/devices/DevicePicker.svelte';
-	import Globe, { type GlobeMarker } from '#lib/features/map/Globe.svelte';
+	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import InstitutionOverview from '#lib/features/classroom/InstitutionOverview.svelte';
 	import NowCard from '#lib/features/devices/NowCard.svelte';
 	import Select from '#lib/components/Select.svelte';
