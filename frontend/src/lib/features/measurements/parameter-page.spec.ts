@@ -7,7 +7,8 @@ import {
 	inRange,
 	latestOf,
 	parameterCsv,
-	rainDays
+	rainDays,
+	rainNow
 } from '#lib/features/measurements/parameter-page.ts';
 
 const series = (
@@ -116,5 +117,27 @@ describe('parameter page (AP-23)', () => {
 			'2026-10-20T06:00:00Z,cls_trinity,gauge,rain_gauge_daily_accumulation,5,mm,CC BY 4.0,,"Trinity, 2026",',
 			''
 		]);
+	});
+
+	it('shows the rain page’s own source at the top, even when another has a later day', () => {
+		const all = [
+			series('gauge', 'rain_gauge_daily_accumulation', [['2026-10-20T08:00:00.000Z', 4.2]]),
+			series('station', 'precip_accum_local_day', [
+				['2026-10-20T08:00:00.000Z', 3.8],
+				['2026-11-11T10:00:00.000Z', 6.2]
+			])
+		];
+		const days = rainDays(all, 'gauge', 2);
+
+		expect(rainNow(days, all, 'rain_gauge_daily_accumulation')).toMatchObject({
+			day: '2026-10-20',
+			value: 4.2,
+			sourceId: 'gauge'
+		});
+		expect(rainNow(days, all, 'precip_accum_local_day')).toMatchObject({
+			day: '2026-11-11',
+			value: 6.2,
+			sourceId: 'station'
+		});
 	});
 });

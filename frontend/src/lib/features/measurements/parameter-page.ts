@@ -120,6 +120,28 @@ export function rainDays(
 		});
 }
 
+/**
+ * The rain value at the top of a rain page: the latest day this page's own value was read, from
+ * its own source. The gauge's page shows the gauge, a station's page the station, even when the
+ * other source has a later day. Falls back to the latest day of any source.
+ */
+export function rainNow(
+	days: RainDay[],
+	series: Pick<PublicParameterSeries, 'source' | 'parameterId'>[],
+	parameterId: string
+): { day: string; value: number | null; sourceId: string | null; review: boolean } | null {
+	const own = series.filter((s) => s.parameterId === parameterId).map((s) => s.source.id);
+	const day = days.findLast((d) => own.some((id) => d.totals[id] !== undefined)) ?? days.at(-1);
+	if (!day) return null;
+	const sourceId = own.find((id) => day.totals[id] !== undefined) ?? day.shownFrom;
+	return {
+		day: day.day,
+		value: sourceId === null ? null : day.totals[sourceId],
+		sourceId,
+		review: day.review
+	};
+}
+
 /** Readings inside a range that ends at `latest`: the last 24 hours, or whole days. */
 export function inRange<T extends { observedAt: string }>(
 	points: T[],
