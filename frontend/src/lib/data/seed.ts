@@ -1261,6 +1261,11 @@ const GAP_DAYS: Record<string, number[]> = {
 	dev_nassau_ws: [6]
 };
 const HOUR = 3_600_000;
+/** Extra readings on each past day: hours from the day's main reading, and how far they swing. */
+const DAY_SPREAD: [number, number][] = [
+	[-5, -1.2],
+	[4, 0.9]
+];
 
 /**
  * A month of daily readings behind each device's latest one, plus hourly readings over the last
@@ -1293,7 +1298,15 @@ function history(): MockDbState['readings'] {
 		for (let day = 1; day < HISTORY_DAYS; day++) {
 			if (GAP_DAYS[device.id]?.includes(day)) continue;
 			const wave = Math.sin(day * 0.9 + d) + 0.5 * Math.sin(day * 2.3 + d * 2);
-			add(new Date(Date.parse(READING_AT) - day * 24 * HOUR).toISOString(), wave, null);
+			const at = Date.parse(READING_AT) - day * 24 * HOUR;
+			add(new Date(at).toISOString(), wave, null);
+			// Early morning and mid-afternoon too, so each day has a low and a high to chart.
+			for (const [hours, shift] of DAY_SPREAD) {
+				const extra = at + hours * HOUR;
+				// The last day has its own hourly readings.
+				if (extra > Date.parse(READING_AT) - 24 * HOUR) continue;
+				add(new Date(extra).toISOString(), wave + shift, null);
+			}
 		}
 		for (let hour = 1; hour < 24; hour++) {
 			const at = Date.parse(READING_AT) - hour * HOUR;
