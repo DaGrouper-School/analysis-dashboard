@@ -9,6 +9,13 @@ export const CHART_LABELS: Record<Chart, string> = {
 	daily_bars: 'Daily bars'
 };
 
+/** Each chart kind's icon (see `UI_ICONS`), on the registry's chart picker. */
+export const CHART_ICONS: Record<Chart, string> = {
+	line: 'chart-line',
+	line_band: 'chart-band',
+	daily_bars: 'chart-bars'
+};
+
 /** The chart a value gets: its registry choice, a line for other numbers, none for text. */
 export function chartOf(parameter: Pick<Parameter, 'chart' | 'valueType'>): Chart | null {
 	if ((parameter.valueType ?? 'number') !== 'number') return null;

@@ -107,6 +107,10 @@ export const REGISTRY_ICONS = {
 
 /** Icons for actions and pairing steps. Not offered in the registry. */
 export const UI_ICONS = {
+	// The registry's chart kinds (see `CHART_ICONS`).
+	'chart-line': [{ d: 'M3 20h18M4 15l4.5-5 4 3L20 6' }],
+	'chart-band': [{ d: 'M3 21h18M6 9v8M10 6v8M14 9v8M18 4v8M6 13l4-3 4 3 4-5' }],
+	'chart-bars': [{ d: 'M3 20h18M6 17v-5M10 17V8M14 17v-7M18 17V5' }],
 	sync: [{ d: 'M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4' }],
 	readings: [{ d: 'M4 5h16M4 10h16M4 15h10M4 20h7' }, { cx: 18.5, cy: 18.5, r: 2.5 }],
 	plus: [{ d: 'M12 5v14M5 12h14' }],
