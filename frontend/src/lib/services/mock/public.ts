@@ -497,7 +497,6 @@ export function createMockPublic({
 					}
 				}
 			}
-			if (!contributions.length) throw missing();
 			contributions.sort((a, b) => b.observedAt.localeCompare(a.observedAt));
 			return {
 				content: structuredClone(state.siteContent),

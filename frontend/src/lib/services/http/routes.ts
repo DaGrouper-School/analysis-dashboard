@@ -571,7 +571,7 @@ export const routes: Route[] = [
 		access: 'public',
 		response: 'PublicContributor',
 		notes:
-			'Looked up by participant ID, the only identifier SAM stores. 404 when the participant has no released values.'
+			'Looked up by participant ID, the only identifier SAM stores. Every participant has a page, with no released values yet too. 404 only for an unknown ID.'
 	},
 
 	// Guardian consent

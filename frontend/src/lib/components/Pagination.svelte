@@ -3,18 +3,25 @@
 	 * Previous and next through a long list fetched a page at a time, with where you are. Hidden
 	 * when everything fits on one page.
 	 */
+	import type { Pager } from '#lib/components/pager.svelte.ts';
+
 	let {
-		page,
-		pageSize,
-		total,
-		onpage,
+		pager,
+		page = pager?.current ?? 1,
+		pageSize = pager?.pageSize ?? 1,
+		total = pager?.total ?? 0,
+		onpage = (next) => {
+			if (pager) pager.page = next;
+		},
 		class: className = ''
 	}: {
+		/** A list paged in the browser; or give the page, size, total and `onpage` instead. */
+		pager?: Pager<unknown>;
 		/** The page shown, from 1. */
-		page: number;
-		pageSize: number;
-		total: number;
-		onpage: (page: number) => void;
+		page?: number;
+		pageSize?: number;
+		total?: number;
+		onpage?: (page: number) => void;
 		class?: string;
 	} = $props();
 

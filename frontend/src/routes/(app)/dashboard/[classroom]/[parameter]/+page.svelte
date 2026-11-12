@@ -7,7 +7,7 @@
 	import { thresholdStatus, thresholdsFor } from '#lib/domain/alerts.ts';
 	import { chartOf } from '#lib/domain/charts.ts';
 	import type { PublicParameterPage } from '#lib/domain/types.ts';
-	import ExportCsvButton from '#lib/features/measurements/ExportCsvButton.svelte';
+	import RawDataButton from '#lib/features/measurements/RawDataButton.svelte';
 	import ChartAlerts from '#lib/features/alerts/ChartAlerts.svelte';
 	import {
 		dailyStats,
@@ -183,13 +183,14 @@
 		{/if}
 	</div>
 	<!-- Every raw value of this measurement, from the device shown (rain: every source). -->
-	<ExportCsvButton
+	<RawDataButton
+		primary
+		label="Export CSV"
 		query={{
 			classroomId: data.classroom.id,
 			parameterId: parameter.id,
 			sourceId: !rain && series?.source.kind === 'device' ? series.source.id : undefined
 		}}
-		classrooms={data.memberClassrooms}
 	/>
 </header>
 

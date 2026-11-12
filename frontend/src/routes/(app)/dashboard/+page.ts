@@ -6,8 +6,8 @@ import type { MemberConsent, RawRow, ReleaseReview } from '#lib/domain/types.ts'
 import type { PageLoad } from './$types';
 import type { PageLoad as DetailsLoad } from './details/$types';
 
-/** How many recent records the Manual records tab lists. */
-const RECORDS = 8;
+/** How many recent records the Manual records tab loads, then pages ten at a time. */
+const RECORDS = 200;
 
 /**
  * The dashboard (AP-45): one classroom at a time, with the same overview as its public page. Its

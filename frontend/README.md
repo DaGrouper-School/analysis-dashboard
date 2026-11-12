@@ -94,21 +94,21 @@ Folder layout follows [Bulletproof React](https://github.com/alan2207/bulletproo
 
 ## Routes
 
-| Route                 | Story                                                    |
-| --------------------- | -------------------------------------------------------- |
-| `/signup`             | AP-01 sign up with Google or phone                       |
-| `/verify-phone`       | AP-01 SMS code with 30 s resend                          |
-| `/onboarding/profile` | AP-02 profile and contact (Google users verify a phone)  |
-| `/onboarding/address` | AP-02 address with places autocomplete                   |
-| `/dashboard`          | Pick a classroom and sensor: conditions, chart, history  |
-| `/dashboard/readings` | Raw readings of the picked sensor, every value it sent   |
-| `/dashboard/domains`  | AP-10 domain tabs: thresholds, trends, 24 h / 7 d / 30 d |
-| `/registry`           | Platform admin: device types, domains and value mapping  |
-| `/map`                | AP-06 device map with current conditions and alerts      |
-| `/classrooms/[id]`    | AP-03 classroom, members, invites; edit name and school  |
-| `/labs/[labId]`       | AP-05 devices, readings, record-data demo                |
-| `/labs/[labId]/edit`  | Edit the lab and its site profile                        |
-| `/profile`            | Edit profile and address, sign out                       |
+| Route                 | Story                                                            |
+| --------------------- | ---------------------------------------------------------------- |
+| `/signup`             | AP-01 sign up with Google or phone                               |
+| `/verify-phone`       | AP-01 SMS code with 30 s resend                                  |
+| `/onboarding/profile` | AP-02 profile and contact (Google users verify a phone)          |
+| `/onboarding/address` | AP-02 address with places autocomplete                           |
+| `/dashboard`          | Pick a classroom and sensor: conditions, chart, history          |
+| `/dashboard/readings` | Old link: goes to the classroom's devices (raw data is a dialog) |
+| `/dashboard/domains`  | AP-10 domain tabs: thresholds, trends, 24 h / 7 d / 30 d         |
+| `/registry`           | Platform admin: device types, domains and value mapping          |
+| `/map`                | AP-06 device map with current conditions and alerts              |
+| `/classrooms/[id]`    | AP-03 classroom, members, invites; edit name and school          |
+| `/labs/[labId]`       | AP-05 devices, readings, record-data demo                        |
+| `/labs/[labId]/edit`  | Edit the lab and its site profile                                |
+| `/profile`            | Edit profile and address, sign out                               |
 
 Route groups `(auth)` and `(app)` hold the guards: signed-in users skip sign-up, and the app
 requires a completed onboarding.
@@ -155,7 +155,7 @@ user belongs to; anyone else, platform admins included, sees an empty state. The
 facilitators and community scientists can run the record-data demo, from the dashboard for the
 picked sensor or from a lab page: it pairs with a registered device and records six readings,
 two of them without a GPS fix, which then appear in that sensor's chart on the dashboard and
-on its raw readings page. Researchers don't see it. Classroom name and
+in its raw data. Researchers don't see it. Classroom name and
 institution are editable by the head; the classroom code never changes.
 
 ## Look and feel
