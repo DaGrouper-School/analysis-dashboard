@@ -4,8 +4,9 @@
 /* Dark explorer theme (the default): black canvas, thin white lines, white pills for the
    active choice, green and teal for data. The light theme below swaps the same tokens. */
 @theme {
-	--font-sans: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
-	--font-display: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
+	--font-sans: 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+	--font-display: 'Cal Sans', 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+	--font-mono: 'Google Sans Flex', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 
 	--color-canvas: #000000;
 	/* Floating panels: a breath lighter than the canvas. */

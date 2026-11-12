@@ -72,7 +72,7 @@
 	}
 </script>
 
-<div class="grid gap-6 lg:grid-cols-[13rem_minmax(0,1fr)]">
+<div class="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[13rem_minmax(0,1fr)]">
 	{#if dropdown}
 		<Select {options} value={active} {label} class="w-full lg:hidden" onchange={open} />
 	{/if}

@@ -1,10 +1,12 @@
 import type {
+	Chart,
 	CoreReadings,
 	DeviceSummaryCard,
 	NowTile,
 	NowTileConfig,
 	Parameter,
-	PublicValue
+	PublicValue,
+	ReviewState
 } from '#lib/domain/types.ts';
 import { formatValue, type KeyValue } from '#lib/features/measurements/key-values.ts';
 import { recentTrend } from '#lib/features/measurements/indicators.ts';
@@ -179,7 +181,17 @@ export function readingTiles(
 export function deviceSummary(
 	readings: { observedAt: string; values: Record<string, unknown> }[],
 	values: KeyValue[],
-	max = Infinity
+	{
+		chart = () => 'line',
+		review = () => 'released',
+		max = Infinity
+	}: {
+		/** Each value's chart kind from the registry. */
+		chart?: (id: string) => Chart;
+		/** Where each value stands in review. */
+		review?: (id: string) => ReviewState;
+		max?: number;
+	} = {}
 ): DeviceSummaryCard[] {
 	const newest = readings[0];
 	// Nothing yet: the same cards with no data, so the page keeps its layout.
@@ -212,7 +224,9 @@ export function deviceSummary(
 				latest: newest ? numberOf(newest, v.id) : null,
 				observedAt: newest?.observedAt ?? null,
 				// The last reading of each day: a day's total for an accumulation, else its close.
-				week: days.map((day) => ({ day, value: numbers(day)[0] ?? null })),
+				week: days.map((day) => ({ day, value: numbers(day)[0] ?? null, ...range(numbers(day)) })),
+				chart: chart(v.id),
+				review: review(v.id),
 				todayLow: todays.low,
 				todayHigh: todays.high,
 				weekLow: weeks.low,

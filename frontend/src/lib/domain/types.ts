@@ -1119,8 +1119,15 @@ export interface DeviceSummaryCard {
 	icon: string | null;
 	latest: number | null;
 	observedAt: string | null;
-	/** Seven days up to the newest reading, oldest first. */
-	week: { day: string; value: number | null }[];
+	/**
+	 * Seven days up to the newest reading, oldest first: each day's last reading (a day's total
+	 * for an accumulation), and its low and high.
+	 */
+	week: { day: string; value: number | null; low: number | null; high: number | null }[];
+	/** The value's chart kind from the registry (AP-23), which sets how its week is drawn. */
+	chart: Chart;
+	/** Where the value stands in review (AP-20). */
+	review: ReviewState;
 	todayLow: number | null;
 	todayHigh: number | null;
 	weekLow: number | null;
