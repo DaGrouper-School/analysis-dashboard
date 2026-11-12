@@ -1,20 +1,13 @@
 <script lang="ts">
 	import Avatar from '#lib/components/Avatar.svelte';
-
-	export interface MockGoogleAccount {
-		sub: string;
-		name: string;
-		email: string;
-		/** What kind of account it is, such as "Researcher" or "New account". */
-		type?: string;
-	}
+	import type { DemoGoogleAccount } from '#lib/domain/types.ts';
 
 	let {
 		accounts,
 		onPick,
 		onClose
 	}: {
-		accounts: MockGoogleAccount[];
+		accounts: DemoGoogleAccount[];
 		onPick: (sub: string) => void;
 		onClose: () => void;
 	} = $props();

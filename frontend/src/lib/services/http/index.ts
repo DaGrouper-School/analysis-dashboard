@@ -20,6 +20,7 @@ import type {
 	Invitation,
 	InvitationPreview,
 	AuthResult,
+	DemoGoogleAccount,
 	DeviceTypeDefinition,
 	DomainDefinition,
 	Parameter,
@@ -89,7 +90,8 @@ export function createHttpServices(baseUrl: string): Services {
 			requestPhoneCode: (phone) => request<PhoneChallenge>('POST', '/auth/phone/start', { phone }),
 			verifyPhoneCode: (requestId, code) =>
 				request<AuthResult>('POST', '/auth/phone/verify', { requestId, code }),
-			signOut: () => request<void>('POST', '/auth/sign-out')
+			signOut: () => request<void>('POST', '/auth/sign-out'),
+			demoGoogleAccounts: () => request<DemoGoogleAccount[]>('GET', '/auth/demo-accounts')
 		},
 		profile: {
 			updateProfile: (input: ProfileInput) => request<User>('PATCH', '/me/profile', input),

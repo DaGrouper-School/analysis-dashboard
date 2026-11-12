@@ -2,7 +2,6 @@
 	import Modal from '#lib/components/Modal.svelte';
 	import type { Calculation, Parameter } from '#lib/domain/types.ts';
 	import { PLAIN_MAX, checkExplanation } from '#lib/domain/validation.ts';
-	import { SOURCE_CALCULATION } from '#lib/data/seed.ts';
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
 
 	/**
@@ -40,17 +39,21 @@
 	// Fill the form each time it opens, from what the registry has now.
 	$effect(() => {
 		if (!open) return;
-		const calculation = parameter.calculation ?? {
-			...SOURCE_CALCULATION[parameter.source],
-			inputs: []
-		};
+		const id = parameter.id;
 		plain = parameter.plain ?? '';
-		method = calculation.method;
-		formula = calculation.formula;
-		inputs = [...calculation.inputs];
 		find = '';
 		errors = {};
 		error = '';
+		// The calculation as the registry API gives it, its default included.
+		services.registry
+			.getCalculation(id)
+			.then((calculation) => {
+				if (parameter.id !== id) return;
+				method = calculation.method;
+				formula = calculation.formula;
+				inputs = [...calculation.inputs];
+			})
+			.catch((e) => (error = errorMessage(e)));
 	});
 
 	const labelOf = (id: string) => parameters.find((p) => p.id === id)?.label ?? id;

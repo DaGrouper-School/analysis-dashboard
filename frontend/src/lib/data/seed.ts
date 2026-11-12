@@ -1254,7 +1254,22 @@ const DAILY_SWING: Record<string, number> = {
 	soil_moisture: 4,
 	soil_temperature: 1.5
 };
-const HISTORY_DAYS = 30;
+/** Days of history behind each lab's latest reading: Trinity has a whole season (91 days). */
+const HISTORY_DAYS: Record<string, number> = { lab_trinity: 91 };
+const DEFAULT_HISTORY_DAYS = 30;
+/**
+ * How far each parameter drifts over a season, going back from the latest reading, in swings.
+ * Shashamane's long rains (kiremt) end in September, so the weeks before were wetter and cooler.
+ */
+const SEASON_DRIFT: Record<string, number> = {
+	air_temperature: -0.8,
+	relative_humidity: 1.5,
+	precip_accum_local_day: 1.2,
+	rain_gauge_daily_accumulation: 1.2,
+	soil_moisture: 2,
+	soil_temperature: -0.8,
+	uv: -0.6
+};
 /** Days back with no reading, so completeness and charts show real gaps. */
 const GAP_DAYS: Record<string, number[]> = {
 	dev_shashamane_gauge: [3, 4, 11],
@@ -1268,23 +1283,27 @@ const DAY_SPREAD: [number, number][] = [
 ];
 
 /**
- * A month of daily readings behind each device's latest one, plus hourly readings over the last
- * day, so the 24 h, 7 d and 30 d views all have a history. Values swing smoothly around the
- * latest reading; UV follows the sun through the day; no reading goes below zero.
+ * Daily readings behind each device's latest one (a season for Trinity, a month elsewhere), plus
+ * hourly readings over the last day, so the 24 h, 7 d, 30 d and season views all have a history.
+ * Values swing smoothly around the latest reading and drift with the season; UV follows the sun
+ * through the day; no reading goes below zero.
  */
 function history(): MockDbState['readings'] {
 	const result: MockDbState['readings'] = [];
 	devices.forEach((device, d) => {
 		const latest = readings.find((r) => r.deviceId === device.id && r.observedAt === READING_AT)!;
 		const gps = latest.locationSource === 'device' ? latest.location : null;
-		const add = (observedAt: string, wave: number, daylight: number | null) => {
+		const days = HISTORY_DAYS[device.labId] ?? DEFAULT_HISTORY_DAYS;
+		const add = (observedAt: string, wave: number, daylight: number | null, season = 0) => {
 			if (readings.some((r) => r.deviceId === device.id && r.observedAt === observedAt)) return;
 			const values = { ...latest.values };
 			for (const [id, swing] of Object.entries(DAILY_SWING)) {
 				const value = values[id];
 				if (typeof value !== 'number') continue;
 				const shifted =
-					id === 'uv' && daylight !== null ? value * daylight : value + (swing * wave) / 1.5;
+					id === 'uv' && daylight !== null
+						? value * daylight
+						: value + (swing * wave) / 1.5 + swing * (SEASON_DRIFT[id] ?? 0) * season;
 				values[id] = Math.max(0, Math.round(shifted * 10) / 10);
 			}
 			// Sunlight follows the sun by the hour, and the cloud cover from day to day.
@@ -1295,17 +1314,19 @@ function history(): MockDbState['readings'] {
 			}
 			result.push(reading(device.id, observedAt, values, gps));
 		};
-		for (let day = 1; day < HISTORY_DAYS; day++) {
+		for (let day = 1; day < days; day++) {
 			if (GAP_DAYS[device.id]?.includes(day)) continue;
 			const wave = Math.sin(day * 0.9 + d) + 0.5 * Math.sin(day * 2.3 + d * 2);
+			// 0 now, 1 a season back.
+			const season = day / 91;
 			const at = Date.parse(READING_AT) - day * 24 * HOUR;
-			add(new Date(at).toISOString(), wave, null);
+			add(new Date(at).toISOString(), wave, null, season);
 			// Early morning and mid-afternoon too, so each day has a low and a high to chart.
 			for (const [hours, shift] of DAY_SPREAD) {
 				const extra = at + hours * HOUR;
 				// The last day has its own hourly readings.
 				if (extra > Date.parse(READING_AT) - 24 * HOUR) continue;
-				add(new Date(extra).toISOString(), wave + shift, null);
+				add(new Date(extra).toISOString(), wave + shift, null, season);
 			}
 		}
 		for (let hour = 1; hour < 24; hour++) {

@@ -102,6 +102,15 @@ export const routes: Route[] = [
 		response: null,
 		notes: 'Clears the session cookie.'
 	},
+	{
+		method: 'auth.demoGoogleAccounts',
+		http: 'GET',
+		path: '/auth/demo-accounts',
+		access: 'public',
+		response: 'DemoGoogleAccount[]',
+		notes:
+			'Demo and staging only: the Google accounts the demo sign-in offers, with each account type. Production returns an empty list.'
+	},
 
 	// Profile
 	{
