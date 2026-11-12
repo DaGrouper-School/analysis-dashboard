@@ -24,9 +24,10 @@
 		return resolve('/classrooms/[classroom]', { classroom: id }) + filterQuery(filter);
 	}
 	function pick(id: string) {
+		// Another classroom keeps the reader where they are, as on the dashboard.
 		// The path is resolved; only the query is added to it.
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
-		goto(hrefOf(id));
+		goto(hrefOf(id), { reset: false });
 	}
 
 	// ---- The filter: it narrows the classroom tabs and the globe -------------------------
