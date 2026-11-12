@@ -5,6 +5,8 @@
 		sub: string;
 		name: string;
 		email: string;
+		/** What kind of account it is, such as "Researcher" or "New account". */
+		type?: string;
 	}
 
 	let {
@@ -27,7 +29,7 @@
 <!-- Stand-in for the Google OAuth popup. The real flow returns an ID token instead of `sub`. -->
 <dialog
 	bind:this={dialog}
-	class="m-auto w-[min(26rem,calc(100vw-2rem))] rounded-md border border-line-strong bg-raised p-0 text-text shadow-2xl backdrop:bg-black/70"
+	class="m-auto w-[min(30rem,calc(100vw-2rem))] rounded-md border border-line-strong bg-raised p-0 text-text shadow-2xl backdrop:bg-black/70"
 	onclose={onClose}
 	aria-labelledby="google-title"
 >
@@ -44,10 +46,11 @@
 					onclick={() => onPick(account.sub)}
 				>
 					<Avatar name={account.name} />
-					<span>
+					<span class="min-w-0 flex-1">
 						<span class="block text-sm font-medium">{account.name}</span>
-						<span class="block text-sm text-muted">{account.email}</span>
+						<span class="block truncate text-sm text-muted">{account.email}</span>
 					</span>
+					{#if account.type}<span class="chip shrink-0 text-xs">{account.type}</span>{/if}
 				</button>
 			</li>
 		{/each}
