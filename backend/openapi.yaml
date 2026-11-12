@@ -182,6 +182,33 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /auth/demo-accounts:
+    get:
+      tags:
+        - Auth
+      operationId: auth.demoGoogleAccounts
+      summary: Demo google accounts
+      description: >-
+        The Google accounts the demo picker offers, each with its account type. Only the mock data
+
+        source has any; real sign-in goes through Google Identity Services.
+
+
+        Demo and staging only: the Google accounts the demo sign-in offers, with each account type.
+        Production returns an empty list.
+
+
+        Access: public, no session needed.
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DemoGoogleAccount"
   /me/profile:
     patch:
       tags:
@@ -3559,6 +3586,25 @@ components:
       additionalProperties: false
       description: The terms attached to a classroom's data in SAM (AP-14). Every export of it carries
         them, so the data keeps its licence, credit and restrictions once it leaves the dashboard.
+    DemoGoogleAccount:
+      type: object
+      properties:
+        sub:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        type:
+          type: string
+          description: Such as "Researcher", "Platform admin" or "New account".
+      required:
+        - sub
+        - name
+        - email
+        - type
+      additionalProperties: false
+      description: A Google account the demo sign-in offers (mock data source only), with what kind it is.
     Device:
       type: object
       properties:

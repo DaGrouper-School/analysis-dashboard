@@ -120,9 +120,11 @@
 		<h2 id="chart-heading" class="font-semibold">
 			{rain
 				? 'Daily rain'
-				: chart === 'line_band'
-					? 'Readings, with each day’s low to high'
-					: 'Readings'}
+				: range === '24h'
+					? 'Readings, last 24 hours'
+					: chart === 'line_band'
+						? 'Readings, with each day’s low to high'
+						: 'Readings'}
 		</h2>
 		<div class="flex flex-wrap items-center gap-2">
 			{#if page.compare.length}

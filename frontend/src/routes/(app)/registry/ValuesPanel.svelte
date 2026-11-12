@@ -3,7 +3,7 @@
 	import Pagination from '#lib/components/Pagination.svelte';
 	import { Pager } from '#lib/components/pager.svelte.ts';
 	import Select, { toOptions, type SelectOption } from '#lib/components/Select.svelte';
-	import { CHARTS, CHART_LABELS, chartOf } from '#lib/domain/charts.ts';
+	import { CHARTS, CHART_ICONS, CHART_LABELS, chartOf } from '#lib/domain/charts.ts';
 	import type {
 		Chart,
 		DeviceTypeDefinition,
@@ -38,7 +38,10 @@
 		onexplain: (parameterId: string) => void;
 	} = $props();
 
-	const chartOptions = toOptions(CHARTS, CHART_LABELS);
+	const chartOptions = toOptions(CHARTS, CHART_LABELS).map((o) => ({
+		...o,
+		icon: CHART_ICONS[o.value]
+	}));
 	const domainsById = $derived(new Map(domains.map((d) => [d.id, d])));
 	const unmapped = $derived(parameters.filter((p) => !p.domain || !domainsById.has(p.domain)));
 	const typesFor = (parameterId: string) =>

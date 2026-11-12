@@ -1,5 +1,6 @@
 import type {
 	ClassroomRole,
+	UserRole,
 	ClassroomStage,
 	DeviceType,
 	DeviceTypeDefinition,
@@ -13,6 +14,12 @@ export const CLASSROOM_ROLE_LABELS: Record<ClassroomRole, string> = {
 	facilitator: 'Facilitator',
 	community_scientist: 'Community scientist',
 	researcher: 'Researcher'
+};
+
+/** An account's own role, such as on the demo sign-in's account list. */
+export const USER_ROLE_LABELS: Record<UserRole, string> = {
+	...CLASSROOM_ROLE_LABELS,
+	custodian: 'Custodian'
 };
 
 /** "a researcher", "an institution head". */

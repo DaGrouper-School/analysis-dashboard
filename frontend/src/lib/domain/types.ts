@@ -98,6 +98,15 @@ export interface ConsentRequest {
 	coordinateDecimals: number;
 }
 
+/** A Google account the demo sign-in offers (mock data source only), with what kind it is. */
+export interface DemoGoogleAccount {
+	sub: string;
+	name: string;
+	email: string;
+	/** Such as "Researcher", "Platform admin" or "New account". */
+	type: string;
+}
+
 export interface AuthResult {
 	user: User;
 	/** True when this sign-in created the account. */

@@ -12,6 +12,7 @@ import {
 	type MockDbState,
 	type StoredChallenge
 } from '#lib/data/mock-db.ts';
+import { USER_ROLE_LABELS } from '#lib/utils/labels.ts';
 import { ServiceError, type Services } from '../types';
 import { createMockClassrooms } from './classrooms';
 import { createMockConsent, createMockGuardian } from './consent';
@@ -202,6 +203,19 @@ export function createMockServices({ latency = 500, now = Date.now }: MockOption
 				await delay();
 				updateDb((state) => {
 					state.session = null;
+				});
+			},
+
+			async demoGoogleAccounts() {
+				const state = readDb();
+				return state.googleAccounts.map(({ sub, name, email }) => {
+					const user = state.users.find((u) => u.id === state.googleLinks[sub]);
+					const type = !user
+						? 'New account'
+						: user.platformAdmin
+							? 'Platform admin'
+							: USER_ROLE_LABELS[user.role];
+					return { sub, name, email, type };
 				});
 			}
 		},

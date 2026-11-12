@@ -21,6 +21,7 @@ import type {
 	Invitation,
 	InvitationPreview,
 	AuthResult,
+	DemoGoogleAccount,
 	DeviceTypeDefinition,
 	DeviceTypeInput,
 	DomainDefinition,
@@ -85,6 +86,11 @@ export interface AuthService {
 	/** Verify the SMS code and start a session. */
 	verifyPhoneCode(requestId: string, code: string): Promise<AuthResult>;
 	signOut(): Promise<void>;
+	/**
+	 * The Google accounts the demo picker offers, each with its account type. Only the mock data
+	 * source has any; real sign-in goes through Google Identity Services.
+	 */
+	demoGoogleAccounts(): Promise<DemoGoogleAccount[]>;
 }
 
 export interface ProfileService {

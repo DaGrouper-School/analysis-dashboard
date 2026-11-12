@@ -249,9 +249,10 @@ describe('labs (AP-05)', () => {
 		const devices = await services.labs.listClassroomDevices('cls_nassau');
 		expect(devices.map((d) => d.id)).toEqual(['dev_nassau_ws']);
 		expect(devices[0].samSourceId).toBeNull();
-		const history = await services.labs.deviceReadings('dev_nassau_ws');
-		// A month of daily readings, less one seeded gap day, plus hourly ones over the last day.
-		expect(history.length).toBe(30 - 1 + 23);
+		const history = await services.labs.deviceReadings('dev_nassau_ws', 500);
+		// The latest reading; 28 earlier days with three readings each (29, less one seeded gap
+		// day), but yesterday's afternoon falls in the last 24 hours; and 23 hourly ones before it.
+		expect(history.length).toBe(1 + 28 * 3 - 1 + 23);
 		expect(history.map((r) => r.observedAt)).toEqual(
 			history
 				.map((r) => r.observedAt)
