@@ -91,6 +91,7 @@ Folder layout follows [Bulletproof React](https://github.com/alan2207/bulletproo
 - A component file is PascalCase and matches what it exports. A module is kebab-case. A test sits beside its file as `*.spec.ts`.
 - Imports use the `#lib/...` alias with the file extension. No barrel (`index.ts`) files.
 - Data only comes from `services`, colours and icons from the registry, and each UI pattern has one shared component.
+- Never copy markup. Before writing a piece of UI, look for the shared component that already does it (`AccordionCard` for a card that opens and closes, `Select` for a dropdown, `Chart`, `Sparkline`, `Modal`, `Collapse`...) and use it. When two places need the same kind of thing and none exists, build one shared component in `lib/components` (or the feature that owns it) and use it in both, so every instance looks and behaves the same.
 
 ## Routes
 
