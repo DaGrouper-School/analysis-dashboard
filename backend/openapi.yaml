@@ -3726,11 +3726,28 @@ components:
                 type:
                   - number
                   - "null"
+              low:
+                type:
+                  - number
+                  - "null"
+              high:
+                type:
+                  - number
+                  - "null"
             required:
               - day
               - value
+              - low
+              - high
             additionalProperties: false
-          description: Seven days up to the newest reading, oldest first.
+          description: "Seven days up to the newest reading, oldest first: each day's last reading (a day's
+            total for an accumulation), and its low and high."
+        chart:
+          $ref: "#/components/schemas/Chart"
+          description: The value's chart kind from the registry (AP-23), which sets how its week is drawn.
+        review:
+          $ref: "#/components/schemas/ReviewState"
+          description: Where the value stands in review (AP-20).
         todayLow:
           type:
             - number
@@ -3755,6 +3772,8 @@ components:
         - latest
         - observedAt
         - week
+        - chart
+        - review
         - todayLow
         - todayHigh
         - weekLow

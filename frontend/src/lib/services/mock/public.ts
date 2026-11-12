@@ -1,5 +1,6 @@
 import { monthCompleteness } from '#lib/features/classroom/completeness.ts';
-import { coreReadings, stationCore } from '#lib/features/devices/core-readings.ts';
+import { coreReadings, reviewOf, stationCore } from '#lib/features/devices/core-readings.ts';
+import { chartOf } from '#lib/domain/charts.ts';
 import { readDb, type MockDbState, type StoredClassroom } from '#lib/data/mock-db.ts';
 import type {
 	InstitutionOverview,
@@ -79,7 +80,9 @@ function released(state: MockDbState, classroom: StoredClassroom, now: number, m
 function publicDevices(
 	state: MockDbState,
 	devices: MockDbState['devices'],
-	shown: ReturnType<typeof released>['released']
+	shown: ReturnType<typeof released>['released'],
+	/** Every record, released or not, and the release cutoff: for each card's review chip. */
+	review: { all: ReturnType<typeof released>['all']; through: string | null }
 ): PublicDevice[] {
 	const parameters = new Map(state.parameters.map((p) => [p.id, p]));
 	const domainIcons = new Map(state.domains.map((d) => [d.id, d.icon]));
@@ -113,7 +116,16 @@ function publicDevices(
 				keyValues(type?.cardParameterIds, valuesFor(type?.cardParameterIds), parameters, {
 					domainIcons,
 					fallback: false
-				})
+				}),
+				{
+					chart: (id) => chartOf(parameters.get(id) ?? {}) ?? 'line',
+					review: (id) =>
+						reviewOf(
+							review.all.filter((r) => r.source.id === device.id).map((r) => r.record),
+							review.through,
+							[id]
+						)
+				}
 			)
 		};
 	});
@@ -388,7 +400,10 @@ export function createMockPublic({
 						};
 					}
 				),
-				devices: publicDevices(state, devices, shownRecords),
+				devices: publicDevices(state, devices, shownRecords, {
+					all,
+					through: publicCutoff(classroom, now())
+				}),
 				institution: institutionFor(
 					state,
 					classroom,

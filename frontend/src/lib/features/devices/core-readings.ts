@@ -1,4 +1,10 @@
-import type { CoreReadings, Reading, StationCore, StationRainDay } from '#lib/domain/types.ts';
+import type {
+	CoreReadings,
+	Reading,
+	ReviewState,
+	StationCore,
+	StationRainDay
+} from '#lib/domain/types.ts';
 
 /** Which registry values feed the shared core readings. Kept with the data, not the page. */
 export interface CoreParameters {
@@ -116,8 +122,16 @@ export function coreReadings(
 	};
 }
 
-function reviewOf(records: CoreRecord[], releasedThrough: string | null, ids: string[]) {
-	const has = (r: CoreRecord) => firstNumber(r.values, ids) !== null;
+/**
+ * Where a value stands in review (AP-20): not released while none of its readings is, in review
+ * while newer ones wait, else released.
+ */
+export function reviewOf(
+	records: Pick<CoreRecord, 'observedAt' | 'values'>[],
+	releasedThrough: string | null,
+	ids: string[]
+): ReviewState {
+	const has = (r: Pick<CoreRecord, 'observedAt' | 'values'>) => firstNumber(r.values, ids) !== null;
 	if (releasedThrough === null || !records.some((r) => has(r) && r.observedAt <= releasedThrough)) {
 		return 'not_released' as const;
 	}
