@@ -288,10 +288,12 @@ describe('Contributor pages (AP-39)', () => {
 		expect(page.total).toBeGreaterThan(0);
 	});
 
-	it('has no page for someone with no released values', async () => {
-		await expect(services.publicSite.contributor(100004)).rejects.toMatchObject({
-			code: 'not_found'
-		});
+	it('has a page for every participant, with no released values yet too', async () => {
+		const page = await services.publicSite.contributor(100004);
+		expect([page.participantId, page.total, page.recent]).toEqual([100004, 0, []]);
+	});
+
+	it('has no page for a participant ID nobody has', async () => {
 		await expect(services.publicSite.contributor(999999)).rejects.toMatchObject({
 			code: 'not_found'
 		});

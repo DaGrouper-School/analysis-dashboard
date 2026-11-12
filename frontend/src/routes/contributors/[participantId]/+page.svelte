@@ -109,6 +109,12 @@
 								>
 							</td>
 						</tr>
+					{:else}
+						<tr>
+							<td class="px-4 py-6 text-center text-muted" colspan="4">
+								Nothing released yet. Values show here once their classroom releases them.
+							</td>
+						</tr>
 					{/each}
 				</tbody>
 			</table>
