@@ -52,7 +52,7 @@
 <ul class={['space-y-3', className]}>
 	{#each alerts as alert (`${alert.device.id}|${alert.parameterId}`)}
 		{@const label = parameters.get(alert.parameterId)?.label ?? alert.parameterId}
-		<li class="card flex flex-wrap items-center gap-4 p-5">
+		<li class="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
 			<div class="min-w-0 flex-1">
 				<p class="flex flex-wrap items-center gap-3 text-xs text-muted">
 					<span
@@ -72,14 +72,15 @@
 			</div>
 			<!-- Opens the value's page on this device, with its alert levels. valueHref resolves. -->
 			<!-- eslint-disable svelte/no-navigation-without-resolve -->
-			<a class="btn btn-ghost" href={valueHref(classroomId, alert.parameterId, alert.device.id)}
-				>Open {label}</a
+			<a
+				class="btn btn-ghost max-sm:w-full"
+				href={valueHref(classroomId, alert.parameterId, alert.device.id)}>Open {label}</a
 			>
 			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		</li>
 	{/each}
 	{#if release && onrelease}
-		<li class="card flex flex-wrap items-center gap-4 p-5">
+		<li class="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
 			<div class="min-w-0 flex-1">
 				<p class="text-xs text-muted">
 					<span class="chip"><Icon name="clipboard" class="size-3.5" /> Review</span>
@@ -94,13 +95,16 @@
 						: '. Nothing is released yet.'}
 				</p>
 			</div>
-			<button type="button" class="btn btn-ghost" aria-haspopup="dialog" onclick={onrelease}
-				>Review and release</button
+			<button
+				type="button"
+				class="btn btn-ghost max-sm:w-full"
+				aria-haspopup="dialog"
+				onclick={onrelease}>Review and release</button
 			>
 		</li>
 	{/if}
 	{#each waiting as member (member.userId)}
-		<li class="card flex flex-wrap items-center gap-4 p-5">
+		<li class="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
 			<div class="min-w-0 flex-1">
 				<p class="text-xs text-muted">
 					<span class="chip"><Icon name="user" class="size-3.5" /> Consent</span>
@@ -114,7 +118,9 @@
 						: '.'}
 				</p>
 			</div>
-			<button type="button" class="btn btn-ghost" onclick={onconsent}>Record paper consent</button>
+			<button type="button" class="btn btn-ghost max-sm:w-full" onclick={onconsent}
+				>Record paper consent</button
+			>
 		</li>
 	{/each}
 </ul>

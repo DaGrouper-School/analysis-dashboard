@@ -190,12 +190,7 @@
 	}
 </script>
 
-<Modal
-	bind:open
-	title={device ? `Sync ${device.name}` : 'Sync a sensor'}
-	eyebrow="Sync"
-	onclose={closed}
->
+<Modal bind:open title={device ? device.name : 'Sync a sensor'} eyebrow="Sync" onclose={closed}>
 	<div class="space-y-5" style:--accent={color ?? 'var(--color-teal)'}>
 		<StepTrack steps={STEPS} current={STEP_OF[phase]} failed={phase === 'error'} />
 
