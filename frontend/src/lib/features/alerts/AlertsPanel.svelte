@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import Collapse from '#lib/components/Collapse.svelte';
+	import AccordionCard from '#lib/components/AccordionCard.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 
 	/**
@@ -22,8 +22,7 @@
 			return true;
 		}
 	}
-	function toggle() {
-		open = !open;
+	function remember(open: boolean) {
 		// A phone always starts closed, so only a wider screen's choice is remembered.
 		if (matchMedia(PHONE).matches) return;
 		try {
@@ -34,37 +33,30 @@
 	}
 </script>
 
-<section class="card mb-8 p-5" aria-labelledby="alerts-panel-heading">
-	<div class="flex items-center gap-3">
-		<h2 id="alerts-panel-heading" class="flex min-w-0 items-center gap-2 text-xl font-medium">
-			<Icon name="alert" class="size-5 text-orange" />
-			Alerts and messages
-			<span
-				class="grid min-w-6 place-items-center rounded-full bg-orange/15 px-1.5 text-sm text-orange"
-				aria-label="{count} need you">{count}</span
-			>
-		</h2>
-		<div class="ml-auto flex items-center gap-2">
-			<!-- Callers pass a resolved path. -->
-			<!-- eslint-disable svelte/no-navigation-without-resolve -->
-			<a class="link text-sm max-sm:hidden" {href}>Open alerts</a>
-			<!-- eslint-enable svelte/no-navigation-without-resolve -->
-			<button
-				type="button"
-				class="grid size-8 place-items-center rounded-full text-muted hover:text-ink focus-visible:ring-2 focus-visible:ring-teal focus-visible:outline-none"
-				aria-expanded={open}
-				aria-controls="alerts-panel-body"
-				aria-label={open ? 'Hide alerts and messages' : 'Show alerts and messages'}
-				onclick={toggle}
-			>
-				<Icon name="chevron" class="size-5 transition-transform {open ? 'rotate-180' : ''}" />
-			</button>
-		</div>
-	</div>
-	<Collapse id="alerts-panel-body" {open} class="pt-4">
-		{@render children()}
+<AccordionCard
+	id="alerts-panel"
+	label="alerts and messages"
+	bind:open
+	ontoggle={remember}
+	class="mb-8 p-5"
+	bodyClass="pt-4"
+>
+	{#snippet heading()}
+		<Icon name="alert" class="size-5 text-orange" />
+		Alerts and messages
+		<span
+			class="grid min-w-6 place-items-center rounded-full bg-orange/15 px-1.5 text-sm text-orange"
+			aria-label="{count} need you">{count}</span
+		>
+	{/snippet}
+	{#snippet aside()}
+		<!-- Callers pass a resolved path. -->
 		<!-- eslint-disable svelte/no-navigation-without-resolve -->
-		<a class="link mt-4 inline-block text-sm sm:hidden" {href}>Open alerts</a>
+		<a class="link text-sm max-sm:hidden" {href}>Open alerts</a>
 		<!-- eslint-enable svelte/no-navigation-without-resolve -->
-	</Collapse>
-</section>
+	{/snippet}
+	{@render children()}
+	<!-- eslint-disable svelte/no-navigation-without-resolve -->
+	<a class="link mt-4 inline-block text-sm sm:hidden" {href}>Open alerts</a>
+	<!-- eslint-enable svelte/no-navigation-without-resolve -->
+</AccordionCard>
