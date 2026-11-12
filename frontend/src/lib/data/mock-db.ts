@@ -25,6 +25,7 @@ import type {
 import type { StoredAlertRule } from '#lib/domain/alerts.ts';
 import type { CoreParameters } from '#lib/features/devices/core-readings.ts';
 import { createSeed } from './seed';
+import { rollSeedForward } from './seed-clock';
 
 /**
  * The mock "backend" state. It is seeded on first load and persisted to localStorage so
@@ -196,14 +197,37 @@ export interface MockDbState {
 	hostApplications: StoredHostApplication[];
 	/** How much of a minor's position is kept: decimal places of latitude and longitude. */
 	privacy: { minorCoordinateDecimals: number };
+	/**
+	 * The seeded readings and observations, and when the latest of them was taken, so the demo can
+	 * move them forward to today (see `rollSeedForward`).
+	 */
+	seedClock: { latest: string; readingIds: string[]; observationIds: string[] };
 }
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 38;
+const VERSION = 39;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;
+/** Set for the demo app: the clock the seeded history is rolled forward to on load. */
+let seedNow: (() => number) | null = null;
+
+/**
+ * Keeps the seeded history ending today in the running app: each time the data loads, seeded
+ * readings move forward by the days since. Tests leave it off and keep the seed's fixed dates.
+ */
+export function rollSeedWith(now: () => number): void {
+	seedNow = now;
+	memory = null;
+}
+
+/** Caches the loaded state, rolled forward first when the app asked for it. */
+function loaded(state: MockDbState): MockDbState {
+	memory = state;
+	if (seedNow && rollSeedForward(state, seedNow())) writeDb(state);
+	return state;
+}
 /**
  * Set when another tab saved the data with a newer release: this tab runs old code and must not
  * overwrite that data with its own shape.
@@ -224,7 +248,7 @@ export function readDb(): MockDbState {
 	if (raw) {
 		try {
 			const parsed = JSON.parse(raw) as MockDbState;
-			if (parsed.version === VERSION) return (memory = parsed);
+			if (parsed.version === VERSION) return loaded(parsed);
 			if (parsed.version > VERSION) {
 				staleRelease = true;
 				reloadOnce(parsed.version);
@@ -233,9 +257,9 @@ export function readDb(): MockDbState {
 			// Corrupt or old data: fall through and reseed.
 		}
 	}
-	memory = { version: VERSION, ...createSeed() };
-	writeDb(memory);
-	return memory;
+	const seeded = { version: VERSION, ...createSeed() };
+	writeDb(seeded);
+	return loaded(seeded);
 }
 
 /** Loads the newer release once. If the reload still serves old code, carry on from memory. */

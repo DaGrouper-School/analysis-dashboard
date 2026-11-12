@@ -1722,6 +1722,11 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 		],
 		samAssertions: [],
 		privacy: { minorCoordinateDecimals: 2 },
+		seedClock: {
+			latest: READING_AT,
+			readingIds: readings.map((r) => r.id),
+			observationIds: observations.map((o) => o.id)
+		},
 		hostQuestions,
 		hostApplications,
 		samSources: [

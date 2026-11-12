@@ -8,6 +8,7 @@ import {
 import {
 	newId,
 	readDb,
+	rollSeedWith,
 	updateDb,
 	type MockDbState,
 	type StoredChallenge
@@ -31,10 +32,17 @@ interface MockOptions {
 	/** Simulated network latency in ms: half a second, so loading states are visible. */
 	latency?: number;
 	now?: () => number;
+	/** Move the seeded history forward so it ends today. On in the app, off in tests. */
+	rollSeed?: boolean;
 }
 
 /** A localStorage-backed implementation of every service, behaving like the future backend. */
-export function createMockServices({ latency = 500, now = Date.now }: MockOptions = {}): Services {
+export function createMockServices({
+	latency = 500,
+	now = Date.now,
+	rollSeed = false
+}: MockOptions = {}): Services {
+	if (rollSeed) rollSeedWith(now);
 	const delay = () => new Promise<void>((r) => setTimeout(r, latency));
 	const iso = (ms: number) => new Date(ms).toISOString();
 
