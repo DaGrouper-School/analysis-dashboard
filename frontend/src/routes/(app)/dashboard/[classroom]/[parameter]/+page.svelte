@@ -15,6 +15,7 @@
 		daysOf,
 		latestOf,
 		rainDays,
+		rainNow,
 		RANGES,
 		type RangeId
 	} from '#lib/features/measurements/parameter-page.ts';
@@ -104,11 +105,11 @@
 
 	const now = $derived.by(() => {
 		if (rain) {
-			const day = rain.at(-1);
+			const day = rainNow(rain, data.series, parameter.id);
 			if (!day) return null;
-			const from = data.series.find((s) => s.source.id === day.shownFrom);
+			const from = data.series.find((s) => s.source.id === day.sourceId);
 			return {
-				value: show(day.shown),
+				value: show(day.value),
 				caption: `Rain on ${dayText(day.day)}${from ? `, from ${sourceName(from)}` : ''}`,
 				review: day.review
 			};

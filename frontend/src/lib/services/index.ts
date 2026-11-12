@@ -12,7 +12,7 @@ function createServices(): Services {
 	if (import.meta.env.VITE_DATA_SOURCE === 'http') {
 		return createHttpServices(import.meta.env.VITE_API_URL ?? '/api');
 	}
-	return createMockServices();
+	return createMockServices({ rollSeed: true });
 }
 
 export const services: Services = createServices();
