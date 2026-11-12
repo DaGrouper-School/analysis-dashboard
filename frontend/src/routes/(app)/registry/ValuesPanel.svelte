@@ -122,7 +122,7 @@
 				/>
 			</div>
 		</div>
-		<div class="card mt-4 overflow-x-auto p-0">
+		<div class="card relative mt-4 overflow-x-auto p-0">
 			<table class="w-full min-w-[52rem] text-left text-sm">
 				<thead class="text-xs text-muted">
 					<tr class="border-b border-line">

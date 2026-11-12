@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import Icon from '#lib/components/Icon.svelte';
+	import LinkArrow from '#lib/components/LinkArrow.svelte';
 
 	/**
 	 * One card of the strip under "What's happening now?" (AP-22, AP-45). Every card has the
@@ -32,7 +33,7 @@
 <div
 	class={[
 		'card flex min-h-60 flex-col p-5',
-		href && 'relative transition-colors hover:border-line-strong'
+		href && 'group relative transition-colors hover:border-line-strong'
 	]}
 >
 	<div class="flex min-h-7 items-center justify-between gap-2">
@@ -43,7 +44,7 @@
 				<!-- eslint-disable svelte/no-navigation-without-resolve -->
 				<a
 					class="after:absolute after:inset-0 after:rounded-[inherit] hover:text-ink focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-teal"
-					{href}>{label}</a
+					{href}><LinkArrow text={label} /></a
 				>
 				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 			{:else}

@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import RollingNumber from '#lib/components/RollingNumber.svelte';
+	import LinkArrow from '#lib/components/LinkArrow.svelte';
 	import Sparkline from '#lib/components/Sparkline.svelte';
 	import type { NowTile } from '#lib/domain/types.ts';
 	import { formatValue } from '#lib/features/measurements/key-values.ts';
@@ -115,7 +116,7 @@
 					class={[
 						'relative flex min-w-0 flex-col rounded-md border p-4',
 						accent ? 'accent-tile' : 'border-line bg-raised',
-						href && tile.parameterId && 'transition-colors hover:border-line-strong'
+						href && tile.parameterId && 'group transition-colors hover:border-line-strong'
 					]}
 				>
 					<!-- The icon and the info button on one line, the label under them at full width. -->
@@ -139,7 +140,7 @@
 							<!-- eslint-disable svelte/no-navigation-without-resolve -->
 							<a
 								class="after:absolute after:inset-0 after:rounded-[inherit] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-teal"
-								href={href(tile.parameterId)}>{tile.label}</a
+								href={href(tile.parameterId)}><LinkArrow text={tile.label} /></a
 							>
 							<!-- eslint-enable svelte/no-navigation-without-resolve -->
 						{:else}

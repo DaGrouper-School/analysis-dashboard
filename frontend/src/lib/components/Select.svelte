@@ -35,7 +35,8 @@
 	 * it picks; `labelHidden` keeps it for screen readers only, where the label already in view
 	 * names it (a unit beside its field, a row of a table). Or pass `id` and write your own
 	 * `<label for>`, as a form does. Choices with an empty value
-	 * ("All sources", "Leave blank") lead the list, set apart by a line. Long lists get a filter.
+	 * ("All sources", "Leave blank") lead the list, set apart by a line. Long lists get a filter; on a phone it sits at the bottom of the sheet and the keyboard
+	 * only opens when it is tapped.
 	 */
 	let {
 		options,
@@ -174,7 +175,9 @@
 		position();
 		const current = shown.findIndex((o) => o.value === value);
 		setActive(current >= 0 && !shown[current].disabled ? current : step(-1, 1));
-		(filterInput ?? list)?.focus({ preventScroll: true });
+		// On a phone the list takes focus, not the filter, so the keyboard only opens when the
+		// person taps the filter; the current choice is highlighted either way.
+		(sheet ? list : (filterInput ?? list))?.focus({ preventScroll: true });
 	}
 
 	function hide(refocus = true) {
@@ -555,6 +558,14 @@
 		margin: -0.25rem -0.25rem 0.25rem;
 		border-bottom: 1px solid var(--color-line);
 		padding: 0.375rem 0.875rem;
+	}
+	/* On a phone the filter sits at the bottom of the sheet, by the thumb and the keyboard. */
+	.is-sheet .select-filter {
+		order: 1;
+		margin: 0.25rem -0.25rem 0;
+		border-top: 1px solid var(--color-line);
+		border-bottom: 0;
+		padding-top: 0.625rem;
 	}
 	.select-list {
 		min-height: 0;

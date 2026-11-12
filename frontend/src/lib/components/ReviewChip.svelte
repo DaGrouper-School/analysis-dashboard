@@ -16,7 +16,7 @@
 	};
 </script>
 
-<span class="chip">
+<span class="chip shrink-0 whitespace-nowrap">
 	<span class={['size-2 rounded-full', TONE[state]]} aria-hidden="true"></span>
 	{LABEL[state]}
 </span>
