@@ -129,7 +129,7 @@
 	</div>
 {:else}
 	<div
-		class="fixed right-4 bottom-4 z-30 w-[min(24rem,calc(100vw-2rem))] space-y-2 shadow-lg"
+		class="fixed right-4 bottom-4 z-30 w-[min(24rem,calc(100vw-2rem))] space-y-2 shadow-lg max-sm:bottom-20"
 		aria-live="polite"
 	>
 		{#if notice}

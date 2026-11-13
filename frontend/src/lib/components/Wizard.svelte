@@ -85,7 +85,9 @@
 		{@render extra?.()}
 		<span class="flex-1"></span>
 		{#if last}
-			<button class="btn btn-primary" disabled={busy}>{busy ? busyLabel : submitLabel}</button>
+			<button class="btn btn-primary" disabled={busy}
+				><Icon name="check" class="size-4" /> {busy ? busyLabel : submitLabel}</button
+			>
 		{:else}
 			<button type="button" class="btn btn-primary" onclick={next}>
 				Next: {steps[current + 1].label}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import {
 		filterOptions,
 		NO_FILTER,
@@ -68,6 +69,6 @@
 		type="button"
 		class="btn btn-ghost py-1.5 text-sm"
 		disabled={!filtered}
-		onclick={() => onchange(NO_FILTER)}>Clear</button
+		onclick={() => onchange(NO_FILTER)}><Icon name="close" class="size-4" /> Clear</button
 	>
 </form>

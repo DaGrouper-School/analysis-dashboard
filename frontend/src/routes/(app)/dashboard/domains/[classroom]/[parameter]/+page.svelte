@@ -2,7 +2,6 @@
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
-	import Icon from '#lib/components/Icon.svelte';
 	import SampleDataBadge from '#lib/components/SampleDataBadge.svelte';
 	import { thresholdStatus, thresholdsFor } from '#lib/domain/alerts.ts';
 	import { chartOf } from '#lib/domain/charts.ts';
@@ -20,9 +19,9 @@
 		type RangeId
 	} from '#lib/features/measurements/parameter-page.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
-	import { FALLBACK_DOMAIN_ICON } from '#lib/utils/icons.ts';
 	import { deviceTypeLabel } from '#lib/utils/labels.ts';
 	import { sensorQuery } from '#lib/utils/sensor-selection.ts';
+	import { classroomsHref, domainsHref } from '#lib/utils/site.ts';
 	import DailySummary from './DailySummary.svelte';
 	import DataQuality from './DataQuality.svelte';
 	import HowMeasured from './HowMeasured.svelte';
@@ -66,6 +65,8 @@
 		rain?.filter((d) => d.day >= rangeDays[0] && d.day <= rangeDays.at(-1)!) ?? []
 	);
 	const stats = $derived(series ? dailyStats(series.points) : []);
+	/** The shown device's registry colour tints the page, so the value shows its sensor. */
+	const accent = $derived(rain ? null : (series?.source.color ?? null));
 	const statsInRange = $derived(stats.filter((d) => d.day >= (rangeDays[0] ?? '')));
 
 	// Alert levels: members of the classroom only, for the device shown.
@@ -146,122 +147,112 @@
 	></svelte:head
 >
 
-<!-- Back to the classroom on the dashboard. -->
+<!-- Back up: the dashboard, the classroom's page, and the value's domain on the device shown. -->
 <Breadcrumbs
 	items={[
-		{ label: 'Dashboard', href: resolve('/(app)/dashboard') },
+		{ label: 'Dashboard', href: resolve('/(app)/dashboard') + sensorQuery(data.classroom.id) },
+		{ label: data.classroom.name, href: classroomsHref(data.classroom.id) },
 		{
-			label: data.classroom.name,
-			href: resolve('/(app)/dashboard/details') + sensorQuery(data.classroom.id)
+			label: data.domain?.label ?? 'Domains',
+			href: domainsHref(
+				data.classroom.id,
+				!rain && series?.source.kind === 'device' ? series.source.id : null,
+				data.domain?.id
+			)
 		},
-		// The device shown, to its domains on the details page. Rain shows every source at once.
-		...(!rain && series?.source.kind === 'device'
-			? [
-					{
-						label: sourceName(series),
-						href:
-							resolve('/(app)/dashboard/details') +
-							sensorQuery(data.classroom.id, series.source.id) +
-							'&tab=domains'
-					}
-				]
-			: []),
 		{ label: parameter.label }
 	]}
 />
 
-<header class="mt-4 flex flex-wrap items-start justify-between gap-4">
-	<div>
-		<div class="flex flex-wrap items-center gap-3">
-			<h1 class="font-display text-4xl">{parameter.label}</h1>
-			<SampleDataBadge show={data.content.sampleData} />
+<div class={['contents', accent && 'accent-scope']} style:--accent={accent}>
+	<header class="mt-4 flex flex-wrap items-start justify-between gap-4">
+		<div>
+			<div class="flex flex-wrap items-center gap-3">
+				<h1 class="font-display text-4xl">{parameter.label}</h1>
+				<SampleDataBadge show={data.content.sampleData} />
+			</div>
+			<p class="mt-2 text-sm text-muted">Parameter details</p>
 		</div>
-		{#if data.domain}
-			<p class="mt-2 flex items-center gap-1.5 text-sm text-muted">
-				<Icon name={data.domain.icon} fallback={FALLBACK_DOMAIN_ICON} class="size-4" />
-				{data.domain.label}
+		<!-- Every raw value of this measurement, from the device shown (rain: every source). -->
+		<RawDataButton
+			primary
+			label="Export CSV"
+			query={{
+				classroomId: data.classroom.id,
+				parameterId: parameter.id,
+				sourceId: !rain && series?.source.kind === 'device' ? series.source.id : undefined
+			}}
+		/>
+	</header>
+
+	<!-- 1. What it means here -->
+	<section class="mt-6 max-w-2xl" aria-labelledby="meaning-heading">
+		<h2 id="meaning-heading" class="text-sm font-medium text-muted">What it means here</h2>
+		<p class="mt-1 text-lg">{data.note ?? parameter.plain ?? parameter.definition}</p>
+		{#if data.note}
+			<p class="mt-2 text-sm text-muted">
+				Written by {data.classroom.name}. {parameter.plain ?? parameter.definition}
 			</p>
 		{/if}
-	</div>
-	<!-- Every raw value of this measurement, from the device shown (rain: every source). -->
-	<RawDataButton
-		primary
-		label="Export CSV"
-		query={{
-			classroomId: data.classroom.id,
-			parameterId: parameter.id,
-			sourceId: !rain && series?.source.kind === 'device' ? series.source.id : undefined
-		}}
+	</section>
+
+	<!-- 2. Value now -->
+	{#if now}<ValueNow {now} {alertNow} />{/if}
+
+	<!-- 3. Main chart, with compare -->
+	<ValueChart
+		page={data}
+		{parameter}
+		{chart}
+		{latest}
+		{rangeDays}
+		{rain}
+		{rainInRange}
+		{series}
+		{stats}
+		{compared}
+		{compareError}
+		{levels}
+		bind:range
+		bind:compareId
+		bind:sourceId
+	>
+		{#snippet levelsEditor()}
+			{#if alerts && parameter.valueType !== 'text' && parameter.valueType !== 'time'}
+				<ChartAlerts
+					{alerts}
+					{parameter}
+					typeName={deviceTypeLabel(data.typeDefinitions, alerts.deviceType)}
+					onchange={() => invalidateAll()}
+				/>
+			{/if}
+		{/snippet}
+	</ValueChart>
+
+	<!-- 4. Daily summary, with download -->
+	<DailySummary
+		page={data}
+		{parameter}
+		{chart}
+		rainInRange={rain ? rainInRange : null}
+		{statsInRange}
 	/>
-</header>
 
-<!-- 1. What it means here -->
-<section class="mt-6 max-w-2xl" aria-labelledby="meaning-heading">
-	<h2 id="meaning-heading" class="text-sm font-medium text-muted">What it means here</h2>
-	<p class="mt-1 text-lg">{data.note ?? parameter.plain ?? parameter.definition}</p>
-	{#if data.note}
-		<p class="mt-2 text-sm text-muted">
-			Written by {data.classroom.name}. {parameter.plain ?? parameter.definition}
-		</p>
-	{/if}
-</section>
+	<!-- 5. Data quality -->
+	<DataQuality
+		{quality}
+		releasedThrough={data.releasedThrough}
+		inReview={data.inReview}
+		rain={!!rain}
+		sources={data.series.map(sourceName).join(', ')}
+	/>
 
-<!-- 2. Value now -->
-{#if now}<ValueNow {now} {alertNow} />{/if}
-
-<!-- 3. Main chart, with compare -->
-<ValueChart
-	page={data}
-	{parameter}
-	{chart}
-	{latest}
-	{rangeDays}
-	{rain}
-	{rainInRange}
-	{series}
-	{stats}
-	{compared}
-	{compareError}
-	{levels}
-	bind:range
-	bind:compareId
-	bind:sourceId
->
-	{#snippet levelsEditor()}
-		{#if alerts && parameter.valueType !== 'text' && parameter.valueType !== 'time'}
-			<ChartAlerts
-				{alerts}
-				{parameter}
-				typeName={deviceTypeLabel(data.typeDefinitions, alerts.deviceType)}
-				onchange={() => invalidateAll()}
-			/>
-		{/if}
-	{/snippet}
-</ValueChart>
-
-<!-- 4. Daily summary, with download -->
-<DailySummary
-	page={data}
-	{parameter}
-	{chart}
-	rainInRange={rain ? rainInRange : null}
-	{statsInRange}
-/>
-
-<!-- 5. Data quality -->
-<DataQuality
-	{quality}
-	releasedThrough={data.releasedThrough}
-	inReview={data.inReview}
-	rain={!!rain}
-	sources={data.series.map(sourceName).join(', ')}
-/>
-
-<!-- 6. How it is measured, with the curriculum link -->
-<HowMeasured
-	{parameter}
-	learn={data.content.sections.find((s) => s.id === 'learn')}
-	rainSeries={rain ? data.series : null}
-	referenceSourceId={data.rain?.referenceSourceId ?? null}
-	deviceTypes={data.deviceTypes}
-/>
+	<!-- 6. How it is measured, with the curriculum link -->
+	<HowMeasured
+		{parameter}
+		learn={data.content.sections.find((s) => s.id === 'learn')}
+		rainSeries={rain ? data.series : null}
+		referenceSourceId={data.rain?.referenceSourceId ?? null}
+		deviceTypes={data.deviceTypes}
+	/>
+</div>

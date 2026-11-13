@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { invalidate } from '$app/navigation';
 	import Select from '#lib/components/Select.svelte';
 	import { MAX_AUTO_RELEASE_DAYS } from '#lib/domain/permissions.ts';
@@ -212,6 +213,7 @@
 		{#if error}<p class="field-error mt-4" role="alert">{error}</p>{/if}
 		<div class="mt-5 flex items-center gap-3">
 			<button class="btn btn-primary" disabled={saving}>
+				<Icon name="check" class="size-4" />
 				{saving ? 'Saving…' : 'Save sharing'}
 			</button>
 			{#if saved}<p class="text-sm text-muted" role="status">Saved.</p>{/if}

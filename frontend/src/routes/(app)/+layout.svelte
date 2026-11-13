@@ -2,12 +2,13 @@
 	import { resolve } from '$app/paths';
 	import { navigating, page } from '$app/state';
 	import Avatar from '#lib/components/Avatar.svelte';
-	import Icon from '#lib/components/Icon.svelte';
+	import BottomNav from '#lib/components/BottomNav.svelte';
 	import NavLinks from '#lib/components/NavLinks.svelte';
 	import Logo from '#lib/components/Logo.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
+	import InboxBell from '#lib/views/InboxBell.svelte';
 	import { outbox } from '#lib/features/devices/outbox.svelte.ts';
-	import { sensorQuery } from '#lib/utils/sensor-selection.ts';
+	import { classroomsHref, domainsHref } from '#lib/utils/site.ts';
 	import { isMockDataSource } from '#lib/services/index.ts';
 
 	let { data, children } = $props();
@@ -30,29 +31,39 @@
 			: { text: 'Online', class: 'border-lime/50 text-lime', dot: 'bg-lime' }
 	);
 
-	// Everything about your classrooms is on the dashboard (AP-45): the logo and the first link
-	// open it. Members also get Classroom, the details page of the classroom they are on, and
-	// Record if they record (not researchers). Platform admins also manage the registry and host
-	// applications. The links look like the public site's, the current one underlined.
-	const classroomHref = $derived(
-		data.contextClassroom
-			? resolve('/(app)/dashboard/details') + sensorQuery(data.contextClassroom.id)
-			: null
-	);
+	// Everything about your classrooms starts on the dashboard (AP-45): the logo and the first
+	// link open it. Members also get Domains, what the classroom they are on measures, and
+	// Classrooms, its sections; recording is on the dashboard. Platform admins also
+	// manage the registry and host applications. The links look like the public site's, the
+	// current one underlined.
 	const dashboard = resolve('/(app)/dashboard');
-	const details = resolve('/(app)/dashboard/details');
+	const domainsPage = resolve('/(app)/dashboard/domains');
+	const classroomsPage = resolve('/(app)/dashboard/classrooms');
 	const under = (path: string) =>
 		page.url.pathname === path || page.url.pathname.startsWith(`${path}/`);
+	const context = $derived(data.contextClassroom);
 	const nav = $derived([
-		// The dashboard and every page under it, except the classroom's details page.
-		{ href: dashboard, label: 'Dashboard', current: under(dashboard) && !under(details) },
-		...(classroomHref
+		// The dashboard and every page under it, except Domains and Classrooms.
+		{
+			href: dashboard,
+			label: 'Dashboard',
+			icon: 'home',
+			current: under(dashboard) && !under(domainsPage) && !under(classroomsPage)
+		},
+		...(context
 			? [
+					// A value's page is under Domains.
 					{
-						href: classroomHref,
-						// The page has a classroom picker: plural for people in more than one.
-						label: data.memberClassrooms.length > 1 ? 'Classrooms' : 'Classroom',
-						current: under(details)
+						href: domainsHref(context.id),
+						label: 'Domains',
+						icon: 'layers',
+						current: under(domainsPage)
+					},
+					{
+						href: classroomsHref(context.id),
+						label: 'Classrooms',
+						icon: 'users',
+						current: under(classroomsPage)
 					}
 				]
 			: []),
@@ -61,11 +72,13 @@
 					{
 						href: resolve('/(app)/registry'),
 						label: 'Registry',
+						icon: 'database',
 						current: under(resolve('/(app)/registry'))
 					},
 					{
 						href: resolve('/(app)/host-applications'),
 						label: 'Applications',
+						icon: 'clipboard',
 						current: under(resolve('/(app)/host-applications'))
 					}
 				]
@@ -78,22 +91,15 @@
 		class="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur [view-transition-name:app-header] print:hidden"
 	>
 		<div class="mx-auto flex max-w-6xl items-center gap-2 px-3 py-3 sm:gap-4 sm:px-6">
-			<a href={resolve('/(app)/dashboard')} aria-label="Dashboard"><Logo compact /></a>
+			<a href={resolve('/(app)/dashboard')} aria-label="Dashboard"><Logo compact="lg" /></a>
+			<!-- On a phone the links are a bar at the bottom of the screen. -->
 			<nav
 				aria-label="Main"
-				class="-my-2 ml-2 flex min-w-0 items-center gap-4 overflow-x-auto py-2 text-sm sm:ml-4 sm:gap-5"
+				class="-my-2 ml-4 flex min-w-0 items-center gap-5 overflow-x-auto py-2 text-sm max-sm:hidden"
 			>
 				<NavLinks links={nav} />
 			</nav>
 			<div class="ml-auto"></div>
-			{#if data.canRecord}
-				<!-- On a phone just the plus, so the links keep their room. -->
-				<a
-					class="btn btn-accent shrink-0 rounded-full max-sm:px-2.5"
-					href={resolve('/(app)/observe')}
-					><Icon name="plus" class="size-4" /><span class="max-sm:sr-only">Record</span></a
-				>
-			{/if}
 			<a
 				href="{resolve('/(app)/observe')}#sync"
 				class={['chip hidden shrink-0 gap-1.5 text-xs sm:inline-flex', syncChip.class]}
@@ -101,6 +107,7 @@
 				<span class={['size-2 rounded-full', syncChip.dot]} aria-hidden="true"></span>
 				{syncChip.text}
 			</a>
+			<InboxBell inbox={data.inbox} invitations={data.invitations} parameters={data.parameters} />
 			<ThemeToggle />
 			<a href={resolve('/(app)/settings')} class="shrink-0" aria-label="Your account">
 				<Avatar name={data.user.fullName} src={data.user.avatarUrl} />
@@ -132,11 +139,12 @@
 	{/if}
 	<main
 		class={[
-			'mx-auto max-w-6xl px-4 py-8 transition-opacity duration-200 sm:px-6 print:max-w-none print:p-0',
+			'mx-auto max-w-6xl px-4 py-8 transition-opacity duration-200 max-sm:pb-28 sm:px-6 print:max-w-none print:p-0',
 			navigating.to && 'opacity-60 delay-150'
 		]}
 		aria-busy={navigating.to ? 'true' : undefined}
 	>
 		{@render children()}
 	</main>
+	<BottomNav links={nav} />
 </div>

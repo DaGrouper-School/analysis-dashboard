@@ -100,12 +100,12 @@
 					<CopyButton text={inviteUrl(invitation.token)} label="Copy link" />
 					{#if permissions.invite.includes(invitation.role)}
 						<button class="btn btn-ghost px-3 py-1.5 text-xs" onclick={() => resend(invitation)}
-							>Resend</button
+							><Icon name="mail" class="size-3.5" /> Resend</button
 						>
 						<button
 							class="btn btn-ghost px-3 py-1.5 text-xs"
 							onclick={() => onrun(() => services.classrooms.revokeInvitation(invitation.id))}
-							>Revoke</button
+							><Icon name="trash" class="size-3.5" /> Revoke</button
 						>
 					{/if}
 				</li>
@@ -162,15 +162,18 @@
 	{/if}
 	{#snippet footer()}
 		{#if sent.length}
-			<button type="button" class="btn btn-ghost" onclick={openInvite}>Invite more</button>
+			<button type="button" class="btn btn-ghost" onclick={openInvite}
+				><Icon name="plus" class="size-4" /> Invite more</button
+			>
 			<button type="button" class="btn btn-primary" onclick={() => (inviteOpen = false)}
-				>Done</button
+				><Icon name="check" class="size-4" /> Done</button
 			>
 		{:else}
 			<button type="button" class="btn btn-ghost" onclick={() => (inviteOpen = false)}
-				>Cancel</button
+				><Icon name="close" class="size-4" /> Cancel</button
 			>
 			<button form="invite-form" class="btn btn-primary" disabled={inviting || !emails.trim()}>
+				<Icon name="mail" class="size-4" />
 				{inviting ? 'Sending…' : 'Send invitations'}
 			</button>
 		{/if}

@@ -1,7 +1,8 @@
 import { redirect } from '@sveltejs/kit';
 import { resolve } from '$app/paths';
 import { services } from '#lib/services/index.ts';
-import { sectionQuery, sensorQuery } from '#lib/utils/sensor-selection.ts';
+import { classroomsHref, domainsHref } from '#lib/utils/site.ts';
+import { sensorQuery } from '#lib/utils/sensor-selection.ts';
 import type { LayoutLoad } from './$types';
 
 // Front-end only for now: render in the browser so the mock layer can use localStorage.
@@ -17,12 +18,12 @@ export const prerender = false;
 const IN_THE_APP = new Set(['/', '/classrooms']);
 const CLASSROOM_PAGES = new Set(['/classrooms/[classroom]']);
 /**
- * A classroom page's `?tab=` as a dashboard section. The members' classroom page, folded into
- * the dashboard, had labs, members, invitations and consent tabs at the same address.
+ * A classroom page's `?tab=` as a section of the Classrooms page. The members' classroom page,
+ * folded into the app, had labs, members, invitations and consent tabs at the same address.
+ * Its domains are on the Domains page.
  */
 const SECTION: Record<string, string> = {
 	about: 'about',
-	domains: 'domains',
 	complete: 'complete',
 	labs: 'labs',
 	members: 'people',
@@ -35,17 +36,20 @@ export const load: LayoutLoad = async ({ depends, route, params, url }) => {
 	const user = await services.auth.getCurrentUser();
 	if (user && route.id && IN_THE_APP.has(route.id)) redirect(307, resolve('/(app)/dashboard'));
 	if (user && route.id && CLASSROOM_PAGES.has(route.id) && params.classroom) {
-		const section = SECTION[url.searchParams.get('tab') ?? ''];
+		const tab = url.searchParams.get('tab') ?? '';
+		if (tab === 'domains') redirect(307, domainsHref(params.classroom));
+		const section = SECTION[tab];
 		redirect(
 			307,
-			resolve('/(app)/dashboard') +
-				(section ? sectionQuery(params.classroom, section) : sensorQuery(params.classroom))
+			section
+				? classroomsHref(params.classroom, section)
+				: resolve('/(app)/dashboard') + sensorQuery(params.classroom)
 		);
 	}
 	if (user && route.id === '/classrooms/[classroom]/[parameter]' && params.parameter) {
 		redirect(
 			307,
-			resolve('/(app)/dashboard/[classroom]/[parameter]', {
+			resolve('/(app)/dashboard/domains/[classroom]/[parameter]', {
 				classroom: params.classroom!,
 				parameter: params.parameter
 			}) + url.search

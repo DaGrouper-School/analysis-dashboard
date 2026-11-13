@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { resolve } from '$app/paths';
 	import CoreReadingsTable from '#lib/features/devices/CoreReadingsTable.svelte';
 	import Globe from '#lib/components/Globe.svelte';
@@ -28,9 +29,11 @@
 			<div class="mt-8 flex flex-wrap gap-3">
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 				<a href={directory ? sectionHref(directory) : '#network'} class="btn btn-primary"
-					>Explore the data</a
+					><Icon name="compass" class="size-4" /> Explore the data</a
 				>
-				<a href={resolve('/host')} class="btn btn-ghost">{content.hosting.title}</a>
+				<a href={resolve('/host')} class="btn btn-ghost"
+					><Icon name="pin" class="size-4" /> {content.hosting.title}</a
+				>
 			</div>
 		</div>
 		<div class="hidden h-96 lg:block" aria-hidden="true">

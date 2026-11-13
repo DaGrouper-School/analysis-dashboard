@@ -20,7 +20,8 @@
 	import { tick, untrack, type Snippet } from 'svelte';
 	import CoreStrip from '#lib/features/devices/CoreStrip.svelte';
 	import DeviceStrip from '#lib/features/devices/DeviceStrip.svelte';
-	import DevicePicker, { type PickableDevice } from '#lib/features/devices/DevicePicker.svelte';
+	import DeviceBar from '#lib/features/devices/DeviceBar.svelte';
+	import type { PickableDevice } from '#lib/features/devices/DevicePicker.svelte';
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import InstitutionOverview from '#lib/features/classroom/InstitutionOverview.svelte';
 	import NowCard from '#lib/features/devices/NowCard.svelte';
@@ -29,13 +30,10 @@
 	import { reveal } from '#lib/utils/reveal.ts';
 	import { goto } from '$app/navigation';
 	import StageBadge from '#lib/components/StageBadge.svelte';
-	import type {
-		DeviceSummaryCard,
-		InstitutionOverview as InstitutionInfo,
-		NowTile
-	} from '#lib/domain/types.ts';
+	import type { DeviceSummaryCard, NowTile } from '#lib/domain/types.ts';
+	import { institutionCard } from './classroom-overview.ts';
 	import { stageColor } from '#lib/utils/labels.ts';
-	import { valueHref } from '#lib/utils/site.ts';
+	import { domainsHref, valueHref } from '#lib/utils/site.ts';
 
 	/**
 	 * A classroom at a glance (AP-43, AP-45), the same on its public page and on the dashboard:
@@ -56,6 +54,7 @@
 		headerActions,
 		tabsStart,
 		nowActions,
+		deviceActions,
 		devices = [],
 		deviceId,
 		onpickdevice,
@@ -80,10 +79,13 @@
 		eyebrow?: Snippet<[ShownPlace]>;
 		/** Beside the stage, such as the viewer's role. */
 		badges?: Snippet;
+		/** At the right edge, on the title's line, such as the dashboard's Classroom details. */
 		headerActions?: Snippet;
 		/** Above the classroom tabs, such as the public page's filter. */
 		tabsStart?: Snippet;
 		nowActions?: Snippet;
+		/** Beside the device picker, such as the dashboard's Pair new device. */
+		deviceActions?: Snippet;
 		/** The device picker on "What's happening now?": its devices, the one shown, and a pick. */
 		devices?: PickableDevice[];
 		deviceId?: string;
@@ -110,6 +112,18 @@
 			? (parameterId: string) => valueHref(classroom.id, parameterId, deviceId)
 			: undefined
 	);
+	/**
+	 * A device type on the institution card opens Domains on the classroom's first device of that
+	 * type. Domains are for the classroom's members only, like value pages.
+	 */
+	const typeHref = $derived(
+		station.can.openValuePage
+			? (typeId: string) => {
+					const device = station.devices.find((d) => d.type === typeId);
+					return device ? domainsHref(classroom.id, device.id) : null;
+				}
+			: undefined
+	);
 	const loading = $derived(pendingId !== classroom.id);
 	const shown = $derived<ShownPlace>(
 		station.places.find((p) => p.id === pendingId) ?? {
@@ -123,19 +137,7 @@
 	const stage = $derived(station.content.stages.find((s) => s.id === shown.stageId));
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 	const core = $derived(classroom.core);
-	// Always a card, with just the name until there is more, so the row never reflows.
-	const institution = $derived<InstitutionInfo>(
-		station.institution ?? {
-			name: classroom.name,
-			location: classroom.location,
-			deviceTypes: [],
-			photoUrl: null,
-			photoAlt: '',
-			history: '',
-			hub: null,
-			website: null
-		}
-	);
+	const institution = $derived(institutionCard(station));
 
 	// The sliding underline under the classroom tabs, measured from the tab being opened.
 	const tabEls: Record<string, HTMLAnchorElement> = $state({});
@@ -186,7 +188,8 @@
 {@render eyebrow?.(shown)}
 
 <header class={['mt-4 flex flex-wrap items-start justify-between gap-4', loading && 'is-loading']}>
-	<div class="min-w-0">
+	<!-- Room for a small action on the title's line, even on a phone; a wide one wraps under it. -->
+	<div class="min-w-0 flex-[1_1_16rem]">
 		<h1 class="font-display text-4xl">{shown.name}</h1>
 		<p class="mt-2 flex flex-wrap items-center gap-2 text-muted">
 			{[shown.placeName, shown.country].filter(Boolean).join(', ') || classroom.institutionName}
@@ -195,9 +198,7 @@
 		</p>
 		<p class="mt-1 w-fit text-sm text-muted" data-skeleton>
 			{core.lastSync ? `Last sync ${dateTime.format(new Date(core.lastSync))}` : 'No sync yet'}
-			{#if station.siteCodes.length}
-				· Site codes <span class="font-mono text-text">{station.siteCodes.join(', ')}</span>
-			{/if}
+			<!-- Site codes hidden for now (user, 13 Nov); still in station.siteCodes. -->
 		</p>
 	</div>
 	{@render headerActions?.()}
@@ -255,43 +256,48 @@
 {/if}
 
 <!-- The picked device's colour runs through every card below (AP-45). -->
+<!-- Always shown, with no devices too, so every classroom has the same layout. -->
+{#snippet devicePicker()}
+	{#if onpickdevice}
+		<DeviceBar {devices} {deviceId} onpick={onpickdevice} actions={deviceActions} />
+	{/if}
+{/snippet}
+
 <div
 	class={['contents', loading && 'is-loading', accent && 'accent-scope']}
 	style:--accent={accent}
 	aria-busy={loading}
 >
-	<!-- On a phone: the institution (collapsed) first, then the globe, the device, what's
-	     happening and its cards. On a wide screen: the device picker, then the three columns, then the cards. -->
+	<!-- On a phone: what's happening (with the device picker), the institution (collapsed), the
+	     globe, then last week's cards. On a wide screen: what's happening beside the map and the
+	     institution stacked, then the cards. -->
 	<div class="mt-6 flex flex-col gap-5 lg:block">
-		<!-- Always shown, with no devices too, so every classroom has the same layout. -->
-		{#if onpickdevice}
-			<DevicePicker class="max-lg:order-3" {devices} {deviceId} onpick={onpickdevice} />
-		{/if}
 		<div
 			class={[
 				// At least 38rem, so most devices keep one height; taller content grows the row, never overflows.
 				'contents lg:grid lg:min-h-[38rem] lg:gap-5',
-				onpickdevice && 'lg:mt-6',
-				classroom.location
-					? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,1fr)]'
-					: 'lg:grid-cols-2'
+				// Two halves: What's happening now on the left; on the right a square map, with the
+				// institution overview filling what is left under it (user, 13 Nov).
+				'lg:grid-cols-2',
+				classroom.location && 'lg:grid-rows-[auto_1fr]'
 			]}
 		>
 			<NowCard
 				bind:element={nowCard}
-				class="max-lg:order-4"
+				class="max-lg:order-2 lg:row-span-2"
 				tiles={now ?? station.now}
 				released={!station.can.seeUnreleased}
 				shared={station.shared}
 				{accent}
 				icon={devices.find((d) => d.id === deviceId)?.icon}
 				actions={nowActions}
+				picker={onpickdevice ? devicePicker : undefined}
 				{onexplain}
 				href={valueOf}
 			/>
 			{#if classroom.location}
 				<section
-					class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] max-lg:order-2 sm:h-96 lg:h-full"
+					class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] max-lg:order-4 sm:h-96 lg:aspect-square lg:h-auto"
 					aria-label="Where {shown.name} is"
 				>
 					<!-- Out of the flow, so the canvas never sets the card's height and grows it. -->
@@ -324,8 +330,9 @@
 			{/if}
 			<InstitutionOverview
 				overview={institution}
+				{typeHref}
 				actions={institutionActions}
-				class="overflow-hidden max-lg:order-1"
+				class="overflow-hidden max-lg:order-3 lg:col-start-2"
 			/>
 		</div>
 

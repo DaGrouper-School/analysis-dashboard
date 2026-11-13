@@ -41,7 +41,9 @@
 		</p>
 	</div>
 	{#if canCreate}
-		<a href={resolve('/(app)/classrooms/new')} class="btn btn-primary">New classroom</a>
+		<a href={resolve('/(app)/classrooms/new')} class="btn btn-primary"
+			><Icon name="plus" class="size-4" /> New classroom</a
+		>
 	{/if}
 </div>
 
@@ -55,7 +57,7 @@
 			<li>
 				<!-- eslint-disable svelte/no-navigation-without-resolve -->
 				<a
-					href={resolve('/(app)/dashboard') + sectionQuery(classroom.id, 'people')}
+					href={resolve('/(app)/dashboard/classrooms') + sectionQuery(classroom.id, 'people')}
 					class="card block transition hover:border-line-strong"
 				>
 					<div class="flex items-start justify-between gap-3">

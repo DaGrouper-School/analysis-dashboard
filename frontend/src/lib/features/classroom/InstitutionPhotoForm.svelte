@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { invalidate } from '$app/navigation';
 	import type { InstitutionInfo } from '#lib/domain/types.ts';
 	import { validateInstitutionPhoto } from '#lib/domain/validation.ts';
@@ -106,11 +107,12 @@
 	{#if error}<p class="field-error" role="alert">{error}</p>{/if}
 	<div class="flex flex-wrap items-center gap-3">
 		<button class="btn btn-primary" disabled={saving || !image}>
+			<Icon name="check" class="size-4" />
 			{saving ? 'Saving…' : 'Save photo'}
 		</button>
 		{#if institution.photoUrl}
 			<button type="button" class="btn btn-ghost" disabled={saving} onclick={remove}
-				>Remove photo</button
+				><Icon name="trash" class="size-4" /> Remove photo</button
 			>
 		{/if}
 		{#if saved}<p class="text-sm text-muted" role="status">Saved.</p>{/if}

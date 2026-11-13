@@ -11,6 +11,7 @@
 		title,
 		eyebrow,
 		wide = false,
+		accent,
 		onclose,
 		children,
 		footer
@@ -20,6 +21,8 @@
 		eyebrow?: string;
 		/** For forms with tables or several columns. */
 		wide?: boolean;
+		/** A device's registry colour: tints the modal so it shows which sensor its content is from. */
+		accent?: string | null;
 		onclose?: () => unknown;
 		children: Snippet;
 		footer?: Snippet;
@@ -39,8 +42,10 @@
 	bind:this={dialog}
 	class={[
 		'modal m-auto overflow-hidden rounded-md border border-line-strong bg-surface p-0 text-text shadow-2xl backdrop:bg-black/75 backdrop:backdrop-blur-sm',
-		wide ? 'w-[min(60rem,calc(100vw-2rem))]' : 'w-[min(36rem,calc(100vw-2rem))]'
+		wide ? 'w-[min(60rem,calc(100vw-2rem))]' : 'w-[min(36rem,calc(100vw-2rem))]',
+		accent && 'accent-modal'
 	]}
+	style:--accent={accent || undefined}
 	aria-labelledby="{id}-title"
 	onclose={() => {
 		open = false;
@@ -52,9 +57,19 @@
 	}}
 >
 	<div class="flex max-h-[calc(100dvh-2rem)] flex-col">
-		<div class="flex items-start justify-between gap-3 border-b border-line px-6 py-4">
+		<div
+			class={[
+				'flex items-start justify-between gap-3 border-b px-6 py-4',
+				accent ? 'border-(--accent)/40' : 'border-line'
+			]}
+		>
 			<div>
-				{#if eyebrow}<p class="text-xs font-medium tracking-[0.18em] text-muted uppercase">
+				{#if eyebrow}<p
+						class={[
+							'text-xs font-medium tracking-[0.18em] uppercase',
+							accent ? 'text-(--accent)' : 'text-muted'
+						]}
+					>
 						{eyebrow}
 					</p>{/if}
 				<h2 id="{id}-title" class="text-lg font-semibold">{title}</h2>

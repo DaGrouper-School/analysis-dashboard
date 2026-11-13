@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { resolve } from '$app/paths';
 
 	/** The dashboard for someone in no classroom yet: how to join one, or start one. */
@@ -13,5 +14,7 @@
 		Conditions come only from devices in your classrooms' labs. Join a classroom with an invite link
 		to see its measurements here.
 	</p>
-	<a class="btn btn-ghost mt-4" href={resolve('/(app)/classrooms/new')}>Start a classroom</a>
+	<a class="btn btn-ghost mt-4" href={resolve('/(app)/classrooms/new')}
+		><Icon name="plus" class="size-4" /> Start a classroom</a
+	>
 </div>

@@ -93,7 +93,8 @@ export const CSV_COLUMNS = [
 	'latitude',
 	'longitude',
 	'location_source',
-	'contributor_id',
+	'participant_id',
+	'participant_url',
 	'licence',
 	'licence_url',
 	'attribution',
@@ -108,7 +109,9 @@ export function toCsv(
 	rows: RawRow[],
 	classroomName: string,
 	terms: DataTerms,
-	parameters: ReadonlyMap<string, Pick<Parameter, 'label' | 'unit'>>
+	parameters: ReadonlyMap<string, Pick<Parameter, 'label' | 'unit'>>,
+	/** The full address of a participant's contributor page, so the CSV links to who recorded it. */
+	participantUrl: (participantId: number) => string
 ): string {
 	const restrictions = terms.restrictions.join(' ');
 	const lines = rows.map((row) => {
@@ -128,6 +131,7 @@ export function toCsv(
 			row.location.lng,
 			row.locationSource,
 			row.contributorId,
+			row.contributorId === null ? null : participantUrl(row.contributorId),
 			terms.licence,
 			terms.licenceUrl,
 			terms.attribution,

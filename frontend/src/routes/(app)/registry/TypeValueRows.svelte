@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import Select, { type SelectOption } from '#lib/components/Select.svelte';
 	import type { DomainDefinition, Parameter } from '#lib/domain/types.ts';
 	import { blankRow, fillRow, NEW_DOMAIN, VALUE_KINDS, type ValueRow } from './type-form.ts';
@@ -121,7 +122,8 @@
 						type="button"
 						class="btn btn-ghost px-3"
 						aria-label="Remove value {i + 1}"
-						onclick={() => (rows = rows.filter((r) => r !== row))}>×</button
+						onclick={() => (rows = rows.filter((r) => r !== row))}
+						><Icon name="close" class="size-4" /></button
 					>
 				</div>
 				{#if errors[`values.${i}.id`] || errors[`values.${i}.label`]}
@@ -141,5 +143,5 @@
 	</ol>
 {/key}
 <button type="button" class="btn btn-ghost mt-3" onclick={() => (rows = [...rows, blankRow()])}
-	>+ Add a value</button
+	><Icon name="plus" class="size-4" />Add a value</button
 >

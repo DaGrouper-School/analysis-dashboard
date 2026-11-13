@@ -231,7 +231,9 @@
 				You can still explore your classroom's data. Ask your facilitator for a paper consent sheet,
 				or open Settings to see where consent stands and send your guardian a link.
 			</p>
-			<a class="btn btn-ghost mt-4" href={resolve('/(app)/settings')}>Open settings</a>
+			<a class="btn btn-ghost mt-4" href={resolve('/(app)/settings')}
+				><Icon name="settings" class="size-4" /> Open settings</a
+			>
 		</div>
 	{:else if !data.targets.length}
 		<div class="card mt-8">
@@ -240,7 +242,9 @@
 				Community scientists, facilitators and institution heads record observations in their
 				classrooms' labs. Researchers read the data only.
 			</p>
-			<a class="btn btn-ghost mt-4" href={resolve('/(app)/dashboard')}>Your dashboard</a>
+			<a class="btn btn-ghost mt-4" href={resolve('/(app)/dashboard')}
+				><Icon name="home" class="size-4" /> Your dashboard</a
+			>
 		</div>
 	{:else if sentEntry && template && target}
 		<ObserveSent

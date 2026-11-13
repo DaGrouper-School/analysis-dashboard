@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import IconPicker from '#lib/components/IconPicker.svelte';
 	import Modal from '#lib/components/Modal.svelte';
@@ -128,7 +129,9 @@
 		label={title}
 	>
 		{#snippet extra()}
-			<button type="button" class="btn btn-ghost" onclick={() => (open = false)}>Cancel</button>
+			<button type="button" class="btn btn-ghost" onclick={() => (open = false)}
+				><Icon name="close" class="size-4" /> Cancel</button
+			>
 		{/snippet}
 		{#if step === 0}
 			<div class="grid gap-3 sm:grid-cols-2">

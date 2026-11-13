@@ -1,5 +1,6 @@
 <script lang="ts">
-	let { compact = false }: { compact?: boolean } = $props();
+	/** Compact: just the mark on a phone (`true`), or until a wide screen (`'lg'`). */
+	let { compact = false }: { compact?: boolean | 'lg' } = $props();
 </script>
 
 <span class="inline-flex items-center gap-2.5">
@@ -9,7 +10,12 @@
 			<path d="M8 16c2-3 5-5 9-6" />
 		</svg>
 	</span>
-	<span class={['text-lg font-semibold tracking-tight text-ink', compact && 'hidden sm:inline']}>
+	<span
+		class={[
+			'text-lg font-semibold tracking-tight whitespace-nowrap text-ink',
+			compact === 'lg' ? 'hidden lg:inline' : compact && 'hidden sm:inline'
+		]}
+	>
 		DaGrouper
 		<span class="text-muted">Analysis</span>
 	</span>

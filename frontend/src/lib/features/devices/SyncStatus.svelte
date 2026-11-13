@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import type { ObservationTarget, ObservationTemplate } from '#lib/domain/types.ts';
 	import { outbox } from '#lib/features/devices/outbox.svelte.ts';
 	import { clockMessage, type OutboxStatus } from '#lib/features/devices/outbox.ts';
@@ -62,7 +63,7 @@
 				type="button"
 				class="btn btn-ghost"
 				disabled={!outbox.online || outbox.syncing || !pending}
-				onclick={() => outbox.sync()}>Sync now</button
+				onclick={() => outbox.sync()}><Icon name="sync" class="size-4" /> Sync now</button
 			>
 		</div>
 	</div>
@@ -109,12 +110,14 @@
 								type="button"
 								class="btn btn-ghost"
 								disabled={!outbox.online || outbox.syncing}
-								onclick={() => outbox.retry(entry.clientId)}>Retry</button
+								onclick={() => outbox.retry(entry.clientId)}
+								><Icon name="sync" class="size-4" /> Retry</button
 							>
 							<button
 								type="button"
 								class="btn btn-ghost"
-								onclick={() => outbox.discard(entry.clientId)}>Discard</button
+								onclick={() => outbox.discard(entry.clientId)}
+								><Icon name="trash" class="size-4" /> Discard</button
 							>
 						</div>
 					{/if}

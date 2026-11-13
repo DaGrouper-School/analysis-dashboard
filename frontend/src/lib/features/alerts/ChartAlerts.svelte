@@ -195,20 +195,22 @@
 								type="button"
 								class="btn btn-ghost px-2 py-0.5 text-xs"
 								aria-label="Change {rule.title}"
-								onclick={() => edit(rule)}>Edit</button
+								onclick={() => edit(rule)}><Icon name="pencil" class="size-3.5" /> Edit</button
 							>
 							<button
 								type="button"
 								class="btn btn-ghost px-2 py-0.5 text-xs"
 								aria-label="{rule.enabled ? 'Turn off' : 'Turn on'} {rule.title}"
-								onclick={() => toggle(rule)}>{rule.enabled ? 'Turn off' : 'Turn on'}</button
+								onclick={() => toggle(rule)}
+								><Icon name="power" class="size-3.5" />
+								{rule.enabled ? 'Turn off' : 'Turn on'}</button
 							>
 							{#if rule.source === 'device' || (rule.source === 'type' && alerts.canEditType)}
 								<button
 									type="button"
 									class="btn btn-ghost px-2 py-0.5 text-xs"
 									aria-label="Delete {rule.title}"
-									onclick={() => remove(rule)}>Delete</button
+									onclick={() => remove(rule)}><Icon name="trash" class="size-3.5" /> Delete</button
 								>
 							{/if}
 						</span>

@@ -99,7 +99,7 @@
 
 <!-- eslint-disable svelte/no-navigation-without-resolve -->
 <a
-	href={resolve('/(app)/dashboard') + sectionQuery(lab.classroomId, 'labs')}
+	href={resolve('/(app)/dashboard/classrooms') + sectionQuery(lab.classroomId, 'labs')}
 	class="text-sm text-muted hover:text-ink">← {data.detail.classroomName}</a
 >
 <!-- eslint-enable svelte/no-navigation-without-resolve -->
@@ -112,7 +112,7 @@
 		</div>
 		{#if data.detail.canManage}
 			<a class="btn btn-ghost" href={resolve('/(app)/labs/[labId]/edit', { labId: lab.id })}
-				>Edit lab</a
+				><Icon name="pencil" class="size-4" /> Edit lab</a
 			>
 		{/if}
 	</div>
@@ -149,7 +149,7 @@
 						<!-- eslint-disable svelte/no-navigation-without-resolve -->
 						<a
 							class="link"
-							href={resolve('/(app)/dashboard') + sectionQuery(lab.classroomId, 'labs')}
+							href={resolve('/(app)/dashboard/classrooms') + sectionQuery(lab.classroomId, 'labs')}
 							>finish setup</a
 						>.
 						<!-- eslint-enable svelte/no-navigation-without-resolve -->

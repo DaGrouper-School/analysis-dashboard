@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/Icon.svelte';
-	import Select from '#lib/components/Select.svelte';
 	import type { Parameter } from '#lib/domain/types.ts';
 	import RawDataButton from '#lib/features/measurements/RawDataButton.svelte';
-	import RegisterSensorModal from '#lib/features/devices/RegisterSensorModal.svelte';
+	import AddDeviceButton from '#lib/features/devices/AddDeviceButton.svelte';
 	import { keySummary } from '#lib/features/measurements/key-values.ts';
 	import {
 		deviceTypeColor,
@@ -48,11 +46,6 @@
 
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 	const conditionOf = (id: string) => data.classroomConditions.find((c) => c.device.id === id);
-
-	let adding = $state(false);
-	let addLabId = $state('');
-	const addLab = $derived(data.labs.find((l) => l.id === addLabId) ?? data.labs[0]);
-	const labOptions = $derived(data.labs.map((l) => ({ value: l.id, label: l.name })));
 </script>
 
 <div class="flex flex-wrap items-end justify-between gap-3">
@@ -63,25 +56,13 @@
 		/>
 	</div>
 	{#if canAddDevice}
-		<div class="flex flex-wrap items-center gap-2">
-			{#if data.labs.length > 1}
-				<Select
-					options={labOptions}
-					value={addLab?.id}
-					label="Lab to add it to"
-					size="compact"
-					onchange={(id) => (addLabId = id)}
-				/>
-			{/if}
-			<button
-				type="button"
-				class="btn btn-primary"
-				aria-haspopup="dialog"
-				onclick={() => (adding = true)}
-			>
-				<Icon name="plus" class="size-4" /> Add measurement
-			</button>
-		</div>
+		<AddDeviceButton
+			labs={data.labs}
+			deviceTypes={data.deviceTypes}
+			domains={data.domains}
+			parameters={data.parameters}
+			label="Add measurement"
+		/>
 	{/if}
 </div>
 <ul class="mt-5 space-y-2.5">
@@ -130,7 +111,7 @@
 					<a
 						class="btn btn-ghost"
 						href={`${resolve('/(app)/observe')}?lab=${option.labId}&device=${option.id}`}
-						>Enter a reading</a
+						><Icon name="plus" class="size-4" /> Enter a reading</a
 					>
 					<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				{/if}
@@ -141,15 +122,3 @@
 		<li class="text-muted">No devices yet. Ask your facilitator to add one in one of the labs.</li>
 	{/each}
 </ul>
-
-{#if canAddDevice && addLab}
-	<RegisterSensorModal
-		bind:open={adding}
-		labId={addLab.id}
-		labName={addLab.name}
-		deviceTypes={data.deviceTypes}
-		domains={data.domains}
-		parameters={data.parameters}
-		onclose={() => invalidateAll()}
-	/>
-{/if}

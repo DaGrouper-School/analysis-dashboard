@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { sectionQuery } from '#lib/utils/sensor-selection.ts';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -19,7 +20,7 @@
 			const classroom = await services.classrooms.acceptInvitation(token);
 			await invalidateAll();
 			// eslint-disable-next-line svelte/no-navigation-without-resolve
-			await goto(resolve('/(app)/dashboard') + sectionQuery(classroom.id, 'people'));
+			await goto(resolve('/(app)/dashboard/classrooms') + sectionQuery(classroom.id, 'people'));
 		} catch (e) {
 			error = errorMessage(e);
 		} finally {
@@ -53,6 +54,7 @@
 						disabled={busy !== ''}
 						onclick={() => join(invitation.token)}
 					>
+						<Icon name="users" class="size-4" />
 						{busy === invitation.token ? 'Joining…' : 'Join classroom'}
 					</button>
 				</li>

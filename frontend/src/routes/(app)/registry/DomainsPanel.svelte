@@ -54,14 +54,14 @@
 						type="button"
 						class="btn btn-ghost px-3 py-1.5"
 						aria-haspopup="dialog"
-						onclick={() => onedit(domain)}>Edit</button
+						onclick={() => onedit(domain)}><Icon name="pencil" class="size-4" /> Edit</button
 					>
 					<button
 						type="button"
 						class="btn btn-ghost px-3 py-1.5"
 						disabled={count > 0}
 						title={count ? 'Move its values to another domain first' : undefined}
-						onclick={() => onremove(domain)}>Remove</button
+						onclick={() => onremove(domain)}><Icon name="trash" class="size-4" /> Remove</button
 					>
 				</div>
 			</li>

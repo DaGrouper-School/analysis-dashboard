@@ -62,7 +62,7 @@
 			});
 			// The head takes it from here: they accept, set up the lab and invite the rest.
 			// eslint-disable-next-line svelte/no-navigation-without-resolve
-			await goto(resolve('/(app)/dashboard') + sectionQuery(classroom.id, 'people'));
+			await goto(resolve('/(app)/dashboard/classrooms') + sectionQuery(classroom.id, 'people'));
 		} catch (e) {
 			if (e instanceof ServiceError) errors = e.fields;
 			const fields = Object.keys(errors);

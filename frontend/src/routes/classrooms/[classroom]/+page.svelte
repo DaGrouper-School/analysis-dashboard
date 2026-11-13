@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { goto, replaceState } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { navigating, page } from '$app/state';
@@ -103,7 +104,9 @@
 			</div>
 		{/snippet}
 		{#snippet headerActions()}
-			<a class="btn btn-ghost" href={resolve('/host')}>{data.content.hosting.title}</a>
+			<a class="btn btn-ghost" href={resolve('/host')}
+				><Icon name="pin" class="size-4" /> {data.content.hosting.title}</a
+			>
 		{/snippet}
 		{#snippet tabsStart()}
 			<ClassroomFilter

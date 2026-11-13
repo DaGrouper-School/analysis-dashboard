@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import RawDataButton from '#lib/features/measurements/RawDataButton.svelte';
 	import { invalidate } from '$app/navigation';
 	import Modal from '#lib/components/Modal.svelte';
@@ -72,13 +73,16 @@
 	</ul>
 	{#if error}<p class="field-error mt-3" role="alert">{error}</p>{/if}
 	{#snippet footer()}
-		<button type="button" class="btn btn-ghost" onclick={() => (open = false)}>Not now</button>
+		<button type="button" class="btn btn-ghost" onclick={() => (open = false)}
+			><Icon name="close" class="size-4" /> Not now</button
+		>
 		<button
 			type="button"
 			class="btn btn-primary"
 			disabled={releasing || !through}
 			onclick={release}
 		>
+			<Icon name="upload" class="size-4" />
 			{releasing
 				? 'Releasing…'
 				: through

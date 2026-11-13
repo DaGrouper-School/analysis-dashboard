@@ -893,6 +893,11 @@ export interface RawPage {
 		parameterIds: string[];
 		sources: { id: string; name: string; kind: RawRow['sourceKind'] }[];
 		sites: { id: string; name: string }[];
+		/**
+		 * The first and last day (UTC, YYYY-MM-DD) of the values the other filters match, whatever
+		 * the dates asked: what the date filters show until one is picked. Null with no values.
+		 */
+		days: { first: string; last: string } | null;
 	};
 }
 
@@ -1026,6 +1031,8 @@ export interface PublicSource {
 	/** The device's name; null for field observations. */
 	name: string | null;
 	kind: 'device' | 'field';
+	/** The device type's registry colour, so a value shows which sensor it came from. */
+	color?: string;
 }
 
 /** The latest released value of one parameter from one source. */
@@ -1142,8 +1149,16 @@ export interface InstitutionOverview extends InstitutionInfo {
 	name: string;
 	/** The classroom's published (rounded) position; null before it has a lab. */
 	location: GeoPoint | null;
-	/** Kinds of device in its Lab in a Bag, by registry label. */
-	deviceTypes: string[];
+	/** Kinds of device in its Lab in a Bag, with the registry's label, icon and colour. */
+	deviceTypes: InstitutionDeviceType[];
+}
+
+/** A kind of device on the institution card, shown with its registry icon and colour. */
+export interface InstitutionDeviceType {
+	id: DeviceType;
+	label: string;
+	icon: string;
+	color: string;
 }
 
 /** One tile of "What's happening now?" (AP-43), from the latest released reading. */

@@ -37,7 +37,8 @@ const rows = [
 		sourceName: 'Field observation',
 		sourceKind: 'field',
 		labId: 'lab_b',
-		siteName: 'Annex'
+		siteName: 'Annex',
+		contributorId: 4821
 	}),
 	row({ id: 'c', observedAt: '2026-10-21T23:59:00.000Z', parameterId: 'uv' })
 ];
@@ -102,7 +103,13 @@ describe('CSV', () => {
 			coordinateDecimals: null
 		};
 		const params = new Map([['air_temperature', { label: 'Air temperature', unit: '°C' }]]);
-		const lines = toCsv([rows[0], rows[1]], 'Bay Street Classroom', terms, params)
+		const lines = toCsv(
+			[rows[0], rows[1]],
+			'Bay Street Classroom',
+			terms,
+			params,
+			(id) => `https://example.org/contributors/${id}`
+		)
 			.trimEnd()
 			.split('\r\n');
 		expect(lines[0]).toBe(CSV_COLUMNS.join(','));
@@ -115,6 +122,9 @@ describe('CSV', () => {
 			);
 		}
 		expect(lines[2]).toContain('Field observation,field,Annex');
+		// Who recorded it: their participant ID and a link to their contributor page.
+		expect(lines[2]).toContain(',4821,https://example.org/contributors/4821,');
+		expect(lines[1]).toContain(',,,CC BY-NC 4.0');
 	});
 
 	it('rounds positions when the terms ask, and names the file after the classroom', () => {

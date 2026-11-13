@@ -49,7 +49,12 @@ function released(state: MockDbState, classroom: StoredClassroom, now: number, m
 		...state.readings.flatMap((r) => {
 			const device = devices.find((d) => d.id === r.deviceId);
 			if (!device) return [];
-			const source: PublicSource = { id: device.id, name: device.name, kind: 'device' };
+			const source: PublicSource = {
+				id: device.id,
+				name: device.name,
+				kind: 'device',
+				color: deviceTypeColor(state.deviceTypes, device.type)
+			};
 			return [{ record: r, source }];
 		}),
 		...state.observations
@@ -221,23 +226,31 @@ function kitFor(state: MockDbState, labs: { id: string }[], member: boolean): Ki
 }
 
 /**
- * The institution overview card (AP-43). The host is shown only once it has signed the host
- * agreement, and only when there is a photo or a history to show.
+ * The institution overview card (AP-43). The public sees the host only once it has signed the
+ * host agreement. The classroom's own members always see it, so a new classroom's head can add
+ * its photo and history in Settings before the agreement is signed.
  */
 function institutionFor(
 	state: MockDbState,
 	classroom: StoredClassroom,
 	publicClassroom: PublicClassroom,
-	kit: KitItem[]
+	kit: KitItem[],
+	member: boolean
 ): InstitutionOverview | null {
 	const info = classroom.profile.institution;
 	// Shown once a host agreement is signed, even before a photo or history is added.
-	if (!publicClassroom.institutionName) return null;
+	const name = publicClassroom.institutionName ?? (member ? classroom.institutionName : null);
+	if (!name) return null;
 	return {
 		...structuredClone(info),
-		name: publicClassroom.institutionName,
+		name,
 		location: publicClassroom.location,
-		deviceTypes: kit.map((k) => k.deviceType.label)
+		deviceTypes: kit.map(({ deviceType: t }) => ({
+			id: t.id,
+			label: t.label,
+			icon: t.icon,
+			color: deviceTypeColor(state.deviceTypes, t.id)
+		}))
 	};
 }
 
@@ -408,7 +421,8 @@ export function createMockPublic({
 					state,
 					classroom,
 					publicClassroom,
-					kitFor(state, released(state, classroom, now()).labs, can.seeUnreleased)
+					kitFor(state, released(state, classroom, now()).labs, can.seeUnreleased),
+					can.seeUnreleased
 				)
 			};
 		},
@@ -470,7 +484,8 @@ export function createMockPublic({
 					state,
 					classroom,
 					toPublicClassroom(state, classroom, now()),
-					kit
+					kit,
+					member
 				),
 				custodianRole: member ? profile.custodianRole : null,
 				sessions: profile.sessions

@@ -186,7 +186,9 @@
 										aria-haspopup="dialog"
 										title={parameter.plain ?? 'No plain-language note yet'}
 										onclick={() => onexplain(parameter.id)}
-										>Meaning<span class="sr-only"> of {parameter.label}</span></button
+										><Icon name="info" class="size-3.5" /> Meaning<span class="sr-only">
+											of {parameter.label}</span
+										></button
 									>
 								</td>
 							</tr>

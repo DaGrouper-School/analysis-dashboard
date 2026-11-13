@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import type {
 		AlertDirection,
 		AlertLevel,
@@ -241,8 +242,11 @@
 	</form>
 
 	{#snippet footer()}
-		<button type="button" class="btn btn-ghost" onclick={() => (open = false)}>Cancel</button>
+		<button type="button" class="btn btn-ghost" onclick={() => (open = false)}
+			><Icon name="close" class="size-4" /> Cancel</button
+		>
 		<button form="alert-rule" class="btn btn-primary" disabled={saving}>
+			<Icon name="check" class="size-4" />
 			{saving ? 'Saving…' : rule ? 'Save changes' : 'Add alert'}
 		</button>
 	{/snippet}

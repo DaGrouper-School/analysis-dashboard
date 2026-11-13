@@ -4346,6 +4346,24 @@ components:
         - required
       additionalProperties: false
       description: A readiness question, from configuration.
+    InstitutionDeviceType:
+      type: object
+      properties:
+        id:
+          $ref: "#/components/schemas/DeviceType"
+        label:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+      required:
+        - id
+        - label
+        - icon
+        - color
+      additionalProperties: false
+      description: A kind of device on the institution card, shown with its registry icon and colour.
     InstitutionInfo:
       type: object
       properties:
@@ -4413,8 +4431,8 @@ components:
         deviceTypes:
           type: array
           items:
-            type: string
-          description: Kinds of device in its Lab in a Bag, by registry label.
+            $ref: "#/components/schemas/InstitutionDeviceType"
+          description: Kinds of device in its Lab in a Bag, with the registry's label, icon and colour.
       required:
         - deviceTypes
         - history
@@ -5624,6 +5642,9 @@ components:
           enum:
             - device
             - field
+        color:
+          type: string
+          description: The device type's registry colour, so a value shows which sensor it came from.
       required:
         - id
         - name
@@ -5851,10 +5872,27 @@ components:
                   - id
                   - name
                 additionalProperties: false
+            days:
+              anyOf:
+                - type: object
+                  properties:
+                    first:
+                      type: string
+                    last:
+                      type: string
+                  required:
+                    - first
+                    - last
+                  additionalProperties: false
+                - type: "null"
+              description: "The first and last day (UTC, YYYY-MM-DD) of the values the other filters match,
+                whatever the dates asked: what the date filters show until one is picked. Null with
+                no values."
           required:
             - parameterIds
             - sources
             - sites
+            - days
           additionalProperties: false
       required:
         - classroomId
@@ -6148,6 +6186,9 @@ components:
                 enum:
                   - device
                   - field
+              color:
+                type: string
+                description: The device type's registry colour, so a value shows which sensor it came from.
             required:
               - count
               - first

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import IconPicker from '#lib/components/IconPicker.svelte';
 	import Modal from '#lib/components/Modal.svelte';
@@ -126,8 +127,11 @@
 		</div>
 	</form>
 	{#snippet footer()}
-		<button type="button" class="btn btn-ghost" onclick={() => (open = false)}>Cancel</button>
+		<button type="button" class="btn btn-ghost" onclick={() => (open = false)}
+			><Icon name="close" class="size-4" /> Cancel</button
+		>
 		<button form="domain-form" class="btn btn-primary" disabled={saving}>
+			<Icon name="plus" class="size-4" />
 			{saving ? 'Saving…' : editing ? 'Save domain' : afterCreate ? 'Add and use' : 'Add domain'}
 		</button>
 	{/snippet}

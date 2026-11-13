@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { resolve } from '$app/paths';
 	import PublicShell from '#lib/components/PublicShell.svelte';
 	import { HOST_STATUS_LABELS } from '#lib/domain/hosting.ts';
@@ -19,7 +20,9 @@
 		{#if !application}
 			<h1 class="mt-1 font-display text-3xl">This status link is not valid</h1>
 			<p class="mt-3 text-muted">Check that you copied the whole link.</p>
-			<a class="btn btn-ghost mt-6" href={resolve('/host')}>Start an application</a>
+			<a class="btn btn-ghost mt-6" href={resolve('/host')}
+				><Icon name="plus" class="size-4" /> Start an application</a
+			>
 		{:else}
 			<h1 class="mt-1 font-display text-3xl">{application.institutionName}</h1>
 			<p class="mt-4 text-sm" role="status">

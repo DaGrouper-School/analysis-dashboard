@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import Collapse from '#lib/components/Collapse.svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -70,13 +71,15 @@
 				/>
 				<ThemeToggle />
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-				<a href={account.href} class="btn btn-primary hidden sm:inline-flex">{account.label}</a>
+				<a href={account.href} class="btn btn-primary hidden sm:inline-flex"
+					><Icon name="user" class="size-4" /> {account.label}</a
+				>
 				<button
 					type="button"
 					class="btn btn-ghost lg:hidden"
 					aria-expanded={menuOpen}
 					aria-controls="site-menu"
-					onclick={() => (menuOpen = !menuOpen)}>Menu</button
+					onclick={() => (menuOpen = !menuOpen)}><Icon name="menu" class="size-4" /> Menu</button
 				>
 			</div>
 		</div>
@@ -87,7 +90,9 @@
 			>
 				<NavLinks links={sectionLinks} extra="py-1" />
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-				<a href={account.href} class="btn btn-primary mt-2 sm:hidden">{account.label}</a>
+				<a href={account.href} class="btn btn-primary mt-2 sm:hidden"
+					><Icon name="user" class="size-4" /> {account.label}</a
+				>
 			</nav>
 		</Collapse>
 		{#if isMockDataSource}

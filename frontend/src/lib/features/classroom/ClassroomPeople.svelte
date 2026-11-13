@@ -83,7 +83,8 @@
 						/>
 						<button
 							class="btn btn-ghost px-3 py-1.5 text-xs"
-							onclick={() => remove(member.userId, member.fullName)}>Remove</button
+							onclick={() => remove(member.userId, member.fullName)}
+							><Icon name="trash" class="size-3.5" /> Remove</button
 						>
 					{:else}
 						<span class="rounded-full bg-raised px-2.5 py-1 text-xs font-medium">
