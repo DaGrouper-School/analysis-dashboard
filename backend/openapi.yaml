@@ -607,6 +607,144 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /institution-setup/form:
+    get:
+      tags:
+        - Classrooms
+      operationId: classrooms.institutionSetupForm
+      summary: Institution setup form
+      description: |-
+        What the institution setup asks (AP-40), from configuration.
+
+        The steps and questions of the institution setup (AP-40), from configuration.
+
+        Access: signed-in users. Classroom roles are checked on the server.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstitutionSetupForm"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /classrooms/{classroomId}/institution/setup:
+    get:
+      tags:
+        - Classrooms
+      operationId: classrooms.institutionSetup
+      summary: Institution setup
+      description: |-
+        The answers so far and the step to resume at. The institution head only.
+
+        Institution head only. The answers so far and the step to resume at.
+
+        Access: signed-in users. Classroom roles are checked on the server.
+      parameters:
+        - name: classroomId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstitutionSetup"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags:
+        - Classrooms
+      operationId: classrooms.saveInstitutionSetup
+      summary: Save institution setup
+      description: >-
+        Saves the answers and the step reached; with `finish`, checks every required answer and
+        marks
+
+        the setup done. The institution head only.
+
+
+        Institution head only. Saves at every step; unanswered required questions are refused only
+        with `finish`. The backend stores the photo and returns its URL.
+
+
+        Access: signed-in users. Classroom roles are checked on the server.
+      parameters:
+        - name: classroomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveInstitutionSetupInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstitutionSetup"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /admin/classrooms/{classroomId}/host-agreement:
+    put:
+      tags:
+        - Classrooms
+      operationId: classrooms.setHostAgreement
+      summary: Set host agreement
+      description: >-
+        Marks the signed host agreement received, or not. Platform admins only.
+
+
+        Platform admins mark the signed host agreement received; the institution then shows
+        publicly.
+
+
+        Access: platform admins only.
+      parameters:
+        - name: classroomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassroomsSetHostAgreementBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassroomSetupStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /classrooms/{classroomId}/sharing:
     put:
       tags:
@@ -3036,12 +3174,18 @@ components:
             - $ref: "#/components/schemas/SharingInput"
             - type: "null"
           description: The sharing settings and data terms, for those who may see them; null otherwise.
+        setup:
+          anyOf:
+            - $ref: "#/components/schemas/ClassroomSetupStatus"
+            - type: "null"
+          description: For the institution head and platform admins; null for everyone else.
       required:
         - classroom
         - members
         - invitations
         - permissions
         - sharing
+        - setup
       additionalProperties: false
     ClassroomMember:
       type: object
@@ -3117,6 +3261,12 @@ components:
         releaseData:
           type: boolean
           description: Review readings in review and release them to the public.
+        setUpInstitution:
+          type: boolean
+          description: "Answer the institution setup (AP-40): the institution head."
+        markHostAgreement:
+          type: boolean
+          description: "Mark the host agreement signed: platform admins, who receive it."
       required:
         - view
         - seeUnreleased
@@ -3135,6 +3285,8 @@ components:
         - manageDevices
         - recordReadings
         - releaseData
+        - setUpInstitution
+        - markHostAgreement
       additionalProperties: false
       description: "Who may do what in one classroom: the viewer's role there, the platform admin flag and
         the classroom's sharing settings. Every page gates its features on these, never on a role."
@@ -3163,6 +3315,20 @@ components:
         - place
       additionalProperties: false
       description: A session on the classroom's calendar (LP-06).
+    ClassroomSetupStatus:
+      type: object
+      properties:
+        institutionDone:
+          type: boolean
+          description: The institution head finished the institution setup.
+        hostAgreementSigned:
+          type: boolean
+          description: A platform admin marked the host agreement signed.
+      required:
+        - institutionDone
+        - hostAgreementSigned
+      additionalProperties: false
+      description: Where a classroom's setup is, for its head and platform admins.
     ClassroomSharing:
       type: object
       properties:
@@ -3220,6 +3386,14 @@ components:
           type: string
       required:
         - through
+      additionalProperties: false
+    ClassroomsSetHostAgreementBody:
+      type: object
+      properties:
+        signed:
+          type: boolean
+      required:
+        - signed
       additionalProperties: false
     ClassroomsSetMemberRoleBody:
       type: object
@@ -4346,6 +4520,58 @@ components:
         - required
       additionalProperties: false
       description: A readiness question, from configuration.
+    InstitutionAnswers:
+      type: object
+      properties:
+        photo:
+          type:
+            - string
+            - "null"
+          description: A data URL, or null for no photo.
+        photoAlt:
+          type: string
+        foundedYear:
+          type: string
+        history:
+          type: string
+        ecosystems:
+          type: array
+          items:
+            type: string
+        hub:
+          type: string
+        website:
+          type: string
+        showPublicly:
+          type: string
+          enum:
+            - ""
+            - yes
+            - no
+          description: "`yes`, `no`, or empty before it is answered."
+      required:
+        - photo
+        - photoAlt
+        - foundedYear
+        - history
+        - ecosystems
+        - hub
+        - website
+        - showPublicly
+      additionalProperties: false
+      description: "The answers, as the form edits them: empty strings for nothing yet."
+    InstitutionField:
+      type: string
+      enum:
+        - photo
+        - photoAlt
+        - foundedYear
+        - history
+        - ecosystems
+        - hub
+        - website
+        - showPublicly
+      description: The overview's fields, each collected by one question.
     InstitutionInfo:
       type: object
       properties:
@@ -4370,12 +4596,24 @@ components:
             - string
             - "null"
           description: Opened by "Learn more"; null hides the button.
+        foundedYear:
+          type:
+            - number
+            - "null"
+          description: The year it was founded, if given.
+        showPublicly:
+          type:
+            - boolean
+            - "null"
+          description: Whether the photo and story may show publicly; null until asked. Members always see them.
       required:
         - photoUrl
         - photoAlt
         - history
         - hub
         - website
+        - foundedYear
+        - showPublicly
       additionalProperties: false
       description: "The host institution as a classroom presents it (AP-43): a photo and a short history.
         Edited by the institution head; collected first in the host application (AP-40)."
@@ -4403,6 +4641,16 @@ components:
             - string
             - "null"
           description: Opened by "Learn more"; null hides the button.
+        foundedYear:
+          type:
+            - number
+            - "null"
+          description: The year it was founded, if given.
+        showPublicly:
+          type:
+            - boolean
+            - "null"
+          description: Whether the photo and story may show publicly; null until asked. Members always see them.
         name:
           type: string
         location:
@@ -4417,12 +4665,14 @@ components:
           description: Kinds of device in its Lab in a Bag, by registry label.
       required:
         - deviceTypes
+        - foundedYear
         - history
         - hub
         - location
         - name
         - photoAlt
         - photoUrl
+        - showPublicly
         - website
       additionalProperties: false
       description: "The institution overview card (AP-43): who runs a classroom and what its community
@@ -4443,6 +4693,117 @@ components:
         - alt
       additionalProperties: false
       description: A new photo of the host institution, or none to remove it (AP-43).
+    InstitutionQuestion:
+      type: object
+      properties:
+        field:
+          $ref: "#/components/schemas/InstitutionField"
+        step:
+          type: string
+          description: The step it is asked on, by `InstitutionSetupStep.id`.
+        label:
+          type: string
+        help:
+          type: string
+          description: Shown under the question; empty for none.
+        kind:
+          $ref: "#/components/schemas/InstitutionQuestionKind"
+        required:
+          type: boolean
+        maxLength:
+          type: number
+          description: Longest answer, in characters, for text.
+        options:
+          type: array
+          items:
+            type: string
+          description: The choices of a multiple choice question.
+        allowOther:
+          type: boolean
+          description: A multiple choice question also takes answers of its own.
+      required:
+        - field
+        - step
+        - label
+        - help
+        - kind
+        - required
+      additionalProperties: false
+      description: One question of the institution setup, from configuration.
+    InstitutionQuestionKind:
+      type: string
+      enum:
+        - photo
+        - short_text
+        - long_text
+        - year
+        - multi_choice
+        - url
+        - yes_no
+    InstitutionSetup:
+      type: object
+      properties:
+        classroomId:
+          type: string
+        classroomName:
+          type: string
+        institutionName:
+          type: string
+        answers:
+          $ref: "#/components/schemas/InstitutionAnswers"
+        step:
+          type: number
+          description: The step to open, counted from 0.
+        completedAt:
+          type:
+            - string
+            - "null"
+          description: Null until the head finishes; they can still change the answers after.
+      required:
+        - classroomId
+        - classroomName
+        - institutionName
+        - answers
+        - step
+        - completedAt
+      additionalProperties: false
+      description: 'Where an institution head is in setting up their institution (AP-40): the answers so
+        far, the step to resume at, and when they finished. Saved at every step, so "Finish later"
+        loses nothing.'
+    InstitutionSetupForm:
+      type: object
+      properties:
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/InstitutionSetupStep"
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/InstitutionQuestion"
+      required:
+        - steps
+        - questions
+      additionalProperties: false
+      description: The institution setup's steps and questions, in order.
+    InstitutionSetupStep:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        icon:
+          type: string
+        intro:
+          type: string
+          description: Shown above the step's questions.
+      required:
+        - id
+        - label
+        - icon
+        - intro
+      additionalProperties: false
     Invitation:
       type: object
       properties:
@@ -6170,6 +6531,21 @@ components:
         - in_review
         - not_released
       description: Where a classroom's released data stands.
+    SaveInstitutionSetupInput:
+      type: object
+      properties:
+        answers:
+          $ref: "#/components/schemas/InstitutionAnswers"
+        step:
+          type: number
+        finish:
+          type: boolean
+          description: Check every required answer and mark the setup finished.
+      required:
+        - answers
+        - step
+        - finish
+      additionalProperties: false
     SharingInput:
       type: object
       properties:

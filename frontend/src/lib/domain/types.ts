@@ -309,6 +309,10 @@ export interface ClassroomPermissions {
 	recordReadings: boolean;
 	/** Review readings in review and release them to the public. */
 	releaseData: boolean;
+	/** Answer the institution setup (AP-40): the institution head. */
+	setUpInstitution: boolean;
+	/** Mark the host agreement signed: platform admins, who receive it. */
+	markHostAgreement: boolean;
 }
 
 /** What waits for review before it is public: counts by source. */
@@ -332,6 +336,8 @@ export interface ClassroomDetail {
 	permissions: ClassroomPermissions;
 	/** The sharing settings and data terms, for those who may see them; null otherwise. */
 	sharing: SharingInput | null;
+	/** For the institution head and platform admins; null for everyone else. */
+	setup: ClassroomSetupStatus | null;
 }
 
 /** What the invite page shows before the user signs in. */
@@ -1281,6 +1287,102 @@ export interface InstitutionInfo {
 	hub: string | null;
 	/** Opened by "Learn more"; null hides the button. */
 	website: string | null;
+	/** The year it was founded, if given. */
+	foundedYear: number | null;
+	/** Whether the photo and story may show publicly; null until asked. Members always see them. */
+	showPublicly: boolean | null;
+}
+
+// ---- Institution setup (AP-40) -------------------------------------------------------
+
+/** The overview's fields, each collected by one question. */
+export type InstitutionField =
+	| 'photo'
+	| 'photoAlt'
+	| 'foundedYear'
+	| 'history'
+	| 'ecosystems'
+	| 'hub'
+	| 'website'
+	| 'showPublicly';
+
+export type InstitutionQuestionKind =
+	'photo' | 'short_text' | 'long_text' | 'year' | 'multi_choice' | 'url' | 'yes_no';
+
+/** One question of the institution setup, from configuration. */
+export interface InstitutionQuestion {
+	field: InstitutionField;
+	/** The step it is asked on, by `InstitutionSetupStep.id`. */
+	step: string;
+	label: string;
+	/** Shown under the question; empty for none. */
+	help: string;
+	kind: InstitutionQuestionKind;
+	required: boolean;
+	/** Longest answer, in characters, for text. */
+	maxLength?: number;
+	/** The choices of a multiple choice question. */
+	options?: string[];
+	/** A multiple choice question also takes answers of its own. */
+	allowOther?: boolean;
+}
+
+export interface InstitutionSetupStep {
+	id: string;
+	label: string;
+	icon: string;
+	/** Shown above the step's questions. */
+	intro: string;
+}
+
+/** The institution setup's steps and questions, in order. */
+export interface InstitutionSetupForm {
+	steps: InstitutionSetupStep[];
+	questions: InstitutionQuestion[];
+}
+
+/** The answers, as the form edits them: empty strings for nothing yet. */
+export interface InstitutionAnswers {
+	/** A data URL, or null for no photo. */
+	photo: string | null;
+	photoAlt: string;
+	foundedYear: string;
+	history: string;
+	ecosystems: string[];
+	hub: string;
+	website: string;
+	/** `yes`, `no`, or empty before it is answered. */
+	showPublicly: '' | 'yes' | 'no';
+}
+
+/**
+ * Where an institution head is in setting up their institution (AP-40): the answers so far, the
+ * step to resume at, and when they finished. Saved at every step, so "Finish later" loses nothing.
+ */
+export interface InstitutionSetup {
+	classroomId: string;
+	classroomName: string;
+	institutionName: string;
+	answers: InstitutionAnswers;
+	/** The step to open, counted from 0. */
+	step: number;
+	/** Null until the head finishes; they can still change the answers after. */
+	completedAt: string | null;
+}
+
+export interface SaveInstitutionSetupInput {
+	answers: InstitutionAnswers;
+	step: number;
+	/** Check every required answer and mark the setup finished. */
+	finish: boolean;
+}
+
+/** Where a classroom's setup is, for its head and platform admins. */
+export interface ClassroomSetupStatus {
+	/** The institution head finished the institution setup. */
+	institutionDone: boolean;
+	/** A platform admin marked the host agreement signed. */
+	hostAgreementSigned: boolean;
 }
 
 export interface ClassroomProfile {

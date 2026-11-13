@@ -24,6 +24,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Component tests run in Chromium.
+      - run: npx playwright install --with-deps chromium
       - run: npm run check -w frontend
       - run: npm test -w frontend
       - run: npm run build -w frontend

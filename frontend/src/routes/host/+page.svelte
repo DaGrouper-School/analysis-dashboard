@@ -5,6 +5,7 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import PublicShell from '#lib/components/PublicShell.svelte';
 	import Wizard from '#lib/components/Wizard.svelte';
+	import YesNoField from '#lib/components/YesNoField.svelte';
 	import {
 		emptyHostApplication,
 		parseEcosystems,
@@ -197,29 +198,17 @@
 					{#each data.questions as q (q.id)}
 						{@const key = `answers.${q.id}`}
 						{#if q.kind === 'yes_no'}
-							<fieldset>
-								<legend class="label">{q.label}</legend>
-								{#if q.help}<p class="-mt-1 mb-2 text-xs text-muted">{q.help}</p>{/if}
-								<div class="flex gap-4">
-									{#each [['yes', 'Yes'], ['no', 'No']] as [value, label] (value)}
-										<label class="flex items-center gap-2 text-sm">
-											<input
-												type="radio"
-												name={key}
-												class="border-line-strong bg-transparent text-teal checked:bg-current focus:ring-teal"
-												{value}
-												checked={form.answers[q.id] === value}
-												onchange={() => {
-													form.answers[q.id] = value;
-													clear(key);
-												}}
-											/>
-											{label}
-										</label>
-									{/each}
-								</div>
-								{#if errors[key]}<p class="field-error">{errors[key]}</p>{/if}
-							</fieldset>
+							<YesNoField
+								name={key}
+								label={q.label}
+								help={q.help}
+								value={form.answers[q.id]}
+								error={errors[key]}
+								onchange={(value) => {
+									form.answers[q.id] = value;
+									clear(key);
+								}}
+							/>
 						{:else}
 							{@render field(
 								key,

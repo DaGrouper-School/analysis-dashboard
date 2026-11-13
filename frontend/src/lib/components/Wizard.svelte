@@ -19,6 +19,7 @@
 		busyLabel = 'Saving…',
 		label,
 		extra,
+		onstep,
 		children
 	}: {
 		steps: { label: string; icon: string }[];
@@ -33,6 +34,8 @@
 		label: string;
 		/** More buttons beside Back, such as Cancel. */
 		extra?: Snippet;
+		/** Called after moving to another step, for saving progress. */
+		onstep?: (step: number) => void;
 		children: Snippet;
 	} = $props();
 
@@ -41,6 +44,7 @@
 
 	async function go(step: number) {
 		current = step;
+		onstep?.(step);
 		await tick();
 		body?.focus({ preventScroll: true });
 		body?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

@@ -3,6 +3,10 @@ import type {
 	DialCode,
 	InstitutionInfo,
 	InstitutionPhotoInput,
+	InstitutionSetup,
+	InstitutionSetupForm,
+	SaveInstitutionSetupInput,
+	ClassroomSetupStatus,
 	HostApplication,
 	HostApplicationInput,
 	HostApplicationReceipt,
@@ -207,6 +211,20 @@ export interface ClassroomService {
 	update(classroomId: string, input: UpdateClassroomInput): Promise<ClassroomSummary>;
 	/** The host institution's photo and its description, or none. Institution head only. */
 	setInstitutionPhoto(classroomId: string, input: InstitutionPhotoInput): Promise<InstitutionInfo>;
+	/** What the institution setup asks (AP-40), from configuration. */
+	institutionSetupForm(): Promise<InstitutionSetupForm>;
+	/** The answers so far and the step to resume at. The institution head only. */
+	institutionSetup(classroomId: string): Promise<InstitutionSetup>;
+	/**
+	 * Saves the answers and the step reached; with `finish`, checks every required answer and marks
+	 * the setup done. The institution head only.
+	 */
+	saveInstitutionSetup(
+		classroomId: string,
+		input: SaveInstitutionSetupInput
+	): Promise<InstitutionSetup>;
+	/** Marks the signed host agreement received, or not. Platform admins only. */
+	setHostAgreement(classroomId: string, signed: boolean): Promise<ClassroomSetupStatus>;
 	/**
 	 * Who sees the classroom's data and what its facilitators may do, with its data terms. The
 	 * institution head (and platform admins) only.

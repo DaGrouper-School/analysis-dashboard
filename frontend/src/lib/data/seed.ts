@@ -448,9 +448,12 @@ const classrooms: MockDbState['classrooms'] = [
 				history:
 					'Trinity School has taught in Addis Ababa since 1994. Its science club and community scientists in Shashamane measure rain and heat on highland farmland and in the school garden, and share what they find with farmers nearby.',
 				hub: null,
-				website: null
+				website: null,
+				foundedYear: null,
+				showPublicly: true
 			}
 		},
+		institutionSetup: { step: 0, completedAt: SEEDED_AT },
 		terms: {
 			licence: 'CC BY 4.0',
 			licenceUrl: 'https://creativecommons.org/licenses/by/4.0/',
@@ -512,9 +515,12 @@ const classrooms: MockDbState['classrooms'] = [
 				history:
 					'Bay Street School has stood on the Nassau harbour front since 1962. Its shoreline lab tracks wind, heat and storm conditions on the harbour, with student interns and local volunteers taking part.',
 				hub: null,
-				website: null
+				website: null,
+				foundedYear: null,
+				showPublicly: true
 			}
 		},
+		institutionSetup: { step: 0, completedAt: SEEDED_AT },
 		terms: {
 			licence: 'CC BY-NC 4.0',
 			licenceUrl: 'https://creativecommons.org/licenses/by-nc/4.0/',
@@ -567,9 +573,12 @@ const classrooms: MockDbState['classrooms'] = [
 				history:
 					'A secondary school science club in Hargeisa studying dry-season heat and dust in the highlands.',
 				hub: null,
-				website: null
+				website: null,
+				foundedYear: null,
+				showPublicly: true
 			}
 		},
+		institutionSetup: { step: 0, completedAt: SEEDED_AT },
 		terms: {
 			licence: 'CC BY 4.0',
 			licenceUrl: 'https://creativecommons.org/licenses/by/4.0/',
@@ -1649,6 +1658,118 @@ const hostQuestions: MockDbState['hostQuestions'] = [
 	}
 ];
 
+/**
+ * What an institution head is asked when setting up their institution (AP-40), from the ticket's
+ * draft. The programme team replaces it with the final research questionnaires.
+ */
+const institutionSetupForm: MockDbState['institutionSetupForm'] = {
+	steps: [
+		{
+			id: 'photo',
+			label: 'Photo',
+			icon: 'upload',
+			intro: 'The photo opens your institution overview, in the app and on the public site.'
+		},
+		{
+			id: 'story',
+			label: 'Story',
+			icon: 'history',
+			intro: 'Tell members and visitors who you are and what your community does here.'
+		},
+		{
+			id: 'links',
+			label: 'Links',
+			icon: 'link',
+			intro: 'Who you work with, and where people can learn more.'
+		},
+		{
+			id: 'sharing',
+			label: 'Sharing',
+			icon: 'users',
+			intro: 'Members always see your overview. Choose whether visitors see it too.'
+		}
+	],
+	questions: [
+		{
+			field: 'photo',
+			step: 'photo',
+			label: 'Photo of your institution',
+			help: 'A wide photo of the buildings or grounds. You must have the right to share it.',
+			kind: 'photo',
+			required: true
+		},
+		{
+			field: 'photoAlt',
+			step: 'photo',
+			label: 'Describe the photo',
+			help: 'For people who can’t see it.',
+			kind: 'short_text',
+			required: true,
+			maxLength: 200
+		},
+		{
+			field: 'foundedYear',
+			step: 'story',
+			label: 'When was your institution founded?',
+			help: '',
+			kind: 'year',
+			required: false
+		},
+		{
+			field: 'history',
+			step: 'story',
+			label: 'Tell us your institution’s story',
+			help: 'Who you are, how you started, and what your community does here.',
+			kind: 'long_text',
+			required: true,
+			maxLength: 600
+		},
+		{
+			field: 'ecosystems',
+			step: 'story',
+			label: 'What does your community study or care for?',
+			help: 'Choose all that apply.',
+			kind: 'multi_choice',
+			required: true,
+			// The ecosystems the seeded classrooms and applications already name.
+			options: [
+				'Highland farmland',
+				'Dry highland',
+				'School garden',
+				'Shoreline',
+				'Mangrove',
+				'Coral reef'
+			],
+			allowOther: true
+		},
+		{
+			field: 'hub',
+			step: 'links',
+			label: 'Partner or hub organisation',
+			help: 'For example, Earth Care.',
+			kind: 'short_text',
+			required: false,
+			maxLength: 120
+		},
+		{
+			field: 'website',
+			step: 'links',
+			label: 'Website',
+			help: 'Shown as “Learn more”.',
+			kind: 'url',
+			required: false
+		},
+		{
+			field: 'showPublicly',
+			step: 'sharing',
+			label: 'May we show the photo and story publicly?',
+			help: 'If not, only members of your classroom see them.',
+			kind: 'yes_no',
+			required: true
+		}
+	]
+};
+
 /** One application waiting for review, so the back office has something to show. */
 const hostApplications: MockDbState['hostApplications'] = [
 	{
@@ -1729,6 +1850,7 @@ export function createSeed(): Omit<MockDbState, 'version'> {
 		},
 		hostQuestions,
 		hostApplications,
+		institutionSetupForm,
 		samSources: [
 			...classrooms.map((c) => ({
 				sourceId: c.code,

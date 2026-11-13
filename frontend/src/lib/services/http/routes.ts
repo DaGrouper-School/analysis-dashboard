@@ -237,6 +237,46 @@ export const routes: Route[] = [
 			'Institution head only. A null image removes the photo. The backend stores the image and returns its URL.'
 	},
 	{
+		method: 'classrooms.institutionSetupForm',
+		http: 'GET',
+		path: '/institution-setup/form',
+		access: 'user',
+		response: 'InstitutionSetupForm',
+		notes: 'The steps and questions of the institution setup (AP-40), from configuration.'
+	},
+	{
+		method: 'classrooms.institutionSetup',
+		http: 'GET',
+		path: '/classrooms/{classroomId}/institution/setup',
+		access: 'user',
+		response: 'InstitutionSetup',
+		errors: [404],
+		notes: 'Institution head only. The answers so far and the step to resume at.'
+	},
+	{
+		method: 'classrooms.saveInstitutionSetup',
+		http: 'PUT',
+		path: '/classrooms/{classroomId}/institution/setup',
+		access: 'user',
+		body: 'SaveInstitutionSetupInput',
+		response: 'InstitutionSetup',
+		errors: [400, 404],
+		notes:
+			'Institution head only. Saves at every step; unanswered required questions are refused only with `finish`. The backend stores the photo and returns its URL.'
+	},
+	{
+		method: 'classrooms.setHostAgreement',
+		http: 'PUT',
+		path: '/admin/classrooms/{classroomId}/host-agreement',
+		access: 'admin',
+		body: '{ signed: boolean }',
+		response: 'ClassroomSetupStatus',
+		errors: [404],
+		args: ['x1', true],
+		notes:
+			'Platform admins mark the signed host agreement received; the institution then shows publicly.'
+	},
+	{
 		method: 'classrooms.updateSharing',
 		http: 'PUT',
 		path: '/classrooms/{classroomId}/sharing',

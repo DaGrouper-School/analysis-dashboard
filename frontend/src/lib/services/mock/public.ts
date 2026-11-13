@@ -228,9 +228,12 @@ function institutionFor(
 	state: MockDbState,
 	classroom: StoredClassroom,
 	publicClassroom: PublicClassroom,
-	kit: KitItem[]
+	kit: KitItem[],
+	member: boolean
 ): InstitutionOverview | null {
 	const info = classroom.profile.institution;
+	// The head chose whether visitors see the photo and story (AP-40); members always do.
+	if (!member && info.showPublicly !== true) return null;
 	// Shown once a host agreement is signed, even before a photo or history is added.
 	if (!publicClassroom.institutionName) return null;
 	return {
@@ -408,7 +411,8 @@ export function createMockPublic({
 					state,
 					classroom,
 					publicClassroom,
-					kitFor(state, released(state, classroom, now()).labs, can.seeUnreleased)
+					kitFor(state, released(state, classroom, now()).labs, can.seeUnreleased),
+					can.seeUnreleased
 				)
 			};
 		},
@@ -470,7 +474,8 @@ export function createMockPublic({
 					state,
 					classroom,
 					toPublicClassroom(state, classroom, now()),
-					kit
+					kit,
+					member
 				),
 				custodianRole: member ? profile.custodianRole : null,
 				sessions: profile.sessions

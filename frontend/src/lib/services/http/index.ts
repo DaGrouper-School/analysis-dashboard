@@ -1,6 +1,9 @@
 import type {
 	DialCode,
 	InstitutionInfo,
+	InstitutionSetup,
+	InstitutionSetupForm,
+	ClassroomSetupStatus,
 	HostApplication,
 	HostApplicationInput,
 	HostApplicationReceipt,
@@ -119,6 +122,21 @@ export function createHttpServices(baseUrl: string): Services {
 					'PUT',
 					`/classrooms/${encodeURIComponent(id)}/institution/photo`,
 					input
+				),
+			institutionSetupForm: () => request<InstitutionSetupForm>('GET', '/institution-setup/form'),
+			institutionSetup: (id) =>
+				request<InstitutionSetup>('GET', `/classrooms/${encodeURIComponent(id)}/institution/setup`),
+			saveInstitutionSetup: (id, input) =>
+				request<InstitutionSetup>(
+					'PUT',
+					`/classrooms/${encodeURIComponent(id)}/institution/setup`,
+					input
+				),
+			setHostAgreement: (id, signed) =>
+				request<ClassroomSetupStatus>(
+					'PUT',
+					`/admin/classrooms/${encodeURIComponent(id)}/host-agreement`,
+					{ signed }
 				),
 			updateSharing: (id, input) =>
 				request<SharingInput>('PUT', `/classrooms/${encodeURIComponent(id)}/sharing`, input),
