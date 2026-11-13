@@ -268,7 +268,7 @@
 				// At least 38rem, so most devices keep one height; taller content grows the row, never overflows.
 				'contents lg:grid lg:min-h-[38rem] lg:gap-5',
 				// Two halves: What's happening now on the left, the map above the institution overview
-				// on the right (user, 13 Nov). The overview never sets the height: it scrolls within the
+				// on the right (user, 13 Nov). The overview never sets the height: it fits the
 				// space What's happening now leaves under the map.
 				'lg:grid-cols-2',
 				classroom.location && 'lg:grid-rows-[22rem_1fr]'
@@ -324,7 +324,7 @@
 			<InstitutionOverview
 				overview={institution}
 				actions={institutionActions}
-				class="overflow-hidden max-lg:order-3 lg:col-start-2 lg:overflow-y-auto lg:[contain:size]"
+				class="overflow-hidden max-lg:order-3 lg:col-start-2 lg:[contain:size]"
 			/>
 		</div>
 
