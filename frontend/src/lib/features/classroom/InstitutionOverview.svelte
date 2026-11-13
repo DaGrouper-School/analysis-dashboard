@@ -29,13 +29,14 @@
 
 	let open = $state(false);
 
-	const hub = $derived(overview.hub ?? overview.name);
+	// A partner hub only when it is another organisation: the institution's name is the heading.
+	const hub = $derived(overview.hub && overview.hub !== overview.name ? overview.hub : null);
 	// Only a web address opens from "Learn more", never another kind of link.
 	const website = $derived(
 		overview.website && /^https?:\/\//i.test(overview.website) ? overview.website : null
 	);
-	// Without kit or a hub there is nothing to say yet, so the card shows just the name.
-	const showHub = $derived(!!overview.hub || overview.deviceTypes.length > 0);
+	// Without a description or a hub there is nothing to say yet, so the card shows just the name.
+	const showHub = $derived(!!hub || !!overview.history);
 </script>
 
 {#snippet factLabel(icon: string, label: string)}
@@ -97,16 +98,17 @@
 		<div class="flex flex-1 flex-col lg:h-full">
 			<h3 class="mt-5 text-lg font-medium lg:mt-0">{overview.name}</h3>
 			{#if showHub}
+				<!-- Under Hub: the institution's description, after its partner hub when it has one. -->
 				<div class="mt-3">
 					{@render factLabel('institution', 'Hub')}
-					<p class="mt-1 text-sm">{hub}</p>
+					{#if hub}<p class="mt-1 text-sm font-medium">{hub}</p>{/if}
+					{#if overview.history}
+						<!-- Clamped on wide screens, so a long description never makes the row taller. -->
+						<p class="mt-1 text-sm leading-relaxed lg:line-clamp-3" title={overview.history}>
+							{overview.history}
+						</p>
+					{/if}
 				</div>
-			{/if}
-			{#if overview.history}
-				<!-- Clamped on wide screens, so a long history never makes the row taller. -->
-				<p class="mt-3 text-sm leading-relaxed lg:line-clamp-3" title={overview.history}>
-					{overview.history}
-				</p>
 			{/if}
 			{#if overview.deviceTypes.length}
 				<div class="mt-3">

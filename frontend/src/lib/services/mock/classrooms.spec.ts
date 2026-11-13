@@ -243,6 +243,30 @@ describe('editing a classroom', () => {
 		expect((await services.classrooms.get('cls_trinity')).permissions.edit).toBe(true);
 	});
 
+	it("saves the institution's description for its overview card, and keeps it when left out", async () => {
+		await signInAs('g-tesfaye');
+		await services.classrooms.update('cls_trinity', {
+			name: 'Trinity Lab Classroom',
+			institutionName: 'Trinity School, Addis Ababa',
+			history: '  A school with a science club.  '
+		});
+		const institution = async () =>
+			(await services.publicSite.station('cls_trinity')).institution!.history;
+		expect(await institution()).toBe('A school with a science club.');
+		await services.classrooms.update('cls_trinity', {
+			name: 'Trinity Lab Classroom',
+			institutionName: 'Trinity School, Addis Ababa'
+		});
+		expect(await institution()).toBe('A school with a science club.');
+		await expect(
+			services.classrooms.update('cls_trinity', {
+				name: 'Trinity Lab Classroom',
+				institutionName: 'Trinity School, Addis Ababa',
+				history: 'x'.repeat(1001)
+			})
+		).rejects.toMatchObject({ fields: { history: expect.any(String) } });
+	});
+
 	it('refuses members who are not the head, and blank names', async () => {
 		const challenge = await services.auth.requestPhoneCode('+251911000001');
 		await services.auth.verifyPhoneCode(challenge.requestId, challenge.devCode!);

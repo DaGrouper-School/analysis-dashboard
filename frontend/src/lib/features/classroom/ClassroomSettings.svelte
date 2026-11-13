@@ -2,14 +2,14 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import { invalidate } from '$app/navigation';
 	import CopyButton from '#lib/components/CopyButton.svelte';
-	import InstitutionPhotoForm from '#lib/features/classroom/InstitutionPhotoForm.svelte';
+	import InstitutionForm from '#lib/features/classroom/InstitutionForm.svelte';
 	import SharingSettings from '#lib/features/classroom/SharingSettings.svelte';
 	import type { ClassroomDetail, InstitutionInfo } from '#lib/domain/types.ts';
 	import { validateClassroomUpdate } from '#lib/domain/validation.ts';
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
 
 	/**
-	 * A classroom's settings (AP-45): its name, institution and the institution's photo, for those
+	 * A classroom's settings (AP-45): its name, and its institution's photo, name and description, for those
 	 * who may edit them, how it shares its data and what its facilitators may do, and its permanent
 	 * code, for those who may see it. A dashboard tab.
 	 */
@@ -23,8 +23,6 @@
 
 	// svelte-ignore state_referenced_locally
 	let name = $state(detail.classroom.name);
-	// svelte-ignore state_referenced_locally
-	let institution = $state(detail.classroom.institutionName);
 	let errors = $state<Record<string, string>>({});
 	let error = $state('');
 	let saving = $state(false);
@@ -32,7 +30,7 @@
 
 	async function save(event: SubmitEvent) {
 		event.preventDefault();
-		const input = { name, institutionName: institution };
+		const input = { name, institutionName: classroom.institutionName };
 		errors = validateClassroomUpdate(input);
 		error = '';
 		saved = false;
@@ -54,7 +52,7 @@
 <div class="space-y-5">
 	{#if permissions.edit}
 		<form class="card max-w-2xl space-y-4" onsubmit={save} novalidate>
-			<h2 class="text-lg font-semibold">Classroom details</h2>
+			<h2 class="text-lg font-semibold">Classroom</h2>
 			<div>
 				<label class="label" for="settings-name">Classroom name</label>
 				<input
@@ -64,15 +62,7 @@
 				/>
 				{#if errors.name}<p class="field-error">{errors.name}</p>{/if}
 			</div>
-			<div>
-				<label class="label" for="settings-institution">Institution</label>
-				<input
-					id="settings-institution"
-					class={['input', errors.institutionName && 'input-error']}
-					bind:value={institution}
-				/>
-				{#if errors.institutionName}<p class="field-error">{errors.institutionName}</p>{/if}
-			</div>
+
 			{#if error}<p class="field-error" role="alert">{error}</p>{/if}
 			<div class="flex items-center gap-3">
 				<button class="btn btn-primary" disabled={saving}>
@@ -82,9 +72,15 @@
 				{#if saved}<p class="text-sm text-muted" role="status">Saved.</p>{/if}
 			</div>
 		</form>
-		{#if institutionInfo}
-			<InstitutionPhotoForm classroomId={classroom.id} institution={institutionInfo} />
-		{/if}
+		<!-- The institution's photo, name and description together, as its overview card shows them. -->
+		{#key classroom.id}
+			<InstitutionForm
+				classroomId={classroom.id}
+				classroomName={classroom.name}
+				institutionName={classroom.institutionName}
+				institution={institutionInfo ?? { photoUrl: null, photoAlt: '', history: '' }}
+			/>
+		{/key}
 	{/if}
 
 	{#if detail.sharing}

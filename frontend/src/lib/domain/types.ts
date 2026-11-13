@@ -349,6 +349,8 @@ export interface InvitationPreview {
 export interface UpdateClassroomInput {
 	name: string;
 	institutionName: string;
+	/** The institution's description on its overview card; left out, it stays as it is. */
+	history?: string;
 }
 
 /** A new photo of the host institution, or none to remove it (AP-43). */
