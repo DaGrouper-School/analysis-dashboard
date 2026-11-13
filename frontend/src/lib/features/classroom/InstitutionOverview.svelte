@@ -16,9 +16,12 @@
 	let {
 		overview,
 		actions,
+		typeHref,
 		class: className = ''
 	}: {
 		overview: InstitutionOverview;
+		/** Where a device type's icon goes, such as Domains on that device; null or absent: no link. */
+		typeHref?: (typeId: string) => string | null;
 		/** Extra buttons beside "Learn more", such as "Edit overview" for the head. */
 		actions?: Snippet;
 		class?: string;
@@ -107,14 +110,28 @@
 			{/if}
 			{#if overview.deviceTypes.length}
 				<div class="mt-3">
-					{@render factLabel('device', 'Devices')}
-					<!-- Each kind of device as just its registry icon and colour; its name on hover. -->
+					{@render factLabel('station', 'Devices')}
+					<!-- Each kind of device as just its registry icon and colour, its name on hover. Members
+					     tap it for Domains on that device. -->
 					<ul class="mt-1.5 flex flex-wrap gap-2">
 						{#each overview.deviceTypes as type (type.id)}
+							{@const href = typeHref?.(type.id)}
 							<li title={type.label}>
-								<ColorIcon name={type.icon} color={type.color} /><span class="sr-only"
-									>{type.label}</span
-								>
+								{#if href}
+									<!-- Callers pass resolved paths. -->
+									<!-- eslint-disable svelte/no-navigation-without-resolve -->
+									<a
+										{href}
+										class="block rounded-sm transition hover:opacity-80 focus-visible:ring-2 focus-visible:ring-teal focus-visible:outline-none"
+										aria-label="{type.label} domains"
+										><ColorIcon name={type.icon} color={type.color} /></a
+									>
+									<!-- eslint-enable svelte/no-navigation-without-resolve -->
+								{:else}
+									<ColorIcon name={type.icon} color={type.color} /><span class="sr-only"
+										>{type.label}</span
+									>
+								{/if}
 							</li>
 						{/each}
 					</ul>

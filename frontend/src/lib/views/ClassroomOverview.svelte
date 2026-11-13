@@ -33,7 +33,7 @@
 	import type { DeviceSummaryCard, NowTile } from '#lib/domain/types.ts';
 	import { institutionCard } from './classroom-overview.ts';
 	import { stageColor } from '#lib/utils/labels.ts';
-	import { valueHref } from '#lib/utils/site.ts';
+	import { domainsHref, valueHref } from '#lib/utils/site.ts';
 
 	/**
 	 * A classroom at a glance (AP-43, AP-45), the same on its public page and on the dashboard:
@@ -110,6 +110,18 @@
 	const valueOf = $derived(
 		station.can.openValuePage
 			? (parameterId: string) => valueHref(classroom.id, parameterId, deviceId)
+			: undefined
+	);
+	/**
+	 * A device type on the institution card opens Domains on the classroom's first device of that
+	 * type. Domains are for the classroom's members only, like value pages.
+	 */
+	const typeHref = $derived(
+		station.can.openValuePage
+			? (typeId: string) => {
+					const device = station.devices.find((d) => d.type === typeId);
+					return device ? domainsHref(classroom.id, device.id) : null;
+				}
 			: undefined
 	);
 	const loading = $derived(pendingId !== classroom.id);
@@ -318,6 +330,7 @@
 			{/if}
 			<InstitutionOverview
 				overview={institution}
+				{typeHref}
 				actions={institutionActions}
 				class="overflow-hidden max-lg:order-3 lg:col-start-2"
 			/>
