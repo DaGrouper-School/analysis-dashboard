@@ -288,7 +288,7 @@
 			{#if classroom}
 				<!-- eslint-disable svelte/no-navigation-without-resolve -->
 				<a
-					class="btn btn-ghost basis-full rounded-full"
+					class="btn btn-accent basis-full rounded-full"
 					href={domainsHref(classroom.id, shownDeviceId)}>View domains</a
 				>
 				<!-- eslint-enable svelte/no-navigation-without-resolve -->
