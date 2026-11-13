@@ -19,6 +19,7 @@ import { createMockClassrooms } from './classrooms';
 import { createMockConsent, createMockGuardian } from './consent';
 import { createMockExports } from './exports';
 import { createMockHosting } from './hosting';
+import { createMockInstitutionSetup } from './institution-setup';
 import { createMockLabs } from './labs';
 import { createMockPlaces } from './places';
 import { createMockPublic } from './public';
@@ -331,7 +332,10 @@ export function createMockServices({
 			...createMockGuardian({ delay, now })
 		},
 
-		classrooms: createMockClassrooms({ delay, now }),
+		classrooms: {
+			...createMockClassrooms({ delay, now }),
+			...createMockInstitutionSetup({ delay, now })
+		},
 
 		labs: createMockLabs({ delay, now }),
 

@@ -133,7 +133,9 @@
 			photoAlt: '',
 			history: '',
 			hub: null,
-			website: null
+			website: null,
+			foundedYear: null,
+			showPublicly: null
 		}
 	);
 

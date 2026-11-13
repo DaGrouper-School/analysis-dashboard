@@ -1,5 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
+import { playwright } from '@vitest/browser-playwright';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import pkg from './package.json' with { type: 'json' };
@@ -37,6 +38,21 @@ export default defineConfig({
 					environment: 'node',
 					include: ['src/**/*.{test,spec}.{js,ts}'],
 					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+				}
+			},
+			{
+				// Components and pages, rendered in a real browser and used the way people use them.
+				extends: './vite.config.ts',
+				test: {
+					name: 'client',
+					include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+					setupFiles: ['src/test/browser-setup.ts'],
+					browser: {
+						enabled: true,
+						headless: true,
+						provider: playwright(),
+						instances: [{ browser: 'chromium' }]
+					}
 				}
 			}
 		]

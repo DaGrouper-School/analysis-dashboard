@@ -65,7 +65,9 @@ export function permissionsFor(
 		manageDevices,
 		// Researchers only read.
 		recordReadings: admin || focal || role === 'community_scientist',
-		releaseData: head || (facilitator && sharing.releasers === 'head_and_facilitators')
+		releaseData: head || (facilitator && sharing.releasers === 'head_and_facilitators'),
+		setUpInstitution: head,
+		markHostAgreement: admin
 	};
 }
 

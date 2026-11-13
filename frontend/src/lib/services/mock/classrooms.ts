@@ -25,6 +25,7 @@ import {
 	type StoredInvitation
 } from '#lib/data/mock-db.ts';
 import { ServiceError, type ClassroomService } from '../types';
+import { setupStatus } from './institution-setup';
 
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const RANK: Record<ClassroomRole, number> = {
@@ -198,7 +199,7 @@ export function reviewOf(
 }
 
 /** Loads a classroom the user may see. Hidden classrooms read as not found. */
-function visibleClassroom(state: MockDbState, user: User, classroomId: string) {
+export function visibleClassroom(state: MockDbState, user: User, classroomId: string) {
 	const classroom = state.classrooms.find((c) => c.id === classroomId);
 	const { role, can } = canIn(state, user, classroomId);
 	if (!classroom || !can.view) throw new ServiceError('not_found', 'Classroom not found.');
@@ -211,7 +212,10 @@ export function createMockClassrooms({
 }: {
 	delay: () => Promise<void>;
 	now: () => number;
-}): ClassroomService {
+}): Omit<
+	ClassroomService,
+	'institutionSetupForm' | 'institutionSetup' | 'saveInstitutionSetup' | 'setHostAgreement'
+> {
 	const iso = () => new Date(now()).toISOString();
 
 	function createInvitation(
@@ -283,7 +287,8 @@ export function createMockClassrooms({
 				permissions: can,
 				sharing: can.viewSharing
 					? { sharing: { ...classroom.sharing }, terms: structuredClone(classroom.terms) }
-					: null
+					: null,
+				setup: setupStatus(classroom, can)
 			};
 		},
 
@@ -377,13 +382,24 @@ export function createMockClassrooms({
 						areaCode: '',
 						language: '',
 						description: '',
-						ecosystems: [],
+						// What the application named; the head confirms them in the institution setup.
+						ecosystems: application ? [...application.site.ecosystems] : [],
 						hostAgreementSigned: false,
 						projects: [],
 						sessions: [],
 						custodianRole: 'institution_head',
-						institution: { photoUrl: null, photoAlt: '', history: '', hub: null, website: null }
-					}
+						institution: {
+							photoUrl: null,
+							photoAlt: '',
+							history: '',
+							hub: null,
+							website: null,
+							foundedYear: null,
+							showPublicly: null
+						}
+					},
+					// The head answers it after accepting their invitation (AP-40).
+					institutionSetup: { step: 0, completedAt: null }
 				};
 				state.classrooms.push(classroom);
 				if (application) application.classroomId = classroom.id;

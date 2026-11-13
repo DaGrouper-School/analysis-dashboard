@@ -5,6 +5,7 @@
 	import type { InvitationPreview } from '#lib/domain/types.ts';
 	import { CLASSROOM_ROLE_LABELS } from '#lib/utils/labels.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
+	import { afterJoining } from './after-joining.ts';
 
 	/** Invitations waiting for the signed-in user, with a button to join each classroom. */
 	let { invitations }: { invitations: InvitationPreview[] } = $props();
@@ -18,8 +19,12 @@
 		try {
 			const classroom = await services.classrooms.acceptInvitation(token);
 			await invalidateAll();
+			const next = await afterJoining(
+				classroom,
+				resolve('/(app)/dashboard') + sectionQuery(classroom.id, 'people')
+			);
 			// eslint-disable-next-line svelte/no-navigation-without-resolve
-			await goto(resolve('/(app)/dashboard') + sectionQuery(classroom.id, 'people'));
+			await goto(next);
 		} catch (e) {
 			error = errorMessage(e);
 		} finally {

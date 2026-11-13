@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { invalidate } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import CopyButton from '#lib/components/CopyButton.svelte';
+	import HostAgreementCard from '#lib/features/classroom/HostAgreementCard.svelte';
 	import InstitutionPhotoForm from '#lib/features/classroom/InstitutionPhotoForm.svelte';
 	import SharingSettings from '#lib/features/classroom/SharingSettings.svelte';
 	import type { ClassroomDetail, InstitutionInfo } from '#lib/domain/types.ts';
@@ -83,6 +85,28 @@
 		{#if institutionInfo}
 			<InstitutionPhotoForm classroomId={classroom.id} institution={institutionInfo} />
 		{/if}
+	{/if}
+
+	{#if permissions.setUpInstitution}
+		<section class="card flex max-w-2xl flex-wrap items-center justify-between gap-4">
+			<div>
+				<h2 class="text-lg font-semibold">Institution overview</h2>
+				<p class="mt-1 text-sm text-muted">
+					The photo, story, ecosystems and links members and visitors see.
+				</p>
+			</div>
+			<a href={resolve('/(app)/classrooms/[id]/setup', { id: classroom.id })} class="btn btn-ghost">
+				{detail.setup?.institutionDone ? 'Edit overview' : 'Continue setup'}
+			</a>
+		</section>
+	{/if}
+
+	{#if detail.setup}
+		<HostAgreementCard
+			classroomId={classroom.id}
+			status={detail.setup}
+			editable={permissions.markHostAgreement}
+		/>
 	{/if}
 
 	{#if detail.sharing}

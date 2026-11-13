@@ -10,6 +10,7 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import ReleaseModal from '#lib/features/classroom/ReleaseModal.svelte';
 	import PendingInvitations from '#lib/features/classroom/PendingInvitations.svelte';
+	import SetupReminder from '#lib/features/classroom/SetupReminder.svelte';
 	import SyncModal from '#lib/features/devices/SyncModal.svelte';
 	import { pickDevice } from '#lib/features/devices/station-now.ts';
 	import { CLASSROOM_ROLE_LABELS, withArticle, isManualType } from '#lib/utils/labels.ts';
@@ -185,6 +186,15 @@
 	<div class="mb-8"><PendingInvitations invitations={data.invitations} /></div>
 {/if}
 
+{#if data.detail?.permissions.setUpInstitution && data.detail.setup && !data.detail.setup.institutionDone}
+	<div class="mb-8">
+		<SetupReminder
+			classroomId={data.detail.classroom.id}
+			institutionName={data.detail.classroom.institutionName}
+		/>
+	</div>
+{/if}
+
 {#if !station}
 	<NoClassroom {firstName} />
 {:else if details}
@@ -282,10 +292,9 @@
 		{/snippet}
 		{#snippet institutionActions()}
 			{#if classroom && role === 'institution_head'}
-				<button
-					type="button"
-					class="btn btn-ghost flex-1 rounded-full"
-					onclick={() => openSection('settings')}>Edit overview</button
+				<a
+					href={resolve('/(app)/classrooms/[id]/setup', { id: classroom.id })}
+					class="btn btn-ghost flex-1 rounded-full">Edit overview</a
 				>
 			{/if}
 		{/snippet}

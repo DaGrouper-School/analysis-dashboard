@@ -7,6 +7,7 @@
 	import { sensorQuery } from '#lib/utils/sensor-selection.ts';
 	import { nextRoute } from '#lib/utils/routing.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
+	import { afterJoining } from '#lib/features/classroom/after-joining.ts';
 	import type { PageProps } from './$types';
 
 	let { data, params }: PageProps = $props();
@@ -26,8 +27,12 @@
 			const classroom = await services.classrooms.acceptInvitation(params.token);
 			await invalidate('app:session');
 			// The path is resolved; only the query is added to it.
+			const next = await afterJoining(
+				classroom,
+				resolve('/(app)/dashboard') + sensorQuery(classroom.id)
+			);
 			// eslint-disable-next-line svelte/no-navigation-without-resolve
-			await goto(resolve('/(app)/dashboard') + sensorQuery(classroom.id), { replaceState: true });
+			await goto(next, { replaceState: true });
 		} catch (e) {
 			error = errorMessage(e);
 		} finally {

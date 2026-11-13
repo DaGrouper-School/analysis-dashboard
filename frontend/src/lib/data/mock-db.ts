@@ -1,6 +1,7 @@
 import type {
 	HostApplication,
 	HostQuestion,
+	InstitutionSetupForm,
 	ClockFlag,
 	ConsentMethod,
 	NowTileConfig,
@@ -63,6 +64,8 @@ export interface StoredClassroom {
 	sharing: ClassroomSharing;
 	/** What its public profile shows (AP-29). */
 	profile: ClassroomProfile;
+	/** The head's institution setup (AP-40): the step to resume at, and when it was finished. */
+	institutionSetup: { step: number; completedAt: string | null };
 }
 
 export interface StoredMembership {
@@ -195,6 +198,8 @@ export interface MockDbState {
 	/** Readiness questions for hosting a classroom (AP-30), in order. */
 	hostQuestions: HostQuestion[];
 	hostApplications: StoredHostApplication[];
+	/** What an institution head is asked when setting up their institution (AP-40). */
+	institutionSetupForm: InstitutionSetupForm;
 	/** How much of a minor's position is kept: decimal places of latitude and longitude. */
 	privacy: { minorCoordinateDecimals: number };
 	/**
@@ -206,7 +211,7 @@ export interface MockDbState {
 
 const STORAGE_KEY = 'dagrouper:mock-db';
 // Bump when the shape changes: older saved data is dropped and reseeded.
-const VERSION = 39;
+const VERSION = 40;
 const RELOAD_KEY = 'dagrouper:reloaded-for-version';
 
 let memory: MockDbState | null = null;

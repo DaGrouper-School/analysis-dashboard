@@ -2,7 +2,7 @@
 	import { invalidate } from '$app/navigation';
 	import type { InstitutionInfo } from '#lib/domain/types.ts';
 	import { validateInstitutionPhoto } from '#lib/domain/validation.ts';
-	import { scaledImage } from '#lib/utils/image.ts';
+	import PhotoPicker from '#lib/components/PhotoPicker.svelte';
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
 
 	/**
@@ -23,18 +23,11 @@
 	let error = $state('');
 	let saving = $state(false);
 	let saved = $state(false);
-	let fileInput = $state<HTMLInputElement>();
+	let picker = $state<PhotoPicker>();
 
-	async function pick(event: Event) {
-		const file = (event.currentTarget as HTMLInputElement).files?.[0];
-		if (!file) return;
-		errors = {};
+	function picked(pickError: string) {
 		saved = false;
-		try {
-			image = await scaledImage(file);
-		} catch {
-			errors = { image: 'That file could not be read as an image.' };
-		}
+		errors = pickError ? { image: pickError } : {};
 	}
 
 	async function save(event: SubmitEvent) {
@@ -45,7 +38,7 @@
 	async function remove() {
 		image = null;
 		alt = '';
-		if (fileInput) fileInput.value = '';
+		picker?.reset();
 		await send({ image: null, alt: '' });
 	}
 
@@ -74,25 +67,16 @@
 		<h2 class="text-lg font-semibold">Institution photo</h2>
 		<p class="mt-1 text-sm text-muted">Shown in the institution overview and on the public site.</p>
 	</div>
-	<div class="aspect-[16/9] overflow-hidden rounded-md border border-line bg-raised">
-		{#if image}
-			<img src={image} alt={alt || 'The new photo'} class="size-full object-cover" />
-		{:else}
-			<p class="grid size-full place-items-center text-sm text-muted">No photo yet</p>
-		{/if}
-	</div>
-	<div>
-		<label class="label" for="institution-photo">Choose a photo</label>
-		<input
-			bind:this={fileInput}
-			id="institution-photo"
-			type="file"
-			accept="image/png,image/jpeg,image/webp"
-			class="block w-full text-sm text-text file:mr-3 file:rounded-sm file:border file:border-line-strong file:bg-transparent file:px-3 file:py-2 file:text-ink"
-			onchange={pick}
-		/>
-		{#if errors.image}<p class="field-error">{errors.image}</p>{/if}
-	</div>
+	<PhotoPicker
+		bind:this={picker}
+		id="institution-photo"
+		label="Choose a photo"
+		bind:image
+		{alt}
+		required
+		error={errors.image}
+		onpick={picked}
+	/>
 	<div>
 		<label class="label" for="institution-photo-alt">What the photo shows</label>
 		<input
