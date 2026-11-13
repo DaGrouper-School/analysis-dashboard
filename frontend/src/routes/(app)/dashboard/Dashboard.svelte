@@ -213,26 +213,31 @@
 		onexplain={explain}
 		onpick={(id) => choose(id, undefined, active)}
 	>
-		{#snippet deviceActions()}
-			<!-- Pairing for whoever manages the classroom's devices; the classroom's page for its members. -->
+		{#snippet headerActions()}
+			<!-- The classroom's own page, with its sections; for its members only. -->
 			{#if classroom}
-				{#if canAddDevice}
-					<AddDeviceButton
-						labs={data.labs}
-						deviceTypes={data.deviceTypes}
-						domains={data.domains}
-						parameters={data.parameters}
-						label="Pair new device"
-					/>
-				{/if}
 				<!-- eslint-disable svelte/no-navigation-without-resolve -->
 				<a
-					class="btn btn-ghost shrink-0"
+					class="btn btn-ghost shrink-0 max-sm:px-2.5"
 					href={detailsHref(classroom.id, shownDeviceId, 'devices')}
-					aria-label="Classrooms"
-					><Icon name="settings" class="size-4" /><span class="max-sm:sr-only">Classrooms</span></a
+					aria-label="Classroom details"
+					><Icon name="settings" class="size-4" /><span class="max-sm:sr-only"
+						>Classroom details</span
+					></a
 				>
 				<!-- eslint-enable svelte/no-navigation-without-resolve -->
+			{/if}
+		{/snippet}
+		{#snippet deviceActions()}
+			<!-- Pairing, for whoever manages the classroom's devices. -->
+			{#if classroom && canAddDevice}
+				<AddDeviceButton
+					labs={data.labs}
+					deviceTypes={data.deviceTypes}
+					domains={data.domains}
+					parameters={data.parameters}
+					label="Pair new device"
+				/>
 			{/if}
 		{/snippet}
 		{#snippet eyebrow()}

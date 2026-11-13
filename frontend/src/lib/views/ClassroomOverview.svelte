@@ -79,11 +79,12 @@
 		eyebrow?: Snippet<[ShownPlace]>;
 		/** Beside the stage, such as the viewer's role. */
 		badges?: Snippet;
+		/** At the right edge, on the title's line, such as the dashboard's Classroom details. */
 		headerActions?: Snippet;
 		/** Above the classroom tabs, such as the public page's filter. */
 		tabsStart?: Snippet;
 		nowActions?: Snippet;
-		/** Beside the device picker: the dashboard's pairing and Classrooms buttons. */
+		/** Beside the device picker, such as the dashboard's Pair new device. */
 		deviceActions?: Snippet;
 		/** The device picker on "What's happening now?": its devices, the one shown, and a pick. */
 		devices?: PickableDevice[];
@@ -175,7 +176,8 @@
 {@render eyebrow?.(shown)}
 
 <header class={['mt-4 flex flex-wrap items-start justify-between gap-4', loading && 'is-loading']}>
-	<div class="min-w-0">
+	<!-- Room for a small action on the title's line, even on a phone; a wide one wraps under it. -->
+	<div class="min-w-0 flex-[1_1_16rem]">
 		<h1 class="font-display text-4xl">{shown.name}</h1>
 		<p class="mt-2 flex flex-wrap items-center gap-2 text-muted">
 			{[shown.placeName, shown.country].filter(Boolean).join(', ') || classroom.institutionName}

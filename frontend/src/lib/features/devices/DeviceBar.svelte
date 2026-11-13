@@ -4,7 +4,7 @@
 
 	/**
 	 * The device picker, with the page's own buttons beside it on a wide screen and under it on a
-	 * phone: on the dashboard, pairing a new device and the classroom's Classrooms page.
+	 * phone: on the dashboard, pairing a new device.
 	 */
 	let {
 		devices,
