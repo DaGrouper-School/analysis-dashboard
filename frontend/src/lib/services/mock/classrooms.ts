@@ -302,6 +302,8 @@ export function createMockClassrooms({
 				// The code is the classroom's identifier in SAM, so it is never editable.
 				classroom.name = input.name.trim();
 				classroom.institutionName = input.institutionName.trim();
+				if (input.history !== undefined)
+					classroom.profile.institution.history = input.history.trim();
 				return summarize(state, user, classroom);
 			});
 		},

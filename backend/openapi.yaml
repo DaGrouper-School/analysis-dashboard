@@ -6618,6 +6618,9 @@ components:
           type: string
         institutionName:
           type: string
+        history:
+          type: string
+          description: The institution's description on its overview card; left out, it stays as it is.
       required:
         - name
         - institutionName

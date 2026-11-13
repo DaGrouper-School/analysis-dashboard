@@ -93,11 +93,16 @@ export function validateReading(input: ReadingInput): Record<string, string> {
 	return errors;
 }
 
+/** The longest institution description the overview card takes. */
+export const MAX_DESCRIPTION_LENGTH = 1000;
+
 export function validateClassroomUpdate(input: UpdateClassroomInput): Record<string, string> {
 	const errors: Record<string, string> = {};
 	if (input.name.trim().length < 3) errors.name = 'Enter a classroom name.';
 	if (input.institutionName.trim().length < 2)
 		errors.institutionName = 'Enter the institution name.';
+	if (input.history !== undefined && input.history.trim().length > MAX_DESCRIPTION_LENGTH)
+		errors.history = `Keep the description under ${MAX_DESCRIPTION_LENGTH.toLocaleString('en')} characters.`;
 	return errors;
 }
 
