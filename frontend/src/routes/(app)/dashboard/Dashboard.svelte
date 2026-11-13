@@ -222,17 +222,8 @@
 			<!-- Recording by hand is per classroom, so it sits beside the classroom's own page. -->
 			{#if classroom}
 				<!-- eslint-disable svelte/no-navigation-without-resolve -->
-				<div class="flex shrink-0 gap-2">
-					{#if data.canRecord && device}
-						<a
-							class="btn btn-ghost max-sm:px-2.5"
-							href={recordHref(device)}
-							aria-label="Record manually"
-							><Icon name="pencil" class="size-4" /><span class="max-sm:sr-only"
-								>Record manually</span
-							></a
-						>
-					{/if}
+				<!-- Stacked: the classroom's page on top, recording by hand (white) under it. -->
+				<div class="flex shrink-0 flex-col gap-2">
 					<a
 						class="btn btn-ghost max-sm:px-2.5"
 						href={detailsHref(classroom.id, shownDeviceId, 'devices')}
@@ -241,6 +232,16 @@
 							>Classroom details</span
 						></a
 					>
+					{#if data.canRecord && device}
+						<a
+							class="btn btn-primary max-sm:px-2.5"
+							href={recordHref(device)}
+							aria-label="Record manually"
+							><Icon name="pencil" class="size-4" /><span class="max-sm:sr-only"
+								>Record manually</span
+							></a
+						>
+					{/if}
 				</div>
 				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 			{/if}

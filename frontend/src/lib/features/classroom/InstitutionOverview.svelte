@@ -67,26 +67,29 @@
 
 	<!-- On a wide screen the photo takes half the width and the words sit beside it, so the card
 	     fits under the map without scrolling. -->
-	<div class="mt-5 flex flex-1 flex-col lg:grid lg:grid-cols-2 lg:items-start lg:gap-5">
-		{#if overview.photoUrl}
-			<img
-				src={overview.photoUrl}
-				alt={overview.photoAlt}
-				class="aspect-video w-full rounded-md border border-line object-cover"
-				loading="lazy"
-			/>
-		{:else}
-			<div
-				class="flex aspect-video w-full flex-col items-center justify-center gap-1 rounded-md border border-line bg-gradient-to-br from-forest to-raised"
-				role="img"
-				aria-label="No photo of {overview.name} yet"
-			>
-				<span class="text-4xl font-medium tracking-wider text-teal" aria-hidden="true"
-					>{initials(overview.name)}</span
+	<div class="mt-5 flex flex-1 flex-col lg:grid lg:grid-cols-2 lg:gap-5">
+		<!-- On a wide screen the photo fills its half, as tall as the words beside it. -->
+		<div class="lg:relative lg:min-h-40">
+			{#if overview.photoUrl}
+				<img
+					src={overview.photoUrl}
+					alt={overview.photoAlt}
+					class="aspect-video w-full rounded-md border border-line object-cover lg:absolute lg:inset-0 lg:aspect-auto lg:h-full"
+					loading="lazy"
+				/>
+			{:else}
+				<div
+					class="flex aspect-video w-full flex-col items-center justify-center gap-1 rounded-md border border-line bg-gradient-to-br from-forest to-raised lg:absolute lg:inset-0 lg:aspect-auto lg:h-full"
+					role="img"
+					aria-label="No photo of {overview.name} yet"
 				>
-				<span class="text-xs text-muted" aria-hidden="true">Photo of the institution</span>
-			</div>
-		{/if}
+					<span class="text-4xl font-medium tracking-wider text-teal" aria-hidden="true"
+						>{initials(overview.name)}</span
+					>
+					<span class="text-xs text-muted" aria-hidden="true">Photo of the institution</span>
+				</div>
+			{/if}
+		</div>
 
 		<div class="flex flex-1 flex-col lg:h-full">
 			<h3 class="mt-5 text-lg font-medium lg:mt-0">{overview.name}</h3>
