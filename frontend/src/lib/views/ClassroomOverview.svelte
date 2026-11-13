@@ -85,7 +85,7 @@
 		/** Above the classroom tabs, such as the public page's filter. */
 		tabsStart?: Snippet;
 		nowActions?: Snippet;
-		/** The What's happening now card's ⋯ menu, such as Sync device and Record manually. */
+		/** Beside the What's happening now heading, such as the phone's Sync device icon. */
 		nowMenu?: Snippet;
 		/** Beside the device picker, such as the dashboard's Pair new device. */
 		deviceActions?: Snippet;
@@ -260,19 +260,23 @@
 	aria-busy={loading}
 >
 	<!-- On a phone: what's happening (with the device picker), the institution (collapsed), the
-	     globe, then last week's cards. On a wide screen: three columns, 40/35/25, then the cards. -->
+	     globe, then last week's cards. On a wide screen: what's happening beside the map and the
+	     institution stacked, then the cards. -->
 	<div class="mt-6 flex flex-col gap-5 lg:block">
 		<div
 			class={[
 				// At least 38rem, so most devices keep one height; taller content grows the row, never overflows.
 				'contents lg:grid lg:min-h-[38rem] lg:gap-5',
-				// What's happening now 40%, the map 35%, the institution overview 25% (user, 13 Nov).
-				classroom.location ? 'lg:grid-cols-[40fr_35fr_25fr]' : 'lg:grid-cols-[40fr_60fr]'
+				// Two halves: What's happening now on the left, the map above the institution overview
+				// on the right (user, 13 Nov). The overview never sets the height: it scrolls within the
+				// space What's happening now leaves under the map.
+				'lg:grid-cols-2',
+				classroom.location && 'lg:grid-rows-[22rem_1fr]'
 			]}
 		>
 			<NowCard
 				bind:element={nowCard}
-				class="max-lg:order-2"
+				class="max-lg:order-2 lg:row-span-2"
 				tiles={now ?? station.now}
 				released={!station.can.seeUnreleased}
 				shared={station.shared}
@@ -286,7 +290,7 @@
 			/>
 			{#if classroom.location}
 				<section
-					class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] max-lg:order-4 sm:h-96 lg:h-full"
+					class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] max-lg:order-4 sm:h-96 lg:h-full lg:min-h-0"
 					aria-label="Where {shown.name} is"
 				>
 					<!-- Out of the flow, so the canvas never sets the card's height and grows it. -->
@@ -320,7 +324,7 @@
 			<InstitutionOverview
 				overview={institution}
 				actions={institutionActions}
-				class="overflow-hidden max-lg:order-3"
+				class="overflow-hidden max-lg:order-3 lg:col-start-2 lg:overflow-y-auto lg:[contain:size]"
 			/>
 		</div>
 

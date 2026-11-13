@@ -17,6 +17,7 @@
 		parameters,
 		label,
 		iconOnPhone = false,
+		ghost = false,
 		class: className = ''
 	}: {
 		labs: { id: string; name: string }[];
@@ -26,6 +27,8 @@
 		label: string;
 		/** Just the plus on a phone, where the button sits beside a dropdown. */
 		iconOnPhone?: boolean;
+		/** A secondary ghost button, such as inside What's happening now beside the device dropdown. */
+		ghost?: boolean;
 		class?: string;
 	} = $props();
 
@@ -48,7 +51,7 @@
 		{/if}
 		<button
 			type="button"
-			class={['btn btn-primary shrink-0', iconOnPhone && 'max-sm:px-2.5']}
+			class={['btn shrink-0', ghost ? 'btn-ghost' : 'btn-primary', iconOnPhone && 'max-sm:px-2.5']}
 			aria-haspopup="dialog"
 			aria-label={iconOnPhone ? label : undefined}
 			onclick={() => (adding = true)}

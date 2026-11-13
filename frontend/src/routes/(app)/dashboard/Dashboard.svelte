@@ -15,7 +15,7 @@
 	import { classroomsHref, domainsHref } from '#lib/utils/site.ts';
 	import ClassroomPageHeader from './ClassroomPageHeader.svelte';
 	import ClassroomSections from './ClassroomSections.svelte';
-	import DeviceActions from './DeviceActions.svelte';
+	import SyncDeviceButton from './SyncDeviceButton.svelte';
 	import NoClassroom from './NoClassroom.svelte';
 	import { sectionTabs, type Section } from './sections.ts';
 	import type { PageData } from './$types';
@@ -171,11 +171,6 @@
 	const canSync = $derived(
 		!!classroom && !!device && data.canRecord && !!data.labLocation && !manual
 	);
-	// Sync device and Record manually: buttons on desktop, the Now card's ⋯ menu below it.
-	const syncRecord = $derived({
-		onsync: canSync && device ? () => sync(device!.id) : undefined,
-		recordHref: classroom && data.canRecord && device ? recordHref(device) : undefined
-	});
 </script>
 
 <svelte:head><title>{details ? 'Classrooms' : 'Dashboard'} · DaGrouper Analysis</title></svelte:head
@@ -225,17 +220,29 @@
 		onpick={(id) => choose(id, undefined, active)}
 	>
 		{#snippet headerActions()}
-			<!-- The classroom's own page, with its sections; for its members only. -->
+			<!-- Recording by hand is per classroom, so it sits beside the classroom's own page. -->
 			{#if classroom}
 				<!-- eslint-disable svelte/no-navigation-without-resolve -->
-				<a
-					class="btn btn-ghost shrink-0 max-sm:px-2.5"
-					href={detailsHref(classroom.id, shownDeviceId, 'devices')}
-					aria-label="Classroom details"
-					><Icon name="settings" class="size-4" /><span class="max-sm:sr-only"
-						>Classroom details</span
-					></a
-				>
+				<div class="flex shrink-0 gap-2">
+					{#if data.canRecord && device}
+						<a
+							class="btn btn-ghost max-sm:px-2.5"
+							href={recordHref(device)}
+							aria-label="Record manually"
+							><Icon name="pencil" class="size-4" /><span class="max-sm:sr-only"
+								>Record manually</span
+							></a
+						>
+					{/if}
+					<a
+						class="btn btn-ghost max-sm:px-2.5"
+						href={detailsHref(classroom.id, shownDeviceId, 'devices')}
+						aria-label="Classroom details"
+						><Icon name="settings" class="size-4" /><span class="max-sm:sr-only"
+							>Classroom details</span
+						></a
+					>
+				</div>
 				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 			{/if}
 		{/snippet}
@@ -249,6 +256,7 @@
 					parameters={data.parameters}
 					label="Pair new device"
 					iconOnPhone
+					ghost
 				/>
 			{/if}
 		{/snippet}
@@ -269,10 +277,16 @@
 			{/if}
 		{/snippet}
 		{#snippet nowMenu()}
-			<DeviceActions as="menu" {...syncRecord} />
+			{#if canSync && device}
+				{@const id = device.id}
+				<SyncDeviceButton as="icon" onsync={() => sync(id)} />
+			{/if}
 		{/snippet}
 		{#snippet nowActions()}
-			<DeviceActions as="buttons" {...syncRecord} />
+			{#if canSync && device}
+				{@const id = device.id}
+				<SyncDeviceButton as="button" onsync={() => sync(id)} />
+			{/if}
 			<!-- A classroom's details are for its members; a visitor sees its overview only. -->
 			{#if classroom}
 				<!-- eslint-disable svelte/no-navigation-without-resolve -->

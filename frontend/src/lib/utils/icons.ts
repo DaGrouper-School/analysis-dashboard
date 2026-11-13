@@ -119,11 +119,6 @@ export const UI_ICONS = {
 	pencil: [{ d: 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4' }],
 	stop: [{ d: 'M7 7h10v10H7z' }],
 	menu: [{ d: 'M4 6h16M4 12h16M4 18h16' }],
-	more: [
-		{ cx: 5, cy: 12, r: 1 },
-		{ cx: 12, cy: 12, r: 1 },
-		{ cx: 19, cy: 12, r: 1 }
-	],
 	logout: [{ d: 'M15 4h4v16h-4M10 16l4-4-4-4M14 12H4' }],
 	power: [{ d: 'M12 3v9' }, { d: 'M6.3 6.3a8 8 0 1 0 11.4 0' }],
 	copy: [{ d: 'M9 9h11v11H9zM5 15H4V4h11v1' }],

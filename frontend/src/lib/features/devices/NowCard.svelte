@@ -39,7 +39,7 @@
 		icon?: string;
 		/** Buttons under the tiles, such as "View domains". */
 		actions?: Snippet;
-		/** Secondary actions in the card header, such as an ActionMenu with Sync device. */
+		/** Secondary actions in the card header, such as the phone's Sync device icon. */
 		menu?: Snippet;
 		/** Above the heading: which device the card shows, such as a DeviceBar. */
 		picker?: Snippet;
