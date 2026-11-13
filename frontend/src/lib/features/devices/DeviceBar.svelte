@@ -4,7 +4,7 @@
 
 	/**
 	 * The device picker at the top of What's happening now, with the page's own buttons at the
-	 * row's right edge: on the dashboard, pairing a new device (just its icon on a phone).
+	 * row's right edge: on the dashboard, pairing a new device (not on phones).
 	 */
 	let {
 		devices,
@@ -25,8 +25,9 @@
 <div class={['flex items-end gap-3', className]}>
 	<DevicePicker fill {devices} {deviceId} {onpick} />
 	{#if actions}
-		<!-- Its buttons as tall as the dropdown beside them, square on a phone. -->
-		<div class="flex shrink-0 gap-2 [&_.btn]:h-12 max-sm:[&_.btn]:w-12">
+		<!-- Its buttons as tall as the dropdown beside them. Not on phones: pairing is done at a
+		     computer (user, 13 Nov). -->
+		<div class="flex shrink-0 gap-2 max-sm:hidden [&_.btn]:h-12">
 			{@render actions()}
 		</div>
 	{/if}

@@ -15,7 +15,6 @@
 	import { classroomsHref, domainsHref } from '#lib/utils/site.ts';
 	import ClassroomPageHeader from './ClassroomPageHeader.svelte';
 	import ClassroomSections from './ClassroomSections.svelte';
-	import SyncDeviceButton from './SyncDeviceButton.svelte';
 	import NoClassroom from './NoClassroom.svelte';
 	import { sectionTabs, type Section } from './sections.ts';
 	import type { PageData } from './$types';
@@ -255,7 +254,6 @@
 					domains={data.domains}
 					parameters={data.parameters}
 					label="Pair new device"
-					iconOnPhone
 					ghost
 				/>
 			{/if}
@@ -276,22 +274,22 @@
 				<span class="chip">Public data only</span>
 			{/if}
 		{/snippet}
-		{#snippet nowMenu()}
-			{#if canSync && device}
-				{@const id = device.id}
-				<SyncDeviceButton as="icon" onsync={() => sync(id)} />
-			{/if}
-		{/snippet}
 		{#snippet nowActions()}
 			{#if canSync && device}
 				{@const id = device.id}
-				<SyncDeviceButton as="button" onsync={() => sync(id)} />
+				<!-- Not on phones: a device syncs to a computer (user, 13 Nov). -->
+				<button
+					type="button"
+					class="btn btn-ghost flex-1 whitespace-nowrap max-sm:hidden"
+					aria-haspopup="dialog"
+					onclick={() => sync(id)}><Icon name="sync" class="size-4" /> Sync device</button
+				>
 			{/if}
 			<!-- A classroom's details are for its members; a visitor sees its overview only. -->
 			{#if classroom}
 				<!-- eslint-disable svelte/no-navigation-without-resolve -->
 				<a
-					class="btn btn-primary w-full rounded-full"
+					class="btn btn-primary flex-1 whitespace-nowrap"
 					href={domainsHref(classroom.id, shownDeviceId)}
 					><Icon name="layers" class="size-4" /> View domains</a
 				>
@@ -300,10 +298,7 @@
 		{/snippet}
 		{#snippet institutionActions()}
 			{#if classroom && role === 'institution_head'}
-				<button
-					type="button"
-					class="btn btn-ghost flex-1 rounded-full"
-					onclick={() => openSection('settings')}
+				<button type="button" class="btn btn-ghost flex-1" onclick={() => openSection('settings')}
 					><Icon name="pencil" class="size-4" /> Edit overview</button
 				>
 			{/if}

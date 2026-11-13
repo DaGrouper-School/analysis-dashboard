@@ -91,7 +91,7 @@
 		class="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur [view-transition-name:app-header] print:hidden"
 	>
 		<div class="mx-auto flex max-w-6xl items-center gap-2 px-3 py-3 sm:gap-4 sm:px-6">
-			<a href={resolve('/(app)/dashboard')} aria-label="Dashboard"><Logo compact /></a>
+			<a href={resolve('/(app)/dashboard')} aria-label="Dashboard"><Logo compact="lg" /></a>
 			<!-- On a phone the links are a bar at the bottom of the screen. -->
 			<nav
 				aria-label="Main"

@@ -72,12 +72,12 @@
 			<img
 				src={overview.photoUrl}
 				alt={overview.photoAlt}
-				class="aspect-video w-full rounded-md border border-line object-cover lg:aspect-[4/3]"
+				class="aspect-video w-full rounded-md border border-line object-cover"
 				loading="lazy"
 			/>
 		{:else}
 			<div
-				class="flex aspect-video w-full flex-col items-center justify-center gap-1 rounded-md border border-line bg-gradient-to-br from-forest to-raised lg:aspect-[4/3]"
+				class="flex aspect-video w-full flex-col items-center justify-center gap-1 rounded-md border border-line bg-gradient-to-br from-forest to-raised"
 				role="img"
 				aria-label="No photo of {overview.name} yet"
 			>
@@ -93,7 +93,7 @@
 			{#if kitLine}<p class="text-xs text-muted">{kitLine}</p>{/if}
 			{#if overview.history}
 				<!-- Clamped on wide screens, so a long history never makes the row taller. -->
-				<p class="mt-3 text-sm leading-relaxed lg:line-clamp-4" title={overview.history}>
+				<p class="mt-3 text-sm leading-relaxed lg:line-clamp-3" title={overview.history}>
 					{overview.history}
 				</p>
 			{/if}
@@ -103,11 +103,8 @@
 					{#if website}
 						<!-- The institution's own site, not an app route. -->
 						<!-- eslint-disable svelte/no-navigation-without-resolve -->
-						<a
-							class="btn btn-ghost flex-1 rounded-full"
-							href={website}
-							target="_blank"
-							rel="noopener noreferrer"><Icon name="info" class="size-4" /> Learn more</a
+						<a class="btn btn-ghost flex-1" href={website} target="_blank" rel="noopener noreferrer"
+							><Icon name="info" class="size-4" /> Learn more</a
 						>
 						<!-- eslint-enable svelte/no-navigation-without-resolve -->
 					{/if}

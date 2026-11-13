@@ -54,7 +54,6 @@
 		headerActions,
 		tabsStart,
 		nowActions,
-		nowMenu,
 		deviceActions,
 		devices = [],
 		deviceId,
@@ -85,8 +84,6 @@
 		/** Above the classroom tabs, such as the public page's filter. */
 		tabsStart?: Snippet;
 		nowActions?: Snippet;
-		/** Beside the What's happening now heading, such as the phone's Sync device icon. */
-		nowMenu?: Snippet;
 		/** Beside the device picker, such as the dashboard's Pair new device. */
 		deviceActions?: Snippet;
 		/** The device picker on "What's happening now?": its devices, the one shown, and a pick. */
@@ -267,11 +264,10 @@
 			class={[
 				// At least 38rem, so most devices keep one height; taller content grows the row, never overflows.
 				'contents lg:grid lg:min-h-[38rem] lg:gap-5',
-				// Two halves: What's happening now on the left, the map above the institution overview
-				// on the right (user, 13 Nov). The overview never sets the height: it fits the
-				// space What's happening now leaves under the map.
+				// Two halves: What's happening now on the left; on the right a square map, with the
+				// institution overview filling what is left under it (user, 13 Nov).
 				'lg:grid-cols-2',
-				classroom.location && 'lg:grid-rows-[22rem_1fr]'
+				classroom.location && 'lg:grid-rows-[auto_1fr]'
 			]}
 		>
 			<NowCard
@@ -283,14 +279,13 @@
 				{accent}
 				icon={devices.find((d) => d.id === deviceId)?.icon}
 				actions={nowActions}
-				menu={nowMenu}
 				picker={onpickdevice ? devicePicker : undefined}
 				{onexplain}
 				href={valueOf}
 			/>
 			{#if classroom.location}
 				<section
-					class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] max-lg:order-4 sm:h-96 lg:h-full lg:min-h-0"
+					class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] max-lg:order-4 sm:h-96 lg:aspect-square lg:h-auto"
 					aria-label="Where {shown.name} is"
 				>
 					<!-- Out of the flow, so the canvas never sets the card's height and grows it. -->
@@ -324,7 +319,7 @@
 			<InstitutionOverview
 				overview={institution}
 				actions={institutionActions}
-				class="overflow-hidden max-lg:order-3 lg:col-start-2 lg:[contain:size]"
+				class="overflow-hidden max-lg:order-3 lg:col-start-2"
 			/>
 		</div>
 
