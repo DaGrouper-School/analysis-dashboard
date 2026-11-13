@@ -3,8 +3,8 @@
 	import DevicePicker, { type PickableDevice } from '#lib/features/devices/DevicePicker.svelte';
 
 	/**
-	 * The device picker, with the page's own buttons at the row's right edge: on the dashboard,
-	 * pairing a new device (just its icon on a phone).
+	 * The device picker at the top of What's happening now, with the page's own buttons at the
+	 * row's right edge: on the dashboard, pairing a new device (just its icon on a phone).
 	 */
 	let {
 		devices,
@@ -21,17 +21,13 @@
 	} = $props();
 </script>
 
-{#if actions}
-	<!-- On a wide screen, the same three columns as the cards below: the picker as wide as the first. -->
-	<div class={['flex items-end gap-3 lg:grid lg:grid-cols-3 lg:gap-5', className]}>
-		<DevicePicker class="lg:w-full" {devices} {deviceId} {onpick} />
+<!-- Inside What's happening now: the picker takes the free width, its buttons at the right. -->
+<div class={['flex items-end gap-3', className]}>
+	<DevicePicker fill {devices} {deviceId} {onpick} />
+	{#if actions}
 		<!-- Its buttons as tall as the dropdown beside them, square on a phone. -->
-		<div
-			class="flex shrink-0 gap-2 sm:ml-auto lg:col-start-3 lg:justify-self-end [&_.btn]:h-12 max-sm:[&_.btn]:w-12"
-		>
+		<div class="flex shrink-0 gap-2 [&_.btn]:h-12 max-sm:[&_.btn]:w-12">
 			{@render actions()}
 		</div>
-	</div>
-{:else}
-	<DevicePicker class={className} {devices} {deviceId} {onpick} />
-{/if}
+	{/if}
+</div>

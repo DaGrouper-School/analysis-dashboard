@@ -21,6 +21,8 @@
 		accent,
 		icon,
 		actions,
+		menu,
+		picker,
 		onexplain,
 		href,
 		element = $bindable(),
@@ -37,6 +39,10 @@
 		icon?: string;
 		/** Buttons under the tiles, such as "View domains". */
 		actions?: Snippet;
+		/** Secondary actions in the card header, such as an ActionMenu with Sync device. */
+		menu?: Snippet;
+		/** Above the heading: which device the card shows, such as a DeviceBar. */
+		picker?: Snippet;
 		/** Opens what a value means and how it is calculated. */
 		onexplain?: (parameterId: string) => void;
 		/** Each tile's value page; the whole tile is the link. */
@@ -67,8 +73,10 @@
 	style:--accent={accent}
 	aria-labelledby="now-heading"
 >
+	{#if picker}<div class="mb-5">{@render picker()}</div>{/if}
 	<div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
 		<h2 id="now-heading" class="text-xl font-medium">What's happening now?</h2>
+		{@render menu?.()}
 	</div>
 	<p class="text-xs text-muted">
 		{#if latest}

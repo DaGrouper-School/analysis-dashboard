@@ -1031,6 +1031,8 @@ export interface PublicSource {
 	/** The device's name; null for field observations. */
 	name: string | null;
 	kind: 'device' | 'field';
+	/** The device type's registry colour, so a value shows which sensor it came from. */
+	color?: string;
 }
 
 /** The latest released value of one parameter from one source. */

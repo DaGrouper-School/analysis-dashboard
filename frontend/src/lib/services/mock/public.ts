@@ -49,7 +49,12 @@ function released(state: MockDbState, classroom: StoredClassroom, now: number, m
 		...state.readings.flatMap((r) => {
 			const device = devices.find((d) => d.id === r.deviceId);
 			if (!device) return [];
-			const source: PublicSource = { id: device.id, name: device.name, kind: 'device' };
+			const source: PublicSource = {
+				id: device.id,
+				name: device.name,
+				kind: 'device',
+				color: deviceTypeColor(state.deviceTypes, device.type)
+			};
 			return [{ record: r, source }];
 		}),
 		...state.observations

@@ -11,10 +11,13 @@
 	let {
 		open = $bindable(false),
 		parameterId,
+		accent,
 		onpick
 	}: {
 		open?: boolean;
 		parameterId: string;
+		/** The registry colour of the device the value comes from. */
+		accent?: string | null;
 		onpick: (parameterId: string) => unknown;
 	} = $props();
 
@@ -52,6 +55,7 @@
 	bind:open
 	title={shown?.parameter.label ?? 'How is this calculated?'}
 	eyebrow="How is this calculated?"
+	{accent}
 >
 	{#if error}
 		<p class="field-error" role="alert">{error}</p>

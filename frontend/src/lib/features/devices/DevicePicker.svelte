@@ -21,11 +21,14 @@
 		devices,
 		deviceId,
 		onpick,
+		fill = false,
 		class: className = ''
 	}: {
 		devices: PickableDevice[];
 		deviceId: string | undefined;
 		onpick: (id: string) => void;
+		/** Takes the row's free width at every size, such as beside Pair new device in a card. */
+		fill?: boolean;
 		class?: string;
 	} = $props();
 
@@ -40,6 +43,6 @@
 	label="Device"
 	placeholder={devices.length ? 'Choose a device' : 'No devices yet'}
 	disabled={!devices.length}
-	class="min-w-0 flex-1 sm:w-96 sm:flex-none {className}"
+	class="min-w-0 flex-1 {fill ? '' : 'sm:w-96 sm:flex-none'} {className}"
 	onchange={onpick}
 />

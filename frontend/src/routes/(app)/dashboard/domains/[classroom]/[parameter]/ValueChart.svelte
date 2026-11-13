@@ -96,7 +96,11 @@
 			seriesLine(
 				series,
 				stats,
-				{ id: series.source.id, label: page.classroom.name, color: SERIES_COLORS[0] },
+				{
+					id: series.source.id,
+					label: page.classroom.name,
+					color: series.source.color ?? SERIES_COLORS[0]
+				},
 				context
 			)
 		];

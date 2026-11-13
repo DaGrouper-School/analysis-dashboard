@@ -5624,6 +5624,9 @@ components:
           enum:
             - device
             - field
+        color:
+          type: string
+          description: The device type's registry colour, so a value shows which sensor it came from.
       required:
         - id
         - name
@@ -6165,6 +6168,9 @@ components:
                 enum:
                   - device
                   - field
+              color:
+                type: string
+                description: The device type's registry colour, so a value shows which sensor it came from.
             required:
               - count
               - first

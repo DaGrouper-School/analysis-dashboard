@@ -54,6 +54,7 @@
 		headerActions,
 		tabsStart,
 		nowActions,
+		nowMenu,
 		deviceActions,
 		devices = [],
 		deviceId,
@@ -84,6 +85,8 @@
 		/** Above the classroom tabs, such as the public page's filter. */
 		tabsStart?: Snippet;
 		nowActions?: Snippet;
+		/** The What's happening now card's ⋯ menu, such as Sync device and Record manually. */
+		nowMenu?: Snippet;
 		/** Beside the device picker, such as the dashboard's Pair new device. */
 		deviceActions?: Snippet;
 		/** The device picker on "What's happening now?": its devices, the one shown, and a pick. */
@@ -186,9 +189,7 @@
 		</p>
 		<p class="mt-1 w-fit text-sm text-muted" data-skeleton>
 			{core.lastSync ? `Last sync ${dateTime.format(new Date(core.lastSync))}` : 'No sync yet'}
-			{#if station.siteCodes.length}
-				· Site codes <span class="font-mono text-text">{station.siteCodes.join(', ')}</span>
-			{/if}
+			<!-- Site codes hidden for now (user, 13 Nov); still in station.siteCodes. -->
 		</p>
 	</div>
 	{@render headerActions?.()}
@@ -246,30 +247,27 @@
 {/if}
 
 <!-- The picked device's colour runs through every card below (AP-45). -->
+<!-- Always shown, with no devices too, so every classroom has the same layout. -->
+{#snippet devicePicker()}
+	{#if onpickdevice}
+		<DeviceBar {devices} {deviceId} onpick={onpickdevice} actions={deviceActions} />
+	{/if}
+{/snippet}
+
 <div
 	class={['contents', loading && 'is-loading', accent && 'accent-scope']}
 	style:--accent={accent}
 	aria-busy={loading}
 >
-	<!-- On a phone: the device, what's happening, the institution (collapsed), the globe, then
-	     last week's cards. On a wide screen: the device row, then three equal columns, then the cards. -->
+	<!-- On a phone: what's happening (with the device picker), the institution (collapsed), the
+	     globe, then last week's cards. On a wide screen: three columns, 40/35/25, then the cards. -->
 	<div class="mt-6 flex flex-col gap-5 lg:block">
-		<!-- Always shown, with no devices too, so every classroom has the same layout. -->
-		{#if onpickdevice}
-			<DeviceBar
-				class="max-lg:order-1"
-				{devices}
-				{deviceId}
-				onpick={onpickdevice}
-				actions={deviceActions}
-			/>
-		{/if}
 		<div
 			class={[
 				// At least 38rem, so most devices keep one height; taller content grows the row, never overflows.
 				'contents lg:grid lg:min-h-[38rem] lg:gap-5',
-				onpickdevice && 'lg:mt-6',
-				classroom.location ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
+				// What's happening now 40%, the map 35%, the institution overview 25% (user, 13 Nov).
+				classroom.location ? 'lg:grid-cols-[40fr_35fr_25fr]' : 'lg:grid-cols-[40fr_60fr]'
 			]}
 		>
 			<NowCard
@@ -281,6 +279,8 @@
 				{accent}
 				icon={devices.find((d) => d.id === deviceId)?.icon}
 				actions={nowActions}
+				menu={nowMenu}
+				picker={onpickdevice ? devicePicker : undefined}
 				{onexplain}
 				href={valueOf}
 			/>

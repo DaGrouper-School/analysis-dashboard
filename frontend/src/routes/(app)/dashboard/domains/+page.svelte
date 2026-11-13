@@ -52,7 +52,12 @@
 		classroomId={pendingId}
 		onclassroom={(id) => choose(id)}
 	/>
-	<section class={['mt-8', loading && 'is-loading']} aria-label="Domains">
+	<!-- Tinted with the picked device's registry colour, so each value shows its sensor. -->
+	<section
+		class={['mt-8', loading && 'is-loading', shownDevice?.color && 'accent-scope']}
+		style:--accent={shownDevice?.color}
+		aria-label="Domains"
+	>
 		<!-- The picked device's raw data beside the picker, as on its card in Measurements. -->
 		<div class="flex flex-wrap items-end justify-between gap-3 lg:flex-nowrap">
 			<DevicePicker

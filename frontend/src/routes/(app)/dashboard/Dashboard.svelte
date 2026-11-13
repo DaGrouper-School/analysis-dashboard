@@ -15,6 +15,7 @@
 	import { classroomsHref, domainsHref } from '#lib/utils/site.ts';
 	import ClassroomPageHeader from './ClassroomPageHeader.svelte';
 	import ClassroomSections from './ClassroomSections.svelte';
+	import DeviceActions from './DeviceActions.svelte';
 	import NoClassroom from './NoClassroom.svelte';
 	import { sectionTabs, type Section } from './sections.ts';
 	import type { PageData } from './$types';
@@ -170,6 +171,11 @@
 	const canSync = $derived(
 		!!classroom && !!device && data.canRecord && !!data.labLocation && !manual
 	);
+	// Sync device and Record manually: buttons on desktop, the Now card's ⋯ menu below it.
+	const syncRecord = $derived({
+		onsync: canSync && device ? () => sync(device!.id) : undefined,
+		recordHref: classroom && data.canRecord && device ? recordHref(device) : undefined
+	});
 </script>
 
 <svelte:head><title>{details ? 'Classrooms' : 'Dashboard'} · DaGrouper Analysis</title></svelte:head
@@ -262,33 +268,16 @@
 				<span class="chip">Public data only</span>
 			{/if}
 		{/snippet}
+		{#snippet nowMenu()}
+			<DeviceActions as="menu" {...syncRecord} />
+		{/snippet}
 		{#snippet nowActions()}
-			<!-- Syncing the device and recording by hand side by side, then its domains under them. -->
-			{#if canSync && device}
-				{@const id = device.id}
-				<button
-					type="button"
-					class="btn btn-primary flex-[1_1_9rem] rounded-full px-3 whitespace-nowrap"
-					aria-haspopup="dialog"
-					onclick={() => sync(id)}><Icon name="sync" class="size-4" /> Sync device</button
-				>
-			{/if}
-			{#if classroom && data.canRecord && device}
-				<!-- eslint-disable svelte/no-navigation-without-resolve -->
-				<a
-					class={[
-						'btn flex-[1_1_9rem] rounded-full px-3 whitespace-nowrap',
-						canSync ? 'btn-ghost' : 'btn-primary'
-					]}
-					href={recordHref(device)}><Icon name="plus" class="size-4" /> Record manually</a
-				>
-				<!-- eslint-enable svelte/no-navigation-without-resolve -->
-			{/if}
+			<DeviceActions as="buttons" {...syncRecord} />
 			<!-- A classroom's details are for its members; a visitor sees its overview only. -->
 			{#if classroom}
 				<!-- eslint-disable svelte/no-navigation-without-resolve -->
 				<a
-					class="btn btn-accent basis-full rounded-full"
+					class="btn btn-accent w-full rounded-full"
 					href={domainsHref(classroom.id, shownDeviceId)}
 					><Icon name="layers" class="size-4" /> View domains</a
 				>
@@ -329,5 +318,6 @@
 <CalculationPanel
 	bind:open={calculating}
 	parameterId={calculationId}
+	accent={shownDevice?.color}
 	onpick={(id) => (calculationId = id)}
 />

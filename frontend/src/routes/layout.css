@@ -143,6 +143,11 @@
 			border-color 300ms ease,
 			background-color 300ms ease;
 	}
+	/* A modal about one device's values, tinted like that device's panel. */
+	.accent-modal {
+		border-color: color-mix(in oklab, var(--accent) 55%, transparent);
+		background: color-mix(in oklab, var(--accent) 10%, var(--color-surface));
+	}
 	/* Every card inside a tinted area takes the area's --accent. */
 	.accent-scope .card {
 		border-color: color-mix(in oklab, var(--accent) 40%, var(--color-line));
