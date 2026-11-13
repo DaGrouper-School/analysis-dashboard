@@ -1149,8 +1149,16 @@ export interface InstitutionOverview extends InstitutionInfo {
 	name: string;
 	/** The classroom's published (rounded) position; null before it has a lab. */
 	location: GeoPoint | null;
-	/** Kinds of device in its Lab in a Bag, by registry label. */
-	deviceTypes: string[];
+	/** Kinds of device in its Lab in a Bag, with the registry's label, icon and colour. */
+	deviceTypes: InstitutionDeviceType[];
+}
+
+/** A kind of device on the institution card, shown with its registry icon and colour. */
+export interface InstitutionDeviceType {
+	id: DeviceType;
+	label: string;
+	icon: string;
+	color: string;
 }
 
 /** One tile of "What's happening now?" (AP-43), from the latest released reading. */

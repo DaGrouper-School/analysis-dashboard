@@ -164,6 +164,7 @@ export const UI_ICONS = {
 		{ cx: 17, cy: 18, r: 2 }
 	],
 	// A phone: the installed app.
+	institution: [{ d: 'M3 21h18M4 10h16M12 3l8 5H4l8-5ZM6 10v8M10 10v8M14 10v8M18 10v8' }],
 	device: [{ x: 6.5, y: 2.5, width: 11, height: 19, rx: 2 }, { d: 'M11 18.5h2' }],
 	mail: [{ x: 3, y: 5, width: 18, height: 14, rx: 2 }, { d: 'm3.5 6.5 8.5 6.5 8.5-6.5' }],
 	clipboard: [

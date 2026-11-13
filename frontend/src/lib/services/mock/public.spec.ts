@@ -181,6 +181,11 @@ describe('Explore station page (AP-43)', () => {
 		expect(trinity.institution).toMatchObject({ name: 'Trinity School, Addis Ababa' });
 		expect(trinity.institution!.history).not.toBe('');
 		expect(trinity.institution!.deviceTypes.length).toBeGreaterThan(0);
+		expect(trinity.institution!.deviceTypes[0]).toMatchObject({
+			label: expect.any(String),
+			icon: expect.any(String),
+			color: expect.any(String)
+		});
 		expect((await services.publicSite.station('cls_hargeisa')).institution).toBeNull();
 		expect((await services.publicSite.profile('cls_trinity')).institution).toEqual(
 			trinity.institution

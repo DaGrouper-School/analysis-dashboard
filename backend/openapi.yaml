@@ -4346,6 +4346,24 @@ components:
         - required
       additionalProperties: false
       description: A readiness question, from configuration.
+    InstitutionDeviceType:
+      type: object
+      properties:
+        id:
+          $ref: "#/components/schemas/DeviceType"
+        label:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+      required:
+        - id
+        - label
+        - icon
+        - color
+      additionalProperties: false
+      description: A kind of device on the institution card, shown with its registry icon and colour.
     InstitutionInfo:
       type: object
       properties:
@@ -4413,8 +4431,8 @@ components:
         deviceTypes:
           type: array
           items:
-            type: string
-          description: Kinds of device in its Lab in a Bag, by registry label.
+            $ref: "#/components/schemas/InstitutionDeviceType"
+          description: Kinds of device in its Lab in a Bag, with the registry's label, icon and colour.
       required:
         - deviceTypes
         - history

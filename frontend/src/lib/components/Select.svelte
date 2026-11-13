@@ -26,6 +26,7 @@
 
 <script lang="ts" generics="T extends string">
 	import { tick } from 'svelte';
+	import ColorIcon from '#lib/components/ColorIcon.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 
 	/**
@@ -388,9 +389,7 @@
 
 {#snippet lead(option: SelectOption)}
 	{#if option.icon}
-		<span class="select-lead" style:--accent={option.color}>
-			<Icon name={option.icon} class="size-[1em]" />
-		</span>
+		<ColorIcon name={option.icon} color={option.color} class="select-lead" />
 	{:else if option.color}
 		<span class="select-dot" style:background={option.color} aria-hidden="true"></span>
 	{/if}
@@ -460,19 +459,7 @@
 		rotate: 180deg;
 		color: var(--color-ink);
 	}
-	.select-lead {
-		display: grid;
-		width: 1.625rem;
-		height: 1.625rem;
-		flex: none;
-		place-items: center;
-		border: 1px solid color-mix(in oklab, var(--accent, var(--color-muted)) 40%, var(--color-line));
-		border-radius: 0.3rem;
-		background: color-mix(in oklab, var(--accent, var(--color-muted)) 12%, var(--color-raised));
-		color: var(--accent, var(--color-text));
-		font-size: 1rem;
-	}
-	[data-size='compact'] .select-trigger .select-lead {
+	[data-size='compact'] .select-trigger :global(.select-lead) {
 		width: 1.25rem;
 		height: 1.25rem;
 		border-radius: 9999px;

@@ -245,7 +245,12 @@ function institutionFor(
 		...structuredClone(info),
 		name,
 		location: publicClassroom.location,
-		deviceTypes: kit.map((k) => k.deviceType.label)
+		deviceTypes: kit.map(({ deviceType: t }) => ({
+			id: t.id,
+			label: t.label,
+			icon: t.icon,
+			color: deviceTypeColor(state.deviceTypes, t.id)
+		}))
 	};
 }
 
