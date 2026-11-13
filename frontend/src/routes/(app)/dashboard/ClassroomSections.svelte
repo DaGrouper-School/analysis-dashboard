@@ -1,95 +1,42 @@
 <script lang="ts">
 	import VerticalTabs, { type TabItem } from '#lib/components/VerticalTabs.svelte';
 	import type { Parameter, PublicStation } from '#lib/domain/types.ts';
-	import AlertsList from '#lib/features/alerts/AlertsList.svelte';
 	import ClassroomAbout from '#lib/features/classroom/ClassroomAbout.svelte';
 	import ClassroomCompleteness from '#lib/features/classroom/ClassroomCompleteness.svelte';
 	import ClassroomPeople from '#lib/features/classroom/ClassroomPeople.svelte';
 	import ClassroomSettings from '#lib/features/classroom/ClassroomSettings.svelte';
 	import ClassroomLabs from '#lib/features/devices/ClassroomLabs.svelte';
-	import DevicePicker, { type PickableDevice } from '#lib/features/devices/DevicePicker.svelte';
-	import RawDataButton from '#lib/features/measurements/RawDataButton.svelte';
-	import DomainBrowser from '#lib/features/measurements/DomainBrowser.svelte';
-	import type { domainsOf } from '#lib/features/measurements/domains.ts';
 	import MeasurementsPanel from './MeasurementsPanel.svelte';
 	import PanelHead from './PanelHead.svelte';
 	import RecordsPanel from './RecordsPanel.svelte';
 	import type { Section } from './sections.ts';
 	import type { PageData } from './$types';
 
-	/** The classroom's sections as tabs on the details page (AP-45), one panel per tab. */
+	/** The classroom's sections as tabs on the Classrooms page (AP-45), one panel per tab. */
 	let {
 		data,
 		station,
 		sections,
 		active = $bindable(),
-		domains,
-		devices,
-		deviceId,
-		onpickdevice,
 		parameters,
-		alertCount,
 		canAddDevice,
 		canAddLab,
-		onsync,
-		onconsent,
-		onrelease
+		onsync
 	}: {
 		data: PageData;
 		station: PublicStation;
 		sections: TabItem<Section>[];
 		active: Section | undefined;
-		domains: ReturnType<typeof domainsOf>;
-		/** The classroom's devices; the one picked sets the domains shown. */
-		devices: PickableDevice[];
-		deviceId: string | undefined;
-		onpickdevice: (id: string) => void;
 		parameters: Map<string, Parameter>;
-		alertCount: number;
 		canAddDevice: boolean;
 		canAddLab: boolean;
 		onsync: (deviceId: string) => void;
-		onconsent: () => void;
-		/** Opens the review of data waiting to be released. */
-		onrelease: () => void;
 	} = $props();
 </script>
 
 <section class="mt-8" aria-label="Classroom sections">
 	<VerticalTabs tabs={sections} bind:active label="Classroom sections">
-		{#if active === 'alerts'}
-			<PanelHead
-				title="Alerts"
-				sub={alertCount
-					? `What needs you in ${station.classroom.name}, from each device's latest reading.`
-					: `Nothing needs you in ${station.classroom.name} right now.`}
-			/>
-			<AlertsList
-				class="mt-5"
-				alerts={data.alerts}
-				waiting={data.waitingForConsent}
-				release={data.release}
-				{parameters}
-				classroomId={station.classroom.id}
-				{onconsent}
-				{onrelease}
-			/>
-		{:else if active === 'domains'}
-			<!-- The picked device's raw data beside the picker, as on its card in Measurements. -->
-			<div class="flex flex-wrap items-center justify-between gap-3 lg:flex-nowrap">
-				<DevicePicker {devices} {deviceId} onpick={onpickdevice} />
-				{#if deviceId}<RawDataButton
-						class="shrink-0"
-						query={{ classroomId: station.classroom.id, sourceId: deviceId }}
-					/>{/if}
-			</div>
-			<DomainBrowser
-				class="mt-6"
-				{domains}
-				parameters={station.parameters}
-				classroomId={station.classroom.id}
-			/>
-		{:else if active === 'devices'}
+		{#if active === 'devices'}
 			<MeasurementsPanel
 				{data}
 				classroomId={station.classroom.id}

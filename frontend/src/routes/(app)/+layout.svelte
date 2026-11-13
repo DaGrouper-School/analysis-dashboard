@@ -6,8 +6,9 @@
 	import NavLinks from '#lib/components/NavLinks.svelte';
 	import Logo from '#lib/components/Logo.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
+	import InboxBell from '#lib/views/InboxBell.svelte';
 	import { outbox } from '#lib/features/devices/outbox.svelte.ts';
-	import { sensorQuery } from '#lib/utils/sensor-selection.ts';
+	import { classroomsHref, domainsHref } from '#lib/utils/site.ts';
 	import { isMockDataSource } from '#lib/services/index.ts';
 
 	let { data, children } = $props();
@@ -30,29 +31,32 @@
 			: { text: 'Online', class: 'border-lime/50 text-lime', dot: 'bg-lime' }
 	);
 
-	// Everything about your classrooms is on the dashboard (AP-45): the logo and the first link
-	// open it. Members also get Classroom, the details page of the classroom they are on, and
-	// Record if they record (not researchers). Platform admins also manage the registry and host
-	// applications. The links look like the public site's, the current one underlined.
-	const classroomHref = $derived(
-		data.contextClassroom
-			? resolve('/(app)/dashboard/details') + sensorQuery(data.contextClassroom.id)
-			: null
-	);
+	// Everything about your classrooms starts on the dashboard (AP-45): the logo and the first
+	// link open it. Members also get Domains, what the classroom they are on measures, and
+	// Classrooms, its sections; and Record if they record (not researchers). Platform admins also
+	// manage the registry and host applications. The links look like the public site's, the
+	// current one underlined.
 	const dashboard = resolve('/(app)/dashboard');
-	const details = resolve('/(app)/dashboard/details');
+	const domainsPage = resolve('/(app)/dashboard/domains');
+	const classroomsPage = resolve('/(app)/dashboard/classrooms');
 	const under = (path: string) =>
 		page.url.pathname === path || page.url.pathname.startsWith(`${path}/`);
+	const context = $derived(data.contextClassroom);
 	const nav = $derived([
-		// The dashboard and every page under it, except the classroom's details page.
-		{ href: dashboard, label: 'Dashboard', current: under(dashboard) && !under(details) },
-		...(classroomHref
+		// The dashboard and every page under it, except Domains and Classrooms.
+		{
+			href: dashboard,
+			label: 'Dashboard',
+			current: under(dashboard) && !under(domainsPage) && !under(classroomsPage)
+		},
+		...(context
 			? [
+					// A value's page is under Domains.
+					{ href: domainsHref(context.id), label: 'Domains', current: under(domainsPage) },
 					{
-						href: classroomHref,
-						// The page has a classroom picker: plural for people in more than one.
-						label: data.memberClassrooms.length > 1 ? 'Classrooms' : 'Classroom',
-						current: under(details)
+						href: classroomsHref(context.id),
+						label: 'Classrooms',
+						current: under(classroomsPage)
 					}
 				]
 			: []),
@@ -79,9 +83,10 @@
 	>
 		<div class="mx-auto flex max-w-6xl items-center gap-2 px-3 py-3 sm:gap-4 sm:px-6">
 			<a href={resolve('/(app)/dashboard')} aria-label="Dashboard"><Logo compact /></a>
+			<!-- On a phone the links get their own row, under this one. -->
 			<nav
 				aria-label="Main"
-				class="-my-2 ml-2 flex min-w-0 items-center gap-4 overflow-x-auto py-2 text-sm sm:ml-4 sm:gap-5"
+				class="-my-2 ml-4 flex min-w-0 items-center gap-5 overflow-x-auto py-2 text-sm max-sm:hidden"
 			>
 				<NavLinks links={nav} />
 			</nav>
@@ -101,11 +106,18 @@
 				<span class={['size-2 rounded-full', syncChip.dot]} aria-hidden="true"></span>
 				{syncChip.text}
 			</a>
+			<InboxBell inbox={data.inbox} invitations={data.invitations} parameters={data.parameters} />
 			<ThemeToggle />
 			<a href={resolve('/(app)/settings')} class="shrink-0" aria-label="Your account">
 				<Avatar name={data.user.fullName} src={data.user.avatarUrl} />
 			</a>
 		</div>
+		<nav
+			aria-label="Main"
+			class="flex items-center justify-around gap-4 border-t border-line px-3 py-2.5 text-sm sm:hidden"
+		>
+			<NavLinks links={nav} />
+		</nav>
 		{#if syncNote}
 			<a
 				href="{resolve('/(app)/observe')}#sync"

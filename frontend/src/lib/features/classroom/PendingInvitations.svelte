@@ -19,7 +19,7 @@
 			const classroom = await services.classrooms.acceptInvitation(token);
 			await invalidateAll();
 			// eslint-disable-next-line svelte/no-navigation-without-resolve
-			await goto(resolve('/(app)/dashboard') + sectionQuery(classroom.id, 'people'));
+			await goto(resolve('/(app)/dashboard/classrooms') + sectionQuery(classroom.id, 'people'));
 		} catch (e) {
 			error = errorMessage(e);
 		} finally {

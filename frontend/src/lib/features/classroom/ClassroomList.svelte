@@ -55,7 +55,7 @@
 			<li>
 				<!-- eslint-disable svelte/no-navigation-without-resolve -->
 				<a
-					href={resolve('/(app)/dashboard') + sectionQuery(classroom.id, 'people')}
+					href={resolve('/(app)/dashboard/classrooms') + sectionQuery(classroom.id, 'people')}
 					class="card block transition hover:border-line-strong"
 				>
 					<div class="flex items-start justify-between gap-3">

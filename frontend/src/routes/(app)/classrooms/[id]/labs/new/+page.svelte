@@ -24,7 +24,7 @@
 
 <!-- eslint-disable svelte/no-navigation-without-resolve -->
 <a
-	href={resolve('/(app)/dashboard') + sectionQuery(data.classroom.id, 'labs')}
+	href={resolve('/(app)/dashboard/classrooms') + sectionQuery(data.classroom.id, 'labs')}
 	class="text-sm text-muted hover:text-ink">← {data.classroom.name}</a
 >
 <!-- eslint-enable svelte/no-navigation-without-resolve -->

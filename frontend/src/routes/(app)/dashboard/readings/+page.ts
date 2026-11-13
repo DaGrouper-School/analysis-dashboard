@@ -12,7 +12,7 @@ export const load: PageLoad = ({ url }) => {
 	const device = url.searchParams.get('source') ?? url.searchParams.get('device') ?? undefined;
 	redirect(
 		307,
-		resolve('/(app)/dashboard/details') +
+		resolve('/(app)/dashboard/classrooms') +
 			(classroom ? `${sensorQuery(classroom, device)}&tab=devices` : '?tab=devices')
 	);
 };

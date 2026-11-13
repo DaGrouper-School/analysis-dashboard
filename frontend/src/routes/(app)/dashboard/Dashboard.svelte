@@ -2,30 +2,29 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { navigating, page } from '$app/state';
-	import { domainsOf } from '#lib/features/measurements/domains.ts';
-	import AlertsList from '#lib/features/alerts/AlertsList.svelte';
-	import AlertsPanel from '#lib/features/alerts/AlertsPanel.svelte';
 	import CalculationPanel from '#lib/features/measurements/CalculationPanel.svelte';
 	import ClassroomOverview, { type ClassroomTab } from '#lib/views/ClassroomOverview.svelte';
 	import Icon from '#lib/components/Icon.svelte';
-	import ReleaseModal from '#lib/features/classroom/ReleaseModal.svelte';
 	import PendingInvitations from '#lib/features/classroom/PendingInvitations.svelte';
+	import AddDeviceButton from '#lib/features/devices/AddDeviceButton.svelte';
 	import SyncModal from '#lib/features/devices/SyncModal.svelte';
 	import { pickDevice } from '#lib/features/devices/station-now.ts';
 	import { CLASSROOM_ROLE_LABELS, withArticle, isManualType } from '#lib/utils/labels.ts';
 	import { givenName } from '#lib/utils/format.ts';
 	import { sensorQuery } from '#lib/utils/sensor-selection.ts';
+	import { classroomsHref, domainsHref } from '#lib/utils/site.ts';
+	import ClassroomPageHeader from './ClassroomPageHeader.svelte';
 	import ClassroomSections from './ClassroomSections.svelte';
-	import DetailsHeader from './DetailsHeader.svelte';
 	import NoClassroom from './NoClassroom.svelte';
 	import { sectionTabs, type Section } from './sections.ts';
 	import type { PageData } from './$types';
 
 	/**
 	 * The dashboard, in two views of the same data (AP-45). The overview is the classroom at a
-	 * glance: its header, devices, what's happening now, the map and the institution. The details
-	 * page holds the classroom's sections as tabs (domains, alerts, measurements and the rest),
-	 * with the classroom and the device picked from dropdowns.
+	 * glance: its header, devices, what's happening now, the map and the institution. The
+	 * Classrooms page holds the classroom's sections as tabs (measurements, labs, people and the
+	 * rest), with the classroom picked from a dropdown. Domains have their own page, and alerts and
+	 * messages are in the top bar on every page.
 	 */
 	let { data, view }: { data: PageData; view: 'overview' | 'details' } = $props();
 	const details = $derived(view === 'details');
@@ -49,9 +48,9 @@
 	/** The overview on a classroom (and device). */
 	const dashboardHref = (classroomId: string, deviceId?: string) =>
 		resolve('/(app)/dashboard') + sensorQuery(classroomId, deviceId);
-	/** The details page on a classroom (and device), open on a section. */
-	const detailsHref = (classroomId: string, deviceId?: string, tab: string = active ?? 'domains') =>
-		resolve('/(app)/dashboard/details') + sensorQuery(classroomId, deviceId) + `&tab=${tab}`;
+	/** The Classrooms page on a classroom (and device), open on a section. */
+	const detailsHref = (classroomId: string, deviceId?: string, tab?: string) =>
+		classroomsHref(classroomId, tab ?? active, deviceId);
 	/** Moves to another classroom or device, staying on this view. */
 	function choose(classroomId: string, deviceId?: string, tab = active) {
 		const href = details
@@ -75,8 +74,6 @@
 			: null
 	);
 	const shownDeviceId = $derived(shownDevice?.id);
-	// The domains of the device shown.
-	const domains = $derived(domainsOf(station?.domains ?? [], shownDeviceId));
 	const pickerDevices = $derived(station?.devices ?? []);
 	function pickDeviceShown(id: string) {
 		if (visiting) visitingDeviceId = id;
@@ -95,29 +92,22 @@
 		!!permissions && (permissions.edit || permissions.seeCode || permissions.viewSharing)
 	);
 	let active = $state<Section>();
-	const alertCount = $derived(
-		data.alerts.length + data.waitingForConsent.length + (data.release ? 1 : 0)
-	);
-	// Reviewing and releasing data to the public, from its alert.
-	let reviewing = $state(false);
 	const sections = $derived(
 		sectionTabs(
 			{
-				domains: domains.length,
-				alerts: alertCount,
 				devices: data.devices.length,
 				labs: data.labs.length,
 				records: data.records.length,
 				members: data.detail?.members.length ?? 0
 			},
-			{ visiting: !!visiting, head: role === 'institution_head', managesPeople, managesSettings }
+			{ head: role === 'institution_head', managesPeople, managesSettings }
 		)
 	);
 	// ---- Adding a measurement (a device) to one of the classroom's labs ----
 	// Whoever manages the classroom's devices adds them, as on a lab page.
 	const canAddDevice = $derived(!!permissions?.manageDevices && data.labs.length > 0);
 
-	/** Opens a section: on the details page, its tab; from the overview, the details page on it. */
+	/** Opens a section: on the Classrooms page, its tab; from the overview, that page on it. */
 	function openSection(id: Section) {
 		if (details) active = id;
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
@@ -141,12 +131,12 @@
 				]
 			: [])
 	]);
-	// The details page is for the user's own classrooms only.
+	// The Classrooms page is for the user's own classrooms only.
 	const classroomOptions = $derived(data.classrooms.map((c) => ({ value: c.id, label: c.name })));
 	// The classroom being opened: the overview moves to it at once and shows a skeleton.
 	const pendingId = $derived(
 		((navigating.to?.route.id === '/(app)/dashboard' ||
-			navigating.to?.route.id === '/(app)/dashboard/details') &&
+			navigating.to?.route.id === '/(app)/dashboard/classrooms') &&
 			navigating.to.url.searchParams.get('classroom')) ||
 			station?.classroom.id ||
 			''
@@ -177,19 +167,21 @@
 	);
 </script>
 
-<svelte:head
-	><title>{details ? 'Classroom details' : 'Dashboard'} · DaGrouper Analysis</title></svelte:head
+<svelte:head><title>{details ? 'Classrooms' : 'Dashboard'} · DaGrouper Analysis</title></svelte:head
 >
 
-{#if data.invitations.length}
+<!-- Someone in no classroom yet sees their invitations here too; everyone has them in the top bar. -->
+{#if !station && data.invitations.length}
 	<div class="mb-8"><PendingInvitations invitations={data.invitations} /></div>
 {/if}
 
 {#if !station}
 	<NoClassroom {firstName} />
 {:else if details}
-	<DetailsHeader
-		dashboardHref={dashboardHref(station.classroom.id, shownDeviceId)}
+	<ClassroomPageHeader
+		title="Classrooms"
+		sub="Everything about {station.classroom
+			.name}: its measurements, labs, records, people and settings."
 		loading={pendingId !== station.classroom.id}
 		{classroomOptions}
 		classroomId={pendingId}
@@ -200,36 +192,12 @@
 		{station}
 		{sections}
 		bind:active
-		{domains}
-		devices={pickerDevices}
-		deviceId={shownDeviceId}
-		onpickdevice={pickDeviceShown}
 		parameters={paramsById}
-		{alertCount}
 		{canAddDevice}
 		canAddLab={!!permissions?.manageDevices}
 		onsync={sync}
-		onconsent={() => openSection('people')}
-		onrelease={() => (reviewing = true)}
 	/>
 {:else}
-	<!-- What needs the user in this classroom, on top; the full list is its Alerts tab. -->
-	{#if classroom && alertCount}
-		<AlertsPanel
-			count={alertCount}
-			href={detailsHref(station.classroom.id, shownDeviceId, 'alerts')}
-		>
-			<AlertsList
-				alerts={data.alerts}
-				waiting={data.waitingForConsent}
-				release={data.release}
-				parameters={paramsById}
-				classroomId={station.classroom.id}
-				onconsent={() => openSection('people')}
-				onrelease={() => (reviewing = true)}
-			/>
-		</AlertsPanel>
-	{/if}
 	<ClassroomOverview
 		{station}
 		{tabs}
@@ -245,6 +213,28 @@
 		onexplain={explain}
 		onpick={(id) => choose(id, undefined, active)}
 	>
+		{#snippet deviceActions()}
+			<!-- Pairing for whoever manages the classroom's devices; the classroom's page for its members. -->
+			{#if classroom}
+				{#if canAddDevice}
+					<AddDeviceButton
+						labs={data.labs}
+						deviceTypes={data.deviceTypes}
+						domains={data.domains}
+						parameters={data.parameters}
+						label="Pair new device"
+					/>
+				{/if}
+				<!-- eslint-disable svelte/no-navigation-without-resolve -->
+				<a
+					class="btn btn-ghost shrink-0"
+					href={detailsHref(classroom.id, shownDeviceId, 'devices')}
+					aria-label="Classrooms"
+					><Icon name="settings" class="size-4" /><span class="max-sm:sr-only">Classrooms</span></a
+				>
+				<!-- eslint-enable svelte/no-navigation-without-resolve -->
+			{/if}
+		{/snippet}
 		{#snippet eyebrow()}
 			<p class="text-sm font-medium text-muted">
 				Hello, {firstName} · {today.format(new Date())}
@@ -273,11 +263,11 @@
 			{/if}
 			<!-- A classroom's details are for its members; a visitor sees its overview only. -->
 			{#if classroom}
-				<button
-					type="button"
-					class="btn btn-ghost flex-1 rounded-full"
-					onclick={() => openSection('domains')}>View domains</button
+				<!-- eslint-disable svelte/no-navigation-without-resolve -->
+				<a class="btn btn-ghost flex-1 rounded-full" href={domainsHref(classroom.id, shownDeviceId)}
+					>View domains</a
 				>
+				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 			{/if}
 		{/snippet}
 		{#snippet institutionActions()}
@@ -292,7 +282,7 @@
 	</ClassroomOverview>
 {/if}
 
-<!-- On the dashboard and on the details page, where Measurements opens it. -->
+<!-- On the dashboard and on the Classrooms page, where Measurements opens it. -->
 {#if canSync && classroom && device && data.labLocation}
 	<!-- Keyed by sensor, so a new pick never syncs to the sensor the user moved away from. -->
 	{#key device.id}
@@ -308,10 +298,6 @@
 			onclose={() => invalidateAll()}
 		/>
 	{/key}
-{/if}
-
-{#if classroom && data.release}
-	<ReleaseModal bind:open={reviewing} classroomId={classroom.id} review={data.release} />
 {/if}
 
 <CalculationPanel

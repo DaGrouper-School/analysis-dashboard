@@ -20,7 +20,8 @@
 	import { tick, untrack, type Snippet } from 'svelte';
 	import CoreStrip from '#lib/features/devices/CoreStrip.svelte';
 	import DeviceStrip from '#lib/features/devices/DeviceStrip.svelte';
-	import DevicePicker, { type PickableDevice } from '#lib/features/devices/DevicePicker.svelte';
+	import DeviceBar from '#lib/features/devices/DeviceBar.svelte';
+	import type { PickableDevice } from '#lib/features/devices/DevicePicker.svelte';
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import InstitutionOverview from '#lib/features/classroom/InstitutionOverview.svelte';
 	import NowCard from '#lib/features/devices/NowCard.svelte';
@@ -29,11 +30,8 @@
 	import { reveal } from '#lib/utils/reveal.ts';
 	import { goto } from '$app/navigation';
 	import StageBadge from '#lib/components/StageBadge.svelte';
-	import type {
-		DeviceSummaryCard,
-		InstitutionOverview as InstitutionInfo,
-		NowTile
-	} from '#lib/domain/types.ts';
+	import type { DeviceSummaryCard, NowTile } from '#lib/domain/types.ts';
+	import { institutionCard } from './classroom-overview.ts';
 	import { stageColor } from '#lib/utils/labels.ts';
 	import { valueHref } from '#lib/utils/site.ts';
 
@@ -56,6 +54,7 @@
 		headerActions,
 		tabsStart,
 		nowActions,
+		deviceActions,
 		devices = [],
 		deviceId,
 		onpickdevice,
@@ -84,6 +83,8 @@
 		/** Above the classroom tabs, such as the public page's filter. */
 		tabsStart?: Snippet;
 		nowActions?: Snippet;
+		/** Beside the device picker: the dashboard's pairing and Classrooms buttons. */
+		deviceActions?: Snippet;
 		/** The device picker on "What's happening now?": its devices, the one shown, and a pick. */
 		devices?: PickableDevice[];
 		deviceId?: string;
@@ -123,19 +124,7 @@
 	const stage = $derived(station.content.stages.find((s) => s.id === shown.stageId));
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 	const core = $derived(classroom.core);
-	// Always a card, with just the name until there is more, so the row never reflows.
-	const institution = $derived<InstitutionInfo>(
-		station.institution ?? {
-			name: classroom.name,
-			location: classroom.location,
-			deviceTypes: [],
-			photoUrl: null,
-			photoAlt: '',
-			history: '',
-			hub: null,
-			website: null
-		}
-	);
+	const institution = $derived(institutionCard(station));
 
 	// The sliding underline under the classroom tabs, measured from the tab being opened.
 	const tabEls: Record<string, HTMLAnchorElement> = $state({});
@@ -265,7 +254,13 @@
 	<div class="mt-6 flex flex-col gap-5 lg:block">
 		<!-- Always shown, with no devices too, so every classroom has the same layout. -->
 		{#if onpickdevice}
-			<DevicePicker class="max-lg:order-3" {devices} {deviceId} onpick={onpickdevice} />
+			<DeviceBar
+				class="max-lg:order-3"
+				{devices}
+				{deviceId}
+				onpick={onpickdevice}
+				actions={deviceActions}
+			/>
 		{/if}
 		<div
 			class={[

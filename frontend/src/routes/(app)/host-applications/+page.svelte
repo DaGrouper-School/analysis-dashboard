@@ -104,7 +104,7 @@
 						<!-- eslint-disable svelte/no-navigation-without-resolve -->
 						<a
 							class="link text-sm"
-							href={resolve('/(app)/dashboard') + sectionQuery(a.classroomId, 'people')}
+							href={resolve('/(app)/dashboard/classrooms') + sectionQuery(a.classroomId, 'people')}
 							>Open its classroom</a
 						>
 						<!-- eslint-enable svelte/no-navigation-without-resolve -->

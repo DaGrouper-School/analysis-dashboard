@@ -2,7 +2,6 @@
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
-	import Icon from '#lib/components/Icon.svelte';
 	import SampleDataBadge from '#lib/components/SampleDataBadge.svelte';
 	import { thresholdStatus, thresholdsFor } from '#lib/domain/alerts.ts';
 	import { chartOf } from '#lib/domain/charts.ts';
@@ -20,9 +19,9 @@
 		type RangeId
 	} from '#lib/features/measurements/parameter-page.ts';
 	import { errorMessage, services } from '#lib/services/index.ts';
-	import { FALLBACK_DOMAIN_ICON } from '#lib/utils/icons.ts';
 	import { deviceTypeLabel } from '#lib/utils/labels.ts';
 	import { sensorQuery } from '#lib/utils/sensor-selection.ts';
+	import { classroomsHref, domainsHref } from '#lib/utils/site.ts';
 	import DailySummary from './DailySummary.svelte';
 	import DataQuality from './DataQuality.svelte';
 	import HowMeasured from './HowMeasured.svelte';
@@ -146,26 +145,19 @@
 	></svelte:head
 >
 
-<!-- Back to the classroom on the dashboard. -->
+<!-- Back up: the dashboard, the classroom's page, and the value's domain on the device shown. -->
 <Breadcrumbs
 	items={[
-		{ label: 'Dashboard', href: resolve('/(app)/dashboard') },
+		{ label: 'Dashboard', href: resolve('/(app)/dashboard') + sensorQuery(data.classroom.id) },
+		{ label: data.classroom.name, href: classroomsHref(data.classroom.id) },
 		{
-			label: data.classroom.name,
-			href: resolve('/(app)/dashboard/details') + sensorQuery(data.classroom.id)
+			label: data.domain?.label ?? 'Domains',
+			href: domainsHref(
+				data.classroom.id,
+				!rain && series?.source.kind === 'device' ? series.source.id : null,
+				data.domain?.id
+			)
 		},
-		// The device shown, to its domains on the details page. Rain shows every source at once.
-		...(!rain && series?.source.kind === 'device'
-			? [
-					{
-						label: sourceName(series),
-						href:
-							resolve('/(app)/dashboard/details') +
-							sensorQuery(data.classroom.id, series.source.id) +
-							'&tab=domains'
-					}
-				]
-			: []),
 		{ label: parameter.label }
 	]}
 />
@@ -176,12 +168,7 @@
 			<h1 class="font-display text-4xl">{parameter.label}</h1>
 			<SampleDataBadge show={data.content.sampleData} />
 		</div>
-		{#if data.domain}
-			<p class="mt-2 flex items-center gap-1.5 text-sm text-muted">
-				<Icon name={data.domain.icon} fallback={FALLBACK_DOMAIN_ICON} class="size-4" />
-				{data.domain.label}
-			</p>
-		{/if}
+		<p class="mt-2 text-sm text-muted">Parameter details</p>
 	</div>
 	<!-- Every raw value of this measurement, from the device shown (rain: every source). -->
 	<RawDataButton

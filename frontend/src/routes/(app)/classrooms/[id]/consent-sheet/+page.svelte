@@ -30,7 +30,7 @@
 <div class="print:hidden">
 	<!-- eslint-disable svelte/no-navigation-without-resolve -->
 	<a
-		href={resolve('/(app)/dashboard') + sectionQuery(data.classroomId, 'people')}
+		href={resolve('/(app)/dashboard/classrooms') + sectionQuery(data.classroomId, 'people')}
 		class="text-sm text-muted hover:text-ink">← {sheet.classroomName}</a
 	>
 	<!-- eslint-enable svelte/no-navigation-without-resolve -->

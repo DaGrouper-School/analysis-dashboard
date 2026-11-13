@@ -21,7 +21,7 @@
 	/**
 	 * What needs a classroom's members (AP-08): each device's active alerts, each opening its
 	 * value's page, then data waiting for review before it is public, then members waiting for
-	 * guardian consent. The same on the dashboard and on the classroom's Alerts tab.
+	 * guardian consent. Shown in the top bar's alerts and messages, on every page.
 	 */
 	let {
 		alerts,
@@ -31,6 +31,7 @@
 		classroomId,
 		onconsent,
 		onrelease,
+		stacked = false,
 		class: className = ''
 	}: {
 		alerts: ClassroomAlert[];
@@ -43,16 +44,23 @@
 		onconsent: () => void;
 		/** Opens the review of what waits, and its release. */
 		onrelease?: () => void;
+		/** Each item's button under its text at every width, as in the top bar's narrow panel. */
+		stacked?: boolean;
 		class?: string;
 	} = $props();
 
+	const itemClass = $derived([
+		'card flex flex-col gap-4 p-5',
+		!stacked && 'sm:flex-row sm:items-center'
+	]);
+	const buttonClass = $derived(['btn btn-ghost', stacked ? 'w-full' : 'max-sm:w-full']);
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 </script>
 
 <ul class={['space-y-3', className]}>
 	{#each alerts as alert (`${alert.device.id}|${alert.parameterId}`)}
 		{@const label = parameters.get(alert.parameterId)?.label ?? alert.parameterId}
-		<li class="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+		<li class={itemClass}>
 			<div class="min-w-0 flex-1">
 				<p class="flex flex-wrap items-center gap-3 text-xs text-muted">
 					<span
@@ -72,15 +80,14 @@
 			</div>
 			<!-- Opens the value's page on this device, with its alert levels. valueHref resolves. -->
 			<!-- eslint-disable svelte/no-navigation-without-resolve -->
-			<a
-				class="btn btn-ghost max-sm:w-full"
-				href={valueHref(classroomId, alert.parameterId, alert.device.id)}>Open {label}</a
+			<a class={buttonClass} href={valueHref(classroomId, alert.parameterId, alert.device.id)}
+				>Open {label}</a
 			>
 			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		</li>
 	{/each}
 	{#if release && onrelease}
-		<li class="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+		<li class={itemClass}>
 			<div class="min-w-0 flex-1">
 				<p class="text-xs text-muted">
 					<span class="chip"><Icon name="clipboard" class="size-3.5" /> Review</span>
@@ -95,16 +102,13 @@
 						: '. Nothing is released yet.'}
 				</p>
 			</div>
-			<button
-				type="button"
-				class="btn btn-ghost max-sm:w-full"
-				aria-haspopup="dialog"
-				onclick={onrelease}>Review and release</button
+			<button type="button" class={buttonClass} aria-haspopup="dialog" onclick={onrelease}
+				>Review and release</button
 			>
 		</li>
 	{/if}
 	{#each waiting as member (member.userId)}
-		<li class="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+		<li class={itemClass}>
 			<div class="min-w-0 flex-1">
 				<p class="text-xs text-muted">
 					<span class="chip"><Icon name="user" class="size-3.5" /> Consent</span>
@@ -118,9 +122,7 @@
 						: '.'}
 				</p>
 			</div>
-			<button type="button" class="btn btn-ghost max-sm:w-full" onclick={onconsent}
-				>Record paper consent</button
-			>
+			<button type="button" class={buttonClass} onclick={onconsent}>Record paper consent</button>
 		</li>
 	{/each}
 </ul>
