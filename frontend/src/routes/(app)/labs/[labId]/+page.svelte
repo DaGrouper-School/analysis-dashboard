@@ -112,7 +112,7 @@
 		</div>
 		{#if data.detail.canManage}
 			<a class="btn btn-ghost" href={resolve('/(app)/labs/[labId]/edit', { labId: lab.id })}
-				>Edit lab</a
+				><Icon name="pencil" class="size-4" /> Edit lab</a
 			>
 		{/if}
 	</div>

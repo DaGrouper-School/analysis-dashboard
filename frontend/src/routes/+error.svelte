@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import Logo from '#lib/components/Logo.svelte';
@@ -30,8 +31,10 @@
 						: 'Please try again in a moment.')}
 			</p>
 			<div class="mt-8 flex flex-wrap justify-center gap-3">
-				<button type="button" class="btn btn-ghost" onclick={() => history.back()}>Go back</button>
-				<a class="btn btn-primary" href={resolve('/')}>Home</a>
+				<button type="button" class="btn btn-ghost" onclick={() => history.back()}
+					><Icon name="back" class="size-4" /> Go back</button
+				>
+				<a class="btn btn-primary" href={resolve('/')}><Icon name="home" class="size-4" /> Home</a>
 			</div>
 		</div>
 	</main>

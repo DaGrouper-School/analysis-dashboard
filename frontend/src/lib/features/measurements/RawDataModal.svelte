@@ -195,7 +195,7 @@
 							parameterId: undefined,
 							from: undefined,
 							to: undefined
-						})}>Clear filters</button
+						})}><Icon name="close" class="size-4" /> Clear filters</button
 				>
 			</div>
 		{/if}
@@ -299,7 +299,9 @@
 	{#if exportError}<p class="field-error mt-2" role="alert">{exportError}</p>{/if}
 
 	{#snippet footer()}
-		<button type="button" class="btn btn-ghost" onclick={() => (open = false)}>Close</button>
+		<button type="button" class="btn btn-ghost" onclick={() => (open = false)}
+			><Icon name="close" class="size-4" /> Close</button
+		>
 		<button
 			type="button"
 			class="btn btn-primary"

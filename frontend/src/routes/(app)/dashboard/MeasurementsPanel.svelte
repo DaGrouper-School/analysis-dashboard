@@ -111,7 +111,7 @@
 					<a
 						class="btn btn-ghost"
 						href={`${resolve('/(app)/observe')}?lab=${option.labId}&device=${option.id}`}
-						>Enter a reading</a
+						><Icon name="plus" class="size-4" /> Enter a reading</a
 					>
 					<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				{/if}

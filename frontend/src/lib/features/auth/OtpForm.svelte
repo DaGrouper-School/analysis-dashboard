@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { onDestroy } from 'svelte';
 	import { isValidOtp } from '#lib/domain/validation.ts';
 	import type { PhoneChallenge } from '#lib/domain/types.ts';
@@ -81,6 +82,7 @@
 		{#if error}<p id="otp-error" class="field-error" role="alert">{error}</p>{/if}
 	</div>
 	<button class="btn btn-primary w-full" disabled={busy || code.length !== 6}>
+		<Icon name="check" class="size-4" />
 		{busy ? 'Checking…' : submitLabel}
 	</button>
 	<p class="text-center text-sm text-muted">

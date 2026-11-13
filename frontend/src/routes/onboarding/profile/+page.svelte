@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { resolve } from '$app/paths';
 	import { goto, invalidate } from '$app/navigation';
 	import OtpForm from '#lib/features/auth/OtpForm.svelte';
@@ -152,6 +153,7 @@
 				onclick={sendCode}
 				disabled={sendingCode || !phone}
 			>
+				<Icon name="mail" class="size-4" />
 				{sendingCode ? 'Sending…' : 'Send verification code'}
 			</button>
 		{/if}
@@ -212,6 +214,7 @@
 	{#if formError}<p class="field-error" role="alert">{formError}</p>{/if}
 
 	<button class="btn btn-primary w-full py-3" disabled={saving}>
+		<Icon name="check" class="size-4" />
 		{saving ? 'Saving…' : 'Continue'}
 	</button>
 </form>

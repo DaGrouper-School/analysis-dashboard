@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import Modal from '#lib/components/Modal.svelte';
 	import type { Calculation, Parameter } from '#lib/domain/types.ts';
 	import { PLAIN_MAX, checkExplanation } from '#lib/domain/validation.ts';
@@ -200,8 +201,11 @@
 	</form>
 
 	{#snippet footer()}
-		<button type="button" class="btn btn-ghost" onclick={() => (open = false)}>Cancel</button>
+		<button type="button" class="btn btn-ghost" onclick={() => (open = false)}
+			><Icon name="close" class="size-4" /> Cancel</button
+		>
 		<button form="explanation" class="btn btn-primary" disabled={saving}>
+			<Icon name="check" class="size-4" />
 			{saving ? 'Saving…' : 'Save'}
 		</button>
 	{/snippet}

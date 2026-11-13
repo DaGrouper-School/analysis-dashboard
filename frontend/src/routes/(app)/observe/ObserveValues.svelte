@@ -149,6 +149,7 @@
 			<p class="label">Where</p>
 			<div class="flex flex-wrap items-center gap-2">
 				<button type="button" class="btn btn-ghost" onclick={locate} disabled={gps === 'locating'}>
+					<Icon name="pin" class="size-4" />
 					{gps === 'locating' ? 'Finding you…' : gps === 'fix' ? 'Update GPS' : 'Use my GPS'}
 				</button>
 				{#if gps === 'fix' && location}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import AccordionCard from '#lib/components/AccordionCard.svelte';
@@ -94,6 +95,7 @@
 			<PhoneInput bind:value={phone} countries={data.dialCodes} error={phoneError} />
 		</div>
 		<button class="btn btn-primary w-full py-3" disabled={sendingCode}>
+			<Icon name="mail" class="size-4" />
 			{sendingCode ? 'Sending code…' : 'Continue with phone'}
 		</button>
 	</form>

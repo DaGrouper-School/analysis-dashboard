@@ -11,12 +11,14 @@
 
 {#if updated.current && !dismissed}
 	<div
-		class="fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-md items-center gap-3 rounded-md border border-line-strong bg-raised px-4 py-3 shadow-lg"
+		class="fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-md items-center gap-3 rounded-md border border-line-strong bg-raised px-4 py-3 shadow-lg max-sm:bottom-20"
 		role="status"
 	>
 		<Icon name="sync" class="size-5 text-lime" />
 		<p class="flex-1 text-sm text-ink">A new version of the app is ready.</p>
-		<button class="btn btn-primary px-3 py-1.5" onclick={() => location.reload()}>Reload</button>
+		<button class="btn btn-primary px-3 py-1.5" onclick={() => location.reload()}
+			><Icon name="sync" class="size-4" /> Reload</button
+		>
 		<button
 			class="rounded-sm p-1 text-muted hover:text-ink"
 			aria-label="Dismiss"

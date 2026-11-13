@@ -70,7 +70,7 @@
 						type="button"
 						class="btn btn-ghost px-3 py-1.5"
 						aria-haspopup="dialog"
-						onclick={() => onedit(type)}>Edit</button
+						onclick={() => onedit(type)}><Icon name="pencil" class="size-4" /> Edit</button
 					>
 				</div>
 				<p class="mt-3 text-xs text-muted">

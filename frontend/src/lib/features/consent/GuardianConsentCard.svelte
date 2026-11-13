@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { resolve } from '$app/paths';
 	import { invalidate } from '$app/navigation';
 	import { CONSENT_LABELS, validateGuardian } from '#lib/domain/consent.ts';
@@ -119,7 +120,8 @@
 			</div>
 			<div class="flex flex-wrap items-center gap-3 sm:col-span-2">
 				<button class="btn btn-ghost" disabled={sending}
-					>{sending
+					><Icon name="mail" class="size-4" />
+					{sending
 						? 'Sending…'
 						: current?.guardianContact
 							? 'Send a new link'

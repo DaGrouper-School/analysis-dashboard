@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { invalidate } from '$app/navigation';
 	import CopyButton from '#lib/components/CopyButton.svelte';
 	import InstitutionPhotoForm from '#lib/features/classroom/InstitutionPhotoForm.svelte';
@@ -75,6 +76,7 @@
 			{#if error}<p class="field-error" role="alert">{error}</p>{/if}
 			<div class="flex items-center gap-3">
 				<button class="btn btn-primary" disabled={saving}>
+					<Icon name="check" class="size-4" />
 					{saving ? 'Saving…' : 'Save changes'}
 				</button>
 				{#if saved}<p class="text-sm text-muted" role="status">Saved.</p>{/if}

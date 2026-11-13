@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import type { Snippet } from 'svelte';
 	import AccordionCard from '#lib/components/AccordionCard.svelte';
 	import type { InstitutionOverview } from '#lib/domain/types.ts';
@@ -102,7 +103,7 @@
 					class="btn btn-ghost flex-1 rounded-full"
 					href={website}
 					target="_blank"
-					rel="noopener noreferrer">Learn more</a
+					rel="noopener noreferrer"><Icon name="info" class="size-4" /> Learn more</a
 				>
 				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 			{/if}

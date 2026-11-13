@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import type { DemoGoogleAccount } from '#lib/domain/types.ts';
 
@@ -49,6 +50,8 @@
 		{/each}
 	</ul>
 	<div class="flex justify-end px-6 py-4">
-		<button class="btn btn-ghost" onclick={() => dialog.close()}>Cancel</button>
+		<button class="btn btn-ghost" onclick={() => dialog.close()}
+			><Icon name="close" class="size-4" /> Cancel</button
+		>
 	</div>
 </dialog>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { resolve } from '$app/paths';
 	import PublicShell from '#lib/components/PublicShell.svelte';
 	import type { PageProps } from './$types';
@@ -14,6 +15,8 @@
 		<h1 class="mt-4 font-display text-4xl">{data.section.label}</h1>
 		<p class="mt-3 text-muted">{data.section.description}</p>
 		<p class="mt-2 text-sm text-muted">This part of the site is not built yet.</p>
-		<a href={resolve('/')} class="btn btn-ghost mt-8">Back to home</a>
+		<a href={resolve('/')} class="btn btn-ghost mt-8"
+			><Icon name="home" class="size-4" /> Back to home</a
+		>
 	</div>
 </PublicShell>

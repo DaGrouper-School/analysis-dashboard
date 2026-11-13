@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { resolve } from '$app/paths';
 	import Globe, { type GlobeMarker } from '#lib/components/Globe.svelte';
 	import StageBadge from '#lib/components/StageBadge.svelte';
@@ -51,7 +52,7 @@
 			<a
 				class="btn btn-primary w-full"
 				href={resolve('/classrooms/[classroom]', { classroom: selected.id })}
-				>Open {selected.name}'s station</a
+				><Icon name="station" class="size-4" /> Open {selected.name}'s station</a
 			>
 		{/if}
 		<dl class="space-y-2 text-sm" aria-label="Stages">

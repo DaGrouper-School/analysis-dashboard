@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import PublicShell from '#lib/components/PublicShell.svelte';
 	import { CONSENT_LABELS } from '#lib/domain/consent.ts';
 	import type { ConsentRequest } from '#lib/domain/types.ts';
@@ -79,12 +80,13 @@
 			<div class="mt-4 flex flex-wrap gap-2">
 				{#if request.status !== 'given'}
 					<button type="button" class="btn btn-primary" disabled={busy} onclick={() => decide(true)}
-						>{busy ? 'Saving…' : 'Give consent'}</button
+						><Icon name="check" class="size-4" /> {busy ? 'Saving…' : 'Give consent'}</button
 					>
 				{/if}
 				{#if request.status === 'given' || request.status === 'pending'}
 					<button type="button" class="btn btn-ghost" disabled={busy} onclick={() => decide(false)}
-						>{request.status === 'given' ? 'Withdraw consent' : 'Do not consent'}</button
+						><Icon name="close" class="size-4" />
+						{request.status === 'given' ? 'Withdraw consent' : 'Do not consent'}</button
 					>
 				{/if}
 			</div>

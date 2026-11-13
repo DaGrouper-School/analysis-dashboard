@@ -268,19 +268,19 @@
 				{@const id = device.id}
 				<button
 					type="button"
-					class="btn btn-primary min-w-0 flex-1 rounded-full px-3 whitespace-nowrap"
+					class="btn btn-primary flex-[1_1_9rem] rounded-full px-3 whitespace-nowrap"
 					aria-haspopup="dialog"
-					onclick={() => sync(id)}>Sync device</button
+					onclick={() => sync(id)}><Icon name="sync" class="size-4" /> Sync device</button
 				>
 			{/if}
 			{#if classroom && data.canRecord && device}
 				<!-- eslint-disable svelte/no-navigation-without-resolve -->
 				<a
 					class={[
-						'btn min-w-0 flex-1 rounded-full px-3 whitespace-nowrap',
+						'btn flex-[1_1_9rem] rounded-full px-3 whitespace-nowrap',
 						canSync ? 'btn-ghost' : 'btn-primary'
 					]}
-					href={recordHref(device)}>Record manually</a
+					href={recordHref(device)}><Icon name="plus" class="size-4" /> Record manually</a
 				>
 				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 			{/if}
@@ -289,7 +289,8 @@
 				<!-- eslint-disable svelte/no-navigation-without-resolve -->
 				<a
 					class="btn btn-accent basis-full rounded-full"
-					href={domainsHref(classroom.id, shownDeviceId)}>View domains</a
+					href={domainsHref(classroom.id, shownDeviceId)}
+					><Icon name="layers" class="size-4" /> View domains</a
 				>
 				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 			{/if}
@@ -299,7 +300,8 @@
 				<button
 					type="button"
 					class="btn btn-ghost flex-1 rounded-full"
-					onclick={() => openSection('settings')}>Edit overview</button
+					onclick={() => openSection('settings')}
+					><Icon name="pencil" class="size-4" /> Edit overview</button
 				>
 			{/if}
 		{/snippet}

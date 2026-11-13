@@ -122,18 +122,21 @@
 						<p class="text-sm text-muted">{consentSource(member)}</p>
 					</div>
 					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-					<a href={sheetFor(member.userId)} class="btn btn-ghost px-3 py-1.5 text-xs">Print sheet</a
+					<a href={sheetFor(member.userId)} class="btn btn-ghost px-3 py-1.5 text-xs"
+						><Icon name="printer" class="size-3.5" /> Print sheet</a
 					>
 					{#if member.status !== 'given'}
 						<button
 							class="btn btn-primary px-3 py-1.5 text-xs"
-							onclick={() => openRecord(member, true)}>Paper consent received</button
+							onclick={() => openRecord(member, true)}
+							><Icon name="check" class="size-3.5" /> Paper consent received</button
 						>
 					{/if}
 					{#if member.status !== 'withdrawn'}
 						<button
 							class="btn btn-ghost px-3 py-1.5 text-xs"
-							onclick={() => openRecord(member, false)}>Record withdrawal</button
+							onclick={() => openRecord(member, false)}
+							><Icon name="review" class="size-3.5" /> Record withdrawal</button
 						>
 					{/if}
 				</li>
@@ -183,9 +186,10 @@
 		</form>
 		{#snippet footer()}
 			<button type="button" class="btn btn-ghost" onclick={() => (recordOpen = false)}
-				>Cancel</button
+				><Icon name="close" class="size-4" /> Cancel</button
 			>
 			<button form="record-form" class="btn btn-primary" disabled={recording}>
+				<Icon name="check" class="size-4" />
 				{recording ? 'Saving…' : recordGive ? 'Record consent' : 'Record withdrawal'}
 			</button>
 		{/snippet}

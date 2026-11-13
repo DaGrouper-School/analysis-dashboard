@@ -41,7 +41,9 @@
 		</p>
 	</div>
 	{#if canCreate}
-		<a href={resolve('/(app)/classrooms/new')} class="btn btn-primary">New classroom</a>
+		<a href={resolve('/(app)/classrooms/new')} class="btn btn-primary"
+			><Icon name="plus" class="size-4" /> New classroom</a
+		>
 	{/if}
 </div>
 

@@ -22,10 +22,13 @@
 </script>
 
 {#if actions}
-	<div class={['flex items-end gap-3', className]}>
-		<DevicePicker {devices} {deviceId} {onpick} />
+	<!-- On a wide screen, the same three columns as the cards below: the picker as wide as the first. -->
+	<div class={['flex items-end gap-3 lg:grid lg:grid-cols-3 lg:gap-5', className]}>
+		<DevicePicker class="lg:w-full" {devices} {deviceId} {onpick} />
 		<!-- Its buttons as tall as the dropdown beside them, square on a phone. -->
-		<div class="flex shrink-0 gap-2 sm:ml-auto [&_.btn]:h-12 max-sm:[&_.btn]:w-12">
+		<div
+			class="flex shrink-0 gap-2 sm:ml-auto lg:col-start-3 lg:justify-self-end [&_.btn]:h-12 max-sm:[&_.btn]:w-12"
+		>
 			{@render actions()}
 		</div>
 	</div>

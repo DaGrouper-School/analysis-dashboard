@@ -54,7 +54,7 @@
 		</p>
 		<a
 			href={resolve('/(app)/classrooms/[id]/labs/new?onboarding', { id: classroomId })}
-			class="btn btn-primary">Set up your lab</a
+			class="btn btn-primary"><Icon name="flask" class="size-4" /> Set up your lab</a
 		>
 	</div>
 {:else}

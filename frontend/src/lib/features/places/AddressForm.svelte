@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import type { Address, PlaceSuggestion } from '#lib/domain/types.ts';
 	import { validateAddress } from '#lib/domain/validation.ts';
 	import { errorMessage, services, ServiceError } from '#lib/services/index.ts';
@@ -147,6 +148,7 @@
 	{#if formError}<p class="field-error" role="alert">{formError}</p>{/if}
 
 	<button class="btn btn-primary w-full py-3" disabled={saving}>
+		<Icon name="check" class="size-4" />
 		{saving ? 'Saving…' : submitLabel}
 	</button>
 </form>

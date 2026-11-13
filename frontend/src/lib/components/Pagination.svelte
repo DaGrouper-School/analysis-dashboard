@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	/**
 	 * Previous and next through a long list fetched a page at a time, with where you are. Hidden
 	 * when everything fits on one page.
@@ -45,13 +46,13 @@
 				type="button"
 				class="btn btn-ghost"
 				disabled={page <= 1}
-				onclick={() => onpage(page - 1)}>Previous</button
+				onclick={() => onpage(page - 1)}><Icon name="back" class="size-4" /> Previous</button
 			>
 			<button
 				type="button"
 				class="btn btn-ghost"
 				disabled={page >= pages}
-				onclick={() => onpage(page + 1)}>Next</button
+				onclick={() => onpage(page + 1)}>Next <Icon name="arrow" class="size-4" /></button
 			>
 		</div>
 	</nav>

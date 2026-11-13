@@ -291,14 +291,20 @@
 
 	{#snippet footer()}
 		{#if busy}
-			<button type="button" class="btn btn-ghost" onclick={stop}>Stop</button>
+			<button type="button" class="btn btn-ghost" onclick={stop}
+				><Icon name="stop" class="size-4" /> Stop</button
+			>
 		{:else if phase === 'done' || phase === 'error'}
 			<button type="button" class="btn btn-ghost" onclick={sync}>
 				<Icon name="sync" class="size-4" /> Sync again
 			</button>
-			<button type="button" class="btn btn-primary" onclick={() => (open = false)}>Done</button>
+			<button type="button" class="btn btn-primary" onclick={() => (open = false)}
+				><Icon name="check" class="size-4" /> Done</button
+			>
 		{:else}
-			<button type="button" class="btn btn-ghost" onclick={() => (open = false)}>Cancel</button>
+			<button type="button" class="btn btn-ghost" onclick={() => (open = false)}
+				><Icon name="close" class="size-4" /> Cancel</button
+			>
 			<button type="button" class="btn btn-primary" disabled={!device} onclick={sync}>
 				<Icon name="sync" class="size-4" /> Start sync
 			</button>

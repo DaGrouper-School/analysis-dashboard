@@ -150,7 +150,7 @@
 			<h2 id="join-heading" class="text-lg font-semibold">{about.content.joinClassroom.title}</h2>
 			<p class="mt-1 text-muted">{about.content.joinClassroom.body}</p>
 			<a class="btn btn-primary mt-4" href={resolve('/(auth)/signup')}
-				>{about.content.joinClassroom.action}</a
+				><Icon name="users" class="size-4" /> {about.content.joinClassroom.action}</a
 			>
 		</section>
 	{/if}

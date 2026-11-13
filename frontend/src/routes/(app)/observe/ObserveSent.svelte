@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { resolve } from '$app/paths';
 	import type { ObservationTarget, ObservationTemplate, Parameter } from '#lib/domain/types.ts';
 	import ContributorId from '#lib/features/consent/ContributorId.svelte';
@@ -83,9 +84,11 @@
 		{/if}
 	</ul>
 	<div class="mt-6 flex flex-wrap gap-2">
-		<button type="button" class="btn btn-primary" onclick={onanother}>Record another</button>
+		<button type="button" class="btn btn-primary" onclick={onanother}
+			><Icon name="plus" class="size-4" /> Record another</button
+		>
 		<a class="btn btn-ghost" href={resolve('/(app)/labs/[labId]', { labId: target.lab.id })}
-			>Open {target.lab.name}</a
+			><Icon name="flask" class="size-4" /> Open {target.lab.name}</a
 		>
 	</div>
 </section>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { sectionQuery } from '#lib/utils/sensor-selection.ts';
 	import { resolve } from '$app/paths';
 	import { HOST_STATUS_LABELS } from '#lib/domain/hosting.ts';
@@ -92,13 +93,14 @@
 							type="button"
 							class="btn btn-primary"
 							disabled={busy !== null}
-							onclick={() => decide(a.id, true)}>Accept</button
+							onclick={() => decide(a.id, true)}><Icon name="check" class="size-4" /> Accept</button
 						>
 						<button
 							type="button"
 							class="btn btn-ghost"
 							disabled={busy !== null}
-							onclick={() => decide(a.id, false)}>Decline</button
+							onclick={() => decide(a.id, false)}
+							><Icon name="close" class="size-4" /> Decline</button
 						>
 					{:else if a.status === 'accepted' && a.classroomId}
 						<!-- eslint-disable svelte/no-navigation-without-resolve -->
@@ -113,7 +115,7 @@
 						<a
 							class="btn btn-primary"
 							href={`${resolve('/(app)/classrooms/new')}?application=${encodeURIComponent(a.id)}`}
-							>Create its classroom</a
+							><Icon name="plus" class="size-4" /> Create its classroom</a
 						>
 						<!-- eslint-enable svelte/no-navigation-without-resolve -->
 					{/if}

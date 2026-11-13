@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import { goto, invalidate } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import AuthShell from '#lib/features/auth/AuthShell.svelte';
@@ -48,7 +49,9 @@
 	{#if !data.invitation}
 		<h1 class="font-display text-3xl">Invitation not found</h1>
 		<p class="mt-2 text-muted">{data.error} Ask the person who invited you for a new link.</p>
-		<a href={resolve('/')} class="btn btn-ghost mt-8 self-start">Go to DaGrouper</a>
+		<a href={resolve('/')} class="btn btn-ghost mt-8 self-start"
+			><Icon name="home" class="size-4" /> Go to DaGrouper</a
+		>
 	{:else}
 		{@const invitation = data.invitation}
 		<p class="text-sm text-muted">{invitation.invitedByName} invited you to join</p>
@@ -69,20 +72,23 @@
 		<div class="mt-8 space-y-4">
 			{#if invitation.status === 'accepted'}
 				<p class="text-muted">This invitation has already been used.</p>
-				<a href={resolve('/')} class="btn btn-ghost">Go to DaGrouper</a>
+				<a href={resolve('/')} class="btn btn-ghost"
+					><Icon name="home" class="size-4" /> Go to DaGrouper</a
+				>
 			{:else if !data.user}
 				<button class="btn btn-primary w-full py-3" onclick={startSignUp}>
-					Sign up or sign in to join
+					<Icon name="user" class="size-4" /> Sign up or sign in to join
 				</button>
 				<p class="text-sm text-muted">
 					Use {invitation.email} as your email so we can match you to this invitation.
 				</p>
 			{:else if !data.user.onboardingCompleted}
 				<button class="btn btn-primary w-full py-3" onclick={startSignUp}>
-					Finish setting up your account
+					<Icon name="arrow" class="size-4" /> Finish setting up your account
 				</button>
 			{:else}
 				<button class="btn btn-primary w-full py-3" onclick={join} disabled={busy}>
+					<Icon name="users" class="size-4" />
 					{busy ? 'Joining…' : 'Join classroom'}
 				</button>
 				<p class="text-sm text-muted">Signed in as {data.user.fullName} ({data.user.email}).</p>

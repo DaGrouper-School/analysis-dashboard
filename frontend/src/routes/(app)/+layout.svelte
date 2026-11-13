@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import { navigating, page } from '$app/state';
 	import Avatar from '#lib/components/Avatar.svelte';
+	import BottomNav from '#lib/components/BottomNav.svelte';
 	import NavLinks from '#lib/components/NavLinks.svelte';
 	import Logo from '#lib/components/Logo.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
@@ -46,15 +47,22 @@
 		{
 			href: dashboard,
 			label: 'Dashboard',
+			icon: 'home',
 			current: under(dashboard) && !under(domainsPage) && !under(classroomsPage)
 		},
 		...(context
 			? [
 					// A value's page is under Domains.
-					{ href: domainsHref(context.id), label: 'Domains', current: under(domainsPage) },
+					{
+						href: domainsHref(context.id),
+						label: 'Domains',
+						icon: 'layers',
+						current: under(domainsPage)
+					},
 					{
 						href: classroomsHref(context.id),
 						label: 'Classrooms',
+						icon: 'users',
 						current: under(classroomsPage)
 					}
 				]
@@ -64,11 +72,13 @@
 					{
 						href: resolve('/(app)/registry'),
 						label: 'Registry',
+						icon: 'database',
 						current: under(resolve('/(app)/registry'))
 					},
 					{
 						href: resolve('/(app)/host-applications'),
 						label: 'Applications',
+						icon: 'clipboard',
 						current: under(resolve('/(app)/host-applications'))
 					}
 				]
@@ -82,7 +92,7 @@
 	>
 		<div class="mx-auto flex max-w-6xl items-center gap-2 px-3 py-3 sm:gap-4 sm:px-6">
 			<a href={resolve('/(app)/dashboard')} aria-label="Dashboard"><Logo compact /></a>
-			<!-- On a phone the links get their own row, under this one. -->
+			<!-- On a phone the links are a bar at the bottom of the screen. -->
 			<nav
 				aria-label="Main"
 				class="-my-2 ml-4 flex min-w-0 items-center gap-5 overflow-x-auto py-2 text-sm max-sm:hidden"
@@ -103,12 +113,6 @@
 				<Avatar name={data.user.fullName} src={data.user.avatarUrl} />
 			</a>
 		</div>
-		<nav
-			aria-label="Main"
-			class="flex items-center justify-around gap-4 border-t border-line px-3 py-2.5 text-sm sm:hidden"
-		>
-			<NavLinks links={nav} />
-		</nav>
 		{#if syncNote}
 			<a
 				href="{resolve('/(app)/observe')}#sync"
@@ -135,11 +139,12 @@
 	{/if}
 	<main
 		class={[
-			'mx-auto max-w-6xl px-4 py-8 transition-opacity duration-200 sm:px-6 print:max-w-none print:p-0',
+			'mx-auto max-w-6xl px-4 py-8 transition-opacity duration-200 max-sm:pb-28 sm:px-6 print:max-w-none print:p-0',
 			navigating.to && 'opacity-60 delay-150'
 		]}
 		aria-busy={navigating.to ? 'true' : undefined}
 	>
 		{@render children()}
 	</main>
+	<BottomNav links={nav} />
 </div>

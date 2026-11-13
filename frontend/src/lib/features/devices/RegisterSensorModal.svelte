@@ -349,12 +349,16 @@
 
 	{#snippet footer()}
 		{#if phase === 'type'}
-			<button type="button" class="btn btn-ghost" onclick={() => (open = false)}>Cancel</button>
+			<button type="button" class="btn btn-ghost" onclick={() => (open = false)}
+				><Icon name="close" class="size-4" /> Cancel</button
+			>
 			<button form="register-sensor" class="btn btn-primary" disabled={!type}>
 				Next <Icon name="arrow" class="size-4" />
 			</button>
 		{:else if phase === 'identify'}
-			<button type="button" class="btn btn-ghost" onclick={() => (phase = 'type')}>Back</button>
+			<button type="button" class="btn btn-ghost" onclick={() => (phase = 'type')}
+				><Icon name="back" class="size-4" /> Back</button
+			>
 			{#if manual}
 				<button form="register-sensor" class="btn btn-primary">
 					<Icon name="plus" class="size-4" /> Add measurement
@@ -371,16 +375,22 @@
 				onclick={() => {
 					run++;
 					phase = 'identify';
-				}}>Stop</button
+				}}><Icon name="stop" class="size-4" /> Stop</button
 			>
 		{:else if phase === 'error'}
-			<button type="button" class="btn btn-ghost" onclick={() => (phase = 'identify')}>Back</button>
-			<button type="button" class="btn btn-primary" onclick={manual ? add : pair}>Try again</button>
+			<button type="button" class="btn btn-ghost" onclick={() => (phase = 'identify')}
+				><Icon name="back" class="size-4" /> Back</button
+			>
+			<button type="button" class="btn btn-primary" onclick={manual ? add : pair}
+				><Icon name="sync" class="size-4" /> Try again</button
+			>
 		{:else}
 			<button type="button" class="btn btn-ghost" onclick={another}>
 				<Icon name="plus" class="size-4" /> Add another
 			</button>
-			<button type="button" class="btn btn-primary" onclick={() => (open = false)}>Done</button>
+			<button type="button" class="btn btn-primary" onclick={() => (open = false)}
+				><Icon name="check" class="size-4" /> Done</button
+			>
 		{/if}
 	{/snippet}
 </Modal>

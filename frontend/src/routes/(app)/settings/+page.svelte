@@ -122,7 +122,9 @@
 				: 'phone'}
 		</p>
 	</div>
-	<button class="btn btn-ghost ml-auto" onclick={signOut}>Sign out</button>
+	<button class="btn btn-ghost ml-auto" onclick={signOut}
+		><Icon name="logout" class="size-4" /> Sign out</button
+	>
 </div>
 
 <div class="mt-8">
@@ -167,7 +169,7 @@
 						</div>
 						<div class="flex items-center gap-3">
 							<button class="btn btn-primary" disabled={saving}
-								>{saving ? 'Saving…' : 'Save profile'}</button
+								><Icon name="check" class="size-4" /> {saving ? 'Saving…' : 'Save profile'}</button
 							>
 							{#if profileMessage}<p class="text-sm text-muted" role="status">
 									{profileMessage}
@@ -257,7 +259,9 @@
 						personas.
 					</p>
 				</div>
-				<button class="btn btn-ghost" onclick={resetDemo}>Reset demo data</button>
+				<button class="btn btn-ghost" onclick={resetDemo}
+					><Icon name="history" class="size-4" /> Reset demo data</button
+				>
 			</section>
 		{/if}
 	</VerticalTabs>

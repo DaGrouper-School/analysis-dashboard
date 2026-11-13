@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import type { GeoPoint } from '#lib/domain/types.ts';
 
 	/** Latitude/longitude as text so partial input stays editable; parse with `toGeoPoint`. */
@@ -67,6 +68,7 @@
 </div>
 <div class="mt-2 flex flex-wrap gap-2">
 	<button type="button" class="btn btn-ghost px-3 py-1.5 text-xs" onclick={useCurrentLocation}>
+		<Icon name="pin" class="size-3.5" />
 		{locating ? 'Locating…' : 'Use my current location'}
 	</button>
 	{#if copyFrom}
@@ -76,7 +78,7 @@
 			onclick={() => {
 				lat = String(copyFrom.lat);
 				lng = String(copyFrom.lng);
-			}}>{copyLabel}</button
+			}}><Icon name="copy" class="size-3.5" /> {copyLabel}</button
 		>
 	{/if}
 </div>

@@ -251,13 +251,13 @@
 	style:--accent={accent}
 	aria-busy={loading}
 >
-	<!-- On a phone: the institution (collapsed) first, then the globe, the device, what's
-	     happening and its cards. On a wide screen: the device picker, then the three columns, then the cards. -->
+	<!-- On a phone: the device, what's happening, the institution (collapsed), the globe, then
+	     last week's cards. On a wide screen: the device row, then three equal columns, then the cards. -->
 	<div class="mt-6 flex flex-col gap-5 lg:block">
 		<!-- Always shown, with no devices too, so every classroom has the same layout. -->
 		{#if onpickdevice}
 			<DeviceBar
-				class="max-lg:order-3"
+				class="max-lg:order-1"
 				{devices}
 				{deviceId}
 				onpick={onpickdevice}
@@ -269,14 +269,12 @@
 				// At least 38rem, so most devices keep one height; taller content grows the row, never overflows.
 				'contents lg:grid lg:min-h-[38rem] lg:gap-5',
 				onpickdevice && 'lg:mt-6',
-				classroom.location
-					? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,1fr)]'
-					: 'lg:grid-cols-2'
+				classroom.location ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
 			]}
 		>
 			<NowCard
 				bind:element={nowCard}
-				class="max-lg:order-4"
+				class="max-lg:order-2"
 				tiles={now ?? station.now}
 				released={!station.can.seeUnreleased}
 				shared={station.shared}
@@ -288,7 +286,7 @@
 			/>
 			{#if classroom.location}
 				<section
-					class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] max-lg:order-2 sm:h-96 lg:h-full"
+					class="card relative h-80 overflow-hidden p-0 [view-transition-name:station-map] max-lg:order-4 sm:h-96 lg:h-full"
 					aria-label="Where {shown.name} is"
 				>
 					<!-- Out of the flow, so the canvas never sets the card's height and grows it. -->
@@ -322,7 +320,7 @@
 			<InstitutionOverview
 				overview={institution}
 				actions={institutionActions}
-				class="overflow-hidden max-lg:order-1"
+				class="overflow-hidden max-lg:order-3"
 			/>
 		</div>
 
