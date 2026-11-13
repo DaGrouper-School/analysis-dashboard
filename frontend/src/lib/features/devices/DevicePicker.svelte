@@ -9,16 +9,13 @@
 </script>
 
 <script lang="ts">
-	import Icon from '#lib/components/Icon.svelte';
 	import Select from '#lib/components/Select.svelte';
-	import { MOBILE_TABS_MAX } from '#lib/utils/tabs.ts';
 
 	/**
-	 * The classroom's devices as a row of choices (AP-45), each with its registry icon and colour.
-	 * The picked one sets what "What's happening now?" and the domains show, and the page's
-	 * colour. The same on the public classroom page and the dashboard. More than three devices
-	 * become a dropdown, so the card stays one row. It always shows, with no devices too, so every
-	 * classroom's page has the same layout.
+	 * The classroom's devices as a labelled dropdown (AP-45), each with its registry icon and
+	 * colour. The picked one sets what "What's happening now?" and the domains show, and the
+	 * page's colour. The same on the public classroom page, the dashboard and Domains. It always
+	 * shows, with no devices too, so every classroom's page has the same layout.
 	 */
 	let {
 		devices,
@@ -37,65 +34,12 @@
 	);
 </script>
 
-<!-- The "Device" label sits in the card, beside the choices, as part of the selector. On a wide
-     screen the card is as wide as what is in it; narrower, it spans the row like the cards below. -->
-<section
-	class={[
-		'card flex min-w-0 items-center gap-3 overflow-hidden p-3 lg:w-fit lg:max-w-full',
-		className
-	]}
-	aria-labelledby="devices-heading"
->
-	<h2
-		id="devices-heading"
-		class="shrink-0 self-stretch border-r border-line pr-3 pl-1 text-sm font-medium text-muted"
-	>
-		<span class="flex h-full items-center">Device</span>
-	</h2>
-	{#if !devices.length}
-		<!-- No devices yet: the same height as a row of choices, so nothing below moves. -->
-		<p class="flex min-h-12 min-w-0 flex-1 items-center px-1 text-sm text-muted">No devices yet</p>
-	{:else if devices.length > MOBILE_TABS_MAX}
-		<Select
-			{options}
-			value={deviceId}
-			label="Device"
-			labelHidden
-			class="min-w-0 flex-1 sm:w-96 sm:flex-none"
-			onchange={onpick}
-		/>
-	{:else}
-		<div
-			class="-m-1 flex min-w-0 flex-1 gap-2 overflow-x-auto p-1"
-			role="group"
-			aria-labelledby="devices-heading"
-		>
-			{#each devices as device (device.id)}
-				{@const picked = device.id === deviceId}
-				<button
-					type="button"
-					aria-pressed={picked}
-					class={[
-						'flex shrink-0 items-center gap-2.5 rounded-md border px-3.5 py-2.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-teal focus-visible:outline-none',
-						picked ? 'text-ink' : 'border-line text-muted hover:border-line-strong hover:text-ink'
-					]}
-					style:--accent={device.color}
-					style:border-color={picked ? device.color : undefined}
-					style:background-color={picked
-						? `color-mix(in oklab, ${device.color} 14%, transparent)`
-						: undefined}
-					onclick={() => onpick(device.id)}
-				>
-					<span
-						class="grid size-7 place-items-center rounded-full"
-						style:color={device.color}
-						style:background-color="color-mix(in oklab, {device.color} 16%, transparent)"
-					>
-						<Icon name={device.icon} class="size-4" />
-					</span>
-					{device.name}
-				</button>
-			{/each}
-		</div>
-	{/if}
-</section>
+<Select
+	{options}
+	value={deviceId}
+	label="Device"
+	placeholder={devices.length ? 'Choose a device' : 'No devices yet'}
+	disabled={!devices.length}
+	class="min-w-0 flex-1 sm:w-96 sm:flex-none {className}"
+	onchange={onpick}
+/>

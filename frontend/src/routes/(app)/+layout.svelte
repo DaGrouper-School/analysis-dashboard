@@ -2,7 +2,6 @@
 	import { resolve } from '$app/paths';
 	import { navigating, page } from '$app/state';
 	import Avatar from '#lib/components/Avatar.svelte';
-	import Icon from '#lib/components/Icon.svelte';
 	import NavLinks from '#lib/components/NavLinks.svelte';
 	import Logo from '#lib/components/Logo.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
@@ -33,7 +32,7 @@
 
 	// Everything about your classrooms starts on the dashboard (AP-45): the logo and the first
 	// link open it. Members also get Domains, what the classroom they are on measures, and
-	// Classrooms, its sections; and Record if they record (not researchers). Platform admins also
+	// Classrooms, its sections; recording is on the dashboard. Platform admins also
 	// manage the registry and host applications. The links look like the public site's, the
 	// current one underlined.
 	const dashboard = resolve('/(app)/dashboard');
@@ -91,14 +90,6 @@
 				<NavLinks links={nav} />
 			</nav>
 			<div class="ml-auto"></div>
-			{#if data.canRecord}
-				<!-- On a phone just the plus, so the links keep their room. -->
-				<a
-					class="btn btn-accent shrink-0 rounded-full max-sm:px-2.5"
-					href={resolve('/(app)/observe')}
-					><Icon name="plus" class="size-4" /><span class="max-sm:sr-only">Record</span></a
-				>
-			{/if}
 			<a
 				href="{resolve('/(app)/observe')}#sync"
 				class={['chip hidden shrink-0 gap-1.5 text-xs sm:inline-flex', syncChip.class]}

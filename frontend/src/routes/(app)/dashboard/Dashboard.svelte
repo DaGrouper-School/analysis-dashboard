@@ -158,6 +158,11 @@
 		if (deviceId !== device?.id) await choose(data.classroom!.id, deviceId, 'devices');
 		syncing = true;
 	}
+	/** Recording by hand in the device's lab; a hand-entered measurement opens on its own form. */
+	function recordHref(shown: { labId: string; id: string }) {
+		const query = new URLSearchParams({ lab: shown.labId, ...(manual && { device: shown.id }) });
+		return `${resolve('/(app)/observe')}?${query}`;
+	}
 	function lastGps() {
 		return data.readings.find((r) => r.locationSource === 'device')?.location ?? null;
 	}
@@ -237,6 +242,7 @@
 					domains={data.domains}
 					parameters={data.parameters}
 					label="Pair new device"
+					iconOnPhone
 				/>
 			{/if}
 		{/snippet}
@@ -257,20 +263,33 @@
 			{/if}
 		{/snippet}
 		{#snippet nowActions()}
+			<!-- Syncing the device and recording by hand side by side, then its domains under them. -->
 			{#if canSync && device}
 				{@const id = device.id}
 				<button
 					type="button"
-					class="btn btn-primary w-full rounded-full"
+					class="btn btn-primary min-w-0 flex-1 rounded-full px-3 whitespace-nowrap"
 					aria-haspopup="dialog"
-					onclick={() => sync(id)}><Icon name="sync" class="size-4" /> Sync this device</button
+					onclick={() => sync(id)}>Sync device</button
 				>
+			{/if}
+			{#if classroom && data.canRecord && device}
+				<!-- eslint-disable svelte/no-navigation-without-resolve -->
+				<a
+					class={[
+						'btn min-w-0 flex-1 rounded-full px-3 whitespace-nowrap',
+						canSync ? 'btn-ghost' : 'btn-primary'
+					]}
+					href={recordHref(device)}>Record manually</a
+				>
+				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 			{/if}
 			<!-- A classroom's details are for its members; a visitor sees its overview only. -->
 			{#if classroom}
 				<!-- eslint-disable svelte/no-navigation-without-resolve -->
-				<a class="btn btn-ghost flex-1 rounded-full" href={domainsHref(classroom.id, shownDeviceId)}
-					>View domains</a
+				<a
+					class="btn btn-ghost basis-full rounded-full"
+					href={domainsHref(classroom.id, shownDeviceId)}>View domains</a
 				>
 				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 			{/if}

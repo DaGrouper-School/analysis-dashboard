@@ -16,6 +16,7 @@
 		domains,
 		parameters,
 		label,
+		iconOnPhone = false,
 		class: className = ''
 	}: {
 		labs: { id: string; name: string }[];
@@ -23,6 +24,8 @@
 		domains: DomainDefinition[];
 		parameters: Parameter[];
 		label: string;
+		/** Just the plus on a phone, where the button sits beside a dropdown. */
+		iconOnPhone?: boolean;
 		class?: string;
 	} = $props();
 
@@ -33,7 +36,7 @@
 </script>
 
 {#if lab}
-	<div class={['flex flex-wrap items-center gap-2', className]}>
+	<div class={['flex flex-wrap items-end gap-2', className]}>
 		{#if labs.length > 1}
 			<Select
 				options={labOptions}
@@ -45,12 +48,13 @@
 		{/if}
 		<button
 			type="button"
-			class="btn btn-primary shrink-0"
+			class={['btn btn-primary shrink-0', iconOnPhone && 'max-sm:px-2.5']}
 			aria-haspopup="dialog"
+			aria-label={iconOnPhone ? label : undefined}
 			onclick={() => (adding = true)}
 		>
 			<Icon name="plus" class="size-4" />
-			{label}
+			<span class={[iconOnPhone && 'max-sm:sr-only']}>{label}</span>
 		</button>
 	</div>
 	<RegisterSensorModal

@@ -54,7 +54,7 @@
 	/>
 	<section class={['mt-8', loading && 'is-loading']} aria-label="Domains">
 		<!-- The picked device's raw data beside the picker, as on its card in Measurements. -->
-		<div class="flex flex-wrap items-center justify-between gap-3 lg:flex-nowrap">
+		<div class="flex flex-wrap items-end justify-between gap-3 lg:flex-nowrap">
 			<DevicePicker
 				devices={station.devices}
 				deviceId={shownDevice?.id}
