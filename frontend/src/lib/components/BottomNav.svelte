@@ -26,7 +26,7 @@
 			href={link.href}
 			aria-current={link.current ? 'page' : undefined}
 			class={[
-				'flex min-w-0 flex-1 items-center justify-center gap-1.5 border-t-2 py-3.5 text-sm',
+				'flex min-w-0 flex-1 items-center justify-center gap-1.5 border-t-2 py-5 text-sm',
 				link.current ? 'border-teal text-ink' : 'border-transparent text-muted hover:text-ink'
 			]}
 		>
