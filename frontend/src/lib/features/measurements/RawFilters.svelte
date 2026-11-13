@@ -34,6 +34,8 @@
 		onchange: (change: RawFilterChange) => void;
 	} = $props();
 
+	// Until a date is picked, the dates show the span of what the other filters match.
+	const days = $derived(options.days);
 	const parameterOptions = $derived(
 		options.parameterIds
 			.map((id) => ({
@@ -82,8 +84,9 @@
 		id="{idPrefix}-from"
 		type="date"
 		class="input"
-		value={query.from ?? ''}
-		max={query.to}
+		value={query.from ?? days?.first ?? ''}
+		min={days?.first}
+		max={query.to ?? days?.last}
 		onchange={(e) => onchange({ from: e.currentTarget.value || undefined })}
 	/>
 </div>
@@ -93,8 +96,9 @@
 		id="{idPrefix}-to"
 		type="date"
 		class="input"
-		value={query.to ?? ''}
-		min={query.from}
+		value={query.to ?? days?.last ?? ''}
+		min={query.from ?? days?.first}
+		max={days?.last}
 		onchange={(e) => onchange({ to: e.currentTarget.value || undefined })}
 	/>
 </div>

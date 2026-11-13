@@ -5851,10 +5851,27 @@ components:
                   - id
                   - name
                 additionalProperties: false
+            days:
+              anyOf:
+                - type: object
+                  properties:
+                    first:
+                      type: string
+                    last:
+                      type: string
+                  required:
+                    - first
+                    - last
+                  additionalProperties: false
+                - type: "null"
+              description: "The first and last day (UTC, YYYY-MM-DD) of the values the other filters match,
+                whatever the dates asked: what the date filters show until one is picked. Null with
+                no values."
           required:
             - parameterIds
             - sources
             - sites
+            - days
           additionalProperties: false
       required:
         - classroomId

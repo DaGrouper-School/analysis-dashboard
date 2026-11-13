@@ -8,6 +8,7 @@ import {
 	sortRows,
 	toCsv
 } from '#lib/features/measurements/raw-data.ts';
+import { contributorUrl } from '#lib/utils/contributor-url.ts';
 import { ServiceError, type ExportService } from '../types';
 import { currentUser, roleIn } from './classrooms';
 
@@ -97,6 +98,10 @@ export function createMockExports({
 				sources.set(row.sourceId, { id: row.sourceId, name: row.sourceName, kind: row.sourceKind });
 			}
 			const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
+			// The days the other filters' values span, for the date filters to start from.
+			const days = filterRows(all, { ...query, from: undefined, to: undefined })
+				.map((r) => r.observedAt.slice(0, 10))
+				.sort();
 			return {
 				classroomId: classroom.id,
 				classroomName: classroom.name,
@@ -108,7 +113,8 @@ export function createMockExports({
 				options: {
 					parameterIds: [...new Set(inSource.map((r) => r.parameterId))],
 					sources: [...sources.values()].sort(byName),
-					sites: [...sites].map(([id, name]) => ({ id, name })).sort(byName)
+					sites: [...sites].map(([id, name]) => ({ id, name })).sort(byName),
+					days: days.length ? { first: days[0], last: days[days.length - 1] } : null
 				}
 			};
 		},
@@ -125,7 +131,7 @@ export function createMockExports({
 					new Date(now()),
 					newId('exp').slice(4, 10)
 				),
-				content: toCsv(rows, classroom.name, classroom.terms, parameters),
+				content: toCsv(rows, classroom.name, classroom.terms, parameters, contributorUrl),
 				rows: rows.length
 			};
 		}

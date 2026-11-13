@@ -893,6 +893,11 @@ export interface RawPage {
 		parameterIds: string[];
 		sources: { id: string; name: string; kind: RawRow['sourceKind'] }[];
 		sites: { id: string; name: string }[];
+		/**
+		 * The first and last day (UTC, YYYY-MM-DD) of the values the other filters match, whatever
+		 * the dates asked: what the date filters show until one is picked. Null with no values.
+		 */
+		days: { first: string; last: string } | null;
 	};
 }
 
