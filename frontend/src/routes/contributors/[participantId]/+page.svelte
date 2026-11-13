@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
+	import Avatar from '#lib/components/Avatar.svelte';
 	import { resolve } from '$app/paths';
 	import PublicShell from '#lib/components/PublicShell.svelte';
 	import Pagination from '#lib/components/Pagination.svelte';
@@ -15,7 +15,6 @@
 	 */
 	let { data }: PageProps = $props();
 
-	const directory = $derived(data.content.sections.find((s) => s.id === 'classrooms'));
 	const title = $derived(data.profile?.fullName || `Participant ${data.participantId}`);
 	const ROLE_LABELS: Record<string, string> = CLASSROOM_ROLE_LABELS;
 	const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
@@ -25,15 +24,12 @@
 <svelte:head><title>{title} · {data.content.hero.eyebrow}</title></svelte:head>
 
 <PublicShell content={data.content} user={data.user}>
-	<Breadcrumbs
-		items={[
-			{ label: directory?.label ?? 'Classrooms', href: resolve('/classrooms') },
-			{ label: title }
-		]}
-	/>
-
-	<header class="mt-4">
+	<header>
 		<div class="flex flex-wrap items-center gap-3">
+			<!-- Their photo or initials, only when their profile is public. -->
+			{#if data.profile}
+				<Avatar name={data.profile.fullName} src={data.profile.avatarUrl} size="lg" />
+			{/if}
 			<h1 class="font-display text-4xl">{title}</h1>
 			<SampleDataBadge show={data.content.sampleData} />
 		</div>

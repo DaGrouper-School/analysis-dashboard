@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { resetDb } from '#lib/data/mock-db.ts';
+import { resetDb, updateDb } from '#lib/data/mock-db.ts';
 import { createMockServices } from './index';
 
 const services = createMockServices({ latency: 0 });
@@ -246,6 +246,22 @@ describe('Classroom profile (AP-29)', () => {
 		expect(page.classroom.institutionName).toBeNull();
 		const home = await services.publicSite.home();
 		expect(home.classrooms.find((c) => c.id === 'cls_hargeisa')!.institutionName).toBeNull();
+	});
+
+	it("shows a classroom's own members its institution before the host agreement", async () => {
+		// A new classroom: nothing signed yet. Its head still adds the photo and history in Settings.
+		updateDb((state) => {
+			state.classrooms.find((c) => c.id === 'cls_trinity')!.profile.hostAgreementSigned = false;
+		});
+		expect((await services.publicSite.station('cls_trinity')).institution).toBeNull();
+		await signIn('+251911000002');
+		const station = await services.publicSite.station('cls_trinity');
+		expect(station.institution).toMatchObject({ name: 'Trinity School, Addis Ababa' });
+		expect((await services.publicSite.profile('cls_trinity')).institution).toEqual(
+			station.institution
+		);
+		// The public still sees no host.
+		expect(station.classroom.institutionName).toBeNull();
 	});
 
 	it('shows members the kit serials, and people with rights a way to manage it', async () => {
