@@ -108,11 +108,13 @@
 			{#if overview.deviceTypes.length}
 				<div class="mt-3">
 					{@render factLabel('device', 'Devices')}
-					<!-- Each kind of device in its registry icon and colour, as everywhere else. -->
-					<ul class="mt-1.5 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+					<!-- Each kind of device as just its registry icon and colour; its name on hover. -->
+					<ul class="mt-1.5 flex flex-wrap gap-2">
 						{#each overview.deviceTypes as type (type.id)}
-							<li class="flex items-center gap-2">
-								<ColorIcon name={type.icon} color={type.color} />{type.label}
+							<li title={type.label}>
+								<ColorIcon name={type.icon} color={type.color} /><span class="sr-only"
+									>{type.label}</span
+								>
 							</li>
 						{/each}
 					</ul>
