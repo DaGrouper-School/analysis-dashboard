@@ -98,3 +98,86 @@ func TestAccounts(t *testing.T) {
 		t.Fatalf("a registered account: %+v, %v", p, err)
 	}
 }
+
+func consent(c Consent) *Consent { return &c }
+
+// TestSAMConsent: SAM holds given only while consent is given, and is told
+// withdrawn when consent is withdrawn, or no longer given after it was.
+func TestSAMConsent(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		here, held, want *Consent
+	}{
+		{nil, nil, nil},
+		{consent(ConsentPending), nil, nil},
+		{consent(ConsentNotNeeded), nil, nil},
+		{consent(ConsentGiven), nil, consent(ConsentGiven)},
+		{consent(ConsentGiven), consent(ConsentWithdrawn), consent(ConsentGiven)},
+		{consent(ConsentWithdrawn), nil, consent(ConsentWithdrawn)},
+		{consent(ConsentWithdrawn), consent(ConsentGiven), consent(ConsentWithdrawn)},
+		{consent(ConsentPending), consent(ConsentGiven), consent(ConsentWithdrawn)},
+		{consent(ConsentPending), consent(ConsentWithdrawn), nil},
+		{nil, consent(ConsentGiven), consent(ConsentWithdrawn)},
+	} {
+		if got := samConsent(tc.here, tc.held); !sameConsent(got, tc.want) {
+			t.Errorf("here %v, SAM holds %v: %v, want %v", deref(tc.here), deref(tc.held), deref(got), deref(tc.want))
+		}
+	}
+}
+
+func deref(c *Consent) string {
+	if c == nil {
+		return "nothing"
+	}
+	return string(*c)
+}
+
+// TestWhatTakesAccessAway: becoming a minor and losing given consent are
+// queued as taking access away; the rest are not.
+func TestWhatTakesAccessAway(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	pool := testutil.DB(t)
+	now := time.Now()
+	u, err := Create(ctx, pool, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	away := func() bool {
+		t.Helper()
+		var v bool
+		if err := pool.QueryRow(ctx, `SELECT takes_access_away FROM sam_outbox WHERE entity = $1 ORDER BY version DESC LIMIT 1`,
+			Entity(u.ID)).Scan(&v); err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	for _, step := range []struct {
+		name string
+		do   func() error
+		want bool
+	}{
+		{"a first minor state", func() error { _, err := SetMinor(ctx, pool, now, u.ID, true); return err }, false},
+		{"an adult after all", func() error { _, err := SetMinor(ctx, pool, now, u.ID, false); return err }, false},
+		{"a minor again", func() error { _, err := SetMinor(ctx, pool, now, u.ID, true); return err }, true},
+		{"consent asked for", func() error { _, err := SetConsent(ctx, pool, now, u.ID, ConsentPending); return err }, false},
+		{"consent given", func() error { _, err := SetConsent(ctx, pool, now, u.ID, ConsentGiven); return err }, false},
+		{"consent withdrawn", func() error { _, err := SetConsent(ctx, pool, now, u.ID, ConsentWithdrawn); return err }, true},
+		{"consent given again", func() error { _, err := SetConsent(ctx, pool, now, u.ID, ConsentGiven); return err }, false},
+		{"asked again", func() error { _, err := SetConsent(ctx, pool, now, u.ID, ConsentPending); return err }, true},
+	} {
+		if err := step.do(); err != nil {
+			t.Fatalf("%s: %v", step.name, err)
+		}
+		if got := away(); got != step.want {
+			t.Errorf("%s: takes access away %v, want %v", step.name, got, step.want)
+		}
+	}
+	got, err := Get(ctx, pool, u.ID)
+	if err != nil || got.Minor == nil || !*got.Minor || got.Consent == nil || *got.Consent != ConsentPending {
+		t.Fatalf("the user: %+v, %v", got, err)
+	}
+	if _, err := SetConsent(ctx, pool, now, u.ID, "maybe"); err == nil {
+		t.Fatal("an unknown consent state was accepted")
+	}
+}

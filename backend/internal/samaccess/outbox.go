@@ -27,6 +27,11 @@ type Change struct {
 	// Actor is the account the change is sent as; nil for this service. A
 	// kind declares which it takes.
 	Actor *uuid.UUID
+	// TakesAccessAway marks a change after which SAM should allow less than
+	// before, such as consent withdrawn or a member removed. Until it is
+	// delivered SAM is more permissive than this service, so a held one is
+	// logged at error level and listed first.
+	TakesAccessAway bool
 }
 
 // Enqueue writes c to the outbox in q's transaction, so it reaches SAM if
@@ -49,33 +54,37 @@ func Enqueue(ctx context.Context, q db.Querier, now time.Time, c Change) (int64,
 		return 0, err
 	}
 	_, err = q.Exec(ctx, `
-		INSERT INTO sam_outbox (entity, kind, version, payload, actor_id, next_attempt_at, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $6)`, c.Entity, c.Kind, version, payload, c.Actor, now)
+		INSERT INTO sam_outbox (entity, kind, version, payload, actor_id, takes_access_away, next_attempt_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $7)`, c.Entity, c.Kind, version, payload, c.Actor, c.TakesAccessAway, now)
 	return version, err
 }
 
 // Held is a change held for an operator.
 type Held struct {
-	Entity    string     `json:"entity"`
-	Kind      string     `json:"kind"`
-	Version   int64      `json:"version"`
-	Actor     *uuid.UUID `json:"actor_id"`
-	Attempts  int        `json:"attempts"`
-	Error     string     `json:"error"`
-	CreatedAt time.Time  `json:"created_at"`
+	Entity   string     `json:"entity"`
+	Kind     string     `json:"kind"`
+	Version  int64      `json:"version"`
+	Actor    *uuid.UUID `json:"actor_id"`
+	Attempts int        `json:"attempts"`
+	// TakesAccessAway is whether SAM stays more permissive than this
+	// service until the change is delivered.
+	TakesAccessAway bool      `json:"takes_access_away"`
+	Error           string    `json:"error"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
-// HeldChanges lists the changes held for an operator, oldest first.
+// HeldChanges lists the changes held for an operator: those that take
+// access away first, then the rest, each oldest first.
 func HeldChanges(ctx context.Context, q db.Querier) ([]Held, error) {
 	rows, err := q.Query(ctx, `
-		SELECT entity, kind, version, actor_id, attempts, coalesce(last_error, ''), created_at
-		FROM sam_outbox WHERE state = 'held' ORDER BY created_at, id`)
+		SELECT entity, kind, version, actor_id, attempts, takes_access_away, coalesce(last_error, ''), created_at
+		FROM sam_outbox WHERE state = 'held' ORDER BY takes_access_away DESC, created_at, id`)
 	if err != nil {
 		return nil, err
 	}
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (Held, error) {
 		var h Held
-		err := r.Scan(&h.Entity, &h.Kind, &h.Version, &h.Actor, &h.Attempts, &h.Error, &h.CreatedAt)
+		err := r.Scan(&h.Entity, &h.Kind, &h.Version, &h.Actor, &h.Attempts, &h.TakesAccessAway, &h.Error, &h.CreatedAt)
 		return h, err
 	})
 }
@@ -97,4 +106,13 @@ func Release(ctx context.Context, q db.Querier, now time.Time, entity string) er
 		return ErrNothingHeld
 	}
 	return nil
+}
+
+// Waiting reports whether entity has a change waiting to be sent or held
+// for an operator, so a reconciler queues no correction on top of one.
+func Waiting(ctx context.Context, q db.Querier, entity string) (bool, error) {
+	var waiting bool
+	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM sam_outbox WHERE entity = $1 AND state IN ('pending', 'held'))`, entity).
+		Scan(&waiting)
+	return waiting, err
 }

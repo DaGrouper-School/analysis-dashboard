@@ -197,14 +197,18 @@ func outbox(ctx context.Context, out io.Writer, pool *pgxpool.Pool, args []strin
 	}
 	// The tabwriter buffers: a write error shows when it flushes.
 	tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	_, _ = fmt.Fprintln(tw, "ENTITY\tKIND\tVERSION\tSENT AS\tATTEMPTS\tSINCE\tERROR")
+	_, _ = fmt.Fprintln(tw, "ENTITY\tKIND\tVERSION\tSENT AS\tATTEMPTS\tSINCE\tTAKES ACCESS AWAY\tERROR")
 	for _, h := range held {
 		actor := "this service"
 		if h.Actor != nil {
 			actor = h.Actor.String()
 		}
-		_, _ = fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%d\t%s\t%s\n", h.Entity, h.Kind, h.Version, actor, h.Attempts,
-			h.CreatedAt.UTC().Format(time.RFC3339), h.Error)
+		away := "no"
+		if h.TakesAccessAway {
+			away = "YES"
+		}
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%d\t%s\t%s\t%s\n", h.Entity, h.Kind, h.Version, actor, h.Attempts,
+			h.CreatedAt.UTC().Format(time.RFC3339), away, h.Error)
 	}
 	return tw.Flush()
 }
