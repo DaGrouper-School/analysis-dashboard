@@ -28,7 +28,7 @@ func (c *Contract) Checked(h http.Handler, report func(error), outside ...string
 		}
 		rec := &recorder{ResponseWriter: w}
 		h.ServeHTTP(rec, r)
-		if err := op.Check(rec.code(), rec.sent, rec.body.Bytes()); err != nil {
+		if err := c.check(op, rec.code(), rec.sent, rec.body.Bytes()); err != nil {
 			report(err)
 		}
 	})

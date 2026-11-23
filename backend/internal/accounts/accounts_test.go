@@ -55,11 +55,11 @@ func TestAccounts(t *testing.T) {
 	ctx := context.Background()
 	pool := testutil.DB(t)
 	now := time.Now()
-	a, err := Create(ctx, pool, now)
+	a, err := Create(ctx, pool, now, NewUser{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := Create(ctx, pool, now)
+	b, err := Create(ctx, pool, now, NewUser{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestAccounts(t *testing.T) {
 		t.Fatalf("the queued registration: %s v%d, %v", kind, version, err)
 	}
 
-	m := New(pool, nil, time.Now)
+	m := New(pool, nil, time.Now, Config{})
 	if p, err := m.Person(ctx, a.ID); err != nil || p.Registered || p.ParticipantID != 1 {
 		t.Fatalf("an account not yet in SAM: %+v, %v", p, err)
 	}
@@ -139,7 +139,7 @@ func TestWhatTakesAccessAway(t *testing.T) {
 	ctx := context.Background()
 	pool := testutil.DB(t)
 	now := time.Now()
-	u, err := Create(ctx, pool, now)
+	u, err := Create(ctx, pool, now, NewUser{})
 	if err != nil {
 		t.Fatal(err)
 	}

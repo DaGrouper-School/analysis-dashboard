@@ -1,20 +1,24 @@
 // Package apitest drives this service over HTTP, as the front end does,
-// against a database of its own and a SAM built from source with this
-// service onboarded. Every response is checked against the contract, and a
-// breach fails the test. Test code only.
+// against a database of its own, a SAM built from source with this service
+// onboarded, and a fake Google. Every response is checked against the
+// contract, and a breach fails the test. Test code only.
 package apitest
 
 import (
+	"context"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/contract"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/server"
@@ -26,11 +30,30 @@ import (
 // set SAM fetches and the media files pages link to.
 var Outside = []string{"/api/.well-known/", "/api/media/"}
 
+// Gaps are what this service answers that the contract does not declare
+// yet, each with why. They belong in the front end's routes, which the
+// contract is generated from; until they are there, the contract check lets
+// them through, provided the body is an Error.
+var Gaps = []contract.Gap{
+	{Operation: "auth.getCurrentUser", Status: http.StatusUnauthorized,
+		Why: "the front end reads 401 as signed out, but the route lists no errors"},
+	{Operation: "auth.signInWithGoogle", Status: http.StatusConflict,
+		Why: "a Google sign-in whose email belongs to another account"},
+}
+
 // Audience is the audience of the user tokens this service signs for SAM.
 const Audience = "sam"
 
 // FrontEnd is the origin the service is told the front end runs on.
 const FrontEnd = "https://app.test"
+
+// Options are how a test's service is set up.
+type Options struct {
+	// Keys sign user tokens; nil for a key generated for the test.
+	Keys *samaccess.Keys
+	// Demo turns demo mode on.
+	Demo bool
+}
 
 // Env is this service running for one test.
 type Env struct {
@@ -38,16 +61,21 @@ type Env struct {
 	URL  string
 	Pool *pgxpool.Pool
 	SAM  *testenv.SAM
+	// Google is the fake Google sign-in trusts.
+	Google *FakeGoogle
+	// Clock is the service's clock, which a test moves.
+	Clock *Clock
 	// Access is how this service calls SAM, and App the service, as last
 	// started.
 	Access *samaccess.Access
 	App    *server.App
-	http   *http.Client
 
 	t       testing.TB
+	opts    Options
 	sam     samaccess.Config
 	handler atomic.Pointer[http.Handler]
 	check   func(http.Handler) http.Handler
+	http    *http.Client
 }
 
 // New starts this service and SAM until t ends, signing user tokens with a
@@ -56,33 +84,42 @@ type Env struct {
 // set.
 func New(t testing.TB) *Env {
 	t.Helper()
-	keys, err := samaccess.GenerateKeys(time.Now())
-	if err != nil {
-		t.Fatal(err)
-	}
-	return NewWithKeys(t, keys)
+	return NewWith(t, Options{})
 }
 
 // NewWithKeys is New, signing with keys.
 func NewWithKeys(t testing.TB, keys *samaccess.Keys) *Env {
 	t.Helper()
+	return NewWith(t, Options{Keys: keys})
+}
+
+// NewWith is New, set up by o.
+func NewWith(t testing.TB, o Options) *Env {
+	t.Helper()
 	c, err := contract.Find()
 	if err != nil {
 		t.Fatal(err)
 	}
+	c = c.WithGaps(Gaps...)
+	if o.Keys == nil {
+		if o.Keys, err = samaccess.GenerateKeys(time.Now()); err != nil {
+			t.Fatal(err)
+		}
+	}
 	srv := httptest.NewUnstartedServer(nil)
 	url := "http://" + srv.Listener.Addr().String()
-	opts := testenv.Options{Issuer: url, KeySetURL: url + "/api" + samaccess.KeySetPath, Audience: Audience}
-	e := &Env{URL: url, Pool: testutil.DB(t), SAM: testenv.Start(t, opts), t: t,
+	sam := testenv.Options{Issuer: url, KeySetURL: url + "/api" + samaccess.KeySetPath, Audience: Audience}
+	e := &Env{URL: url, Pool: testutil.DB(t), SAM: testenv.Start(t, sam), Google: newFakeGoogle(t), Clock: &Clock{now: time.Now()},
+		t: t, opts: o,
 		check: func(h http.Handler) http.Handler {
 			return c.Checked(h, func(err error) { t.Errorf("contract: %v", err) }, Outside...)
 		}}
-	e.sam = e.SAM.Config(opts)
-	e.Restart(keys)
+	e.sam = e.SAM.Config(sam)
+	e.Restart(o.Keys)
 	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { (*e.handler.Load()).ServeHTTP(w, r) })
 	srv.Start()
 	t.Cleanup(srv.Close)
-	e.http = srv.Client()
+	e.http = e.NewClient()
 	return e
 }
 
@@ -90,18 +127,36 @@ func NewWithKeys(t testing.TB, keys *samaccess.Keys) *Env {
 // to its key file would, and serves it at the same address.
 func (e *Env) Restart(keys *samaccess.Keys) {
 	e.t.Helper()
-	access, err := samaccess.New(e.sam, keys, time.Now)
+	access, err := samaccess.New(e.sam, keys, e.Clock.Now)
 	if err != nil {
 		e.t.Fatal(err)
 	}
 	e.Access = access
-	e.App = server.New(server.Deps{DB: e.Pool, SAM: access, AllowedOrigins: []string{FrontEnd}, Now: time.Now})
+	e.App = server.New(server.Deps{DB: e.Pool, SAM: access, AllowedOrigins: []string{FrontEnd}, Now: e.Clock.Now,
+		Accounts: accounts.Config{GoogleClientID: e.Google.ClientID, GoogleKeysURL: e.Google.KeysURL, Demo: e.opts.Demo}})
 	h := e.check(e.App.Handler())
 	e.handler.Store(&h)
 }
 
+// NewClient is an HTTP client with a cookie jar of its own: one browser.
+// Env.Do uses the first.
+func (e *Env) NewClient() *http.Client {
+	e.t.Helper()
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	return &http.Client{Jar: jar, Timeout: 30 * time.Second}
+}
+
 // Do calls this service and returns the response with its body read.
 func (e *Env) Do(t testing.TB, method, path, body string) (*http.Response, string) {
+	t.Helper()
+	return e.DoWith(t, e.http, method, path, body)
+}
+
+// DoWith is Do through client.
+func (e *Env) DoWith(t testing.TB, client *http.Client, method, path, body string) (*http.Response, string) {
 	t.Helper()
 	req, err := http.NewRequestWithContext(t.Context(), method, e.URL+path, strings.NewReader(body))
 	if err != nil {
@@ -110,7 +165,7 @@ func (e *Env) Do(t testing.TB, method, path, body string) (*http.Response, strin
 	if body != "" {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	res, err := e.http.Do(req)
+	res, err := client.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,6 +176,39 @@ func (e *Env) Do(t testing.TB, method, path, body string) (*http.Response, strin
 	}
 	return res, string(b)
 }
+
+// RunBackground runs the service's background work, such as the restore
+// guard, until t ends.
+func (e *Env) RunBackground() {
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+	for _, task := range e.App.Background() {
+		wg.Go(func() { task(ctx) })
+	}
+	e.t.Cleanup(func() { cancel(); wg.Wait() })
+}
+
+// Worker is an outbox worker for the service's own kinds and accounts.
+func (e *Env) Worker() *samaccess.Worker {
+	e.t.Helper()
+	w, err := samaccess.NewWorker(e.Pool, e.Access, e.App.OutboxKinds(), e.App.Actors(), e.Clock.Now)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	return w
+}
+
+// Clock is a time a test moves by hand.
+type Clock struct {
+	mu  sync.Mutex
+	now time.Time
+}
+
+// Now is the clock's time.
+func (c *Clock) Now() time.Time { c.mu.Lock(); defer c.mu.Unlock(); return c.now }
+
+// Add moves the clock on by d.
+func (c *Clock) Add(d time.Duration) { c.mu.Lock(); defer c.mu.Unlock(); c.now = c.now.Add(d) }
 
 // Unserved lists the operations in the contract app does not serve.
 func Unserved(c *contract.Contract, app *server.App) []*contract.Operation {

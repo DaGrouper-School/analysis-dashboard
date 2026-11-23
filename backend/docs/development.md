@@ -74,6 +74,10 @@ Configuration comes from the environment (`internal/config`). Every problem is r
 | `DGS_SAM_TENANT_FILE` | none: required | The tenant file: the JSON `sam tenant create -json` printed when this service was onboarded, with the service key ([SAM](#sam)) |
 | `DGS_SAM_ISSUER` | none: required | The `iss` of user tokens: the `-issuer` this service was onboarded with |
 | `DGS_SAM_AUDIENCE` | `sam` | The `aud` of user tokens: the `-audience` this service was onboarded with |
+| `DGS_PUBLIC_URL` | `http://localhost:8090` in development and test; required elsewhere | The URL the service is reached at. The session cookie is `Secure` when it is `https`, which outside development and test it must be |
+| `DGS_GOOGLE_CLIENT_ID` | none; required outside development and test | The Google OAuth client ID, the audience of the ID tokens sign-in accepts. Without it Google sign-in is refused |
+| `DGS_SESSION_TTL` | `720h` (30 days) | How long an unused session lasts, a Go duration of at least `1h` |
+| `DGS_DEMO` | `false` | `true` signs in the demo accounts by subject. Start-up is refused with it on outside development and test |
 | `DGS_RECONCILE_INTERVAL` | `15m` | How often the reconciler compares SAM with this database, a Go duration of at least `1m` |
 | `DGS_SIGNING_KEYS_FILE` | none in development and test, where a key is generated at start-up; required elsewhere | The key file user tokens are signed with ([Operations](operations.md#signing-keys)) |
 
@@ -165,6 +169,17 @@ A change SAM must reflect is never sent from a handler. The service function tha
 
 Both stop when the service does, before the database closes.
 
+### Signing in
+
+Sign-in is the accounts module's (`internal/accounts`), as are the tables it keeps ([Accounts and sign-in](design/accounts-and-sign-in.md)).
+
+- **Google.** `POST /api/auth/google` takes an ID token from Google Identity Services and verifies its signature against Google's keys, the issuer, the audience (`DGS_GOOGLE_CLIENT_ID`) and the expiry, with thirty seconds' leeway. Google's keys are cached for an hour and fetched again for an unknown key at most once a minute; while Google cannot be reached, a cached key still verifies. A token that does not verify is `400 invalid_input` on `idToken`, and why is logged, never shown.
+- **The first sign-in** creates the account, its outbox row, its Google identity (`google_identities`, by Google's subject) and the session in one transaction, and answers `isNewUser: true`. A new account whose verified email belongs to another account is `409 conflict`: the person signs in the way they did before. Nothing waits on SAM.
+- **Sessions** are random tokens in the `session` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` when `DGS_PUBLIC_URL` is `https`); `sessions` keeps only their SHA-256 hash. An unused session ends after `DGS_SESSION_TTL`; a use an hour or more after the last extension moves its end on and sends the cookie again. Ended sessions are removed every hour. `POST /api/auth/sign-out` deletes the session and clears the cookie.
+- **Guarding a route.** Modules are given the module's `Sessions` and wrap a signed-in route in `RequireUser`, which answers `401 unauthenticated` without a live session and puts the user in the request's context, read with `accounts.CurrentUser`. `GET /api/auth/me` is guarded so, which the front end reads as signed out.
+- **Demo sign-in.** With `DGS_DEMO` on, `GET /api/auth/demo-accounts` lists `demo_accounts`, and `POST /api/auth/google` takes a demo account's subject in place of a token. Otherwise the list is empty and a subject is no token.
+- **A new account** is shown as no minor, with consent not needed, as the front end starts every account; SAM treats the person as a minor until onboarding asserts otherwise.
+
 ### Accounts in SAM
 
 - **Participant IDs** come from the `participant_ids` sequence, in order, and are never reused. An account's ID is its SAM principal's subject, as a decimal string.
@@ -209,6 +224,9 @@ Each table is read and written only by the package that owns it ([Data ownership
 | `schema_migrations` | `internal/db` | |
 | `sam_outbox` | `internal/samaccess` | |
 | `users` | `internal/accounts` | |
+| `google_identities` | `internal/accounts` | |
+| `sessions` | `internal/accounts` | |
+| `demo_accounts` | `internal/accounts` | |
 | `sam_outbox_versions` | `internal/samaccess` | |
 
 ## Testing
@@ -232,6 +250,10 @@ Tests that need the database call `testutil.DB(t)`, which gives the test a datab
 `e.SAM.Service()` and `e.SAM.Operator()` are SAM clients acting as this service and as the deployment's operator, for setting a test up or checking what reached SAM.
 
 **Route coverage.** `TestRouteCoverage` lists every operation in the contract this service does not serve yet, and how many it does. It reports and does not fail while the service is built.
+
+**Contract gaps.** `apitest.Gaps` lists the statuses this service answers that an operation does not declare yet, each with why, such as `401` on `auth.getCurrentUser`. They belong in the front end's routes, which the contract is generated from; until they are there, the check lets them through, provided the body is an `Error`.
+
+**Signing in** in a test: `e.Google.Token(person, e.Clock.Now())` is an ID token from the fake Google the service trusts, and `e.NewClient()` a browser with its own cookies. `e.Clock` is the service's clock, moved by hand. `apitest.NewWith(t, apitest.Options{Demo: true})` turns demo mode on.
 
 ### SAM's module
 

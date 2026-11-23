@@ -29,7 +29,7 @@ type accountsBench struct {
 
 func newAccounts(t *testing.T, e *apitest.Env, access *samaccess.Access) *accountsBench {
 	t.Helper()
-	b := &accountsBench{t: t, e: e, m: accounts.New(e.Pool, e.Access, time.Now), clock: &manualClock{now: time.Now()}}
+	b := &accountsBench{t: t, e: e, m: accounts.New(e.Pool, e.Access, time.Now, accounts.Config{}), clock: &manualClock{now: time.Now()}}
 	var err error
 	b.worker, err = samaccess.NewWorker(e.Pool, access, b.m.OutboxKinds(), b.m, b.clock.Now)
 	if err != nil {
@@ -40,7 +40,7 @@ func newAccounts(t *testing.T, e *apitest.Env, access *samaccess.Access) *accoun
 
 func (b *accountsBench) create() accounts.User {
 	b.t.Helper()
-	a, err := accounts.Create(context.Background(), b.e.Pool, b.clock.Now())
+	a, err := accounts.Create(context.Background(), b.e.Pool, b.clock.Now(), accounts.NewUser{})
 	if err != nil {
 		b.t.Fatal(err)
 	}

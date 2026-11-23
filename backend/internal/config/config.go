@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 )
@@ -52,6 +53,11 @@ type Config struct {
 	// ReconcileInterval is how often the reconciler compares SAM with this
 	// database.
 	ReconcileInterval time.Duration
+	// PublicURL is where the service is reached, such as
+	// https://dgs.example; the session cookie is Secure when it is HTTPS.
+	PublicURL string
+	// Accounts is how people sign in.
+	Accounts accounts.Config
 	// SigningKeysFile is the key file user tokens are signed with. Required
 	// outside development and test; there, without one, a key is generated
 	// at start-up and lasts until the process exits.
@@ -116,6 +122,9 @@ func Load() (Config, error) {
 		}
 		c.ReconcileInterval = d
 	}
+	if err := c.signIn(); err != nil {
+		errs = append(errs, err)
+	}
 	c.SigningKeysFile = os.Getenv("DGS_SIGNING_KEYS_FILE")
 	if c.SigningKeysFile == "" && !c.Local() {
 		errs = append(errs, fmt.Errorf("DGS_SIGNING_KEYS_FILE must be set in %s: generated keys exist only in development and test", c.Environment))
@@ -130,6 +139,55 @@ const (
 	defaultReconcileInterval = 15 * time.Minute
 	minReconcileInterval     = time.Minute
 )
+
+// Sign-in defaults.
+const (
+	defaultPublicURL = "http://localhost:8090"
+	minSessionTTL    = time.Hour
+)
+
+// signIn reads DGS_PUBLIC_URL, DGS_GOOGLE_CLIENT_ID, DGS_SESSION_TTL and
+// DGS_DEMO. Outside development and test the service is reached over HTTPS,
+// Google sign-in has a client ID, and demo mode is refused.
+func (c *Config) signIn() error {
+	var errs []error
+	c.PublicURL = os.Getenv("DGS_PUBLIC_URL")
+	if c.PublicURL == "" && c.Local() {
+		c.PublicURL = defaultPublicURL
+	}
+	u, err := url.Parse(c.PublicURL)
+	switch {
+	case c.PublicURL == "":
+		errs = append(errs, fmt.Errorf("DGS_PUBLIC_URL must be set in %s: the URL the service is reached at", c.Environment))
+	case err != nil || u.Host == "" || (u.Scheme != "https" && u.Scheme != "http"):
+		errs = append(errs, fmt.Errorf("DGS_PUBLIC_URL must be a URL such as https://dgs.example, not %q", c.PublicURL))
+	case !c.Local() && u.Scheme != "https":
+		errs = append(errs, fmt.Errorf("DGS_PUBLIC_URL must use https in %s", c.Environment))
+	}
+	c.Accounts = accounts.Config{GoogleClientID: os.Getenv("DGS_GOOGLE_CLIENT_ID"), SessionTTL: accounts.DefaultSessionTTL,
+		SecureCookies: u != nil && u.Scheme == "https"}
+	if c.Accounts.GoogleClientID == "" && !c.Local() {
+		errs = append(errs, fmt.Errorf("DGS_GOOGLE_CLIENT_ID must be set in %s: the Google OAuth client ID sign-in accepts", c.Environment))
+	}
+	if v := os.Getenv("DGS_SESSION_TTL"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil || d < minSessionTTL {
+			errs = append(errs, fmt.Errorf("DGS_SESSION_TTL must be a duration of at least %s, such as 720h, not %q", minSessionTTL, v))
+		}
+		c.Accounts.SessionTTL = d
+	}
+	switch v := os.Getenv("DGS_DEMO"); v {
+	case "", "false":
+	case "true":
+		if !c.Local() {
+			errs = append(errs, fmt.Errorf("DGS_DEMO must not be on in %s: demo sign-in exists only in development and test", c.Environment))
+		}
+		c.Accounts.Demo = true
+	default:
+		errs = append(errs, fmt.Errorf("DGS_DEMO must be true or false, not %q", v))
+	}
+	return errors.Join(errs...)
+}
 
 // defaultAudience is the audience this service's user tokens carry for SAM.
 const defaultAudience = "sam"
