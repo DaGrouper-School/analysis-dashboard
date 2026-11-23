@@ -36,9 +36,6 @@ jobs:
     env:
       DGS_TEST_DATABASE_URL: postgres://postgres:dgs@localhost:5432/postgres?sslmode=disable
       GOPRIVATE: github.com/dagrouper-school/*
-      # A read-only token for the SAM repository, whose module the tests
-      # build SAM from.
-      SAM_READ_TOKEN: ${{ secrets.SAM_READ_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -50,7 +47,21 @@ jobs:
         run: |
           npm ci
           npm run openapi:check -w frontend
+      # SAM's module is private. The SAM reader GitHub App, installed on the
+      # SAM repository, gives this job a token that may only read its
+      # contents and is revoked when the job ends.
+      - name: Token for SAM's module
+        id: sam-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.SAM_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SAM_APP_PRIVATE_KEY }}
+          owner: DaGrouper-School
+          repositories: sam
+          permission-contents: read
       - name: Read access to SAM's module
+        env:
+          SAM_READ_TOKEN: ${{ steps.sam-token.outputs.token }}
         run: git config --global url."https://x-access-token:${SAM_READ_TOKEN}@github.com/dagrouper-school/".insteadOf "https://github.com/dagrouper-school/"
       - uses: actions/setup-go@v5
         with:
@@ -68,4 +79,6 @@ jobs:
       - name: Vulnerabilities
         run: make vulncheck
       - name: Build image
+        env:
+          SAM_READ_TOKEN: ${{ steps.sam-token.outputs.token }}
         run: docker build --secret id=sam_read_token,env=SAM_READ_TOKEN -t dgs:ci .

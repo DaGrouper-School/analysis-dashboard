@@ -179,7 +179,7 @@ SAM's repository is private, and `go.mod` lists its command as a tool (`go get -
 
 - `GOPRIVATE=github.com/dagrouper-school/*` keeps it away from the public module proxy and checksum database. The Makefile sets it.
 - Locally, git reaches GitHub as the user the GitHub CLI is signed in as. `make up` passes the image build `SAM_READ_TOKEN`, from `gh auth token` unless it is set, as a build secret that never reaches an image layer.
-- CI reads the repository secret `SAM_READ_TOKEN`, a token that may read the SAM repository and nothing else, for the tests, the vulnerability check and the image build.
+- CI gets a token from a GitHub App installed on the SAM repository with read access to its contents and nothing else. Each job mints its own installation token (`actions/create-github-app-token`), limited to that repository, and it is revoked when the job ends. The app's client ID is the repository variable `SAM_APP_CLIENT_ID` and its private key the secret `SAM_APP_PRIVATE_KEY`. The token serves the tests, the vulnerability check and the image build.
 
 To move to a newer SAM: `go get -tool github.com/dagrouper-school/sam/cmd/sam@<commit or tag>`, then `go mod tidy`.
 
