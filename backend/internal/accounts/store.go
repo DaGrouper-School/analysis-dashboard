@@ -360,3 +360,31 @@ func deleteSpent(ctx context.Context, q db.Querier, now time.Time, window time.D
 	}
 	return nil
 }
+
+// The profile's writes. Each moves updated_at on.
+
+func setProfile(ctx context.Context, q db.Querier, id uuid.UUID, name, email string, verified bool, now time.Time) error {
+	_, err := q.Exec(ctx, `UPDATE users SET full_name = $2, email = $3, email_verified = $4, updated_at = $5 WHERE id = $1`,
+		id, name, email, verified, now)
+	return err
+}
+
+func setAddress(ctx context.Context, q db.Querier, id uuid.UUID, address []byte, now time.Time) error {
+	_, err := q.Exec(ctx, `UPDATE users SET address = $2, updated_at = $3 WHERE id = $1`, id, address, now)
+	return err
+}
+
+func setVerifiedPhone(ctx context.Context, q db.Querier, id uuid.UUID, phone string, now time.Time) error {
+	_, err := q.Exec(ctx, `UPDATE users SET phone = $2, phone_verified = true, updated_at = $3 WHERE id = $1`, id, phone, now)
+	return err
+}
+
+func setPublicProfile(ctx context.Context, q db.Querier, id uuid.UUID, show bool, now time.Time) error {
+	_, err := q.Exec(ctx, `UPDATE users SET public_profile = $2, updated_at = $3 WHERE id = $1`, id, show, now)
+	return err
+}
+
+func setOnboardingCompleted(ctx context.Context, q db.Querier, id uuid.UUID, now time.Time) error {
+	_, err := q.Exec(ctx, `UPDATE users SET onboarding_completed = true, updated_at = $2 WHERE id = $1`, id, now)
+	return err
+}

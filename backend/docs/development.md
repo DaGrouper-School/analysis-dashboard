@@ -189,6 +189,19 @@ Sign-in is the accounts module's (`internal/accounts`), as are the tables it kee
 - **Demo sign-in.** With `DGS_DEMO` on, `GET /api/auth/demo-accounts` lists `demo_accounts`, and `POST /api/auth/google` takes a demo account's subject in place of a token. Otherwise the list is empty and a subject is no token. Demo mode also returns a phone code in the response as `devCode`, and does not text it.
 - **A new account** is shown as no minor, with consent not needed, as the front end starts every account; SAM treats the person as a minor until onboarding asserts otherwise.
 
+### The profile and onboarding
+
+The profile is the accounts module's too: name, email, phone and address stay in this service, and SAM holds only the participant ID. Every call needs a session.
+
+| Call | Does |
+|---|---|
+| `PATCH /api/me/profile` | Sets the name, at least two characters, and the email, stored lower-cased. A Google user's email stays verified while it is unchanged; any other typed in is not. An email another account holds verified is `409 conflict` |
+| `POST /api/me/phone/start`, `POST /api/me/phone/verify` | Verify a phone with the codes and limits of phone sign-in, for the purpose `verify_phone`. A number another account has verified is `409 conflict`; a code sent to another account is `code_invalid` |
+| `PUT /api/me/address` | Sets the address; a street, a city and a country at least |
+| `POST /api/me/onboarding/complete` | Needs a name, an email, a verified phone and an address, and says what is still needed. For an adult it queues `minor=false` for SAM, which until then treats the person as a minor |
+| `PUT /api/me/public-profile` | Shows or hides the name and role on contributor pages. Refused for a minor, `403 forbidden` |
+| `POST /api/me/minor` | Marks a minor: consent pending, no public profile, `minor=true` queued for SAM. Marking again changes nothing |
+
 ### Accounts in SAM
 
 - **Participant IDs** come from the `participant_ids` sequence, in order, and are never reused. An account's ID is its SAM principal's subject, as a decimal string.
@@ -262,7 +275,7 @@ Tests that need the database call `testutil.DB(t)`, which gives the test a datab
 
 `e.SAM.Service()` and `e.SAM.Operator()` are SAM clients acting as this service and as the deployment's operator, for setting a test up or checking what reached SAM.
 
-**Route coverage.** `TestRouteCoverage` lists every operation in the contract this service does not serve yet, and how many it does. It reports and does not fail while the service is built.
+**Route coverage.** `TestRouteCoverage` lists every operation in the contract this service does not serve yet, and how many it does, from the service built as it runs, with its database and SAM, so every module is mounted. It reports and does not fail while the service is built.
 
 **Contract gaps.** `apitest.Gaps` lists the statuses this service answers that an operation does not declare yet, each with why, such as `401` on `auth.getCurrentUser`. They belong in the front end's routes, which the contract is generated from; until they are there, the check lets them through, provided the body is an `Error`.
 

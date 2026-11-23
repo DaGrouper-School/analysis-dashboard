@@ -55,7 +55,8 @@ type Module interface {
 // App is the assembled service.
 type App struct {
 	Deps
-	modules []Module
+	modules  []Module
+	accounts *accounts.Module
 }
 
 // New builds the service. Each module is built here from d and added to
@@ -69,7 +70,8 @@ func New(d Deps) *App {
 		a.modules = append(a.modules, d.SAM)
 	}
 	if d.SAM != nil && d.DB != nil {
-		a.modules = append(a.modules, accounts.New(d.DB, d.SAM, d.Now, d.Accounts))
+		a.accounts = accounts.New(d.DB, d.SAM, d.Now, d.Accounts)
+		a.modules = append(a.modules, a.accounts)
 	}
 	return a
 }
@@ -130,6 +132,10 @@ func (a *App) Actors() samaccess.Actors {
 	}
 	return nil
 }
+
+// Accounts is the accounts module, whose Sessions the modules that guard
+// signed-in routes are built with; nil without a database and SAM.
+func (a *App) Accounts() *accounts.Module { return a.accounts }
 
 // Handler is the HTTP API.
 func (a *App) Handler() http.Handler {
