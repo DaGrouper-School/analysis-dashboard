@@ -1,0 +1,21 @@
+# Development: this service on http://localhost:8090.
+#
+#   make up      (or: docker compose up --build)
+#
+# Then run the front end against it, from the repository root:
+#   VITE_DATA_SOURCE=http VITE_API_URL=http://localhost:8090/api npm run dev -w frontend
+name: dgs
+
+services:
+  backend:
+    build:
+      context: .
+      # Build steps use the host's network, so they resolve names however
+      # the host does. On the default bridge they cannot reach a DNS server
+      # whose address falls in Docker's 172.17.0.0/16, as on some Wi-Fi
+      # networks.
+      network: host
+    environment:
+      DGS_ENV: development
+      DGS_ALLOWED_ORIGINS: http://localhost:5173
+    ports: ["127.0.0.1:8090:8090"]

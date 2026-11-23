@@ -2,6 +2,6 @@
 	"name": "@dagrouper/backend",
 	"private": true,
 	"version": "0.0.1",
-	"description": "Analysis Platform backend: auth API and SAM integration. Stack not chosen yet.",
+	"description": "DaGrouper School backend: a Go service (see README.md). This package holds its generated API contract.",
 	"scripts": {}
 }
