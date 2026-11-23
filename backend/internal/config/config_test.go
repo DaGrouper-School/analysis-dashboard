@@ -8,7 +8,7 @@ import (
 func setEnv(t *testing.T, kv map[string]string) {
 	t.Helper()
 	for _, k := range []string{"DGS_ENV", "DGS_LISTEN", "DGS_ALLOWED_ORIGINS", "DGS_LOG_FORMAT", "DGS_LOG_LEVEL",
-		"DGS_DB_MAX_CONNS", "DGS_DB_STATEMENT_TIMEOUT", "DGS_SAM_AUDIENCE", "DGS_SIGNING_KEYS_FILE"} {
+		"DGS_DB_MAX_CONNS", "DGS_DB_STATEMENT_TIMEOUT", "DGS_SAM_AUDIENCE", "DGS_SIGNING_KEYS_FILE", "DGS_RECONCILE_INTERVAL"} {
 		t.Setenv(k, "")
 	}
 	// Every case has a database, SAM and signing keys unless it says otherwise.
@@ -72,6 +72,8 @@ func TestLoadRefuses(t *testing.T) {
 			"DGS_SAM_URL": "http://sam.example"}, "https"},
 		{"no tenant file", map[string]string{"DGS_ENV": "test", "DGS_SAM_TENANT_FILE": ""}, "DGS_SAM_TENANT_FILE"},
 		{"no issuer", map[string]string{"DGS_ENV": "test", "DGS_SAM_ISSUER": ""}, "DGS_SAM_ISSUER"},
+		{"reconciling too often", map[string]string{"DGS_ENV": "test", "DGS_RECONCILE_INTERVAL": "10s"}, "DGS_RECONCILE_INTERVAL"},
+		{"a bad reconcile interval", map[string]string{"DGS_ENV": "test", "DGS_RECONCILE_INTERVAL": "often"}, "DGS_RECONCILE_INTERVAL"},
 		{"no signing keys in production", map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example",
 			"DGS_SIGNING_KEYS_FILE": ""}, "DGS_SIGNING_KEYS_FILE"},
 	}
@@ -107,7 +109,8 @@ func TestLoadSAM(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.SAM.URL != "http://sam:8080" || c.SAM.Audience != "sam" || c.SAM.Issuer != "https://dgs.example" || c.SigningKeysFile != "" {
+	if c.SAM.URL != "http://sam:8080" || c.SAM.Audience != "sam" || c.SAM.Issuer != "https://dgs.example" || c.SigningKeysFile != "" ||
+		c.ReconcileInterval != defaultReconcileInterval {
 		t.Fatalf("SAM in development: %+v, keys %q", c.SAM, c.SigningKeysFile)
 	}
 }

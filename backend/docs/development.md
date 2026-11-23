@@ -1,6 +1,6 @@
 # Development
 
-How to build, run and test the service as it stands, and the conventions its code follows. So far the service has configuration, logging with request IDs, the HTTP conventions, its PostgreSQL database with migrations, calls to SAM as itself, as a person or as anonymous, the key set SAM verifies user tokens with, `/healthz`, graceful shutdown, and integration tests against SAM and the API contract.
+How to build, run and test the service as it stands, and the conventions its code follows. So far the service has configuration, logging with request IDs, the HTTP conventions, its PostgreSQL database with migrations, calls to SAM as itself, as a person or as anonymous, the key set SAM verifies user tokens with, the outbox that delivers changes to SAM and the reconciler, `/healthz`, graceful shutdown, and integration tests against SAM and the API contract.
 
 ## Prerequisites
 
@@ -74,6 +74,7 @@ Configuration comes from the environment (`internal/config`). Every problem is r
 | `DGS_SAM_TENANT_FILE` | none: required | The tenant file: the JSON `sam tenant create -json` printed when this service was onboarded, with the service key ([SAM](#sam)) |
 | `DGS_SAM_ISSUER` | none: required | The `iss` of user tokens: the `-issuer` this service was onboarded with |
 | `DGS_SAM_AUDIENCE` | `sam` | The `aud` of user tokens: the `-audience` this service was onboarded with |
+| `DGS_RECONCILE_INTERVAL` | `15m` | How often the reconciler compares SAM with this database, a Go duration of at least `1m` |
 | `DGS_SIGNING_KEYS_FILE` | none in development and test, where a key is generated at start-up; required elsewhere | The key file user tokens are signed with ([Operations](operations.md#signing-keys)) |
 
 Every variable the service reads is listed here. The tests also read `DGS_TEST_DATABASE_URL` ([Testing](#testing)).
@@ -82,12 +83,12 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 
 | Package | Responsibility |
 |---|---|
-| `cmd/dgs` | The command. `dgs serve` (the default) applies new migrations, reads the tenant file and signing keys, then serves until `SIGINT` or `SIGTERM`, then stops taking requests and waits up to ten seconds for those in flight. `dgs migrate` applies new migrations and exits. `dgs keys new` prints a new signing key ([Operations](operations.md#signing-keys)) |
+| `cmd/dgs` | The command. `dgs serve` (the default) applies new migrations, reads the tenant file and signing keys, then serves until `SIGINT` or `SIGTERM`, then stops taking requests and waits up to ten seconds for those in flight. `dgs migrate` applies new migrations and exits. `dgs keys new` prints a new signing key ([Operations](operations.md#signing-keys)). `dgs outbox held` and `dgs outbox release ENTITY` list and release changes held for an operator ([Operations](operations.md#held-changes)) |
 | `internal/config` | Reads and checks the configuration |
 | `internal/logx` | Sets up `slog` in text or JSON; carries the request ID so every log line written while serving a request names it |
 | `internal/httpx` | The error format, `WriteJSON`, `WriteError`, the `Handler` type, strict decoding |
 | `internal/db` | Opens the pool, applies the migrations, transactions (`InTx`) and advisory locks |
-| `internal/samaccess` | Calls SAM as this service, as a person through a user token or as anonymous; the signing keys and the key set; SAM's errors translated |
+| `internal/samaccess` | Calls SAM as this service, as a person through a user token or as anonymous; the signing keys and the key set; SAM's errors translated; the outbox, its worker and the reconciler |
 | `internal/server` | `server.New(Deps)`, the `Module` interface, the middleware, `/healthz` and the API's not-found answer |
 | `internal/testutil` | A fresh database per test (test code only) |
 | `internal/contract` | Reads `openapi.yaml` and checks responses against it (test code only) |
@@ -150,6 +151,19 @@ Every error is JSON `{code, message, fields}`. `code` is one of the front end's 
 
 Calls to SAM time out after fifteen seconds. `/healthz` does not ask SAM: this service answers while SAM is down.
 
+### The outbox
+
+A change SAM must reflect is never sent from a handler. The service function that makes it writes the entity's whole desired state to the outbox, in the same transaction, and the worker sends it ([The outbox](design/sam-integration.md#the-outbox)).
+
+- **Enqueueing.** `samaccess.Enqueue(ctx, tx, now, Change{Entity, Kind, Payload, Actor})`. `Entity` names what the change is about, such as `user:<account id>`, and never a participant ID or a row ID a restored database could give out again. `Actor` is the account the change is sent as, or nil for this service.
+- **Kinds.** A module whose changes reach SAM declares its kinds with `OutboxKinds() []samaccess.Kind`: a name, whether it is sent as a person (`ByPerson`), and `Apply(ctx, Attempt)`, which sends the desired state through `Attempt.SAM`, the client acting as the change's actor.
+- **Idempotency keys.** Every write `Apply` sends carries `Attempt.WithKey(ctx, what)`, the key `<entity>:<what>:v<version>`, so a retry after a lost answer gets the first answer back. When `Attempt.Replayed` is false, the first attempt is more than a day old and SAM no longer replays it, so a change that must happen once checks what SAM holds before sending again.
+- **What Apply returns.** `nil` once SAM holds the change. `samaccess.ErrNotYet` while another entity must reach SAM first: the change is retried. `samaccess.Hold(err)` for what retrying cannot fix. SAM's own answers are sorted by the worker: `unavailable`, `internal`, `rate_limited` (after `Retry-After`), `idempotency_in_progress`, any 5xx and timeouts are retried, with backoff from a second up to five minutes; `forbidden`, `unauthenticated`, `invalid_request`, `attenuation_violation`, `idempotency_key_reused` and any other refusal hold the change.
+- **The worker** runs on the instance holding the outbox lock, checks every second, and sends only the latest pending version of each entity. Once SAM holds it, the entity's older versions, waiting or held, are superseded. A change sent as a person waits until their principal is registered, and is held if their account is gone or the kind and the change disagree about who acts. Accounts are found through the module implementing `samaccess.Actors`.
+- **The reconciler** runs every `DGS_RECONCILE_INTERVAL` on the instance holding the reconciler lock, and runs each `samaccess.Check` that modules declare with `Checks()`. A check compares one kind of entity in SAM with this database, a page at a time, and enqueues a correction where they differ. A failing check is logged and runs again on the next pass.
+
+Both stop when the service does, before the database closes.
+
 ## The database
 
 PostgreSQL 17, through `pgx` (`internal/db`). `db.Open` opens a pool of at most `DGS_DB_MAX_CONNS` connections, each with `statement_timeout` set to `DGS_DB_STATEMENT_TIMEOUT`, and fails unless the database answers.
@@ -158,7 +172,7 @@ PostgreSQL 17, through `pgx` (`internal/db`). `db.Open` opens a pool of at most 
 
 **Transactions.** `db.InTx(ctx, q, fn)` runs `fn` in a transaction. When `ctx` already carries one (`db.WithTx`), `fn` runs in a savepoint of it, so a service function that needs a transaction works the same alone or inside a caller's.
 
-**Advisory locks** are taken only through `db.Lock` (held by a connection until released) and `db.TryLock` (held until the transaction ends), and every key is a constant in `internal/db/locks.go`, so no two uses share one by accident.
+**Advisory locks** are taken only through `db.Lock` (held by a connection until released) and `db.TryLock` (held until the transaction ends), and every key is a constant in `internal/db/locks.go`, so no two uses share one by accident. `MigrationLock` is held while migrations apply, `OutboxLock` for each pass of the outbox worker and `ReconcilerLock` for each pass of the reconciler.
 
 ## Conventions
 
@@ -184,6 +198,8 @@ Each table is read and written only by the package that owns it ([Data ownership
 | Table | Owner | Also used by |
 |---|---|---|
 | `schema_migrations` | `internal/db` | |
+| `sam_outbox` | `internal/samaccess` | |
+| `sam_outbox_versions` | `internal/samaccess` | |
 
 ## Testing
 

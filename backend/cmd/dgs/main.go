@@ -1,9 +1,12 @@
 // Command dgs runs the DaGrouper School backend.
 //
-//	dgs serve      apply new migrations, then serve the API until SIGINT or
-//	               SIGTERM (the default)
-//	dgs migrate    apply new migrations and exit
-//	dgs keys new   print a new signing key for the key file
+//	dgs serve                   apply new migrations, then serve the API,
+//	                            send changes to SAM and reconcile with it,
+//	                            until SIGINT or SIGTERM (the default)
+//	dgs migrate                 apply new migrations and exit
+//	dgs keys new                print a new signing key for the key file
+//	dgs outbox held             list the changes for SAM held for an operator
+//	dgs outbox release ENTITY   send an entity's latest held change again
 //
 // Configuration comes from the environment; docs/development.md lists every
 // variable and its default.
@@ -20,8 +23,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
+	"sync"
 	"syscall"
+	"text/tabwriter"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -46,14 +52,13 @@ func main() {
 	}
 }
 
-const usage = "usage: dgs serve|migrate|keys new"
+const usage = "usage: dgs serve|migrate|keys new|outbox held|outbox release ENTITY"
 
 func run(ctx context.Context, out io.Writer, args []string) error {
-	cmd := args[0]
 	switch {
-	case cmd == "keys" && len(args) == 2 && args[1] == "new":
+	case is(args, "keys", "new"):
 		return newKey(out)
-	case (cmd == "serve" || cmd == "migrate") && len(args) == 1:
+	case is(args, "serve"), is(args, "migrate"), is(args, "outbox", "held"), len(args) == 3 && is(args[:2], "outbox", "release"):
 	default:
 		return fmt.Errorf("unknown command %q; %s", strings.Join(args, " "), usage)
 	}
@@ -71,10 +76,32 @@ func run(ctx context.Context, out io.Writer, args []string) error {
 		return err
 	}
 	defer pool.Close()
-	if cmd == "migrate" {
+	switch args[0] {
+	case "migrate":
 		return nil
+	case "outbox":
+		return outbox(ctx, out, pool, args[1:])
 	}
+	return serveAll(ctx, cfg, pool)
+}
+
+// is reports whether args are exactly want.
+func is(args []string, want ...string) bool { return slices.Equal(args, want) }
+
+// serveAll serves the API, and sends the outbox and reconciles with SAM in
+// the background, until ctx ends. The background work stops before the
+// database closes.
+func serveAll(ctx context.Context, cfg config.Config, pool *pgxpool.Pool) error {
 	sam, err := samAccess(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	app := server.New(server.Deps{DB: pool, SAM: sam, AllowedOrigins: cfg.AllowedOrigins, Now: time.Now})
+	worker, err := samaccess.NewWorker(pool, sam, app.OutboxKinds(), app.Actors(), time.Now)
+	if err != nil {
+		return err
+	}
+	reconciler, err := samaccess.NewReconciler(pool, app.Checks(), cfg.ReconcileInterval)
 	if err != nil {
 		return err
 	}
@@ -82,9 +109,46 @@ func run(ctx context.Context, out io.Writer, args []string) error {
 	if err != nil {
 		return err
 	}
-	app := server.New(server.Deps{DB: pool, SAM: sam, AllowedOrigins: cfg.AllowedOrigins, Now: time.Now})
+	bg, stop := context.WithCancel(ctx)
+	var wg sync.WaitGroup
+	wg.Go(func() { worker.Run(bg) })
+	wg.Go(func() { reconciler.Run(bg) })
 	slog.InfoContext(ctx, "listening", "addr", ln.Addr().String(), "env", cfg.Environment)
-	return serve(ctx, ln, app.Handler())
+	err = serve(ctx, ln, app.Handler())
+	stop()
+	wg.Wait()
+	return err
+}
+
+// outbox lists the changes held for an operator, or releases one entity's.
+func outbox(ctx context.Context, out io.Writer, pool *pgxpool.Pool, args []string) error {
+	if args[0] == "release" {
+		if err := samaccess.Release(ctx, pool, time.Now(), args[1]); err != nil {
+			return fmt.Errorf("%s: %w", args[1], err)
+		}
+		_, err := fmt.Fprintf(out, "released %s: it is sent again on the next pass\n", args[1])
+		return err
+	}
+	held, err := samaccess.HeldChanges(ctx, pool)
+	if err != nil {
+		return err
+	}
+	if len(held) == 0 {
+		_, err := fmt.Fprintln(out, "nothing is held")
+		return err
+	}
+	// The tabwriter buffers: a write error shows when it flushes.
+	tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
+	_, _ = fmt.Fprintln(tw, "ENTITY\tKIND\tVERSION\tSENT AS\tATTEMPTS\tSINCE\tERROR")
+	for _, h := range held {
+		actor := "this service"
+		if h.Actor != nil {
+			actor = h.Actor.String()
+		}
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%d\t%s\t%s\n", h.Entity, h.Kind, h.Version, actor, h.Attempts,
+			h.CreatedAt.UTC().Format(time.RFC3339), h.Error)
+	}
+	return tw.Flush()
 }
 
 // migrate opens the database and applies the migrations it has not had,
