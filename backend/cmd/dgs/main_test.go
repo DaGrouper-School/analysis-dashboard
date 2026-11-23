@@ -1,13 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
 	"net"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/testutil"
 )
 
@@ -59,13 +64,43 @@ func TestServeDrains(t *testing.T) {
 	}
 }
 
+// setSAM points the configuration at a SAM; the commands tested here
+// never call it.
+func setSAM(t *testing.T) {
+	t.Helper()
+	t.Setenv("DGS_SAM_URL", "http://127.0.0.1:1")
+	t.Setenv("DGS_SAM_TENANT_FILE", filepath.Join(t.TempDir(), "tenant.json"))
+	t.Setenv("DGS_SAM_ISSUER", "http://127.0.0.1:8090")
+	t.Setenv("DGS_SIGNING_KEYS_FILE", "")
+}
+
 func TestRunRefuses(t *testing.T) {
-	if err := run(context.Background(), "frobnicate"); err == nil || !strings.Contains(err.Error(), "unknown command") {
-		t.Fatalf("unknown command: %v", err)
+	for _, args := range [][]string{{"frobnicate"}, {"keys"}, {"keys", "old"}, {"serve", "now"}} {
+		if err := run(context.Background(), io.Discard, args); err == nil || !strings.Contains(err.Error(), "unknown command") {
+			t.Fatalf("%v: %v", args, err)
+		}
 	}
 	t.Setenv("DGS_ENV", "")
-	if err := run(context.Background(), "serve"); err == nil || !strings.Contains(err.Error(), "DGS_ENV") {
+	if err := run(context.Background(), io.Discard, []string{"serve"}); err == nil || !strings.Contains(err.Error(), "DGS_ENV") {
 		t.Fatalf("no environment: %v", err)
+	}
+}
+
+// TestKeysNew: dgs keys new prints a key that, once it signs, is a valid
+// key file entry.
+func TestKeysNew(t *testing.T) {
+	var out bytes.Buffer
+	if err := run(context.Background(), &out, []string{"keys", "new"}); err != nil {
+		t.Fatal(err)
+	}
+	var k samaccess.KeyEntry
+	if err := json.Unmarshal(out.Bytes(), &k); err != nil || k.Signs {
+		t.Fatalf("printed %q: %v", out.String(), err)
+	}
+	k.Signs = true
+	file, _ := json.Marshal(map[string]any{"keys": []samaccess.KeyEntry{k}})
+	if keys, err := samaccess.ParseKeys(file); err != nil || keys.SigningKeyID() != k.ID {
+		t.Fatalf("the printed key in a key file: %v", err)
 	}
 }
 
@@ -75,8 +110,9 @@ func TestMigrate(t *testing.T) {
 	dsn := testutil.EmptyDB(t)
 	t.Setenv("DGS_ENV", "test")
 	t.Setenv("DGS_DATABASE_URL", dsn)
+	setSAM(t)
 	for range 2 {
-		if err := run(context.Background(), "migrate"); err != nil {
+		if err := run(context.Background(), io.Discard, []string{"migrate"}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -91,7 +127,8 @@ func TestMigrate(t *testing.T) {
 func TestServeNeedsTheDatabase(t *testing.T) {
 	t.Setenv("DGS_ENV", "test")
 	t.Setenv("DGS_DATABASE_URL", "postgres://dgs@127.0.0.1:1/dgs?connect_timeout=2")
-	if err := run(context.Background(), "serve"); err == nil {
+	setSAM(t)
+	if err := run(context.Background(), io.Discard, []string{"serve"}); err == nil {
 		t.Fatal("serve started without a database")
 	}
 }

@@ -1,4 +1,5 @@
-# Development: this service on http://localhost:8090, with its database.
+# Development: this service on http://localhost:8090, with its database and
+# a SAM it is onboarded on, at http://localhost:8091.
 #
 #   make up      (or: docker compose up --build)
 #
@@ -28,10 +29,73 @@ services:
       DGS_ENV: development
       DGS_ALLOWED_ORIGINS: http://localhost:5173
       DGS_DATABASE_URL: postgres://postgres:dgs@db:5432/dgs?sslmode=disable
+      DGS_SAM_URL: http://sam:8080
+      DGS_SAM_TENANT_FILE: /sam/tenant.json
+      DGS_SAM_ISSUER: http://backend:8090
+    volumes:
+      - sam-config:/sam:ro
     ports: ["127.0.0.1:8090:8090"]
     depends_on:
       db:
         condition: service_healthy
+      sam:
+        condition: service_healthy
+
+  # SAM, built from the module version go.mod pins. sam-init sets its
+  # deployment up and onboards this service once, keeping the operator's
+  # key and the tenant file in the sam-config volume; SAM fetches this
+  # service's key set by container name, which SAM_ALLOW_PRIVATE_KEY_SETS
+  # allows.
+  sam:
+    build: &sam-build
+      context: .
+      target: sam
+      network: host
+      secrets: [sam_read_token]
+    environment: &sam-env
+      SAM_DATABASE_URL: postgres://postgres:dgs@sam-db:5432/sam?sslmode=disable
+      SAM_ALLOW_PRIVATE_KEY_SETS: "true"
+      SAM_LOG_FORMAT: text
+    # The tenant file, which `make run` copies out from here.
+    volumes:
+      - sam-config:/config:ro
+    ports: ["127.0.0.1:8091:8080"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null"]
+      interval: 2s
+      retries: 30
+    depends_on:
+      sam-init:
+        condition: service_completed_successfully
+
+  sam-init:
+    build: *sam-build
+    environment: *sam-env
+    volumes:
+      - sam-config:/config
+    entrypoint:
+      - sh
+      - -ec
+      - |
+        test -s /config/operator.json || sam bootstrap -json > /config/operator.json
+        test -s /config/tenant.json || sam tenant create -name dgs -registry \
+          -issuer http://backend:8090 -jwks http://backend:8090/api/.well-known/jwks.json \
+          -audience sam -json > /config/tenant.json
+    depends_on:
+      sam-db:
+        condition: service_healthy
+
+  sam-db:
+    image: postgis/postgis:17-3.5-alpine
+    environment:
+      POSTGRES_PASSWORD: dgs
+      POSTGRES_DB: sam
+    volumes:
+      - sam-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1"]
+      interval: 2s
+      retries: 30
 
   db:
     image: postgres:17-alpine
@@ -61,6 +125,8 @@ services:
 
 volumes:
   dgs-db:
+  sam-data:
+  sam-config:
 
 secrets:
   sam_read_token:

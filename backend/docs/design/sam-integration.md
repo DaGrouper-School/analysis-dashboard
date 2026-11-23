@@ -30,7 +30,7 @@ SAM also checks the actor of every change. It refuses a grant or membership to o
 
 ### The tenant
 
-The service is onboarded once with `sam tenant create -json`, whose output is the tenant file: the service key, the tenant root space, the trusted issuer and SAM's anonymous principal. If the file does not carry the anonymous principal, it is asked of SAM once, at first use. The service principal holds the tenant grant on the root space, from which it issues every role group's grants, and `registry:manage` there.
+The service is onboarded once with `sam tenant create -json`, whose output is the tenant file: the service key, the tenant root space, the trusted issuer and SAM's anonymous principal. The service principal holds the tenant grant on the root space, from which it issues every role group's grants, and `registry:manage` there.
 
 ### Three ways to call SAM
 
@@ -44,9 +44,9 @@ SAM decides and audits a call made as a person as that person, with this service
 
 ### User tokens and the key set
 
-- For each call made as a person, this service signs a short-lived token: Ed25519, five minutes (SAM accepts at most ten), with the participant ID as subject and the issuer and audience the tenant's onboarding named.
+- For each call made as a person, this service signs a short-lived token: Ed25519, five minutes (SAM accepts at most ten), with the participant ID as subject, the issuer and audience the tenant's onboarding named, and this service's name in SAM as `azp`.
 - The public keys are published at `/api/.well-known/jwks.json`. SAM fetches and caches the set.
-- **Rotation:** the current key is added to the retired keys, which are published but sign nothing; the new key becomes the signing key; the service restarts. Tokens last minutes, so a retired key can be dropped from the set a day later. Rotation never strands a token in flight, since SAM's cached set still verifies it.
+- **Rotation:** SAM keeps a fetched set for five minutes, so a new key is published, signing nothing, at least that long before it signs; then it becomes the signing key and the old one stays published. Tokens last minutes, so the old key can be dropped from the set a day later. Rotation never strands a token, since SAM's cached set holds both keys ([Operations](../operations.md#rotating)).
 - **Keys outside development:** start-up is refused without a configured signing key. A key generated at start-up exists only in development and test.
 
 ### Who acts in SAM
@@ -150,12 +150,12 @@ SAM offers four authorised reads: list, latest, aggregate and summary. This serv
 
 | SAM answers | The front end gets | Note |
 |---|---|---|
-| 400 invalid | `invalid_input` | With field messages where SAM names the field and the front end has one |
-| 401 or 403 | `forbidden` | Never `unauthenticated`: the session is this service's |
+| 400 or 422 (`invalid_request` and an endpoint's own) | `invalid_input` | With field messages where SAM names the field and the front end has one |
+| 401 or 403 | `forbidden` | Never `unauthenticated`: the session is this service's. A 401 is a fault in this service's credentials, logged as such |
 | 404 | `not_found` | |
 | 409 | `conflict` | |
 | 429 | `rate_limited` | With `Retry-After` |
-| 5xx, timeout, unreachable | `internal` | Logged with the request ID |
+| 5xx, timeout, unreachable, or a call SAM refuses as malformed | `internal` | Logged with the request ID |
 
 The message is this service's own. SAM's developer-facing detail is logged, never shown. A SAM refusal is never answered as a failure of this service. Calls to SAM have a timeout of fifteen seconds.
 

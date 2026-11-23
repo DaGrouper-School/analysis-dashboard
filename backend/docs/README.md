@@ -2,7 +2,7 @@
 
 This service backs the DaGrouper School analysis dashboard. It holds people, sessions, classrooms and everything specific to DaGrouper School, and is SAM's first tenant, relying on SAM for access control and observation data.
 
-So far the service runs with its database and migrations, serves `/healthz` and shuts down cleanly, and its integration tests run it against a SAM built from source, holding every response to the API contract. The design documents describe the whole service to be built; every other page describes only what exists.
+So far the service runs with its database and migrations, calls SAM as itself, as a person or as anonymous, serves `/healthz` and shuts down cleanly, and its integration tests run it against a SAM built from source, holding every response to the API contract. The design documents describe the whole service to be built; every other page describes only what exists.
 
 ## Design
 
@@ -22,5 +22,6 @@ So far the service runs with its database and migrations, serves `/healthz` and 
 | Page | Read it to |
 |---|---|
 | [Development](development.md) | build, run, configure and test the service; learn the conventions its code follows |
+| [Operations](operations.md) | run the deployed service: its signing keys and the tenant file |
 | [Decisions](decisions/README.md) | record a decision taken while building |
 | [API (Swagger UI)](index.html) | browse the contract served to the front end |

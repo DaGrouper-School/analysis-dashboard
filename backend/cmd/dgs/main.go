@@ -1,8 +1,9 @@
 // Command dgs runs the DaGrouper School backend.
 //
-//	dgs serve     apply new migrations, then serve the API until SIGINT or
-//	              SIGTERM (the default)
-//	dgs migrate   apply new migrations and exit
+//	dgs serve      apply new migrations, then serve the API until SIGINT or
+//	               SIGTERM (the default)
+//	dgs migrate    apply new migrations and exit
+//	dgs keys new   print a new signing key for the key file
 //
 // Configuration comes from the environment; docs/development.md lists every
 // variable and its default.
@@ -10,13 +11,16 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -25,25 +29,33 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/config"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/logx"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/server"
 )
 
 func main() {
-	cmd := "serve"
-	if len(os.Args) > 1 {
-		cmd = os.Args[1]
+	args := os.Args[1:]
+	if len(args) == 0 {
+		args = []string{"serve"}
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	if err := run(ctx, cmd); err != nil {
-		slog.Error(cmd+" failed", "err", err)
+	if err := run(ctx, os.Stdout, args); err != nil {
+		slog.Error(strings.Join(args, " ")+" failed", "err", err)
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, cmd string) error {
-	if cmd != "serve" && cmd != "migrate" {
-		return fmt.Errorf("unknown command %q (serve, migrate)", cmd)
+const usage = "usage: dgs serve|migrate|keys new"
+
+func run(ctx context.Context, out io.Writer, args []string) error {
+	cmd := args[0]
+	switch {
+	case cmd == "keys" && len(args) == 2 && args[1] == "new":
+		return newKey(out)
+	case (cmd == "serve" || cmd == "migrate") && len(args) == 1:
+	default:
+		return fmt.Errorf("unknown command %q; %s", strings.Join(args, " "), usage)
 	}
 	cfg, err := config.Load()
 	if err != nil {
@@ -62,11 +74,15 @@ func run(ctx context.Context, cmd string) error {
 	if cmd == "migrate" {
 		return nil
 	}
+	sam, err := samAccess(ctx, cfg)
+	if err != nil {
+		return err
+	}
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return err
 	}
-	app := server.New(server.Deps{DB: pool, AllowedOrigins: cfg.AllowedOrigins, Now: time.Now})
+	app := server.New(server.Deps{DB: pool, SAM: sam, AllowedOrigins: cfg.AllowedOrigins, Now: time.Now})
 	slog.InfoContext(ctx, "listening", "addr", ln.Addr().String(), "env", cfg.Environment)
 	return serve(ctx, ln, app.Handler())
 }
@@ -89,6 +105,35 @@ func migrate(ctx context.Context, cfg config.Config) (*pgxpool.Pool, error) {
 	}
 	slog.InfoContext(ctx, "database is up to date", "applied", len(applied))
 	return pool, nil
+}
+
+// samAccess reads the tenant file and the signing keys. Without a key file,
+// which only development and test allow, it signs with a key generated now.
+func samAccess(ctx context.Context, cfg config.Config) (*samaccess.Access, error) {
+	var keys *samaccess.Keys
+	var err error
+	if cfg.SigningKeysFile != "" {
+		keys, err = samaccess.LoadKeys(cfg.SigningKeysFile)
+	} else {
+		slog.WarnContext(ctx, "no DGS_SIGNING_KEYS_FILE: signing user tokens with a key generated now, which a restart replaces")
+		keys, err = samaccess.GenerateKeys(time.Now())
+	}
+	if err != nil {
+		return nil, err
+	}
+	return samaccess.New(cfg.SAM, keys, time.Now)
+}
+
+// newKey prints a key to add to the key file. It does not sign until its
+// entry's signs is set; see docs/operations.md.
+func newKey(out io.Writer) error {
+	k, err := samaccess.NewKey(time.Now())
+	if err != nil {
+		return err
+	}
+	enc := json.NewEncoder(out)
+	enc.SetIndent("", "  ")
+	return enc.Encode(k)
 }
 
 // Server timeouts. A whole request, body included, must arrive within

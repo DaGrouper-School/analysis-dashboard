@@ -14,6 +14,7 @@ import (
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/logx"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 )
 
 // Prefix is where the API is served: the front end calls /api on its own
@@ -35,6 +36,9 @@ type Deps struct {
 	AllowedOrigins []string
 	// Now is the clock every module uses for expiries, limits and caches.
 	Now func() time.Time
+	// SAM calls SAM, and serves the key set SAM verifies user tokens with.
+	// Nil only in tests that need no SAM.
+	SAM *samaccess.Access
 }
 
 // Module is a group of endpoints. Each module registers its own routes
@@ -55,7 +59,11 @@ func New(d Deps) *App {
 	if d.Now == nil {
 		d.Now = time.Now
 	}
-	return &App{Deps: d}
+	a := &App{Deps: d}
+	if d.SAM != nil {
+		a.modules = append(a.modules, d.SAM)
+	}
+	return a
 }
 
 // Handler is the HTTP API.
