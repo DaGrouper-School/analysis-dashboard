@@ -13,12 +13,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/notify"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 )
 
@@ -35,8 +37,17 @@ type Config struct {
 	// SecureCookies sets Secure on the session cookie: the service is
 	// reached over HTTPS.
 	SecureCookies bool
-	// Demo signs in the demo accounts by subject. Development and test only.
+	// Demo signs in the demo accounts by subject, and returns phone codes
+	// instead of texting them. Development and test only.
 	Demo bool
+	// SMSSendsPerHour is the most codes sent per hour overall, set per
+	// deployment from the expected sign-up rate.
+	SMSSendsPerHour int
+	// ClientIPHeader is the header a trusted proxy puts the client's
+	// address in, last; empty when the service is reached directly.
+	ClientIPHeader string
+	// SMS sends the codes; nil refuses every send.
+	SMS notify.SMS
 }
 
 // DefaultSessionTTL is how long an unused session lasts unless configured.
@@ -58,6 +69,12 @@ func New(q db.Querier, sam *samaccess.Access, now func() time.Time, cfg Config) 
 	if cfg.SessionTTL <= 0 {
 		cfg.SessionTTL = DefaultSessionTTL
 	}
+	if cfg.SMSSendsPerHour <= 0 {
+		cfg.SMSSendsPerHour = DefaultSendsPerHour
+	}
+	if cfg.SMS == nil {
+		cfg.SMS = notify.None{}
+	}
 	return &Module{db: q, sam: sam, now: now, cfg: cfg, google: newGoogle(cfg.GoogleClientID, cfg.GoogleKeysURL, now),
 		guard: &Guard{db: q, sam: sam}, sessions: &Sessions{db: q, now: now, ttl: cfg.SessionTTL, secure: cfg.SecureCookies}}
 }
@@ -69,10 +86,34 @@ func (m *Module) Guard() *Guard { return m.guard }
 // their routes with RequireUser.
 func (m *Module) Sessions() *Sessions { return m.sessions }
 
-// Background is the restore guard, run once at start-up, and the pruning
-// of ended sessions.
+// Background is the restore guard, run once at start-up, and the hourly
+// pruning of ended sessions, spent limits and old codes.
 func (m *Module) Background() []func(context.Context) {
-	return []func(context.Context){m.guard.Run, m.sessions.prune}
+	return []func(context.Context){m.guard.Run, m.prune}
+}
+
+// prune removes, every hour until ctx ends, what no session, code or limit
+// needs any more.
+func (m *Module) prune(ctx context.Context) {
+	t := time.NewTicker(pruneEvery)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+		now := m.now()
+		n, err := deleteEndedSessions(ctx, m.db, now)
+		if err == nil {
+			err = deleteSpent(ctx, m.db, now, limitWindow)
+		}
+		if err != nil && ctx.Err() == nil {
+			slog.ErrorContext(ctx, "pruning sessions, codes and limits", "err", err)
+		} else if n > 0 {
+			slog.InfoContext(ctx, "removed ended sessions", "count", n)
+		}
+	}
 }
 
 // User is a person's account.

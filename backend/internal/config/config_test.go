@@ -11,7 +11,7 @@ import (
 func setEnv(t *testing.T, kv map[string]string) {
 	t.Helper()
 	for _, k := range []string{"DGS_ENV", "DGS_LISTEN", "DGS_ALLOWED_ORIGINS", "DGS_LOG_FORMAT", "DGS_LOG_LEVEL",
-		"DGS_DB_MAX_CONNS", "DGS_DB_STATEMENT_TIMEOUT", "DGS_SAM_AUDIENCE", "DGS_SIGNING_KEYS_FILE", "DGS_RECONCILE_INTERVAL", "DGS_SESSION_TTL", "DGS_DEMO"} {
+		"DGS_DB_MAX_CONNS", "DGS_DB_STATEMENT_TIMEOUT", "DGS_SAM_AUDIENCE", "DGS_SIGNING_KEYS_FILE", "DGS_RECONCILE_INTERVAL", "DGS_SESSION_TTL", "DGS_DEMO", "DGS_SMS_SENDS_PER_HOUR", "DGS_CLIENT_IP_HEADER"} {
 		t.Setenv(k, "")
 	}
 	// Every case has a database, SAM and signing keys unless it says otherwise.
@@ -88,6 +88,9 @@ func TestLoadRefuses(t *testing.T) {
 		{"demo in staging", map[string]string{"DGS_ENV": "staging", "DGS_ALLOWED_ORIGINS": "https://a.example", "DGS_DEMO": "true"}, "DGS_DEMO"},
 		{"demo in production", map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example", "DGS_DEMO": "true"}, "DGS_DEMO"},
 		{"demo half on", map[string]string{"DGS_ENV": "test", "DGS_DEMO": "yes"}, "DGS_DEMO"},
+		{"no SMS at all", map[string]string{"DGS_ENV": "test", "DGS_SMS_SENDS_PER_HOUR": "0"}, "DGS_SMS_SENDS_PER_HOUR"},
+		{"a bad SMS limit", map[string]string{"DGS_ENV": "test", "DGS_SMS_SENDS_PER_HOUR": "lots"}, "DGS_SMS_SENDS_PER_HOUR"},
+		{"not a header", map[string]string{"DGS_ENV": "test", "DGS_CLIENT_IP_HEADER": "X Forwarded"}, "DGS_CLIENT_IP_HEADER"},
 		{"a bad reconcile interval", map[string]string{"DGS_ENV": "test", "DGS_RECONCILE_INTERVAL": "often"}, "DGS_RECONCILE_INTERVAL"},
 		{"no signing keys in production", map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example",
 			"DGS_SIGNING_KEYS_FILE": ""}, "DGS_SIGNING_KEYS_FILE"},
@@ -139,9 +142,13 @@ func TestLoadSignIn(t *testing.T) {
 	if c.PublicURL != defaultPublicURL || c.Accounts.SecureCookies || !c.Accounts.Demo || c.Accounts.SessionTTL != accounts.DefaultSessionTTL {
 		t.Fatalf("sign-in in development: %s %+v", c.PublicURL, c.Accounts)
 	}
-	setEnv(t, map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example", "DGS_SESSION_TTL": "48h"})
+	if c.Accounts.SMSSendsPerHour != accounts.DefaultSendsPerHour || c.Accounts.ClientIPHeader != "" {
+		t.Fatalf("phone limits in development: %+v", c.Accounts)
+	}
+	setEnv(t, map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example", "DGS_SESSION_TTL": "48h",
+		"DGS_SMS_SENDS_PER_HOUR": "50", "DGS_CLIENT_IP_HEADER": "X-Forwarded-For"})
 	if c, err = Load(); err != nil || !c.Accounts.SecureCookies || c.Accounts.Demo || c.Accounts.SessionTTL != 48*time.Hour ||
-		c.Accounts.GoogleClientID == "" {
+		c.Accounts.GoogleClientID == "" || c.Accounts.SMSSendsPerHour != 50 || c.Accounts.ClientIPHeader != "X-Forwarded-For" {
 		t.Fatalf("sign-in in production: %+v, %v", c.Accounts, err)
 	}
 }

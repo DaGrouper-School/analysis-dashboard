@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"log/slog"
 	"net/http"
 	"time"
 
@@ -119,24 +118,6 @@ func (s *Sessions) set(w http.ResponseWriter, token string, now, expires time.Ti
 func (s *Sessions) clear(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{Name: CookieName, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: s.secure,
 		SameSite: http.SameSiteLaxMode})
-}
-
-// prune removes ended sessions every hour until ctx ends.
-func (s *Sessions) prune(ctx context.Context) {
-	t := time.NewTicker(pruneEvery)
-	defer t.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-		}
-		if n, err := deleteEndedSessions(ctx, s.db, s.now()); err != nil && ctx.Err() == nil {
-			slog.ErrorContext(ctx, "removing ended sessions", "err", err)
-		} else if n > 0 {
-			slog.InfoContext(ctx, "removed ended sessions", "count", n)
-		}
-	}
 }
 
 // newToken is a random session token.

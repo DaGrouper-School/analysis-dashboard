@@ -14,6 +14,8 @@ import (
 func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	mux.Handle("GET "+prefix+"/auth/me", m.sessions.RequireUser(httpx.Handler(m.me)))
 	mux.Handle("POST "+prefix+"/auth/google", httpx.Handler(m.signInGoogle))
+	mux.Handle("POST "+prefix+"/auth/phone/start", httpx.Handler(m.requestPhoneCode))
+	mux.Handle("POST "+prefix+"/auth/phone/verify", httpx.Handler(m.verifyPhoneCode))
 	mux.Handle("POST "+prefix+"/auth/sign-out", m.sessions.RequireUser(httpx.Handler(m.signOut)))
 	mux.Handle("GET "+prefix+"/auth/demo-accounts", httpx.Handler(m.listDemoAccounts))
 }
@@ -37,6 +39,37 @@ func (m *Module) signInGoogle(w http.ResponseWriter, r *http.Request) error {
 		return errSignInFailed
 	}
 	u, isNew, err := m.SignInWithGoogle(r.Context(), w, in.IDToken)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, authResult{User: viewOf(u), IsNewUser: isNew})
+	return nil
+}
+
+func (m *Module) requestPhoneCode(w http.ResponseWriter, r *http.Request) error {
+	var in struct {
+		Phone string `json:"phone"`
+	}
+	if err := httpx.Decode(r, &in); err != nil {
+		return err
+	}
+	c, err := m.RequestCode(r.Context(), in.Phone, PurposeSignIn, nil, clientAddress(r, m.cfg.ClientIPHeader))
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, c)
+	return nil
+}
+
+func (m *Module) verifyPhoneCode(w http.ResponseWriter, r *http.Request) error {
+	var in struct {
+		RequestID string `json:"requestId"`
+		Code      string `json:"code"`
+	}
+	if err := httpx.Decode(r, &in); err != nil {
+		return err
+	}
+	u, isNew, err := m.SignInWithPhone(r.Context(), w, in.RequestID, in.Code, clientAddress(r, m.cfg.ClientIPHeader))
 	if err != nil {
 		return err
 	}

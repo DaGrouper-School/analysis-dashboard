@@ -3,6 +3,8 @@ package accounts
 import (
 	"context"
 	"errors"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -213,4 +215,148 @@ func moveParticipantIDsPast(ctx context.Context, q db.Querier, last int64) error
 	_, err := q.Exec(ctx, `SELECT setval('participant_ids', greatest($1::bigint,
 		(SELECT CASE WHEN is_called THEN last_value ELSE last_value - 1 END FROM participant_ids)))`, last)
 	return err
+}
+
+// takeLimits takes one use of every limit in tx, or none: when any key is
+// at its limit, it reports how long until that key has room, and takes
+// nothing. Each key's row is locked while it is counted, so two requests
+// never both take its last place; keys are locked in order, so two
+// requests never wait on each other.
+func takeLimits(ctx context.Context, tx db.Querier, now time.Time, window time.Duration, limits []limit) (time.Duration, error) {
+	slices.SortFunc(limits, func(a, b limit) int { return strings.Compare(a.key, b.key) })
+	since := now.Add(-window)
+	for _, l := range limits {
+		if _, err := tx.Exec(ctx, `INSERT INTO rate_limits (key) VALUES ($1) ON CONFLICT (key) DO NOTHING`, l.key); err != nil {
+			return 0, err
+		}
+		if _, err := tx.Exec(ctx, `SELECT key FROM rate_limits WHERE key = $1 FOR UPDATE`, l.key); err != nil {
+			return 0, err
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM rate_events WHERE key = $1 AND at <= $2`, l.key, since); err != nil {
+			return 0, err
+		}
+		var used int
+		var oldest *time.Time
+		if err := tx.QueryRow(ctx, `SELECT count(*), min(at) FROM rate_events WHERE key = $1`, l.key).Scan(&used, &oldest); err != nil {
+			return 0, err
+		}
+		if used >= l.max {
+			return oldest.Add(window).Sub(now), nil
+		}
+	}
+	for _, l := range limits {
+		if _, err := tx.Exec(ctx, `INSERT INTO rate_events (key, at) VALUES ($1, $2)`, l.key, now); err != nil {
+			return 0, err
+		}
+	}
+	return 0, nil
+}
+
+// challenge is a code sent to a number.
+type challenge struct {
+	id        uuid.UUID
+	phone     string
+	purpose   string
+	user      *uuid.UUID
+	codeHash  []byte
+	resendAt  time.Time
+	expiresAt time.Time
+	endedAt   *time.Time
+}
+
+// resendAt is when the number may next be sent a code for purpose: the
+// live code's resend time, or zero when it has none.
+func resendAt(ctx context.Context, q db.Querier, phone, purpose string, now time.Time) (time.Time, error) {
+	var at time.Time
+	err := q.QueryRow(ctx, `SELECT resend_at FROM phone_challenges WHERE phone = $1 AND purpose = $2 AND ended_at IS NULL
+		AND expires_at > $3 ORDER BY created_at DESC LIMIT 1`, phone, purpose, now).Scan(&at)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return time.Time{}, nil
+	}
+	return at, err
+}
+
+// replaceChallenge ends the number's live codes for purpose and stores c in
+// their place. The number's attempts carry over while any of its codes has
+// lived, and start again only once every code has expired.
+func replaceChallenge(ctx context.Context, tx db.Querier, c challenge, now time.Time) error {
+	if _, err := tx.Exec(ctx, `UPDATE phone_challenges SET ended_at = $3 WHERE phone = $1 AND purpose = $2 AND ended_at IS NULL`,
+		c.phone, c.purpose, now); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO phone_challenges (id, phone, purpose, user_id, code_hash, created_at, resend_at, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, c.id, c.phone, c.purpose, c.user, c.codeHash, now, c.resendAt, c.expiresAt); err != nil {
+		return err
+	}
+	_, err := tx.Exec(ctx, `INSERT INTO phone_attempts (phone, purpose, attempts, window_ends_at) VALUES ($1, $2, 0, $4)
+		ON CONFLICT (phone, purpose) DO UPDATE SET
+			attempts = CASE WHEN phone_attempts.window_ends_at <= $3 THEN 0 ELSE phone_attempts.attempts END,
+			window_ends_at = $4`, c.phone, c.purpose, now, c.expiresAt)
+	return err
+}
+
+func getChallenge(ctx context.Context, q db.Querier, id uuid.UUID) (challenge, bool, error) {
+	c := challenge{id: id}
+	err := q.QueryRow(ctx, `SELECT phone, purpose, user_id, code_hash, resend_at, expires_at, ended_at FROM phone_challenges WHERE id = $1`, id).
+		Scan(&c.phone, &c.purpose, &c.user, &c.codeHash, &c.resendAt, &c.expiresAt, &c.endedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return challenge{}, false, nil
+	}
+	return c, err == nil, err
+}
+
+// spendAttempt spends one of the number's attempts for purpose, in one
+// statement that increments the count and reads it, so parallel guesses
+// spend the budget exactly. It reports false, with when the budget starts
+// again, when none is left.
+func spendAttempt(ctx context.Context, q db.Querier, phone, purpose string, max int, now time.Time) (bool, time.Time, error) {
+	var n int
+	err := q.QueryRow(ctx, `UPDATE phone_attempts SET attempts = attempts + 1
+		WHERE phone = $1 AND purpose = $2 AND attempts < $3 AND window_ends_at > $4 RETURNING attempts`, phone, purpose, max, now).Scan(&n)
+	if errors.Is(err, pgx.ErrNoRows) {
+		var ends time.Time
+		if err := q.QueryRow(ctx, `SELECT window_ends_at FROM phone_attempts WHERE phone = $1 AND purpose = $2`, phone, purpose).
+			Scan(&ends); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return false, time.Time{}, err
+		}
+		return false, ends, nil
+	}
+	return err == nil, time.Time{}, err
+}
+
+// useChallenge ends a live code as used, once: of two requests with the
+// right code, one uses it.
+func useChallenge(ctx context.Context, q db.Querier, id uuid.UUID, now time.Time) (bool, error) {
+	tag, err := q.Exec(ctx, `UPDATE phone_challenges SET ended_at = $2 WHERE id = $1 AND ended_at IS NULL AND expires_at > $2`, id, now)
+	return tag.RowsAffected() == 1, err
+}
+
+// userWithPhone is the user a verified number belongs to, if any.
+func userWithPhone(ctx context.Context, q db.Querier, phone string) (uuid.UUID, bool, error) {
+	var id uuid.UUID
+	err := q.QueryRow(ctx, `SELECT id FROM users WHERE phone_verified AND phone = $1`, phone).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, false, nil
+	}
+	return id, err == nil, err
+}
+
+// deleteSpent removes what no limit or code needs any more: limit events
+// older than the window, codes ended or expired a day ago, and attempt
+// budgets whose window ended a day ago.
+func deleteSpent(ctx context.Context, q db.Querier, now time.Time, window time.Duration) error {
+	day := now.Add(-24 * time.Hour)
+	for _, sql := range []struct {
+		q   string
+		arg time.Time
+	}{
+		{`DELETE FROM rate_events WHERE at <= $1`, now.Add(-window)},
+		{`DELETE FROM phone_challenges WHERE coalesce(ended_at, expires_at) <= $1`, day},
+		{`DELETE FROM phone_attempts WHERE window_ends_at <= $1`, day},
+	} {
+		if _, err := q.Exec(ctx, sql.q, sql.arg); err != nil {
+			return err
+		}
+	}
+	return nil
 }
