@@ -113,7 +113,8 @@ func serveAll(ctx context.Context, cfg config.Config, pool *pgxpool.Pool) error 
 	// Until a deployment configures a provider, codes go to the log in
 	// development and test, and nowhere elsewhere.
 	cfg.Accounts.SMS = notify.ForEnvironment(cfg.Local())
-	app := server.New(server.Deps{DB: pool, SAM: sam, AllowedOrigins: cfg.AllowedOrigins, Now: time.Now, Accounts: cfg.Accounts})
+	app := server.New(server.Deps{DB: pool, SAM: sam, AllowedOrigins: cfg.AllowedOrigins, Now: time.Now, Accounts: cfg.Accounts,
+		Places: cfg.Places})
 	worker, err := samaccess.NewWorker(pool, sam, app.OutboxKinds(), app.Actors(), time.Now)
 	if err != nil {
 		return err

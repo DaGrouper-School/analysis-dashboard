@@ -80,6 +80,7 @@ Configuration comes from the environment (`internal/config`). Every problem is r
 | `DGS_DEMO` | `false` | `true` signs in the demo accounts by subject. Start-up is refused with it on outside development and test |
 | `DGS_SMS_SENDS_PER_HOUR` | `200` | The most phone codes sent per hour overall, a whole number from 1, set from the expected sign-up rate ([Operations](operations.md#phone-codes)) |
 | `DGS_CLIENT_IP_HEADER` | none | The header a trusted proxy puts the client's address in, such as `X-Forwarded-For`; the last address in it is the client's. Without it, the connection's address is |
+| `DGS_PLACES_API_KEY` | none in development and test, where the offline list is used; required elsewhere | The Google Places key address lookup uses. It is sent to Google in a request header only, never to the browser |
 | `DGS_RECONCILE_INTERVAL` | `15m` | How often the reconciler compares SAM with this database, a Go duration of at least `1m` |
 | `DGS_SIGNING_KEYS_FILE` | none in development and test, where a key is generated at start-up; required elsewhere | The key file user tokens are signed with ([Operations](operations.md#signing-keys)) |
 
@@ -96,6 +97,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/db` | Opens the pool, applies the migrations, transactions (`InTx`) and advisory locks |
 | `internal/accounts` | Accounts and their participant IDs; registering each account's SAM principal through the outbox; the restore guard |
 | `internal/notify` | Delivers messages: the SMS interface, the log provider for development and test, and a recorder for tests |
+| `internal/places` | The places module: address autocomplete and lookup through a provider, and the calling codes |
 | `internal/samaccess` | Calls SAM as this service, as a person through a user token or as anonymous; the signing keys and the key set; SAM's errors translated; the outbox, its worker and the reconciler |
 | `internal/server` | `server.New(Deps)`, the `Module` interface, the middleware, `/healthz` and the API's not-found answer |
 | `internal/testutil` | A fresh database per test (test code only) |
@@ -201,6 +203,19 @@ The profile is the accounts module's too: name, email, phone and address stay in
 | `POST /api/me/onboarding/complete` | Needs a name, an email, a verified phone and an address, and says what is still needed. For an adult it queues `minor=false` for SAM, which until then treats the person as a minor |
 | `PUT /api/me/public-profile` | Shows or hides the name and role on contributor pages. Refused for a minor, `403 forbidden` |
 | `POST /api/me/minor` | Marks a minor: consent pending, no public profile, `minor=true` queued for SAM. Marking again changes nothing |
+
+### Places
+
+`internal/places` looks addresses up for the profile and labs, so the provider's key stays on the server.
+
+| Call | Does |
+|---|---|
+| `GET /api/places/autocomplete?q=…` | Suggestions for what the person typed, from two characters |
+| `GET /api/places/{placeId}` | The address of a suggestion; `404` for a place the provider does not know |
+| `GET /api/places/dial-codes` | The calling codes, pilot countries first. Needs no session |
+
+- **Providers.** With `DGS_PLACES_API_KEY`, Google Places (the Places API): autocomplete, and a lookup asking only for the address's parts and location. Without it, the offline list, the same pilot-region places as the front end's mock; only development and test may run without a key.
+- **Limits.** Autocomplete and lookups need a session, and each person has 300 an hour together, counted with the accounts module's limits; past it they get `429` with `Retry-After`.
 
 ### Accounts in SAM
 

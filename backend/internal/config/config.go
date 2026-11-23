@@ -15,6 +15,7 @@ import (
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/places"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 )
 
@@ -59,6 +60,8 @@ type Config struct {
 	PublicURL string
 	// Accounts is how people sign in.
 	Accounts accounts.Config
+	// Places is how places are looked up.
+	Places places.Config
 	// SigningKeysFile is the key file user tokens are signed with. Required
 	// outside development and test; there, without one, a key is generated
 	// at start-up and lasts until the process exits.
@@ -125,6 +128,11 @@ func Load() (Config, error) {
 	}
 	if err := c.signIn(); err != nil {
 		errs = append(errs, err)
+	}
+	c.Places = places.Config{APIKey: os.Getenv("DGS_PLACES_API_KEY")}
+	if c.Places.APIKey == "" && !c.Local() {
+		errs = append(errs, fmt.Errorf("DGS_PLACES_API_KEY must be set in %s: the Google Places key address lookup uses; "+
+			"the offline list exists only in development and test", c.Environment))
 	}
 	c.SigningKeysFile = os.Getenv("DGS_SIGNING_KEYS_FILE")
 	if c.SigningKeysFile == "" && !c.Local() {

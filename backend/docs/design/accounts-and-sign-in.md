@@ -83,7 +83,7 @@ With these limits, guessing one code needs on the order of 10^5 numbers' worth o
 ### Profile and onboarding
 
 - `updateProfile`, `updateAddress` and phone verification fill the profile. `completeOnboarding` checks the required fields and sets `onboardingCompleted`.
-- **Places.** Address autocomplete and lookup go through a provider behind an interface, so the provider's key stays on the server. Development and test use an offline provider with a fixed list covering the pilot regions. `dialCodes` lists calling codes, pilot countries first.
+- **Places.** Address autocomplete and lookup go through a provider behind an interface, so the provider's key stays on the server. The provider is Google Places, whose suggestions the front end's main and secondary text are shaped after. Development and test use an offline provider with a fixed list covering the pilot regions, the same as the front end's mock. `dialCodes` lists calling codes, pilot countries first.
 - **Public profile.** `setPublicProfile` shows the person's name and role next to their participant ID on contributor pages. It is refused for a minor ([Dashboards and public site](dashboards-and-public-site.md#contributors-and-credit)).
 - **Minors.** `markMinor` and `requestGuardianConsent` mark the account as a minor's and start consent ([Classrooms and permissions](classrooms-and-permissions.md#guardian-consent)).
 

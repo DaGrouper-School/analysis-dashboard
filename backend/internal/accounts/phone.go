@@ -144,6 +144,13 @@ func (m *Module) take(ctx context.Context, msg string, limits ...limit) error {
 	return err
 }
 
+// Limit takes one use of key's hourly limit of max uses, or answers
+// rate_limited with msg and when to try again. Other modules limit their
+// callers with it, keyed by user, so the counts live with the rest.
+func (m *Module) Limit(ctx context.Context, msg, key string, max int) error {
+	return m.take(ctx, msg, limit{key: key, max: max})
+}
+
 // errLimited ends the limits' transaction when one is reached, so none is
 // taken.
 var errLimited = errors.New("a limit is reached")
