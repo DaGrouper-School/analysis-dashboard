@@ -5,7 +5,7 @@ Monorepo for the DaGrouper Analysis Platform.
 | Folder                  | What it is                                                              |
 | ----------------------- | ----------------------------------------------------------------------- |
 | [`frontend/`](frontend) | SvelteKit app. Runs on mock data saved in localStorage for now.         |
-| [`backend/`](backend)   | Placeholder for the auth API and SAM integration. Stack not chosen yet. |
+| [`backend/`](backend)   | The DaGrouper School backend: a Go service, SAM's first tenant. Its design is in [`backend/docs/design/`](backend/docs/design/README.md). |
 
 The folders are npm workspaces. From the repo root:
 
