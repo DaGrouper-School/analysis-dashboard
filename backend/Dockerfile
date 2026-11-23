@@ -1,9 +1,17 @@
 FROM golang:1.27-alpine AS build
+# SAM's module is private and fetched with git.
+RUN apk add --no-cache git
+ENV GOPRIVATE=github.com/dagrouper-school/*
 WORKDIR /src
-COPY go.mod ./
+COPY go.mod go.sum ./
 # The module and build caches outlive the image, so later builds download
-# and compile only what changed.
-RUN --mount=type=cache,target=/go/pkg/mod go mod download
+# and compile only what changed. The token for SAM's repository is a build
+# secret: it reaches this step only, never a layer.
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=secret,id=sam_read_token,required=true \
+    GIT_CONFIG_COUNT=1 \
+    GIT_CONFIG_KEY_0="url.https://x-access-token:$(cat /run/secrets/sam_read_token)@github.com/dagrouper-school/.insteadOf" \
+    GIT_CONFIG_VALUE_0="https://github.com/dagrouper-school/" \
+    go mod download
 COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 go build -trimpath -o /out/dgs ./cmd/dgs

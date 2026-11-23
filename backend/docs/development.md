@@ -1,6 +1,6 @@
 # Development
 
-How to build, run and test the service as it stands, and the conventions its code follows. So far the service has configuration, logging with request IDs, the HTTP conventions, its PostgreSQL database with migrations, `/healthz` and graceful shutdown.
+How to build, run and test the service as it stands, and the conventions its code follows. So far the service has configuration, logging with request IDs, the HTTP conventions, its PostgreSQL database with migrations, `/healthz`, graceful shutdown, and integration tests against SAM and the API contract.
 
 ## Prerequisites
 
@@ -10,6 +10,7 @@ How to build, run and test the service as it stands, and the conventions its cod
 | golangci-lint | v2 (CI pins v2.15.0) | `make lint` |
 | Docker with Compose | Recent | The databases, `make up`, the image |
 | Node and npm | 22 | Regenerating and checking the API contract, from the repository root |
+| GitHub CLI, signed in | Recent | Reading SAM's private module ([SAM's module](#sams-module)) |
 
 ## Running
 
@@ -31,7 +32,7 @@ make down                    # stops it
 | Service | Published on | For |
 |---|---|---|
 | `db` | `127.0.0.1:5433`, database `dgs` | The development data, kept in the `dgs-db` volume until `make down` |
-| `test-db` | `127.0.0.1:55433` | The server the tests create their databases on. Its data is in memory, and it starts only with the `test` profile, which `make test` and `make db-up` use |
+| `test-db` | `127.0.0.1:55433` | The server the tests create their databases on, with PostGIS for the SAM the integration tests start. Its data is in memory, and it starts only with the `test` profile, which `make test` and `make db-up` use |
 
 The ports differ from SAM's, so both stacks run side by side.
 
@@ -82,6 +83,9 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/db` | Opens the pool, applies the migrations, transactions (`InTx`) and advisory locks |
 | `internal/server` | `server.New(Deps)`, the `Module` interface, the middleware, `/healthz` and the API's not-found answer |
 | `internal/testutil` | A fresh database per test (test code only) |
+| `internal/contract` | Reads `openapi.yaml` and checks responses against it (test code only) |
+| `internal/testenv` | Runs SAM built from source, with this service onboarded (test code only) |
+| `internal/apitest` | The integration harness and its tests (test code only) |
 
 The areas the code is organised into, and the data each owns, are in the design overview ([Data ownership](design/README.md#data-ownership)).
 
@@ -155,14 +159,38 @@ make test-short   # only those that need no database or SAM
 make lint
 ```
 
-Tests that need the database call `testutil.DB(t)`, which gives the test a database of its own, migrated and dropped when it ends, so tests run in parallel without seeing each other's rows. Each is a copy of a template migrated once per set of migrations. `DGS_TEST_DATABASE_URL` is an admin connection to the server they are created on; `make test` starts the compose `test-db` and points it there unless the variable is already set. Under `-short` these tests are skipped. The integration harness, with a real SAM built from source and every response checked against `openapi.yaml`, is described in the [design overview](design/README.md#testing-approach).
+Tests that need the database call `testutil.DB(t)`, which gives the test a database of its own, migrated and dropped when it ends, so tests run in parallel without seeing each other's rows. Each is a copy of a template migrated once per set of migrations. `DGS_TEST_DATABASE_URL` is an admin connection to the server they are created on, which must have PostGIS; `make test` starts the compose `test-db` and points it there unless the variable is already set. Under `-short` these tests are skipped.
+
+### Integration tests
+
+`apitest.New(t)` runs this service for one test, over HTTP, as the front end calls it:
+
+1. **SAM.** `internal/testenv` builds `cmd/sam` from SAM's module at the version `go.mod` names, once per test run, and keeps the binary under the system's temporary directory by version. It gives SAM a new database on the test server, runs `sam bootstrap -json`, onboards this service with `sam tenant create -name dgs -registry`, naming this service's key set, and runs `sam serve` on a free loopback port until the test ends. A test that fails shows SAM's log.
+2. **This service** gets a database of its own and listens on the address SAM was told about.
+3. **The contract.** Every response to a request under `/api` is checked against `openapi.yaml`: its status must be one the operation declares, and its body must match the declared schema. Any operation may also answer `500` with the `internal` error. A breach, or a request for a path the contract lacks, fails the test. The key set (`/api/.well-known/`) and media files (`/api/media/`) lie outside the contract.
+
+`e.SAM.Service()` and `e.SAM.Operator()` are SAM clients acting as this service and as the deployment's operator, for setting a test up or checking what reached SAM.
+
+**Route coverage.** `TestRouteCoverage` lists every operation in the contract this service does not serve yet, and how many it does. It reports and does not fail while the service is built.
+
+### SAM's module
+
+SAM's repository is private, and `go.mod` lists its command as a tool (`go get -tool`), which pins its version with the other modules. Go fetches it with git, so:
+
+- `GOPRIVATE=github.com/dagrouper-school/*` keeps it away from the public module proxy and checksum database. The Makefile sets it.
+- Locally, git reaches GitHub as the user the GitHub CLI is signed in as. `make up` passes the image build `SAM_READ_TOKEN`, from `gh auth token` unless it is set, as a build secret that never reaches an image layer.
+- CI gets a token from a GitHub App installed on the SAM repository with read access to its contents and nothing else. Each job mints its own installation token (`actions/create-github-app-token`), limited to that repository, and it is revoked when the job ends. The app's client ID is the repository variable `SAM_APP_CLIENT_ID` and its private key the secret `SAM_APP_PRIVATE_KEY`. The token serves the tests, the vulnerability check and the image build.
+
+To move to a newer SAM: `go get -tool github.com/dagrouper-school/sam/cmd/sam@<commit or tag>`, then `go mod tidy`.
+
+### Rules
 
 - **Unit tests** cover pure logic, in the package that holds it. Integration tests cover behaviour across the API, and are never the only test of a rule such as validation, permissions, cutoffs or alerts.
 - **Every fix** comes with a test that fails without it.
 - **Every endpoint** is called by an integration test in `internal/apitest`, so the contract check covers it.
 - Tests call `t.Parallel()`.
 
-CI (`.github/workflows/backend.yml`) runs on changes to `backend/`, the front end's services and domain, and the contract generator. It checks the contract is current, then runs `make tidy-check`, `make lint`, `make test` (against a PostgreSQL service container) and `make vulncheck`, and builds the image.
+CI (`.github/workflows/backend.yml`) runs on changes to `backend/`, the front end's services and domain, and the contract generator. It checks the contract is current, then runs `make tidy-check`, `make lint`, `make test` (against a PostGIS service container) and `make vulncheck`, and builds the image.
 
 ## The API contract
 

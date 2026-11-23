@@ -6,8 +6,12 @@
 #   VITE_DATA_SOURCE=http VITE_API_URL=http://localhost:8090/api npm run dev -w frontend
 #
 # `db` holds the development data; `test-db` is the server the tests create
-# their own databases on (DGS_TEST_DATABASE_URL). Their ports differ from
-# SAM's, so both stacks run side by side.
+# their own databases on (DGS_TEST_DATABASE_URL), with PostGIS, which the
+# SAM the integration tests start needs. Their ports differ from SAM's, so
+# both stacks run side by side.
+#
+# Building the image reads SAM's private module with SAM_READ_TOKEN, which
+# `make up` takes from `gh auth token` when it is not set.
 name: dgs
 
 services:
@@ -19,6 +23,7 @@ services:
       # whose address falls in Docker's 172.17.0.0/16, as on some Wi-Fi
       # networks.
       network: host
+      secrets: [sam_read_token]
     environment:
       DGS_ENV: development
       DGS_ALLOWED_ORIGINS: http://localhost:5173
@@ -42,7 +47,7 @@ services:
       retries: 30
 
   test-db:
-    image: postgres:17-alpine
+    image: postgis/postgis:17-3.5-alpine
     environment:
       POSTGRES_PASSWORD: dgs
     ports: ["127.0.0.1:55433:5432"]
@@ -56,3 +61,7 @@ services:
 
 volumes:
   dgs-db:
+
+secrets:
+  sam_read_token:
+    environment: SAM_READ_TOKEN

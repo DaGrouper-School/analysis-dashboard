@@ -26,7 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:17-alpine
+        # PostGIS, for the SAM the integration tests start.
+        image: postgis/postgis:17-3.5-alpine
         env:
           POSTGRES_PASSWORD: dgs
         ports: ["5432:5432"]
@@ -34,6 +35,7 @@ jobs:
           --health-cmd "pg_isready -U postgres" --health-interval 2s --health-retries 30
     env:
       DGS_TEST_DATABASE_URL: postgres://postgres:dgs@localhost:5432/postgres?sslmode=disable
+      GOPRIVATE: github.com/dagrouper-school/*
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -45,10 +47,26 @@ jobs:
         run: |
           npm ci
           npm run openapi:check -w frontend
+      # SAM's module is private. The SAM reader GitHub App, installed on the
+      # SAM repository, gives this job a token that may only read its
+      # contents and is revoked when the job ends.
+      - name: Token for SAM's module
+        id: sam-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.SAM_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SAM_APP_PRIVATE_KEY }}
+          owner: DaGrouper-School
+          repositories: sam
+          permission-contents: read
+      - name: Read access to SAM's module
+        env:
+          SAM_READ_TOKEN: ${{ steps.sam-token.outputs.token }}
+        run: git config --global url."https://x-access-token:${SAM_READ_TOKEN}@github.com/dagrouper-school/".insteadOf "https://github.com/dagrouper-school/"
       - uses: actions/setup-go@v5
         with:
           go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.mod
+          cache-dependency-path: backend/go.sum
       - name: Install golangci-lint
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/v2.15.0/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v2.15.0
       # The same targets as on a laptop, so the two never drift.
@@ -61,4 +79,6 @@ jobs:
       - name: Vulnerabilities
         run: make vulncheck
       - name: Build image
-        run: docker build -t dgs:ci .
+        env:
+          SAM_READ_TOKEN: ${{ steps.sam-token.outputs.token }}
+        run: docker build --secret id=sam_read_token,env=SAM_READ_TOKEN -t dgs:ci .

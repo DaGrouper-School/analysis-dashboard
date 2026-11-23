@@ -95,6 +95,18 @@ func (a *App) healthz(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// Serves reports whether a module serves method on path, so the
+// route-coverage report can list the operations the contract has and the
+// service does not yet.
+func (a *App) Serves(method, path string) bool {
+	r, err := http.NewRequestWithContext(context.Background(), method, path, nil)
+	if err != nil {
+		return false
+	}
+	_, pattern := a.routes().Handler(r)
+	return pattern != "" && pattern != notFoundPattern
+}
+
 // notFoundPattern catches every path under the API no endpoint serves.
 const notFoundPattern = Prefix + "/"
 

@@ -121,3 +121,23 @@ func TestWritesFromOtherSitesAreRefused(t *testing.T) {
 		t.Errorf("a read from another site: %d", w.Code)
 	}
 }
+
+func TestServes(t *testing.T) {
+	t.Parallel()
+	a := New(Deps{})
+	a.modules = append(a.modules, echo{})
+	for _, tc := range []struct {
+		method, path string
+		want         bool
+	}{
+		{"GET", "/api/echo", true},
+		{"POST", "/api/echo", true},
+		{"DELETE", "/api/echo", false},
+		{"GET", "/api/other", false},
+		{"GET", "/healthz", true},
+	} {
+		if got := a.Serves(tc.method, tc.path); got != tc.want {
+			t.Errorf("%s %s: %v, want %v", tc.method, tc.path, got, tc.want)
+		}
+	}
+}
