@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -50,11 +52,24 @@ func code(t *testing.T, w *httptest.ResponseRecorder) string {
 	return e.Code
 }
 
+// pinger is a database that answers with err.
+type pinger struct{ err error }
+
+func (p pinger) Ping(context.Context) error { return p.err }
+
 func TestHealthz(t *testing.T) {
 	t.Parallel()
 	w := do(t, app(), "GET", "/healthz", nil)
 	if w.Code != http.StatusOK || w.Body.String() != "{\"status\":\"ok\"}\n" || w.Header().Get("X-Request-ID") == "" {
 		t.Fatalf("%d %q %v", w.Code, w.Body, w.Header())
+	}
+	up := New(Deps{DB: pinger{}}).Handler()
+	if w := do(t, up, "GET", "/healthz", nil); w.Code != http.StatusOK {
+		t.Fatalf("with the database up: %d %q", w.Code, w.Body)
+	}
+	down := New(Deps{DB: pinger{errors.New("connection refused")}}).Handler()
+	if w := do(t, down, "GET", "/healthz", nil); w.Code != http.StatusServiceUnavailable || w.Body.String() != "{\"status\":\"unavailable\"}\n" {
+		t.Fatalf("with the database down: %d %q", w.Code, w.Body)
 	}
 }
 

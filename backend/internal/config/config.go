@@ -8,7 +8,11 @@ import (
 	"net/url"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
+	"time"
+
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 )
 
 // Environments, from least to most protected. Development conveniences,
@@ -38,7 +42,18 @@ type Config struct {
 	// LogFormat is json or text; LogLevel is debug, info, warn or error.
 	LogFormat string
 	LogLevel  string
+	// DatabaseURL is the PostgreSQL connection string. Required.
+	DatabaseURL string
+	// DB sizes the pool and bounds its statements.
+	DB db.Config
 }
+
+// Pool defaults: enough connections for one instance's requests and its
+// background work, and a statement bound well above any request's.
+const (
+	defaultMaxConns         = 10
+	defaultStatementTimeout = 30 * time.Second
+)
 
 // Load reads the configuration and refuses unsafe combinations: every
 // problem found is reported at once.
@@ -71,7 +86,36 @@ func Load() (Config, error) {
 		errs = append(errs, err)
 	}
 	c.AllowedOrigins = origins
+	c.DatabaseURL = os.Getenv("DGS_DATABASE_URL")
+	if c.DatabaseURL == "" {
+		errs = append(errs, errors.New("DGS_DATABASE_URL must be set: the PostgreSQL connection string"))
+	}
+	c.DB, err = pool()
+	if err != nil {
+		errs = append(errs, err)
+	}
 	return c, errors.Join(errs...)
+}
+
+// pool reads DGS_DB_MAX_CONNS and DGS_DB_STATEMENT_TIMEOUT.
+func pool() (db.Config, error) {
+	cfg := db.Config{MaxConns: defaultMaxConns, StatementTimeout: defaultStatementTimeout}
+	var errs []error
+	if v := os.Getenv("DGS_DB_MAX_CONNS"); v != "" {
+		n, err := strconv.ParseInt(v, 10, 32)
+		if err != nil || n < 1 {
+			errs = append(errs, fmt.Errorf("DGS_DB_MAX_CONNS must be a whole number from 1, not %q", v))
+		}
+		cfg.MaxConns = int32(n)
+	}
+	if v := os.Getenv("DGS_DB_STATEMENT_TIMEOUT"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil || d < time.Millisecond {
+			errs = append(errs, fmt.Errorf("DGS_DB_STATEMENT_TIMEOUT must be a duration of at least 1ms, such as 30s, not %q", v))
+		}
+		cfg.StatementTimeout = d
+	}
+	return cfg, errors.Join(errs...)
 }
 
 // origins reads DGS_ALLOWED_ORIGINS. Outside development and test it must be

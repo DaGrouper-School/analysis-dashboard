@@ -1,9 +1,13 @@
-# Development: this service on http://localhost:8090.
+# Development: this service on http://localhost:8090, with its database.
 #
 #   make up      (or: docker compose up --build)
 #
 # Then run the front end against it, from the repository root:
 #   VITE_DATA_SOURCE=http VITE_API_URL=http://localhost:8090/api npm run dev -w frontend
+#
+# `db` holds the development data; `test-db` is the server the tests create
+# their own databases on (DGS_TEST_DATABASE_URL). Their ports differ from
+# SAM's, so both stacks run side by side.
 name: dgs
 
 services:
@@ -18,4 +22,37 @@ services:
     environment:
       DGS_ENV: development
       DGS_ALLOWED_ORIGINS: http://localhost:5173
+      DGS_DATABASE_URL: postgres://postgres:dgs@db:5432/dgs?sslmode=disable
     ports: ["127.0.0.1:8090:8090"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: dgs
+      POSTGRES_DB: dgs
+    ports: ["127.0.0.1:5433:5432"]
+    volumes:
+      - dgs-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1"]
+      interval: 2s
+      retries: 30
+
+  test-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: dgs
+    ports: ["127.0.0.1:55433:5432"]
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1"]
+      interval: 2s
+      retries: 30
+    profiles: [test]
+
+volumes:
+  dgs-db:

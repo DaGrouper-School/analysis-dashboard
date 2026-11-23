@@ -5,6 +5,7 @@
 package server
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"slices"
@@ -19,8 +20,16 @@ import (
 // origin.
 const Prefix = "/api"
 
+// Pinger is the database as the health check sees it.
+type Pinger interface {
+	Ping(ctx context.Context) error
+}
+
 // Deps is everything the service is built from.
 type Deps struct {
+	// DB is the database. The health check reports the service unavailable
+	// while it does not answer.
+	DB Pinger
 	// AllowedOrigins are the front-end origins that may call with
 	// credentials and send writes.
 	AllowedOrigins []string
@@ -57,9 +66,7 @@ func (a *App) Handler() http.Handler {
 // routes is every endpoint, with a catch-all that answers not_found.
 func (a *App) routes() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
-		httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-	})
+	mux.HandleFunc("GET /healthz", a.healthz)
 	for _, m := range a.modules {
 		m.Routes(mux, Prefix)
 	}
@@ -67,6 +74,25 @@ func (a *App) routes() *http.ServeMux {
 		httpx.WriteError(w, r, httpx.NotFound("No such endpoint."))
 	})
 	return mux
+}
+
+// pingTimeout bounds the health check's database ping, well inside the
+// probe's own timeout.
+const pingTimeout = 2 * time.Second
+
+// healthz answers 200 while the database answers, and 503 otherwise, so a
+// load balancer stops sending requests to an instance that cannot serve them.
+func (a *App) healthz(w http.ResponseWriter, r *http.Request) {
+	if a.DB != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), pingTimeout)
+		defer cancel()
+		if err := a.DB.Ping(ctx); err != nil {
+			slog.WarnContext(ctx, "health check: the database did not answer", "err", err)
+			httpx.WriteJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "unavailable"})
+			return
+		}
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // notFoundPattern catches every path under the API no endpoint serves.
