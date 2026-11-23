@@ -256,7 +256,7 @@ Instances are stateless apart from the database and run behind the front end's o
 
 | Risk | Mitigation |
 |---|---|
-| SAM reflects a change only once it is delivered, so it may briefly be more permissive (consent still given after a withdrawal) | This service checks its own consent and minor record before relaying anything for a person |
+| SAM reflects a change only once it is delivered, so it may be more permissive meanwhile (consent still given after a withdrawal, a removed member still in a group, a public grant not yet revoked) | Every call for a person or a visitor checks this service's own record first: consent, membership and role, and the sharing settings ([SAM integration](sam-integration.md#the-outbox)) |
 | The contract drifts from the front end | The contract is generated from the front end's routes and checked in CI; every integration response is validated against it |
 | A module reaches into another's tables | The ownership test fails, unless the exception is listed with its reason |
 | A change is held in the outbox and nobody notices | Held changes are logged as warnings and listed for operators ([SAM integration](sam-integration.md)) |

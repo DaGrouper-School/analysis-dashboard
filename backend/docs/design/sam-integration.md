@@ -111,7 +111,17 @@ The kinds:
 
 **No request waits on SAM.** Sign-in creates the account and queues it; the worker registers it, normally within a second. Until then the person sees what a person without grants sees.
 
-**SAM lags behind.** SAM reflects a change only once it is delivered, and until then keeps the state before it, which may be more permissive (consent still `given` after a withdrawal). Whatever this service relays to SAM for a person therefore checks its own record first.
+**SAM lags behind.** SAM reflects a change only once it is delivered, and until then keeps the state before it. For a change that takes access away, that state is more permissive:
+
+| Here | SAM, until delivery |
+|---|---|
+| A guardian withdraws consent | `consent` still `given` |
+| A member is removed, or loses a role | Still in the role's group |
+| A classroom stops showing its data publicly | The anonymous grants still live |
+
+Delivery normally takes a second, but lasts as long as SAM is down, and a change SAM refuses is held until an operator acts. People and visitors reach SAM only through this service, so the rule is: **every call made for a person or a visitor checks this service's own record first**, and SAM's answer only narrows what that record allows. That covers relays (membership, `recordReadings`, consent), reads as the viewer (membership and role), and public pages (the classroom's sharing settings): a classroom that does not show its data publicly answers visitors with no values, whatever grants SAM still holds.
+
+**Changes that take access away** are marked so when queued. Held, one is logged at error level rather than warning, and `dgs outbox held` lists it first, since until it is delivered SAM is more permissive than this service.
 
 ### Idempotency keys
 
@@ -136,11 +146,9 @@ A user it cannot compare is logged and tried again on the next pass. It reads us
 ### Participant IDs and the restore guard
 
 - The participant ID is the subject of a person's SAM principal and the only identifier of a person SAM holds. It comes from a sequence and is never reused.
-- Every principal is registered with a tag naming its account.
-- A principal is registered only for an account with none stored. When SAM answers that the participant ID already exists:
-  - with this account's tag, it is this account's own attempt whose answer was lost, and it is adopted;
-  - otherwise it belongs to an account this database does not know. That happens only after a restore. The row is held for an operator and the principal is never adopted.
-- **At start-up** the guard moves the sequence past every ID SAM already knows. IDs are given in order, so the registered ones above the next ID are a run: the guard finds its end by doubling, then halving, with a bounded number of lookups, and logs a warning when it moves the sequence.
+- A principal is registered only for an account with none stored, under an idempotency key naming the account and the change's version.
+- **Adoption.** When an answer is lost, the retry carries the same key and SAM replays its first answer: the user's own principal, which is adopted. SAM answers `409 already_exists` when the participant ID is a principal registered by some other request. After a restore that is either a user the restore lost, who had the ID, or this user's own registration that reached SAM after the backup and whose answer SAM no longer replays (it keeps answers for 24 hours). The service cannot tell which, so it never adopts on its own: the row is held, and an operator either gives the user a new participant ID or adopts the principal as theirs ([Operations](../operations.md#after-a-database-restore)).
+- **At start-up** the guard moves the sequence past every ID SAM already knows. IDs are given in order, so the registered ones above the next ID are a run: the guard finds its end by doubling, then halving, with a bounded number of lookups, and logs a warning when it moves the sequence. While SAM cannot be asked, the service starts anyway, the guard retries in the background, and registrations wait for it.
 
 ### Reads
 
@@ -166,14 +174,14 @@ The message is this service's own. SAM's developer-facing detail is logged, neve
 - **Falling back to this service's authority when a person's does not suffice.** It would let a person do through this service what SAM refuses them, such as a head making heads. Rejected.
 - **Idempotency keys from row IDs or participant IDs.** A restored database gives them out again, and SAM would replay an answer meant for another change. Rejected for keys that name the change.
 - **A key per attempt.** A retry after a lost answer would publish a release twice. Rejected for stable keys.
-- **Adopting a principal that already exists.** After a restore, one person would act as another. Rejected: only this account's own tagged attempt is adopted.
+- **Adopting a principal that already exists.** After a restore, one person would act as another. Rejected: only the replayed answer to this account's own request is adopted.
 - **Reconciling memberships.** SAM cannot list a group's members, so there is nothing to compare. The applier records confirmed steps instead.
 
 ## Risks
 
 | Risk | Mitigation |
 |---|---|
-| SAM keeps a more permissive state until delivery | Relays check this service's own record first; delivery normally takes a second |
+| SAM keeps a more permissive state until a change is delivered, for as long as SAM is down or the change is held | Every call for a person or a visitor checks this service's own record first: relays, reads as the viewer and public pages. A held change that takes access away is logged at error level and listed first |
 | Held rows go unnoticed | `dgs outbox held`; held rows are logged at warning level |
 | A membership changed in SAM by hand is not repaired | Only this service changes classroom groups; SAM's audit shows any other change |
 | The signing key is lost or leaked | Rotation without downtime; tokens live five minutes |

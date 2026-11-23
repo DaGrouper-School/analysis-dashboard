@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/logx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
@@ -21,8 +23,9 @@ import (
 // origin.
 const Prefix = "/api"
 
-// Pinger is the database as the health check sees it.
-type Pinger interface {
+// Database is the database modules query and the health check pings.
+type Database interface {
+	db.Querier
 	Ping(ctx context.Context) error
 }
 
@@ -30,7 +33,7 @@ type Pinger interface {
 type Deps struct {
 	// DB is the database. The health check reports the service unavailable
 	// while it does not answer.
-	DB Pinger
+	DB Database
 	// AllowedOrigins are the front-end origins that may call with
 	// credentials and send writes.
 	AllowedOrigins []string
@@ -63,6 +66,9 @@ func New(d Deps) *App {
 	if d.SAM != nil {
 		a.modules = append(a.modules, d.SAM)
 	}
+	if d.SAM != nil && d.DB != nil {
+		a.modules = append(a.modules, accounts.New(d.DB, d.SAM, d.Now))
+	}
 	return a
 }
 
@@ -72,7 +78,23 @@ type (
 	outboxSender interface{ OutboxKinds() []samaccess.Kind }
 	// reconciled is a module whose entities the reconciler compares.
 	reconciled interface{ Checks() []samaccess.Check }
+	// background is a module with work to run while the service serves.
+	background interface {
+		Background() []func(context.Context)
+	}
 )
+
+// Background is every module's work to run while the service serves, each
+// until its context ends.
+func (a *App) Background() []func(context.Context) {
+	var out []func(context.Context)
+	for _, m := range a.modules {
+		if b, ok := m.(background); ok {
+			out = append(out, b.Background()...)
+		}
+	}
+	return out
+}
 
 // OutboxKinds are every module's kinds of outbox change.
 func (a *App) OutboxKinds() []samaccess.Kind {

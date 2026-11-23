@@ -83,11 +83,12 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 
 | Package | Responsibility |
 |---|---|
-| `cmd/dgs` | The command. `dgs serve` (the default) applies new migrations, reads the tenant file and signing keys, then serves until `SIGINT` or `SIGTERM`, then stops taking requests and waits up to ten seconds for those in flight. `dgs migrate` applies new migrations and exits. `dgs keys new` prints a new signing key ([Operations](operations.md#signing-keys)). `dgs outbox held` and `dgs outbox release ENTITY` list and release changes held for an operator ([Operations](operations.md#held-changes)) |
+| `cmd/dgs` | The command. `dgs serve` (the default) applies new migrations, reads the tenant file and signing keys, then serves until `SIGINT` or `SIGTERM`, then stops taking requests and waits up to ten seconds for those in flight. `dgs migrate` applies new migrations and exits. `dgs keys new` prints a new signing key ([Operations](operations.md#signing-keys)). `dgs outbox held` and `dgs outbox release ENTITY` list and release changes held for an operator ([Operations](operations.md#held-changes)). `dgs accounts renumber USER` and `dgs accounts adopt USER` resolve a registration held after a database restore ([Operations](operations.md#after-a-database-restore)) |
 | `internal/config` | Reads and checks the configuration |
 | `internal/logx` | Sets up `slog` in text or JSON; carries the request ID so every log line written while serving a request names it |
 | `internal/httpx` | The error format, `WriteJSON`, `WriteError`, the `Handler` type, strict decoding |
 | `internal/db` | Opens the pool, applies the migrations, transactions (`InTx`) and advisory locks |
+| `internal/accounts` | Accounts and their participant IDs; registering each account's SAM principal through the outbox; the restore guard |
 | `internal/samaccess` | Calls SAM as this service, as a person through a user token or as anonymous; the signing keys and the key set; SAM's errors translated; the outbox, its worker and the reconciler |
 | `internal/server` | `server.New(Deps)`, the `Module` interface, the middleware, `/healthz` and the API's not-found answer |
 | `internal/testutil` | A fresh database per test (test code only) |
@@ -155,7 +156,7 @@ Calls to SAM time out after fifteen seconds. `/healthz` does not ask SAM: this s
 
 A change SAM must reflect is never sent from a handler. The service function that makes it writes the entity's whole desired state to the outbox, in the same transaction, and the worker sends it ([The outbox](design/sam-integration.md#the-outbox)).
 
-- **Enqueueing.** `samaccess.Enqueue(ctx, tx, now, Change{Entity, Kind, Payload, Actor})`. `Entity` names what the change is about, such as `user:<account id>`, and never a participant ID or a row ID a restored database could give out again. `Actor` is the account the change is sent as, or nil for this service.
+- **Enqueueing.** `samaccess.Enqueue(ctx, tx, now, Change{Entity, Kind, Payload, Actor})`. `Entity` names what the change is about, such as `user:<user id>`, and never a participant ID or a row ID a restored database could give out again. `Actor` is the account the change is sent as, or nil for this service.
 - **Kinds.** A module whose changes reach SAM declares its kinds with `OutboxKinds() []samaccess.Kind`: a name, whether it is sent as a person (`ByPerson`), and `Apply(ctx, Attempt)`, which sends the desired state through `Attempt.SAM`, the client acting as the change's actor.
 - **Idempotency keys.** Every write `Apply` sends carries `Attempt.WithKey(ctx, what)`, the key `<entity>:<what>:v<version>`, so a retry after a lost answer gets the first answer back. When `Attempt.Replayed` is false, the first attempt is more than a day old and SAM no longer replays it, so a change that must happen once checks what SAM holds before sending again.
 - **What Apply returns.** `nil` once SAM holds the change. `samaccess.ErrNotYet` while another entity must reach SAM first: the change is retried. `samaccess.Hold(err)` for what retrying cannot fix. SAM's own answers are sorted by the worker: `unavailable`, `internal`, `rate_limited` (after `Retry-After`), `idempotency_in_progress`, any 5xx and timeouts are retried, with backoff from a second up to five minutes; `forbidden`, `unauthenticated`, `invalid_request`, `attenuation_violation`, `idempotency_key_reused` and any other refusal hold the change.
@@ -163,6 +164,12 @@ A change SAM must reflect is never sent from a handler. The service function tha
 - **The reconciler** runs every `DGS_RECONCILE_INTERVAL` on the instance holding the reconciler lock, and runs each `samaccess.Check` that modules declare with `Checks()`. A check compares one kind of entity in SAM with this database, a page at a time, and enqueues a correction where they differ. A failing check is logged and runs again on the next pass.
 
 Both stop when the service does, before the database closes.
+
+### Accounts in SAM
+
+- **Participant IDs** come from the `participant_ids` sequence, in order, and are never reused. An account's ID is its SAM principal's subject, as a decimal string.
+- **Registration.** `accounts.Create` makes the user and queues their `user` change in the same transaction. The worker registers the principal, as this service, under the key `user:<user id>:principal:v<version>`, and stores its ID. Until then the account is answered as a person with no grants.
+- **The restore guard** runs at every start-up, in the background. It looks participant IDs up in SAM from the sequence's next one, doubling the step and then halving it, and moves the sequence past the last ID SAM knows, logging a warning when it does. Registrations wait until it has run, so while SAM cannot be asked the service serves and accounts wait to be registered.
 
 ## The database
 
@@ -199,6 +206,7 @@ Each table is read and written only by the package that owns it ([Data ownership
 |---|---|---|
 | `schema_migrations` | `internal/db` | |
 | `sam_outbox` | `internal/samaccess` | |
+| `users` | `internal/accounts` | |
 | `sam_outbox_versions` | `internal/samaccess` | |
 
 ## Testing

@@ -7,6 +7,10 @@
 //	dgs keys new                print a new signing key for the key file
 //	dgs outbox held             list the changes for SAM held for an operator
 //	dgs outbox release ENTITY   send an entity's latest held change again
+//	dgs accounts renumber USER  give a user not yet in SAM a new
+//	                            participant ID
+//	dgs accounts adopt USER     record the principal SAM has under a
+//	                            restored user's participant ID as theirs
 //
 // Configuration comes from the environment; docs/development.md lists every
 // variable and its default.
@@ -30,8 +34,11 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/config"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/logx"
@@ -52,13 +59,14 @@ func main() {
 	}
 }
 
-const usage = "usage: dgs serve|migrate|keys new|outbox held|outbox release ENTITY"
+const usage = "usage: dgs serve|migrate|keys new|outbox held|outbox release ENTITY|accounts renumber USER|accounts adopt USER"
 
 func run(ctx context.Context, out io.Writer, args []string) error {
 	switch {
 	case is(args, "keys", "new"):
 		return newKey(out)
-	case is(args, "serve"), is(args, "migrate"), is(args, "outbox", "held"), len(args) == 3 && is(args[:2], "outbox", "release"):
+	case is(args, "serve"), is(args, "migrate"), is(args, "outbox", "held"), len(args) == 3 && is(args[:2], "outbox", "release"),
+		len(args) == 3 && (is(args[:2], "accounts", "renumber") || is(args[:2], "accounts", "adopt")):
 	default:
 		return fmt.Errorf("unknown command %q; %s", strings.Join(args, " "), usage)
 	}
@@ -81,6 +89,11 @@ func run(ctx context.Context, out io.Writer, args []string) error {
 		return nil
 	case "outbox":
 		return outbox(ctx, out, pool, args[1:])
+	case "accounts":
+		if args[1] == "adopt" {
+			return adopt(ctx, out, cfg, pool, args[2])
+		}
+		return renumber(ctx, out, pool, args[2])
 	}
 	return serveAll(ctx, cfg, pool)
 }
@@ -113,10 +126,55 @@ func serveAll(ctx context.Context, cfg config.Config, pool *pgxpool.Pool) error 
 	var wg sync.WaitGroup
 	wg.Go(func() { worker.Run(bg) })
 	wg.Go(func() { reconciler.Run(bg) })
+	for _, task := range app.Background() {
+		wg.Go(func() { task(bg) })
+	}
 	slog.InfoContext(ctx, "listening", "addr", ln.Addr().String(), "env", cfg.Environment)
 	err = serve(ctx, ln, app.Handler())
 	stop()
 	wg.Wait()
+	return err
+}
+
+// renumber gives a user SAM does not have yet a new participant ID, for
+// one whose ID SAM knows as someone else's after a database restore.
+func renumber(ctx context.Context, out io.Writer, pool *pgxpool.Pool, user string) error {
+	id, err := uuid.Parse(user)
+	if err != nil {
+		return fmt.Errorf("%q is not a user ID", user)
+	}
+	u, err := accounts.Renumber(ctx, pool, time.Now(), id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("no user %s", id)
+	}
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(out, "user %s now has participant ID %d; their registration in SAM is queued\n", id, u.ParticipantID)
+	return err
+}
+
+// adopt records as a user's own the principal SAM has under their
+// participant ID, for a restored user whose registration reached SAM after
+// the backup. The operator checks first that the principal is theirs.
+func adopt(ctx context.Context, out io.Writer, cfg config.Config, pool *pgxpool.Pool, user string) error {
+	id, err := uuid.Parse(user)
+	if err != nil {
+		return fmt.Errorf("%q is not a user ID", user)
+	}
+	sam, err := samAccess(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	p, err := accounts.New(pool, sam, time.Now).Adopt(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("no user %s", id)
+	}
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(out, "user %s adopted SAM principal %s, which SAM registered at %s\n", id, p.ID,
+		p.CreatedAt.UTC().Format(time.RFC3339))
 	return err
 }
 

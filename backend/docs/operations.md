@@ -39,6 +39,24 @@ dgs outbox release ENTITY      # send the entity's latest held change again on t
 
 Release a change once what refused it is fixed, for example once the person has the rights SAM asked for. A released change that SAM refuses again is held again.
 
+## After a database restore
+
+A database restored from a backup has forgotten what happened after the backup was taken, but SAM has not. Users who signed up after the backup are gone from this database, yet SAM still holds their principals under their participant IDs. At start-up the restore guard moves the participant ID sequence past every ID SAM knows, and logs `participant ID guard moved the sequence`. New users then get IDs SAM has never seen.
+
+A registration can still be held after a restore, with SAM answering that a principal already exists under the user's participant ID. `dgs outbox held` lists it as `user:<user id>`, with an error saying so. Which of two cases it is decides what to do, and the service cannot tell them apart, so it never adopts the principal itself:
+
+| The user | SAM's principal is | Do |
+|---|---|---|
+| Signed up after the restore, before the guard ran, such as while SAM could not be asked at start-up | Someone else's: a user the restore lost, who had this ID | `dgs accounts renumber USER` |
+| Was in the backup, but their registration reached SAM after the backup was taken. Its answer is lost with the restore, and SAM no longer replays it after a day | Their own | `dgs accounts adopt USER` |
+
+To tell them apart, compare when the user was created here (`SELECT created_at FROM users WHERE id = '<user id>'`) with when the backup was taken. A user created before the backup is the second case; one created after the restore is the first. `dgs accounts adopt` prints when SAM registered the principal, which falls after the backup in the second case.
+
+- **Renumbering** gives the user the next free participant ID and queues their registration under it.
+- **Adopting** records SAM's principal as the user's and completes their held registration.
+
+Both refuse a user whose principal is already recorded. Never adopt a principal you have not checked: adopting someone else's lets one person act as another in SAM, with their grants and their data.
+
 ## The tenant file
 
 `DGS_SAM_TENANT_FILE` is what `sam tenant create -json` printed when this service was onboarded, and holds its service key, shown that once. Keep it as a secret. Onboarding again for an onboarded tenant prints no key: a lost service key is replaced with an emergency key issued by SAM's operator ([SAM's tenants](https://github.com/DaGrouper-School/sam/blob/main/docs/tenants.md)).

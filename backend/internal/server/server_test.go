@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
 )
 
@@ -52,8 +53,11 @@ func code(t *testing.T, w *httptest.ResponseRecorder) string {
 	return e.Code
 }
 
-// pinger is a database that answers with err.
-type pinger struct{ err error }
+// pinger is a database whose ping answers err; it is never queried.
+type pinger struct {
+	db.Querier
+	err error
+}
 
 func (p pinger) Ping(context.Context) error { return p.err }
 
@@ -67,7 +71,7 @@ func TestHealthz(t *testing.T) {
 	if w := do(t, up, "GET", "/healthz", nil); w.Code != http.StatusOK {
 		t.Fatalf("with the database up: %d %q", w.Code, w.Body)
 	}
-	down := New(Deps{DB: pinger{errors.New("connection refused")}}).Handler()
+	down := New(Deps{DB: pinger{err: errors.New("connection refused")}}).Handler()
 	if w := do(t, down, "GET", "/healthz", nil); w.Code != http.StatusServiceUnavailable || w.Body.String() != "{\"status\":\"unavailable\"}\n" {
 		t.Fatalf("with the database down: %d %q", w.Code, w.Body)
 	}

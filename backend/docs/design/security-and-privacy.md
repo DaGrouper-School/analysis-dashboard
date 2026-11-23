@@ -43,7 +43,7 @@ The service holds personal data about participants, many of them minors, and the
 | An invitation outliving its authority | Invitations expire, are revoked with the inviter's role, and are accepted as the inviter |
 | One person acting as another after a restore | Participant IDs never reused; principals tagged with their account; a foreign principal never adopted; the sequence moved past SAM's IDs at start-up |
 | Signing key compromise | Ed25519 keys from configured files; five-minute tokens; rotation without downtime |
-| A withdrawal not yet in SAM | This service checks its own consent record before relaying |
+| A withdrawal, removal or end of public sharing not yet in SAM | Every call for a person or a visitor checks this service's own record first, and a held change that takes access away is logged at error level |
 | Identifying a minor | Never named or listed; no public profile; GPS rounded before sending; positions generalised and identities stripped for visitors |
 | Enumerating contributors | Contributor pages only for non-minors with a public profile; every other ID answers 404 like an unknown one |
 | Publishing an email | Contributor profiles carry `email: null` |
