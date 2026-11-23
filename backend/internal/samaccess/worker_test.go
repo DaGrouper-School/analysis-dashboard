@@ -1,8 +1,11 @@
 package samaccess
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -410,5 +413,48 @@ func TestReconciler(t *testing.T) {
 	}
 	if _, err := NewReconciler(pool, nil, 0); err == nil {
 		t.Error("no interval")
+	}
+}
+
+// TestHeldChangesThatTakeAccessAwayComeFirst: a held change after which SAM
+// should allow less is listed before the rest.
+func TestHeldChangesThatTakeAccessAwayComeFirst(t *testing.T) {
+	t.Parallel()
+	b := newBench(t, nil)
+	ctx := context.Background()
+	b.enqueue(Change{Entity: "thing:a", Kind: "thing", Payload: 1})
+	b.clock.Add(time.Second)
+	b.enqueue(Change{Entity: "thing:b", Kind: "thing", Payload: 1, TakesAccessAway: true})
+	b.answering(&client.Error{Status: 403, Code: "forbidden"})
+	b.pass()
+	held, err := HeldChanges(ctx, b.pool)
+	if err != nil || len(held) != 2 || held[0].Entity != "thing:b" || !held[0].TakesAccessAway || held[1].TakesAccessAway {
+		t.Fatalf("held %+v, %v", held, err)
+	}
+}
+
+// TestAHeldChangeThatTakesAccessAwayIsAnError: such a change is logged at
+// error level when held, the rest at warning. It replaces the default
+// logger, so it does not run in parallel.
+func TestAHeldChangeThatTakesAccessAwayIsAnError(t *testing.T) {
+	var log bytes.Buffer
+	defer slog.SetDefault(slog.Default())
+	slog.SetDefault(slog.New(slog.NewTextHandler(&log, nil)))
+	b := newBench(t, nil)
+	b.enqueue(Change{Entity: "thing:a", Kind: "thing", Payload: 1})
+	b.enqueue(Change{Entity: "thing:b", Kind: "thing", Payload: 1, TakesAccessAway: true})
+	b.answering(&client.Error{Status: 403, Code: "forbidden"})
+	b.pass()
+	lines := strings.Split(strings.TrimSpace(log.String()), "\n")
+	levels := map[string]string{}
+	for _, l := range lines {
+		for _, e := range []string{"thing:a", "thing:b"} {
+			if strings.Contains(l, "entity="+e) && strings.Contains(l, "held") {
+				levels[e] = strings.Fields(strings.SplitN(l, "level=", 2)[1])[0]
+			}
+		}
+	}
+	if levels["thing:a"] != "WARN" || levels["thing:b"] != "ERROR" {
+		t.Fatalf("levels %v in:\n%s", levels, log.String())
 	}
 }

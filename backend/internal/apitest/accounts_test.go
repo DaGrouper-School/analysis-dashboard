@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -268,5 +269,176 @@ func TestARestoredUserIsAdopted(t *testing.T) {
 	other := b.create()
 	if _, err := b.m.Adopt(ctx, other.ID); !errors.Is(err, accounts.ErrNotInSAM) {
 		t.Fatalf("adopting with nothing in SAM: %v", err)
+	}
+}
+
+// countAssertions counts the attribute assertions sent to SAM.
+type countAssertions struct {
+	mu sync.Mutex
+	n  int
+}
+
+func (c *countAssertions) RoundTrip(r *http.Request) (*http.Response, error) {
+	if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/attributes") {
+		c.mu.Lock()
+		c.n++
+		c.mu.Unlock()
+	}
+	return http.DefaultTransport.RoundTrip(r)
+}
+
+func (c *countAssertions) count() int { c.mu.Lock(); defer c.mu.Unlock(); return c.n }
+
+// held is what SAM holds about participant n at the tenant root.
+func held(t *testing.T, e *apitest.Env, n int64) map[string]string {
+	t.Helper()
+	p := samUser(t, e, n)
+	root := e.Access.Tenant().RootSpaceID
+	attrs, err := e.Access.Service().Attributes(context.Background(), p.ID, &root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := map[string]string{}
+	for _, a := range attrs {
+		out[a.Name] = a.Value
+	}
+	return out
+}
+
+func (b *accountsBench) setMinor(u accounts.User, minor bool) {
+	b.t.Helper()
+	if _, err := accounts.SetMinor(context.Background(), b.e.Pool, b.clock.Now(), u.ID, minor); err != nil {
+		b.t.Fatal(err)
+	}
+}
+
+func (b *accountsBench) setConsent(u accounts.User, c accounts.Consent) {
+	b.t.Helper()
+	if _, err := accounts.SetConsent(context.Background(), b.e.Pool, b.clock.Now(), u.ID, c); err != nil {
+		b.t.Fatal(err)
+	}
+}
+
+// TestMinorAndConsentReachSAM: a user's minor and consent are asserted at
+// the tenant root; a value SAM already holds is never asserted again; and
+// consent that is withdrawn, or asked for again after it was given, is
+// withdrawn in SAM.
+func TestMinorAndConsentReachSAM(t *testing.T) {
+	t.Parallel()
+	e := apitest.New(t)
+	keys, err := samaccess.GenerateKeys(time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	counter := &countAssertions{}
+	cfg := e.SAM.Config(optionsOf(e))
+	cfg.HTTPClient = &http.Client{Transport: counter, Timeout: samaccess.CallTimeout}
+	counting, err := samaccess.New(cfg, keys, time.Now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := newAccounts(t, e, counting)
+	b.guard()
+
+	adult := b.create()
+	b.setMinor(adult, false)
+	minor := b.create()
+	b.setMinor(minor, true)
+	b.setConsent(minor, accounts.ConsentGiven)
+	b.pass()
+	if got := held(t, e, adult.ParticipantID); got["minor"] != "false" || got["consent"] != "" {
+		t.Fatalf("the adult in SAM: %v", got)
+	}
+	if got := held(t, e, minor.ParticipantID); got["minor"] != "true" || got["consent"] != "given" {
+		t.Fatalf("the minor in SAM: %v", got)
+	}
+	sent := counter.count()
+	if sent != 3 {
+		t.Fatalf("%d assertions, want 3", sent)
+	}
+
+	b.setMinor(minor, true)
+	b.setConsent(minor, accounts.ConsentGiven)
+	b.pass()
+	if counter.count() != sent {
+		t.Fatalf("values SAM already holds were asserted again: %d assertions", counter.count()-sent)
+	}
+
+	b.setConsent(minor, accounts.ConsentPending)
+	b.pass()
+	if got := held(t, e, minor.ParticipantID); got["consent"] != "withdrawn" {
+		t.Fatalf("asked again after consent was given: SAM holds %v", got)
+	}
+	b.setConsent(minor, accounts.ConsentGiven)
+	b.pass()
+	b.setConsent(minor, accounts.ConsentWithdrawn)
+	b.pass()
+	if got := held(t, e, minor.ParticipantID); got["consent"] != "withdrawn" {
+		t.Fatalf("after a withdrawal: SAM holds %v", got)
+	}
+}
+
+// TestUsersConvergeAfterAnOutage: consent given while SAM is down reaches
+// SAM once it is back.
+func TestUsersConvergeAfterAnOutage(t *testing.T) {
+	t.Parallel()
+	e := apitest.New(t)
+	b := newAccounts(t, e, e.Access)
+	b.guard()
+	u := b.create()
+	b.setMinor(u, true)
+	b.pass()
+	e.SAM.Stop()
+	b.setConsent(u, accounts.ConsentGiven)
+	b.pass()
+	if s, _ := state(t, e, accounts.Entity(u.ID)); s != "pending" {
+		t.Fatalf("while SAM is down: %s", s)
+	}
+	e.SAM.Start()
+	b.pass()
+	if got := held(t, e, u.ParticipantID); got["consent"] != "given" {
+		t.Fatalf("once SAM is back: SAM holds %v", got)
+	}
+}
+
+// TestTheReconcilerCorrectsSAM: consent given in SAM by hand, after it was
+// withdrawn here, is found by the reconciler and withdrawn again, queued as
+// taking access away.
+func TestTheReconcilerCorrectsSAM(t *testing.T) {
+	t.Parallel()
+	e := apitest.New(t)
+	b := newAccounts(t, e, e.Access)
+	ctx := context.Background()
+	b.guard()
+	u := b.create()
+	b.setMinor(u, true)
+	b.setConsent(u, accounts.ConsentWithdrawn)
+	b.pass()
+	root := e.Access.Tenant().RootSpaceID
+	if _, err := e.Access.Service().Assert(ctx, samUser(t, e, u.ParticipantID).ID,
+		client.AssertionInput{Name: "consent", Value: "given", ScopeSpaceID: &root}); err != nil {
+		t.Fatal(err)
+	}
+	checks := b.m.Checks()
+	if len(checks) != 1 {
+		t.Fatalf("checks %+v", checks)
+	}
+	if err := checks[0].Run(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var away bool
+	if err := e.Pool.QueryRow(ctx, `SELECT takes_access_away FROM sam_outbox WHERE entity = $1 AND state = 'pending'`,
+		accounts.Entity(u.ID)).Scan(&away); err != nil || !away {
+		t.Fatalf("the correction: takes access away %v, %v", away, err)
+	}
+	b.pass()
+	if got := held(t, e, u.ParticipantID); got["consent"] != "withdrawn" {
+		t.Fatalf("after the reconciler: SAM holds %v", got)
+	}
+	if err := checks[0].Run(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if waiting, err := samaccess.Waiting(ctx, e.Pool, accounts.Entity(u.ID)); err != nil || waiting {
+		t.Fatalf("a second pass queued again: %v %v", waiting, err)
 	}
 }

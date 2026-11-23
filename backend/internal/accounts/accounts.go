@@ -12,6 +12,7 @@ package accounts
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -51,6 +52,70 @@ type User struct {
 	ParticipantID int64
 	// Principal is the user's SAM principal, nil until registered.
 	Principal *uuid.UUID
+	// Minor is whether the user is a minor, nil until onboarding says.
+	Minor *bool
+	// Consent is their guardian's consent, nil until asked for.
+	Consent *Consent
+
+	// samMinor and samConsent are what SAM last confirmed it holds about
+	// them, so the user applier asserts only what differs.
+	samMinor   *bool
+	samConsent *Consent
+}
+
+// Consent is a guardian's consent, as this service keeps it. Only given and
+// withdrawn reach SAM; pending and not needed are this service's own.
+type Consent string
+
+// The consent states.
+const (
+	ConsentPending   Consent = "pending"
+	ConsentGiven     Consent = "given"
+	ConsentWithdrawn Consent = "withdrawn"
+	ConsentNotNeeded Consent = "not_needed"
+)
+
+func (c Consent) valid() bool {
+	switch c {
+	case ConsentPending, ConsentGiven, ConsentWithdrawn, ConsentNotNeeded:
+		return true
+	}
+	return false
+}
+
+// SetMinor records whether the user is a minor, in tx, and queues it for
+// SAM. Onboarding sets it, false for an adult, since SAM treats a user with
+// no minor assertion as a minor. A user who becomes a minor loses access:
+// without consent they may no longer submit.
+func SetMinor(ctx context.Context, tx db.Querier, now time.Time, id uuid.UUID, minor bool) (User, error) {
+	cur, err := lockUser(ctx, tx, id)
+	if err != nil {
+		return User{}, err
+	}
+	if err := setMinor(ctx, tx, id, minor); err != nil {
+		return User{}, err
+	}
+	away := minor && cur.Minor != nil && !*cur.Minor
+	cur.Minor = &minor
+	return cur, enqueue(ctx, tx, now, cur, away)
+}
+
+// SetConsent records the user's guardian's consent, in tx, and queues it
+// for SAM. Consent that was given and no longer is takes access away.
+func SetConsent(ctx context.Context, tx db.Querier, now time.Time, id uuid.UUID, c Consent) (User, error) {
+	if !c.valid() {
+		return User{}, fmt.Errorf("%q is not a consent state", c)
+	}
+	cur, err := lockUser(ctx, tx, id)
+	if err != nil {
+		return User{}, err
+	}
+	if err := setConsent(ctx, tx, id, c); err != nil {
+		return User{}, err
+	}
+	away := cur.Consent != nil && *cur.Consent == ConsentGiven && c != ConsentGiven
+	cur.Consent = &c
+	return cur, enqueue(ctx, tx, now, cur, away)
 }
 
 // Create makes a user in tx and queues their registration in SAM. No
@@ -61,7 +126,7 @@ func Create(ctx context.Context, tx db.Querier, now time.Time) (User, error) {
 	if err != nil {
 		return User{}, err
 	}
-	return u, enqueue(ctx, tx, now, u)
+	return u, enqueue(ctx, tx, now, u, false)
 }
 
 // Get reads a user; pgx.ErrNoRows when there is none.
@@ -77,7 +142,7 @@ var ErrRegistered = errors.New("the user is registered in SAM: their participant
 func Renumber(ctx context.Context, q db.Querier, now time.Time, id uuid.UUID) (User, error) {
 	var u User
 	err := db.InTx(ctx, q, func(tx pgx.Tx) error {
-		cur, err := getUser(ctx, tx, id)
+		cur, err := lockUser(ctx, tx, id)
 		if err != nil {
 			return err
 		}
@@ -88,7 +153,7 @@ func Renumber(ctx context.Context, q db.Querier, now time.Time, id uuid.UUID) (U
 		if u.ParticipantID, err = newParticipantID(ctx, tx, id); err != nil {
 			return err
 		}
-		return enqueue(ctx, tx, now, u)
+		return enqueue(ctx, tx, now, u, false)
 	})
 	return u, err
 }

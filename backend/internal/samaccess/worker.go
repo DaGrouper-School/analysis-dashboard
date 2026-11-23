@@ -175,6 +175,8 @@ type row struct {
 	actor       *uuid.UUID
 	attempts    int
 	firstSentAt *time.Time
+	// takesAccessAway is the change's mark; see Change.TakesAccessAway.
+	takesAccessAway bool
 }
 
 // due is the latest pending version of each entity whose next attempt has
@@ -182,7 +184,7 @@ type row struct {
 // desired state.
 func (w *Worker) due(ctx context.Context) ([]row, error) {
 	rows, err := w.pool.Query(ctx, `
-		SELECT id, entity, kind, version, payload, actor_id, attempts, first_sent_at FROM (
+		SELECT id, entity, kind, version, payload, actor_id, attempts, first_sent_at, takes_access_away FROM (
 			SELECT DISTINCT ON (entity) * FROM sam_outbox WHERE state = 'pending' ORDER BY entity, version DESC
 		) latest
 		WHERE next_attempt_at <= $1 ORDER BY next_attempt_at, id LIMIT $2`, w.now(), passLimit)
@@ -191,7 +193,7 @@ func (w *Worker) due(ctx context.Context) ([]row, error) {
 	}
 	return pgx.CollectRows(rows, func(c pgx.CollectableRow) (row, error) {
 		var r row
-		err := c.Scan(&r.id, &r.entity, &r.kind, &r.version, &r.payload, &r.actor, &r.attempts, &r.firstSentAt)
+		err := c.Scan(&r.id, &r.entity, &r.kind, &r.version, &r.payload, &r.actor, &r.attempts, &r.firstSentAt, &r.takesAccessAway)
 		return r, err
 	})
 }
@@ -329,7 +331,12 @@ func (w *Worker) record(ctx context.Context, r row, err error) error {
 			return err
 		})
 	case hold:
-		slog.WarnContext(ctx, "outbox change held", "entity", r.entity, "kind", r.kind, "version", r.version, "err", err)
+		level, msg := slog.LevelWarn, "outbox change held"
+		if r.takesAccessAway {
+			// SAM still allows what this service has taken away.
+			level, msg = slog.LevelError, "outbox change held that takes access away: SAM allows more than this service until it is delivered"
+		}
+		slog.Log(ctx, level, msg, "entity", r.entity, "kind", r.kind, "version", r.version, "err", err)
 		_, err := w.pool.Exec(ctx, `UPDATE sam_outbox SET state = 'held', attempts = attempts + 1, last_error = $2 WHERE id = $1`,
 			r.id, clip(err.Error()))
 		return err
