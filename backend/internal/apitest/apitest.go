@@ -20,6 +20,7 @@ import (
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/contract"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/notify"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/server"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/testenv"
@@ -53,7 +54,13 @@ type Options struct {
 	Keys *samaccess.Keys
 	// Demo turns demo mode on.
 	Demo bool
+	// SendsPerHour is the overall SMS limit; zero for the default.
+	SendsPerHour int
 }
+
+// ClientHeader is the header the service reads a test client's address
+// from, as from a trusted proxy.
+const ClientHeader = "X-Test-Client"
 
 // Env is this service running for one test.
 type Env struct {
@@ -65,6 +72,8 @@ type Env struct {
 	Google *FakeGoogle
 	// Clock is the service's clock, which a test moves.
 	Clock *Clock
+	// SMS keeps the texts the service sends.
+	SMS *notify.Recorder
 	// Access is how this service calls SAM, and App the service, as last
 	// started.
 	Access *samaccess.Access
@@ -110,7 +119,8 @@ func NewWith(t testing.TB, o Options) *Env {
 	url := "http://" + srv.Listener.Addr().String()
 	sam := testenv.Options{Issuer: url, KeySetURL: url + "/api" + samaccess.KeySetPath, Audience: Audience}
 	e := &Env{URL: url, Pool: testutil.DB(t), SAM: testenv.Start(t, sam), Google: newFakeGoogle(t), Clock: &Clock{now: time.Now()},
-		t: t, opts: o,
+		SMS: &notify.Recorder{},
+		t:   t, opts: o,
 		check: func(h http.Handler) http.Handler {
 			return c.Checked(h, func(err error) { t.Errorf("contract: %v", err) }, Outside...)
 		}}
@@ -133,7 +143,8 @@ func (e *Env) Restart(keys *samaccess.Keys) {
 	}
 	e.Access = access
 	e.App = server.New(server.Deps{DB: e.Pool, SAM: access, AllowedOrigins: []string{FrontEnd}, Now: e.Clock.Now,
-		Accounts: accounts.Config{GoogleClientID: e.Google.ClientID, GoogleKeysURL: e.Google.KeysURL, Demo: e.opts.Demo}})
+		Accounts: accounts.Config{GoogleClientID: e.Google.ClientID, GoogleKeysURL: e.Google.KeysURL, Demo: e.opts.Demo,
+			SMS: e.SMS, SMSSendsPerHour: e.opts.SendsPerHour, ClientIPHeader: ClientHeader}})
 	h := e.check(e.App.Handler())
 	e.handler.Store(&h)
 }
@@ -158,12 +169,22 @@ func (e *Env) Do(t testing.TB, method, path, body string) (*http.Response, strin
 // DoWith is Do through client.
 func (e *Env) DoWith(t testing.TB, client *http.Client, method, path, body string) (*http.Response, string) {
 	t.Helper()
+	return e.DoFrom(t, client, "", method, path, body)
+}
+
+// DoFrom is DoWith from the client address addr, as a trusted proxy would
+// pass it; "" for the connection's.
+func (e *Env) DoFrom(t testing.TB, client *http.Client, addr, method, path, body string) (*http.Response, string) {
+	t.Helper()
 	req, err := http.NewRequestWithContext(t.Context(), method, e.URL+path, strings.NewReader(body))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if body != "" {
 		req.Header.Set("Content-Type", "application/json")
+	}
+	if addr != "" {
+		req.Header.Set(ClientHeader, addr)
 	}
 	res, err := client.Do(req)
 	if err != nil {

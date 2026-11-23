@@ -42,6 +42,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/config"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/logx"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/notify"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/server"
 )
@@ -109,6 +110,9 @@ func serveAll(ctx context.Context, cfg config.Config, pool *pgxpool.Pool) error 
 	if err != nil {
 		return err
 	}
+	// Until a deployment configures a provider, codes go to the log in
+	// development and test, and nowhere elsewhere.
+	cfg.Accounts.SMS = notify.ForEnvironment(cfg.Local())
 	app := server.New(server.Deps{DB: pool, SAM: sam, AllowedOrigins: cfg.AllowedOrigins, Now: time.Now, Accounts: cfg.Accounts})
 	worker, err := samaccess.NewWorker(pool, sam, app.OutboxKinds(), app.Actors(), time.Now)
 	if err != nil {

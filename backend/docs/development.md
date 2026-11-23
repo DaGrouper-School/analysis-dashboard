@@ -78,6 +78,8 @@ Configuration comes from the environment (`internal/config`). Every problem is r
 | `DGS_GOOGLE_CLIENT_ID` | none; required outside development and test | The Google OAuth client ID, the audience of the ID tokens sign-in accepts. Without it Google sign-in is refused |
 | `DGS_SESSION_TTL` | `720h` (30 days) | How long an unused session lasts, a Go duration of at least `1h` |
 | `DGS_DEMO` | `false` | `true` signs in the demo accounts by subject. Start-up is refused with it on outside development and test |
+| `DGS_SMS_SENDS_PER_HOUR` | `200` | The most phone codes sent per hour overall, a whole number from 1, set from the expected sign-up rate ([Operations](operations.md#phone-codes)) |
+| `DGS_CLIENT_IP_HEADER` | none | The header a trusted proxy puts the client's address in, such as `X-Forwarded-For`; the last address in it is the client's. Without it, the connection's address is |
 | `DGS_RECONCILE_INTERVAL` | `15m` | How often the reconciler compares SAM with this database, a Go duration of at least `1m` |
 | `DGS_SIGNING_KEYS_FILE` | none in development and test, where a key is generated at start-up; required elsewhere | The key file user tokens are signed with ([Operations](operations.md#signing-keys)) |
 
@@ -93,6 +95,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/httpx` | The error format, `WriteJSON`, `WriteError`, the `Handler` type, strict decoding |
 | `internal/db` | Opens the pool, applies the migrations, transactions (`InTx`) and advisory locks |
 | `internal/accounts` | Accounts and their participant IDs; registering each account's SAM principal through the outbox; the restore guard |
+| `internal/notify` | Delivers messages: the SMS interface, the log provider for development and test, and a recorder for tests |
 | `internal/samaccess` | Calls SAM as this service, as a person through a user token or as anonymous; the signing keys and the key set; SAM's errors translated; the outbox, its worker and the reconciler |
 | `internal/server` | `server.New(Deps)`, the `Module` interface, the middleware, `/healthz` and the API's not-found answer |
 | `internal/testutil` | A fresh database per test (test code only) |
@@ -177,7 +180,13 @@ Sign-in is the accounts module's (`internal/accounts`), as are the tables it kee
 - **The first sign-in** creates the account, its outbox row, its Google identity (`google_identities`, by Google's subject) and the session in one transaction, and answers `isNewUser: true`. A new account whose verified email belongs to another account is `409 conflict`: the person signs in the way they did before. Nothing waits on SAM.
 - **Sessions** are random tokens in the `session` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` when `DGS_PUBLIC_URL` is `https`); `sessions` keeps only their SHA-256 hash. An unused session ends after `DGS_SESSION_TTL`; a use an hour or more after the last extension moves its end on and sends the cookie again. Ended sessions are removed every hour. `POST /api/auth/sign-out` deletes the session and clears the cookie.
 - **Guarding a route.** Modules are given the module's `Sessions` and wrap a signed-in route in `RequireUser`, which answers `401 unauthenticated` without a live session and puts the user in the request's context, read with `accounts.CurrentUser`. `GET /api/auth/me` is guarded so, which the front end reads as signed out.
-- **Demo sign-in.** With `DGS_DEMO` on, `GET /api/auth/demo-accounts` lists `demo_accounts`, and `POST /api/auth/google` takes a demo account's subject in place of a token. Otherwise the list is empty and a subject is no token.
+- **Phone codes.** `POST /api/auth/phone/start` normalises the number to E.164, as the front end's `normalizePhone` does, and texts a six-digit code through `notify`. `POST /api/auth/phone/verify` checks it and signs the holder in, creating their account on first sign-in, as Google sign-in does. The rules, all from the design's [Phone codes](design/accounts-and-sign-in.md#phone-codes):
+  - **The code.** It comes from a secure random source and is stored only as its hash with the challenge's ID. It lives five minutes, is resent no sooner than thirty seconds, is used once, and a new one ends the last.
+  - **Attempts.** A number has five while its codes live, and a new code keeps the count. One statement spends an attempt and reads the count before the code is compared, so parallel guesses spend the budget exactly.
+  - **Limits.** Sends are limited per number (5 an hour), per client address (20) and overall (`DGS_SMS_SENDS_PER_HOUR`); verifications per number (10) and per address (50). They are counted over a sliding hour in `rate_events`, each key's `rate_limits` row locked while it is counted, so they hold across replicas. A refusal is `429 rate_limited` with `Retry-After`.
+  - **The client address.** It is the connection's, or the last address in `DGS_CLIENT_IP_HEADER`. IPv6 addresses are keyed by their /64.
+  - **Refusals.** A wrong code is `400 code_invalid`. An unknown, used, replaced or expired one is `400 code_expired`. A number without its country code is `400 invalid_input` on `phone`.
+- **Demo sign-in.** With `DGS_DEMO` on, `GET /api/auth/demo-accounts` lists `demo_accounts`, and `POST /api/auth/google` takes a demo account's subject in place of a token. Otherwise the list is empty and a subject is no token. Demo mode also returns a phone code in the response as `devCode`, and does not text it.
 - **A new account** is shown as no minor, with consent not needed, as the front end starts every account; SAM treats the person as a minor until onboarding asserts otherwise.
 
 ### Accounts in SAM
@@ -227,6 +236,10 @@ Each table is read and written only by the package that owns it ([Data ownership
 | `google_identities` | `internal/accounts` | |
 | `sessions` | `internal/accounts` | |
 | `demo_accounts` | `internal/accounts` | |
+| `phone_challenges` | `internal/accounts` | |
+| `phone_attempts` | `internal/accounts` | |
+| `rate_limits` | `internal/accounts` | |
+| `rate_events` | `internal/accounts` | |
 | `sam_outbox_versions` | `internal/samaccess` | |
 
 ## Testing
@@ -253,7 +266,7 @@ Tests that need the database call `testutil.DB(t)`, which gives the test a datab
 
 **Contract gaps.** `apitest.Gaps` lists the statuses this service answers that an operation does not declare yet, each with why, such as `401` on `auth.getCurrentUser`. They belong in the front end's routes, which the contract is generated from; until they are there, the check lets them through, provided the body is an `Error`.
 
-**Signing in** in a test: `e.Google.Token(person, e.Clock.Now())` is an ID token from the fake Google the service trusts, and `e.NewClient()` a browser with its own cookies. `e.Clock` is the service's clock, moved by hand. `apitest.NewWith(t, apitest.Options{Demo: true})` turns demo mode on.
+**Signing in** in a test: `e.Google.Token(person, e.Clock.Now())` is an ID token from the fake Google the service trusts, and `e.NewClient()` a browser with its own cookies. `e.Clock` is the service's clock, moved by hand. `apitest.NewWith(t, apitest.Options{Demo: true})` turns demo mode on. `e.SMS` keeps the texts the service sends, so a test reads a code from it, and `e.DoFrom` sends a request from a client address, as a trusted proxy would pass it.
 
 ### SAM's module
 

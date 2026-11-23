@@ -2,6 +2,12 @@
 
 Running the service once it is deployed. Configuration is in [Development](development.md#configuration).
 
+## Phone codes
+
+- **The SMS provider.** Development and test write codes to the log. No other environment does: until a deployment configures an SMS provider, phone sign-in refuses to send a code, and the error is logged.
+- **The overall send limit.** `DGS_SMS_SENDS_PER_HOUR` (200 by default) caps the codes sent per hour across every number and address, which caps what SMS pumping can cost. Set it from the expected sign-up rate. Past it, people asking for a code get `429` with `Retry-After` until the oldest send of the hour leaves the window.
+- **The client address behind a proxy.** The per-address limits key on the client's address. Behind a load balancer or proxy that is the proxy's own, so set `DGS_CLIENT_IP_HEADER` to the header it puts the client's address in, such as `X-Forwarded-For`: the service takes the last address in it, the one the proxy added. Set it only behind a proxy that sets the header itself, or a client could name any address.
+
 ## Signing keys
 
 User tokens are signed with Ed25519 keys from the key file `DGS_SIGNING_KEYS_FILE`. Outside development and test, start-up is refused without one. Keep it as a secret, readable only by the service.

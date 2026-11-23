@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -140,6 +141,9 @@ const (
 	minReconcileInterval     = time.Minute
 )
 
+// headerName is what an HTTP header name may hold.
+var headerName = regexp.MustCompile(`^[A-Za-z0-9-]+$`)
+
 // Sign-in defaults.
 const (
 	defaultPublicURL = "http://localhost:8090"
@@ -175,6 +179,18 @@ func (c *Config) signIn() error {
 			errs = append(errs, fmt.Errorf("DGS_SESSION_TTL must be a duration of at least %s, such as 720h, not %q", minSessionTTL, v))
 		}
 		c.Accounts.SessionTTL = d
+	}
+	c.Accounts.SMSSendsPerHour = accounts.DefaultSendsPerHour
+	if v := os.Getenv("DGS_SMS_SENDS_PER_HOUR"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 {
+			errs = append(errs, fmt.Errorf("DGS_SMS_SENDS_PER_HOUR must be a whole number from 1, not %q", v))
+		}
+		c.Accounts.SMSSendsPerHour = n
+	}
+	c.Accounts.ClientIPHeader = os.Getenv("DGS_CLIENT_IP_HEADER")
+	if h := c.Accounts.ClientIPHeader; h != "" && !headerName.MatchString(h) {
+		errs = append(errs, fmt.Errorf("DGS_CLIENT_IP_HEADER must be a header name, such as X-Forwarded-For, not %q", h))
 	}
 	switch v := os.Getenv("DGS_DEMO"); v {
 	case "", "false":
