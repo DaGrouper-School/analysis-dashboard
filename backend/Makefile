@@ -3,9 +3,9 @@
 DGS_ENV ?= development
 export DGS_ENV
 
-# Tests run against DGS_TEST_DATABASE_URL when it is set (any server tests
-# may create databases on); otherwise against the compose test-db service,
-# which `make test` starts.
+# Tests run against DGS_TEST_DATABASE_URL when it is set (any PostGIS server
+# tests may create databases on); otherwise against the compose test-db
+# service, which `make test` starts.
 TEST_DB ?= postgres://postgres:dgs@127.0.0.1:55433/postgres?sslmode=disable
 
 # `make run` and `make migrate` use the compose db service unless
@@ -26,6 +26,10 @@ run: ## serve the API locally, in development unless DGS_ENV says otherwise
 
 migrate: ## apply new migrations to DGS_DATABASE_URL
 	go run ./cmd/dgs migrate
+
+# SAM's module is private: go fetches it with git, as the signed-in user.
+GOPRIVATE ?= github.com/dagrouper-school/*
+export GOPRIVATE
 
 test: ## run every test with the race detector, against the test database
 ifdef DGS_TEST_DATABASE_URL
@@ -53,7 +57,7 @@ db-up: ## start the development and test databases
 	docker compose --profile test up -d --wait db test-db
 
 up: ## build and start the service and its database with docker compose
-	docker compose up -d --build --wait
+	SAM_READ_TOKEN="$${SAM_READ_TOKEN:-$$(gh auth token)}" docker compose up -d --build --wait
 
 down: ## stop the stack and discard its data
 	docker compose down --volumes --remove-orphans

@@ -2,7 +2,7 @@
 
 This service backs the DaGrouper School analysis dashboard. It holds people, sessions, classrooms and everything specific to DaGrouper School, and is SAM's first tenant, relying on SAM for access control and observation data.
 
-So far the service runs, serves `/healthz` and shuts down cleanly. The design documents describe the whole service to be built; every other page describes only what exists.
+So far the service runs with its database and migrations, serves `/healthz` and shuts down cleanly, and its integration tests run it against a SAM built from source, holding every response to the API contract. The design documents describe the whole service to be built; every other page describes only what exists.
 
 ## Design
 

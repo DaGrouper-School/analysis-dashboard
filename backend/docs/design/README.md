@@ -264,7 +264,7 @@ Instances are stateless apart from the database and run behind the front end's o
 ## Testing approach
 
 - **Unit tests** for pure logic, in the package that holds it, written here rather than translated from the front end's specs. They are never replaced by an end-to-end test.
-- **Integration tests** (`internal/apitest`) build SAM from its source, start it on a fresh database, onboard this service as its tenant, and drive this service over HTTP. Every response is validated against `openapi.yaml`, and a route-coverage test lists every operation without a handler.
+- **Integration tests** (`internal/apitest`) build SAM from its source, start it on a fresh database, onboard this service as its tenant, and drive this service over HTTP. Every response is validated against `openapi.yaml`, and a route-coverage report lists every operation without a handler; once every operation is served, it fails on any that is not.
 - **Parity:** the permission grid is checked cell by cell against SAM's answer.
 - **End to end:** the front end's own HTTP client runs against the compose stack, and a generated Postman collection walks every operation.
 - **Every fix ships with a test that fails without it.**
