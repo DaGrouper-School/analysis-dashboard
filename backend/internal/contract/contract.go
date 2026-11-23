@@ -46,6 +46,43 @@ const internalSchema = `{
 type Contract struct {
 	ops      []*Operation
 	internal *jsonschema.Schema
+	// errorBody is the contract's Error, the body of every refusal.
+	errorBody *jsonschema.Schema
+	// gaps are statuses let through that operations do not declare yet.
+	gaps map[string]map[int]bool
+}
+
+// Gap is a status this service answers that an operation does not declare
+// yet, with why. It belongs in the front end's routes, which the contract
+// is generated from; until it is there, Checked lets the status through,
+// checking only that its body is an Error.
+type Gap struct {
+	Operation string
+	Status    int
+	Why       string
+}
+
+// WithGaps is the contract letting gaps through.
+func (c *Contract) WithGaps(gaps ...Gap) *Contract {
+	out := *c
+	out.gaps = map[string]map[int]bool{}
+	for _, g := range gaps {
+		if out.gaps[g.Operation] == nil {
+			out.gaps[g.Operation] = map[int]bool{}
+		}
+		out.gaps[g.Operation][g.Status] = true
+	}
+	return &out
+}
+
+// check is op.Check, letting the contract's gaps through.
+func (c *Contract) check(op *Operation, status int, header http.Header, body []byte) error {
+	if c.gaps[op.ID][status] {
+		gap := *op
+		gap.responses = map[int]*jsonschema.Schema{status: c.errorBody}
+		return gap.Check(status, header, body)
+	}
+	return op.Check(status, header, body)
 }
 
 // Operation is one method on one path of the contract.
@@ -99,6 +136,9 @@ func Load(path string) (*Contract, error) {
 		return nil, err
 	}
 	l := loader{comp: comp, url: url, doc: doc, internal: c.internal}
+	if c.errorBody, err = l.schema("#/components/schemas/Error"); err != nil {
+		return nil, err
+	}
 	if err := l.operations(c); err != nil {
 		return nil, err
 	}

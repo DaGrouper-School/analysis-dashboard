@@ -32,13 +32,14 @@ If the environment defaulted to development, a deployment that forgot to set it 
 - Every path that creates an account writes the user's outbox row in the same transaction, so no account exists that SAM will not hear of.
 - An email is unique only when verified, that is, when it came from Google. A Google sign-in whose email belongs to another account is refused with `conflict` and asks the person to sign in the way they did before.
 - A Google identity is linked to its account by Google's subject (`google_identities`), so a change of email at Google keeps the account.
+- Until onboarding says, an account is shown as no minor with consent not needed, as the front end starts every account. SAM treats the person as a minor until onboarding asserts `minor=false`, so nothing they submit is accepted before then.
 
 ### Google sign-in
 
 The front end gets an ID token from Google Identity Services and posts it. This service verifies:
 
 - the signature, against Google's published keys, cached for an hour and refetched for an unknown key at most once a minute;
-- the issuer, `accounts.google.com`;
+- the issuer, `accounts.google.com` or `https://accounts.google.com`, both of which Google issues;
 - the audience, `DGS_GOOGLE_CLIENT_ID`;
 - the expiry, with thirty seconds' leeway.
 

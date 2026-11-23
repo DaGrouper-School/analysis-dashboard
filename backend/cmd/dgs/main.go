@@ -109,7 +109,7 @@ func serveAll(ctx context.Context, cfg config.Config, pool *pgxpool.Pool) error 
 	if err != nil {
 		return err
 	}
-	app := server.New(server.Deps{DB: pool, SAM: sam, AllowedOrigins: cfg.AllowedOrigins, Now: time.Now})
+	app := server.New(server.Deps{DB: pool, SAM: sam, AllowedOrigins: cfg.AllowedOrigins, Now: time.Now, Accounts: cfg.Accounts})
 	worker, err := samaccess.NewWorker(pool, sam, app.OutboxKinds(), app.Actors(), time.Now)
 	if err != nil {
 		return err
@@ -166,7 +166,7 @@ func adopt(ctx context.Context, out io.Writer, cfg config.Config, pool *pgxpool.
 	if err != nil {
 		return err
 	}
-	p, err := accounts.New(pool, sam, time.Now).Adopt(ctx, id)
+	p, err := accounts.New(pool, sam, time.Now, cfg.Accounts).Adopt(ctx, id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("no user %s", id)
 	}

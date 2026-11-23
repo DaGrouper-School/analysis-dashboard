@@ -42,6 +42,8 @@ type Deps struct {
 	// SAM calls SAM, and serves the key set SAM verifies user tokens with.
 	// Nil only in tests that need no SAM.
 	SAM *samaccess.Access
+	// Accounts is how people sign in.
+	Accounts accounts.Config
 }
 
 // Module is a group of endpoints. Each module registers its own routes
@@ -67,7 +69,7 @@ func New(d Deps) *App {
 		a.modules = append(a.modules, d.SAM)
 	}
 	if d.SAM != nil && d.DB != nil {
-		a.modules = append(a.modules, accounts.New(d.DB, d.SAM, d.Now))
+		a.modules = append(a.modules, accounts.New(d.DB, d.SAM, d.Now, d.Accounts))
 	}
 	return a
 }

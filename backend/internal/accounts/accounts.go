@@ -13,7 +13,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,28 +22,58 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 )
 
+// Config is how people sign in.
+type Config struct {
+	// GoogleClientID is this service's Google OAuth client, the audience of
+	// the ID tokens it accepts. Without one, Google sign-in is refused.
+	GoogleClientID string
+	// GoogleKeysURL is where Google's signing keys are fetched; empty for
+	// Google's own. Tests point it at a fake.
+	GoogleKeysURL string
+	// SessionTTL is how long an unused session lasts.
+	SessionTTL time.Duration
+	// SecureCookies sets Secure on the session cookie: the service is
+	// reached over HTTPS.
+	SecureCookies bool
+	// Demo signs in the demo accounts by subject. Development and test only.
+	Demo bool
+}
+
+// DefaultSessionTTL is how long an unused session lasts unless configured.
+const DefaultSessionTTL = 30 * 24 * time.Hour
+
 // Module is the accounts module.
 type Module struct {
-	db    db.Querier
-	sam   *samaccess.Access
-	now   func() time.Time
-	guard *Guard
+	db       db.Querier
+	sam      *samaccess.Access
+	now      func() time.Time
+	cfg      Config
+	google   *google
+	guard    *Guard
+	sessions *Sessions
 }
 
 // New builds the module.
-func New(q db.Querier, sam *samaccess.Access, now func() time.Time) *Module {
-	return &Module{db: q, sam: sam, now: now, guard: &Guard{db: q, sam: sam}}
+func New(q db.Querier, sam *samaccess.Access, now func() time.Time, cfg Config) *Module {
+	if cfg.SessionTTL <= 0 {
+		cfg.SessionTTL = DefaultSessionTTL
+	}
+	return &Module{db: q, sam: sam, now: now, cfg: cfg, google: newGoogle(cfg.GoogleClientID, cfg.GoogleKeysURL, now),
+		guard: &Guard{db: q, sam: sam}, sessions: &Sessions{db: q, now: now, ttl: cfg.SessionTTL, secure: cfg.SecureCookies}}
 }
-
-// Routes serves nothing yet: sign-in and the profile add the module's
-// endpoints.
-func (m *Module) Routes(*http.ServeMux, string) {}
 
 // Guard is the restore guard, which the service runs at start-up.
 func (m *Module) Guard() *Guard { return m.guard }
 
-// Background is the restore guard, run once at start-up.
-func (m *Module) Background() []func(context.Context) { return []func(context.Context){m.guard.Run} }
+// Sessions finds who a request is from. Other modules are given it to guard
+// their routes with RequireUser.
+func (m *Module) Sessions() *Sessions { return m.sessions }
+
+// Background is the restore guard, run once at start-up, and the pruning
+// of ended sessions.
+func (m *Module) Background() []func(context.Context) {
+	return []func(context.Context){m.guard.Run, m.sessions.prune}
+}
 
 // User is a person's account.
 type User struct {
@@ -57,10 +86,37 @@ type User struct {
 	// Consent is their guardian's consent, nil until asked for.
 	Consent *Consent
 
+	// The rest of the account, as the front end's User shows it.
+	AuthProvider        string
+	FullName            string
+	Email               *string
+	EmailVerified       bool
+	Phone               *string
+	PhoneVerified       bool
+	AvatarURL           *string
+	Role                string
+	PlatformAdmin       bool
+	Address             []byte // JSON; nil for none
+	OnboardingCompleted bool
+	PublicProfile       bool
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+
 	// samMinor and samConsent are what SAM last confirmed it holds about
 	// them, so the user applier asserts only what differs.
 	samMinor   *bool
 	samConsent *Consent
+}
+
+// NewUser is what a sign-in knows about a person whose account it creates.
+type NewUser struct {
+	AuthProvider  string
+	FullName      string
+	Email         *string
+	EmailVerified bool
+	Phone         *string
+	PhoneVerified bool
+	AvatarURL     *string
 }
 
 // Consent is a guardian's consent, as this service keeps it. Only given and
@@ -121,8 +177,11 @@ func SetConsent(ctx context.Context, tx db.Querier, now time.Time, id uuid.UUID,
 // Create makes a user in tx and queues their registration in SAM. No
 // request waits on SAM: until the worker registers them, they are answered
 // as a person without grants.
-func Create(ctx context.Context, tx db.Querier, now time.Time) (User, error) {
-	u, err := insertUser(ctx, tx, uuid.New(), now)
+func Create(ctx context.Context, tx db.Querier, now time.Time, n NewUser) (User, error) {
+	if n.AuthProvider == "" {
+		n.AuthProvider = "google"
+	}
+	u, err := insertUser(ctx, tx, uuid.New(), now, n)
 	if err != nil {
 		return User{}, err
 	}

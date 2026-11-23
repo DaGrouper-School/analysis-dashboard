@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,17 +14,134 @@ import (
 // The module's store: the only queries on users and the participant ID
 // sequence. Each works on the pool or inside a transaction.
 
-const userColumns = `id, participant_id, sam_principal_id, minor, consent, sam_minor, sam_consent`
+const userColumns = `users.id, participant_id, sam_principal_id, minor, consent, sam_minor, sam_consent,
+	auth_provider, full_name, email, email_verified, phone, phone_verified, avatar_url, role, platform_admin,
+	address, onboarding_completed, public_profile, users.created_at, updated_at`
 
 func scanUser(row pgx.Row) (User, error) {
 	var u User
-	err := row.Scan(&u.ID, &u.ParticipantID, &u.Principal, &u.Minor, &u.Consent, &u.samMinor, &u.samConsent)
+	err := row.Scan(&u.ID, &u.ParticipantID, &u.Principal, &u.Minor, &u.Consent, &u.samMinor, &u.samConsent,
+		&u.AuthProvider, &u.FullName, &u.Email, &u.EmailVerified, &u.Phone, &u.PhoneVerified, &u.AvatarURL, &u.Role,
+		&u.PlatformAdmin, &u.Address, &u.OnboardingCompleted, &u.PublicProfile, &u.CreatedAt, &u.UpdatedAt)
 	return u, err
 }
 
 // insertUser makes a user, with the next participant ID.
-func insertUser(ctx context.Context, q db.Querier, id uuid.UUID, now time.Time) (User, error) {
-	return scanUser(q.QueryRow(ctx, `INSERT INTO users (id, created_at) VALUES ($1, $2) RETURNING `+userColumns, id, now))
+func insertUser(ctx context.Context, q db.Querier, id uuid.UUID, now time.Time, n NewUser) (User, error) {
+	return scanUser(q.QueryRow(ctx, `
+		INSERT INTO users (id, created_at, updated_at, auth_provider, full_name, email, email_verified, phone, phone_verified, avatar_url)
+		VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING `+userColumns,
+		id, now, n.AuthProvider, n.FullName, n.Email, n.EmailVerified, n.Phone, n.PhoneVerified, n.AvatarURL))
+}
+
+// userWithEmail is the user a verified email belongs to, if any.
+func userWithEmail(ctx context.Context, q db.Querier, email string) (uuid.UUID, bool, error) {
+	var id uuid.UUID
+	err := q.QueryRow(ctx, `SELECT id FROM users WHERE email_verified AND lower(email) = lower($1)`, email).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, false, nil
+	}
+	return id, err == nil, err
+}
+
+// googleUser is the user a Google subject is linked to, if any.
+func googleUser(ctx context.Context, q db.Querier, subject string) (uuid.UUID, bool, error) {
+	var id uuid.UUID
+	err := q.QueryRow(ctx, `SELECT user_id FROM google_identities WHERE subject = $1`, subject).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, false, nil
+	}
+	return id, err == nil, err
+}
+
+func linkGoogle(ctx context.Context, q db.Querier, subject string, id uuid.UUID, email string, now time.Time) error {
+	_, err := q.Exec(ctx, `INSERT INTO google_identities (subject, user_id, email, created_at) VALUES ($1, $2, nullif($3, ''), $4)`,
+		subject, id, email, now)
+	return err
+}
+
+// noteGoogleEmail keeps the email Google last gave for a subject.
+func noteGoogleEmail(ctx context.Context, q db.Querier, subject, email string) error {
+	_, err := q.Exec(ctx, `UPDATE google_identities SET email = nullif($2, '') WHERE subject = $1`, subject, email)
+	return err
+}
+
+// DemoAccount is a Google account demo mode offers.
+type DemoAccount struct {
+	Subject   string
+	Name      string
+	Email     string
+	Type      string
+	AvatarURL *string
+}
+
+func demoAccounts(ctx context.Context, q db.Querier) ([]DemoAccount, error) {
+	rows, err := q.Query(ctx, `SELECT subject, name, email, type, avatar_url FROM demo_accounts ORDER BY name, subject`)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (DemoAccount, error) {
+		var d DemoAccount
+		err := r.Scan(&d.Subject, &d.Name, &d.Email, &d.Type, &d.AvatarURL)
+		return d, err
+	})
+}
+
+func demoAccount(ctx context.Context, q db.Querier, subject string) (DemoAccount, bool, error) {
+	var d DemoAccount
+	err := q.QueryRow(ctx, `SELECT subject, name, email, type, avatar_url FROM demo_accounts WHERE subject = $1`, subject).
+		Scan(&d.Subject, &d.Name, &d.Email, &d.Type, &d.AvatarURL)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return DemoAccount{}, false, nil
+	}
+	return d, err == nil, err
+}
+
+// session is a session found by its token's hash, with its user.
+type session struct {
+	user       User
+	extendedAt time.Time
+	expiresAt  time.Time
+}
+
+func insertSession(ctx context.Context, q db.Querier, hash []byte, user uuid.UUID, now, expires time.Time) error {
+	_, err := q.Exec(ctx, `INSERT INTO sessions (token_hash, user_id, created_at, extended_at, expires_at) VALUES ($1, $2, $3, $3, $4)`,
+		hash, user, now, expires)
+	return err
+}
+
+// liveSession is the session hash names, unless it has ended.
+func liveSession(ctx context.Context, q db.Querier, hash []byte, now time.Time) (session, bool, error) {
+	row := q.QueryRow(ctx, `SELECT `+userColumns+`, sessions.extended_at, sessions.expires_at
+		FROM sessions JOIN users ON users.id = sessions.user_id
+		WHERE sessions.token_hash = $1 AND sessions.expires_at > $2`, hash, now)
+	var s session
+	u := &s.user
+	err := row.Scan(&u.ID, &u.ParticipantID, &u.Principal, &u.Minor, &u.Consent, &u.samMinor, &u.samConsent,
+		&u.AuthProvider, &u.FullName, &u.Email, &u.EmailVerified, &u.Phone, &u.PhoneVerified, &u.AvatarURL, &u.Role,
+		&u.PlatformAdmin, &u.Address, &u.OnboardingCompleted, &u.PublicProfile, &u.CreatedAt, &u.UpdatedAt,
+		&s.extendedAt, &s.expiresAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return session{}, false, nil
+	}
+	return s, err == nil, err
+}
+
+// extendSession moves the session's end on, once an hour at most.
+func extendSession(ctx context.Context, q db.Querier, hash []byte, now, expires time.Time) error {
+	_, err := q.Exec(ctx, `UPDATE sessions SET extended_at = $2, expires_at = $3 WHERE token_hash = $1`, hash, now, expires)
+	return err
+}
+
+func deleteSession(ctx context.Context, q db.Querier, hash []byte) error {
+	_, err := q.Exec(ctx, `DELETE FROM sessions WHERE token_hash = $1`, hash)
+	return err
+}
+
+// deleteEndedSessions removes sessions that ended before now.
+func deleteEndedSessions(ctx context.Context, q db.Querier, now time.Time) (int64, error) {
+	tag, err := q.Exec(ctx, `DELETE FROM sessions WHERE expires_at <= $1`, now)
+	return tag.RowsAffected(), err
 }
 
 func getUser(ctx context.Context, q db.Querier, id uuid.UUID) (User, error) {

@@ -3,12 +3,15 @@ package config
 import (
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 )
 
 func setEnv(t *testing.T, kv map[string]string) {
 	t.Helper()
 	for _, k := range []string{"DGS_ENV", "DGS_LISTEN", "DGS_ALLOWED_ORIGINS", "DGS_LOG_FORMAT", "DGS_LOG_LEVEL",
-		"DGS_DB_MAX_CONNS", "DGS_DB_STATEMENT_TIMEOUT", "DGS_SAM_AUDIENCE", "DGS_SIGNING_KEYS_FILE", "DGS_RECONCILE_INTERVAL"} {
+		"DGS_DB_MAX_CONNS", "DGS_DB_STATEMENT_TIMEOUT", "DGS_SAM_AUDIENCE", "DGS_SIGNING_KEYS_FILE", "DGS_RECONCILE_INTERVAL", "DGS_SESSION_TTL", "DGS_DEMO"} {
 		t.Setenv(k, "")
 	}
 	// Every case has a database, SAM and signing keys unless it says otherwise.
@@ -17,6 +20,8 @@ func setEnv(t *testing.T, kv map[string]string) {
 	t.Setenv("DGS_SAM_TENANT_FILE", "/run/secrets/tenant.json")
 	t.Setenv("DGS_SAM_ISSUER", "https://dgs.example")
 	t.Setenv("DGS_SIGNING_KEYS_FILE", "/run/secrets/keys.json")
+	t.Setenv("DGS_PUBLIC_URL", "https://dgs.example")
+	t.Setenv("DGS_GOOGLE_CLIENT_ID", "dgs.apps.googleusercontent.com")
 	for k, v := range kv {
 		t.Setenv(k, v)
 	}
@@ -73,6 +78,16 @@ func TestLoadRefuses(t *testing.T) {
 		{"no tenant file", map[string]string{"DGS_ENV": "test", "DGS_SAM_TENANT_FILE": ""}, "DGS_SAM_TENANT_FILE"},
 		{"no issuer", map[string]string{"DGS_ENV": "test", "DGS_SAM_ISSUER": ""}, "DGS_SAM_ISSUER"},
 		{"reconciling too often", map[string]string{"DGS_ENV": "test", "DGS_RECONCILE_INTERVAL": "10s"}, "DGS_RECONCILE_INTERVAL"},
+		{"no public URL in staging", map[string]string{"DGS_ENV": "staging", "DGS_ALLOWED_ORIGINS": "https://a.example", "DGS_PUBLIC_URL": ""}, "DGS_PUBLIC_URL"},
+		{"an http public URL in production", map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example",
+			"DGS_PUBLIC_URL": "http://dgs.example"}, "https"},
+		{"not a public URL", map[string]string{"DGS_ENV": "test", "DGS_PUBLIC_URL": "dgs"}, "DGS_PUBLIC_URL"},
+		{"no Google client in production", map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example",
+			"DGS_GOOGLE_CLIENT_ID": ""}, "DGS_GOOGLE_CLIENT_ID"},
+		{"a short session", map[string]string{"DGS_ENV": "test", "DGS_SESSION_TTL": "10m"}, "DGS_SESSION_TTL"},
+		{"demo in staging", map[string]string{"DGS_ENV": "staging", "DGS_ALLOWED_ORIGINS": "https://a.example", "DGS_DEMO": "true"}, "DGS_DEMO"},
+		{"demo in production", map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example", "DGS_DEMO": "true"}, "DGS_DEMO"},
+		{"demo half on", map[string]string{"DGS_ENV": "test", "DGS_DEMO": "yes"}, "DGS_DEMO"},
 		{"a bad reconcile interval", map[string]string{"DGS_ENV": "test", "DGS_RECONCILE_INTERVAL": "often"}, "DGS_RECONCILE_INTERVAL"},
 		{"no signing keys in production", map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example",
 			"DGS_SIGNING_KEYS_FILE": ""}, "DGS_SIGNING_KEYS_FILE"},
@@ -112,5 +127,21 @@ func TestLoadSAM(t *testing.T) {
 	if c.SAM.URL != "http://sam:8080" || c.SAM.Audience != "sam" || c.SAM.Issuer != "https://dgs.example" || c.SigningKeysFile != "" ||
 		c.ReconcileInterval != defaultReconcileInterval {
 		t.Fatalf("SAM in development: %+v, keys %q", c.SAM, c.SigningKeysFile)
+	}
+}
+
+func TestLoadSignIn(t *testing.T) {
+	setEnv(t, map[string]string{"DGS_ENV": "development", "DGS_PUBLIC_URL": "", "DGS_GOOGLE_CLIENT_ID": "", "DGS_DEMO": "true"})
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.PublicURL != defaultPublicURL || c.Accounts.SecureCookies || !c.Accounts.Demo || c.Accounts.SessionTTL != accounts.DefaultSessionTTL {
+		t.Fatalf("sign-in in development: %s %+v", c.PublicURL, c.Accounts)
+	}
+	setEnv(t, map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example", "DGS_SESSION_TTL": "48h"})
+	if c, err = Load(); err != nil || !c.Accounts.SecureCookies || c.Accounts.Demo || c.Accounts.SessionTTL != 48*time.Hour ||
+		c.Accounts.GoogleClientID == "" {
+		t.Fatalf("sign-in in production: %+v, %v", c.Accounts, err)
 	}
 }

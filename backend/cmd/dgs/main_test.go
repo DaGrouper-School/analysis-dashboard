@@ -183,7 +183,7 @@ func TestAccountsRenumber(t *testing.T) {
 	if err := run(ctx, io.Discard, []string{"migrate"}); err != nil {
 		t.Fatal(err)
 	}
-	a, err := accounts.Create(ctx, testutil.Pool(t, dsn), time.Now())
+	a, err := accounts.Create(ctx, testutil.Pool(t, dsn), time.Now(), accounts.NewUser{})
 	if err != nil {
 		t.Fatal(err)
 	}

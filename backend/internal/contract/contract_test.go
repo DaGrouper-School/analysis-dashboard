@@ -155,3 +155,39 @@ func TestChecked(t *testing.T) {
 		}
 	}
 }
+
+// TestGaps: a gap lets an undeclared status through, provided its body is
+// an Error, for that operation only.
+func TestGaps(t *testing.T) {
+	t.Parallel()
+	c := load(t).WithGaps(contract.Gap{Operation: "auth.getCurrentUser", Status: 401, Why: "test"})
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/auth/me", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(401)
+		_, _ = w.Write([]byte(r.Header.Get("X-Body")))
+	})
+	mux.HandleFunc("GET /api/places/dial-codes", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(401)
+		_, _ = w.Write([]byte(`{"code":"unauthenticated","message":"No.","fields":{}}`))
+	})
+	var reports []error
+	h := c.Checked(mux, func(err error) { reports = append(reports, err) })
+	for _, tc := range []struct {
+		path, body string
+		reports    int
+	}{
+		{"/api/auth/me", `{"code":"unauthenticated","message":"Sign in.","fields":{}}`, 0},
+		{"/api/auth/me", `{}`, 1},
+		{"/api/places/dial-codes", "", 1},
+	} {
+		reports = nil
+		r := httptest.NewRequest("GET", tc.path, nil)
+		r.Header.Set("X-Body", tc.body)
+		h.ServeHTTP(httptest.NewRecorder(), r)
+		if len(reports) != tc.reports {
+			t.Errorf("%s %s: %d reports, want %d: %v", tc.path, tc.body, len(reports), tc.reports, reports)
+		}
+	}
+}
