@@ -14,6 +14,12 @@ const (
 	// MigrationLock is held while migrations apply, so instances starting
 	// together apply each migration once.
 	MigrationLock int64 = 8301001
+	// OutboxLock is held by the instance whose worker sends the outbox to
+	// SAM, for one pass at a time.
+	OutboxLock int64 = 8301002
+	// ReconcilerLock is held by the instance comparing SAM with this
+	// database, for one pass at a time.
+	ReconcilerLock int64 = 8301003
 	// TestTemplateLock is held while tests build their migrated template
 	// database.
 	TestTemplateLock int64 = 8301999

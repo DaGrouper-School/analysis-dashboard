@@ -66,6 +66,47 @@ func New(d Deps) *App {
 	return a
 }
 
+// What modules declare to the background work, beside their routes.
+type (
+	// outboxSender is a module whose changes reach SAM through the outbox.
+	outboxSender interface{ OutboxKinds() []samaccess.Kind }
+	// reconciled is a module whose entities the reconciler compares.
+	reconciled interface{ Checks() []samaccess.Check }
+)
+
+// OutboxKinds are every module's kinds of outbox change.
+func (a *App) OutboxKinds() []samaccess.Kind {
+	var out []samaccess.Kind
+	for _, m := range a.modules {
+		if s, ok := m.(outboxSender); ok {
+			out = append(out, s.OutboxKinds()...)
+		}
+	}
+	return out
+}
+
+// Checks are every module's reconciler checks.
+func (a *App) Checks() []samaccess.Check {
+	var out []samaccess.Check
+	for _, m := range a.modules {
+		if r, ok := m.(reconciled); ok {
+			out = append(out, r.Checks()...)
+		}
+	}
+	return out
+}
+
+// Actors is the module that finds the account an outbox change is sent as,
+// or nil while there is none.
+func (a *App) Actors() samaccess.Actors {
+	for _, m := range a.modules {
+		if ac, ok := m.(samaccess.Actors); ok {
+			return ac
+		}
+	}
+	return nil
+}
+
 // Handler is the HTTP API.
 func (a *App) Handler() http.Handler {
 	return requestIDs(logRequests(a.cors(a.checkOrigin(a.routes()))))

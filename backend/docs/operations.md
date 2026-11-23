@@ -28,6 +28,17 @@ SAM keeps a fetched key set for five minutes. A key is therefore published befor
 
 Tokens last five minutes, so a leaked key is useful only while it is published. Add a new key and make it sign at once, removing the leaked one in the same change, then restart every instance. SAM refetches the set when a token names a key it does not hold, at most once every thirty seconds, so calls made as a person may be refused for up to half a minute.
 
+## Held changes
+
+Changes reach SAM through the outbox. A change SAM refuses, whose actor's account is gone, or that this version cannot read is held, and logged at warning level as `outbox change held`. Later changes to the same entity are still sent, and one that reaches SAM supersedes the held one.
+
+```sh
+dgs outbox held                # what is held: the entity, kind, version, who it is sent as, attempts and the error
+dgs outbox release ENTITY      # send the entity's latest held change again on the worker's next pass
+```
+
+Release a change once what refused it is fixed, for example once the person has the rights SAM asked for. A released change that SAM refuses again is held again.
+
 ## The tenant file
 
 `DGS_SAM_TENANT_FILE` is what `sam tenant create -json` printed when this service was onboarded, and holds its service key, shown that once. Keep it as a secret. Onboarding again for an onboarded tenant prints no key: a lost service key is replaced with an emergency key issued by SAM's operator ([SAM's tenants](https://github.com/DaGrouper-School/sam/blob/main/docs/tenants.md)).

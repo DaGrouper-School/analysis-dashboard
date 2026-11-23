@@ -49,6 +49,8 @@ type Config struct {
 	// service signs, as onboarding gave them.
 	Issuer   string
 	Audience string
+	// HTTPClient makes the calls; nil for one with CallTimeout.
+	HTTPClient *http.Client
 }
 
 // Tenant is this service as SAM's tenant: the tenant file.
@@ -109,7 +111,10 @@ func New(cfg Config, keys *Keys, now func() time.Time) (*Access, error) {
 	if err != nil {
 		return nil, err
 	}
-	h := &http.Client{Timeout: CallTimeout}
+	h := cfg.HTTPClient
+	if h == nil {
+		h = &http.Client{Timeout: CallTimeout}
+	}
 	return &Access{tenant: t, keys: keys, issuer: cfg.Issuer, audience: cfg.Audience, now: now,
 		service: client.New(cfg.URL, client.WithKey(t.Key.Secret), client.WithHTTPClient(h), client.WithUserAgent("dgs"))}, nil
 }

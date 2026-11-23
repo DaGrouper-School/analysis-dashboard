@@ -48,6 +48,20 @@ type SAM struct {
 	// as this service reads it.
 	Tenant     samaccess.Tenant
 	TenantFile string
+
+	t    testing.TB
+	bin  string
+	env  []string
+	log  syncBuffer
+	proc *process
+}
+
+// process is a running `sam serve`.
+type process struct {
+	cmd *exec.Cmd
+	// exited closes when the process has exited, with its status in err.
+	exited chan struct{}
+	err    error
 }
 
 // Options are how this service is onboarded: the issuer, key set and
@@ -78,7 +92,7 @@ func Start(t testing.TB, o Options) *SAM {
 	if err := json.Unmarshal(run(t, bin, env, "bootstrap", "-json"), &boot); err != nil {
 		t.Fatalf("sam bootstrap: %v", err)
 	}
-	s := &SAM{OperatorKey: boot.OperatorKey.Secret, TenantFile: filepath.Join(t.TempDir(), "tenant.json")}
+	s := &SAM{OperatorKey: boot.OperatorKey.Secret, TenantFile: filepath.Join(t.TempDir(), "tenant.json"), t: t, bin: bin}
 	tenant := run(t, bin, env, "tenant", "create", "-name", TenantName, "-registry",
 		"-issuer", o.Issuer, "-jwks", o.KeySetURL, "-audience", o.Audience, "-json")
 	if err := os.WriteFile(s.TenantFile, tenant, 0o600); err != nil {
@@ -91,7 +105,14 @@ func Start(t testing.TB, o Options) *SAM {
 
 	addr := freeAddr(t)
 	s.URL = "http://" + addr
-	serve(t, bin, append(env, "SAM_LISTEN="+addr), s.URL)
+	s.env = append(env, "SAM_LISTEN="+addr)
+	s.Start()
+	t.Cleanup(func() {
+		s.Stop()
+		if t.Failed() {
+			t.Logf("sam serve:\n%s", s.log.String())
+		}
+	})
 	return s
 }
 
@@ -126,36 +147,41 @@ func run(t testing.TB, bin string, env []string, args ...string) []byte {
 	return stdout.Bytes()
 }
 
-// serve starts `sam serve`, waits until it answers, and stops it when t
-// ends. Its log is shown when t fails.
-func serve(t testing.TB, bin string, env []string, url string) {
-	t.Helper()
-	cmd := exec.Command(bin, "serve")
-	cmd.Env = env
-	var log syncBuffer
-	cmd.Stdout, cmd.Stderr = &log, &log
-	if err := cmd.Start(); err != nil {
-		t.Fatal(err)
+// Start runs `sam serve` on SAM's address and waits until it answers. Start
+// calls it; a test calls it again after Stop, to bring SAM back.
+func (s *SAM) Start() {
+	s.t.Helper()
+	if s.proc != nil {
+		s.t.Fatal("SAM is already running")
 	}
-	// exited closes when SAM has exited, with its exit status in waitErr.
-	exited := make(chan struct{})
-	var waitErr error
-	go func() { waitErr = cmd.Wait(); close(exited) }()
-	t.Cleanup(func() {
-		// The exit status of a stopped SAM says nothing a test needs.
-		_ = cmd.Process.Signal(os.Interrupt)
-		select {
-		case <-exited:
-		case <-time.After(stopTimeout):
-			_ = cmd.Process.Kill()
-			<-exited
-		}
-		if t.Failed() {
-			t.Logf("sam serve:\n%s", log.String())
-		}
-	})
-	if err := waitHealthy(url, exited, &waitErr); err != nil {
-		t.Fatalf("sam serve: %v\n%s", err, log.String())
+	cmd := exec.Command(s.bin, "serve")
+	cmd.Env = s.env
+	cmd.Stdout, cmd.Stderr = &s.log, &s.log
+	if err := cmd.Start(); err != nil {
+		s.t.Fatal(err)
+	}
+	p := &process{cmd: cmd, exited: make(chan struct{})}
+	go func() { p.err = cmd.Wait(); close(p.exited) }()
+	s.proc = p
+	if err := waitHealthy(s.URL, p.exited, &p.err); err != nil {
+		s.t.Fatalf("sam serve: %v\n%s", err, s.log.String())
+	}
+}
+
+// Stop stops `sam serve`, as an outage would: calls fail until Start.
+func (s *SAM) Stop() {
+	p := s.proc
+	if p == nil {
+		return
+	}
+	s.proc = nil
+	// The exit status of a stopped SAM says nothing a test needs.
+	_ = p.cmd.Process.Signal(os.Interrupt)
+	select {
+	case <-p.exited:
+	case <-time.After(stopTimeout):
+		_ = p.cmd.Process.Kill()
+		<-p.exited
 	}
 }
 

@@ -87,7 +87,7 @@ The worker:
 
 - **Runs on one replica,** chosen by an advisory lock, and checks for work every second.
 - **Works each entity on its own,** so one held or backed-off entity never delays another.
-- **Sends in version order per entity.** Only the latest pending version is sent: since each payload is the whole desired state, rows it supersedes are marked done unsent.
+- **Sends in version order per entity.** Only the latest pending version is sent: since each payload is the whole desired state, the rows it supersedes, waiting or held, are marked superseded unsent once SAM holds it.
 - **Retries with backoff,** up to five minutes between attempts.
 - **Waits for dependencies.** An applier returns "not yet" when another entity must reach SAM first, such as a classroom's groups before a membership, or a head's own membership before rows sent as that head. The row is retried, not held.
 - **Holds what retrying cannot fix:** a refusal from SAM, a missing actor, a payload or kind this version cannot read. Held rows stay until an operator releases them.
@@ -104,7 +104,7 @@ The kinds:
 | Area | Kinds |
 |---|---|
 | Accounts | user (principal, `minor`, `consent`), admins group, admin membership |
-| Registry | this tenant's registry parameters and device types |
+| Registry | this tenant's registry domains, parameters and device types |
 | Classrooms | classroom (space, groups, grants), membership, attribute assertion |
 | Labs | lab (space and site), device |
 | Sharing and release | sharing (public grants), data policy, release |

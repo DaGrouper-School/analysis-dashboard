@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -75,7 +76,7 @@ func setSAM(t *testing.T) {
 }
 
 func TestRunRefuses(t *testing.T) {
-	for _, args := range [][]string{{"frobnicate"}, {"keys"}, {"keys", "old"}, {"serve", "now"}} {
+	for _, args := range [][]string{{"frobnicate"}, {"keys"}, {"keys", "old"}, {"serve", "now"}, {"outbox"}, {"outbox", "release"}} {
 		if err := run(context.Background(), io.Discard, args); err == nil || !strings.Contains(err.Error(), "unknown command") {
 			t.Fatalf("%v: %v", args, err)
 		}
@@ -130,5 +131,40 @@ func TestServeNeedsTheDatabase(t *testing.T) {
 	setSAM(t)
 	if err := run(context.Background(), io.Discard, []string{"serve"}); err == nil {
 		t.Fatal("serve started without a database")
+	}
+}
+
+// TestOutboxCommands: dgs outbox held lists what is held, and release
+// sends an entity's held change again.
+func TestOutboxCommands(t *testing.T) {
+	dsn := testutil.EmptyDB(t)
+	t.Setenv("DGS_ENV", "test")
+	t.Setenv("DGS_DATABASE_URL", dsn)
+	setSAM(t)
+	ctx := context.Background()
+	if err := run(ctx, io.Discard, []string{"migrate"}); err != nil {
+		t.Fatal(err)
+	}
+	pool := testutil.Pool(t, dsn)
+	if _, err := samaccess.Enqueue(ctx, pool, time.Now(), samaccess.Change{Entity: "user:a", Kind: "user", Payload: 1}); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	if err := run(ctx, &out, []string{"outbox", "held"}); err != nil || !strings.Contains(out.String(), "nothing is held") {
+		t.Fatalf("with nothing held: %q, %v", out.String(), err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE sam_outbox SET state = 'held', last_error = 'sam: 403 forbidden'`); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	if err := run(ctx, &out, []string{"outbox", "held"}); err != nil || !strings.Contains(out.String(), "user:a") ||
+		!strings.Contains(out.String(), "403 forbidden") || !strings.Contains(out.String(), "this service") {
+		t.Fatalf("held: %q, %v", out.String(), err)
+	}
+	if err := run(ctx, io.Discard, []string{"outbox", "release", "user:a"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := run(ctx, io.Discard, []string{"outbox", "release", "user:a"}); !errors.Is(err, samaccess.ErrNothingHeld) {
+		t.Fatalf("releasing it again: %v", err)
 	}
 }

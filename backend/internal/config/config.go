@@ -49,6 +49,9 @@ type Config struct {
 	DB db.Config
 	// SAM is how this service reaches SAM. Required.
 	SAM samaccess.Config
+	// ReconcileInterval is how often the reconciler compares SAM with this
+	// database.
+	ReconcileInterval time.Duration
 	// SigningKeysFile is the key file user tokens are signed with. Required
 	// outside development and test; there, without one, a key is generated
 	// at start-up and lasts until the process exits.
@@ -105,12 +108,28 @@ func Load() (Config, error) {
 	if err != nil {
 		errs = append(errs, err)
 	}
+	c.ReconcileInterval = defaultReconcileInterval
+	if v := os.Getenv("DGS_RECONCILE_INTERVAL"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil || d < minReconcileInterval {
+			errs = append(errs, fmt.Errorf("DGS_RECONCILE_INTERVAL must be a duration of at least %s, such as 15m, not %q", minReconcileInterval, v))
+		}
+		c.ReconcileInterval = d
+	}
 	c.SigningKeysFile = os.Getenv("DGS_SIGNING_KEYS_FILE")
 	if c.SigningKeysFile == "" && !c.Local() {
 		errs = append(errs, fmt.Errorf("DGS_SIGNING_KEYS_FILE must be set in %s: generated keys exist only in development and test", c.Environment))
 	}
 	return c, errors.Join(errs...)
 }
+
+// The reconciler's interval: each pass reads every user from SAM, and SAM
+// audits each attribute read, so a pass is not run more often than a
+// minute.
+const (
+	defaultReconcileInterval = 15 * time.Minute
+	minReconcileInterval     = time.Minute
+)
 
 // defaultAudience is the audience this service's user tokens carry for SAM.
 const defaultAudience = "sam"
