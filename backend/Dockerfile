@@ -16,6 +16,19 @@ COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 go build -trimpath -o /out/dgs ./cmd/dgs
 
+# SAM, built from the module version go.mod pins, for the development stack.
+FROM build AS sam-build
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath -o /out/sam github.com/dagrouper-school/sam/cmd/sam
+
+FROM alpine:3.22 AS sam
+RUN adduser -D -H sam && mkdir /config && chown sam /config
+COPY --from=sam-build /out/sam /usr/local/bin/sam
+USER sam
+EXPOSE 8080
+ENTRYPOINT ["sam"]
+CMD ["serve"]
+
 FROM alpine:3.22
 RUN adduser -D -H dgs
 COPY --from=build /out/dgs /usr/local/bin/dgs

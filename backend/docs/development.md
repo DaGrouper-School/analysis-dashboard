@@ -1,6 +1,6 @@
 # Development
 
-How to build, run and test the service as it stands, and the conventions its code follows. So far the service has configuration, logging with request IDs, the HTTP conventions, its PostgreSQL database with migrations, `/healthz`, graceful shutdown, and integration tests against SAM and the API contract.
+How to build, run and test the service as it stands, and the conventions its code follows. So far the service has configuration, logging with request IDs, the HTTP conventions, its PostgreSQL database with migrations, calls to SAM as itself, as a person or as anonymous, the key set SAM verifies user tokens with, `/healthz`, graceful shutdown, and integration tests against SAM and the API contract.
 
 ## Prerequisites
 
@@ -15,45 +15,46 @@ How to build, run and test the service as it stands, and the conventions its cod
 ## Running
 
 ```sh
-make db-up                   # the development and test databases
-make run                     # in development, on :8090, against the development database
+make up                      # the service, its database and SAM, waiting until healthy
 curl -s localhost:8090/healthz
+make down                    # stops them and discards their data
 ```
 
-Or with Docker:
-
-```sh
-make up                      # builds the image and starts it, waiting until healthy
-make down                    # stops it
-```
-
-`compose.yaml` runs the service in development, with `http://localhost:5173` as its front-end origin, published on `127.0.0.1:8090`, and its databases:
+`compose.yaml` runs the service in development, with `http://localhost:5173` as its front-end origin, published on `127.0.0.1:8090`, beside its databases and a SAM it is onboarded on:
 
 | Service | Published on | For |
 |---|---|---|
+| `backend` | `127.0.0.1:8090` | This service |
 | `db` | `127.0.0.1:5433`, database `dgs` | The development data, kept in the `dgs-db` volume until `make down` |
+| `sam` | `127.0.0.1:8091` | SAM, built from the module version `go.mod` pins |
+| `sam-init` | | Runs once before `sam`: sets the deployment up (`sam bootstrap -json`) and onboards this service (`sam tenant create -name dgs -registry`), keeping the operator's key (`operator.json`) and the tenant file (`tenant.json`) in the `sam-config` volume |
+| `sam-db` | | SAM's database, on PostGIS, kept in the `sam-data` volume until `make down` |
 | `test-db` | `127.0.0.1:55433` | The server the tests create their databases on, with PostGIS for the SAM the integration tests start. Its data is in memory, and it starts only with the `test` profile, which `make test` and `make db-up` use |
 
-The ports differ from SAM's, so both stacks run side by side.
+The ports differ from SAM's own stack, so both run side by side.
+
+**SAM in compose.** The tenant was onboarded with issuer `http://backend:8090` and key set `http://backend:8090/api/.well-known/jwks.json`. SAM fetches the key set by container name, which `SAM_ALLOW_PRIVATE_KEY_SETS=true` allows, and never in production. In development the service signs with a key it generates at start-up, so a restart changes it; SAM fetches the set again when a token names a key it does not hold.
+
+**Running on the host.** `make run` serves on `:8090` with `go run`, against the compose `db` and `sam`, which it starts, with the tenant file copied out to `.dev/tenant.json`. SAM still verifies user tokens against the compose backend's key set, so a call made as a person needs `make up`. Stop the compose `backend` first, since both listen on `8090`.
 
 ## Make targets
 
-The targets are the same as SAM's. `make help` lists them. The Makefile sets `DGS_ENV=development`, and `DGS_DATABASE_URL` to the compose `db` service, unless the environment already sets them.
+The targets are the same as SAM's. `make help` lists them. The Makefile sets `DGS_ENV=development`, `DGS_DATABASE_URL` to the compose `db` service and the `DGS_SAM_*` settings to the compose `sam`, unless the environment already sets them.
 
 | Target | What it does |
 |---|---|
 | `help` | Lists the targets |
 | `build` | Builds `bin/dgs` |
-| `run` | Serves the API locally (`go run ./cmd/dgs serve`) |
+| `run` | Serves the API locally (`go run ./cmd/dgs serve`), starting the compose `db` and `sam` |
 | `migrate` | Applies new migrations to `DGS_DATABASE_URL` (`go run ./cmd/dgs migrate`) |
 | `test` | Runs every test with the race detector, against `DGS_TEST_DATABASE_URL` when it is set, otherwise against the compose `test-db`, which it starts |
 | `test-short` | Runs the tests that need no database or SAM (`-short`) |
 | `lint` | `go vet`, a `gofmt` check and `golangci-lint` |
 | `tidy-check` | Fails when `go.mod` or `go.sum` is not tidy |
 | `vulncheck` | Reports known vulnerabilities in dependencies (`govulncheck`) |
-| `db-up` | Starts the development and test databases |
-| `up` | Builds and starts the service and its database, waiting until healthy |
-| `down` | Stops the stack and discards its data |
+| `db-up` | Starts the development and test databases, and SAM |
+| `up` | Builds and starts the service, its database and SAM, waiting until healthy |
+| `down` | Stops the stack and discards its data, SAM's included |
 
 ## Configuration
 
@@ -69,6 +70,11 @@ Configuration comes from the environment (`internal/config`). Every problem is r
 | `DGS_DATABASE_URL` | none: required (`make` sets the compose `db`) | The PostgreSQL connection string |
 | `DGS_DB_MAX_CONNS` | `10` | The most connections the pool opens, a whole number from 1 |
 | `DGS_DB_STATEMENT_TIMEOUT` | `30s` | How long one statement may run before PostgreSQL cancels it, a Go duration of at least `1ms` |
+| `DGS_SAM_URL` | none: required (`make` sets the compose `sam`) | SAM's URL. Outside development and test it must use `https` |
+| `DGS_SAM_TENANT_FILE` | none: required | The tenant file: the JSON `sam tenant create -json` printed when this service was onboarded, with the service key ([SAM](#sam)) |
+| `DGS_SAM_ISSUER` | none: required | The `iss` of user tokens: the `-issuer` this service was onboarded with |
+| `DGS_SAM_AUDIENCE` | `sam` | The `aud` of user tokens: the `-audience` this service was onboarded with |
+| `DGS_SIGNING_KEYS_FILE` | none in development and test, where a key is generated at start-up; required elsewhere | The key file user tokens are signed with ([Operations](operations.md#signing-keys)) |
 
 Every variable the service reads is listed here. The tests also read `DGS_TEST_DATABASE_URL` ([Testing](#testing)).
 
@@ -76,11 +82,12 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 
 | Package | Responsibility |
 |---|---|
-| `cmd/dgs` | The command. `dgs serve` (the default) applies new migrations, then serves until `SIGINT` or `SIGTERM`, then stops taking requests and waits up to ten seconds for those in flight. `dgs migrate` applies new migrations and exits |
+| `cmd/dgs` | The command. `dgs serve` (the default) applies new migrations, reads the tenant file and signing keys, then serves until `SIGINT` or `SIGTERM`, then stops taking requests and waits up to ten seconds for those in flight. `dgs migrate` applies new migrations and exits. `dgs keys new` prints a new signing key ([Operations](operations.md#signing-keys)) |
 | `internal/config` | Reads and checks the configuration |
 | `internal/logx` | Sets up `slog` in text or JSON; carries the request ID so every log line written while serving a request names it |
 | `internal/httpx` | The error format, `WriteJSON`, `WriteError`, the `Handler` type, strict decoding |
 | `internal/db` | Opens the pool, applies the migrations, transactions (`InTx`) and advisory locks |
+| `internal/samaccess` | Calls SAM as this service, as a person through a user token or as anonymous; the signing keys and the key set; SAM's errors translated |
 | `internal/server` | `server.New(Deps)`, the `Module` interface, the middleware, `/healthz` and the API's not-found answer |
 | `internal/testutil` | A fresh database per test (test code only) |
 | `internal/contract` | Reads `openapi.yaml` and checks responses against it (test code only) |
@@ -115,6 +122,33 @@ Every error is JSON `{code, message, fields}`. `code` is one of the front end's 
 | `forbidden` | 403 | `httpx.Forbidden(message)` |
 | `rate_limited` | 429 | `httpx.RateLimited(message, retryAfter)`, which sets `Retry-After` |
 | `internal` | 500 | Any error that is not an `*httpx.Error`: logged with the request ID, shown as a generic message |
+
+## SAM
+
+`internal/samaccess` is the only package that calls SAM, and reaches modules through `server.Deps.SAM` ([SAM integration](design/sam-integration.md)).
+
+| Calling as | With | For |
+|---|---|---|
+| This service | `Service()`: the service key from the tenant file | Changes made by policy; checks before a change |
+| A person | `User(Person)`: the service key, and a user token for them in `SAM-Act-As` | Reads as the viewer; changes a person makes; relayed submissions |
+| Anonymous | `Anonymous()` | Public pages |
+
+- **User tokens** are EdDSA JWTs signed with the signing key: `kid`, `iss` (`DGS_SAM_ISSUER`), `aud` (`DGS_SAM_AUDIENCE`), `sub` (the participant ID), `azp` (this service's name in SAM, from the tenant file), and `iat` and `exp` five minutes apart. A token is signed for each call.
+- **The key set** is served at `GET /api/.well-known/jwks.json`, outside the front end's contract, with every key in the key file, cached for five minutes.
+- **A person with no SAM principal yet** gets `samaccess.ErrUnregistered` from `User`, without a call to SAM, and is answered as a person with no grants.
+- **Errors.** `samaccess.Translate(ctx, err)` turns a SAM error into the front end's. SAM's detail is logged at info, never shown:
+
+| SAM answers | The front end gets |
+|---|---|
+| `400` or `422` (`invalid_request` and an endpoint's own) | `invalid_input` |
+| `401 unauthenticated` | `forbidden`, logged at error as a fault in this service's credentials |
+| `403` | `forbidden` |
+| `404` or `410` | `not_found` |
+| `409` or `412` (`already_exists`, `version_mismatch` and the like) | `conflict` |
+| `429` | `rate_limited`, keeping `Retry-After` |
+| `5xx`, a timeout, SAM unreachable, or a call SAM refuses as malformed (`idempotency_key_reused`, `method_not_allowed`, `body_too_large`) | `internal`, logged with the request ID |
+
+Calls to SAM time out after fifteen seconds. `/healthz` does not ask SAM: this service answers while SAM is down.
 
 ## The database
 

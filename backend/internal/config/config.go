@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 )
 
 // Environments, from least to most protected. Development conveniences,
@@ -46,6 +47,12 @@ type Config struct {
 	DatabaseURL string
 	// DB sizes the pool and bounds its statements.
 	DB db.Config
+	// SAM is how this service reaches SAM. Required.
+	SAM samaccess.Config
+	// SigningKeysFile is the key file user tokens are signed with. Required
+	// outside development and test; there, without one, a key is generated
+	// at start-up and lasts until the process exits.
+	SigningKeysFile string
 }
 
 // Pool defaults: enough connections for one instance's requests and its
@@ -94,7 +101,38 @@ func Load() (Config, error) {
 	if err != nil {
 		errs = append(errs, err)
 	}
+	c.SAM, err = c.sam()
+	if err != nil {
+		errs = append(errs, err)
+	}
+	c.SigningKeysFile = os.Getenv("DGS_SIGNING_KEYS_FILE")
+	if c.SigningKeysFile == "" && !c.Local() {
+		errs = append(errs, fmt.Errorf("DGS_SIGNING_KEYS_FILE must be set in %s: generated keys exist only in development and test", c.Environment))
+	}
 	return c, errors.Join(errs...)
+}
+
+// defaultAudience is the audience this service's user tokens carry for SAM.
+const defaultAudience = "sam"
+
+// sam reads DGS_SAM_URL, DGS_SAM_TENANT_FILE, DGS_SAM_ISSUER and
+// DGS_SAM_AUDIENCE. Outside development and test SAM is reached over HTTPS.
+func (c Config) sam() (samaccess.Config, error) {
+	cfg := samaccess.Config{URL: os.Getenv("DGS_SAM_URL"), TenantFile: os.Getenv("DGS_SAM_TENANT_FILE"),
+		Issuer: os.Getenv("DGS_SAM_ISSUER"), Audience: env("DGS_SAM_AUDIENCE", defaultAudience)}
+	var errs []error
+	if u, err := url.Parse(cfg.URL); cfg.URL == "" || err != nil || u.Host == "" || (u.Scheme != "https" && u.Scheme != "http") {
+		errs = append(errs, fmt.Errorf("DGS_SAM_URL must be SAM's URL, such as https://sam.example, not %q", cfg.URL))
+	} else if !c.Local() && u.Scheme != "https" {
+		errs = append(errs, fmt.Errorf("DGS_SAM_URL must use https in %s", c.Environment))
+	}
+	if cfg.TenantFile == "" {
+		errs = append(errs, errors.New("DGS_SAM_TENANT_FILE must be set: the JSON `sam tenant create -json` printed"))
+	}
+	if cfg.Issuer == "" {
+		errs = append(errs, errors.New("DGS_SAM_ISSUER must be set: the issuer this service was onboarded with"))
+	}
+	return cfg, errors.Join(errs...)
 }
 
 // pool reads DGS_DB_MAX_CONNS and DGS_DB_STATEMENT_TIMEOUT.

@@ -1,0 +1,33 @@
+# Operations
+
+Running the service once it is deployed. Configuration is in [Development](development.md#configuration).
+
+## Signing keys
+
+User tokens are signed with Ed25519 keys from the key file `DGS_SIGNING_KEYS_FILE`. Outside development and test, start-up is refused without one. Keep it as a secret, readable only by the service.
+
+```json
+{"keys": [
+  {"kid": "20261123-3f9a1c", "seed": "<32-byte seed, unpadded base64url>", "signs": true}
+]}
+```
+
+- Exactly one key signs. Every key in the file is published in the key set at `/api/.well-known/jwks.json`, so SAM verifies a token signed by any of them.
+- `dgs keys new` prints a new key, not yet signing, named by the day and a random suffix.
+- Every instance reads the file at start-up, so a change takes effect as each one restarts.
+
+### Rotating
+
+SAM keeps a fetched key set for five minutes. A key is therefore published before it signs, and stays published after:
+
+1. Add the key `dgs keys new` prints, with `signs` false, and restart every instance. The set now publishes it.
+2. At least five minutes later, move `signs: true` to the new key and restart every instance. SAM's cached set already holds the new key, and tokens signed by the old one still verify.
+3. A day later, remove the old key and restart.
+
+### A lost or leaked key
+
+Tokens last five minutes, so a leaked key is useful only while it is published. Add a new key and make it sign at once, removing the leaked one in the same change, then restart every instance. SAM refetches the set when a token names a key it does not hold, at most once every thirty seconds, so calls made as a person may be refused for up to half a minute.
+
+## The tenant file
+
+`DGS_SAM_TENANT_FILE` is what `sam tenant create -json` printed when this service was onboarded, and holds its service key, shown that once. Keep it as a secret. Onboarding again for an onboarded tenant prints no key: a lost service key is replaced with an emergency key issued by SAM's operator ([SAM's tenants](https://github.com/DaGrouper-School/sam/blob/main/docs/tenants.md)).

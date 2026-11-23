@@ -8,11 +8,15 @@ import (
 func setEnv(t *testing.T, kv map[string]string) {
 	t.Helper()
 	for _, k := range []string{"DGS_ENV", "DGS_LISTEN", "DGS_ALLOWED_ORIGINS", "DGS_LOG_FORMAT", "DGS_LOG_LEVEL",
-		"DGS_DB_MAX_CONNS", "DGS_DB_STATEMENT_TIMEOUT"} {
+		"DGS_DB_MAX_CONNS", "DGS_DB_STATEMENT_TIMEOUT", "DGS_SAM_AUDIENCE", "DGS_SIGNING_KEYS_FILE"} {
 		t.Setenv(k, "")
 	}
-	// Every case has a database unless it says otherwise.
+	// Every case has a database, SAM and signing keys unless it says otherwise.
 	t.Setenv("DGS_DATABASE_URL", "postgres://dgs@db/dgs")
+	t.Setenv("DGS_SAM_URL", "https://sam.example")
+	t.Setenv("DGS_SAM_TENANT_FILE", "/run/secrets/tenant.json")
+	t.Setenv("DGS_SAM_ISSUER", "https://dgs.example")
+	t.Setenv("DGS_SIGNING_KEYS_FILE", "/run/secrets/keys.json")
 	for k, v := range kv {
 		t.Setenv(k, v)
 	}
@@ -62,6 +66,14 @@ func TestLoadRefuses(t *testing.T) {
 		{"no connections", map[string]string{"DGS_ENV": "test", "DGS_DB_MAX_CONNS": "0"}, "DGS_DB_MAX_CONNS"},
 		{"a bad pool size", map[string]string{"DGS_ENV": "test", "DGS_DB_MAX_CONNS": "many"}, "DGS_DB_MAX_CONNS"},
 		{"no statement timeout", map[string]string{"DGS_ENV": "test", "DGS_DB_STATEMENT_TIMEOUT": "0s"}, "DGS_DB_STATEMENT_TIMEOUT"},
+		{"no SAM", map[string]string{"DGS_ENV": "test", "DGS_SAM_URL": ""}, "DGS_SAM_URL"},
+		{"not a URL for SAM", map[string]string{"DGS_ENV": "test", "DGS_SAM_URL": "sam:8080"}, "DGS_SAM_URL"},
+		{"SAM over http in staging", map[string]string{"DGS_ENV": "staging", "DGS_ALLOWED_ORIGINS": "https://a.example",
+			"DGS_SAM_URL": "http://sam.example"}, "https"},
+		{"no tenant file", map[string]string{"DGS_ENV": "test", "DGS_SAM_TENANT_FILE": ""}, "DGS_SAM_TENANT_FILE"},
+		{"no issuer", map[string]string{"DGS_ENV": "test", "DGS_SAM_ISSUER": ""}, "DGS_SAM_ISSUER"},
+		{"no signing keys in production", map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example",
+			"DGS_SIGNING_KEYS_FILE": ""}, "DGS_SIGNING_KEYS_FILE"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -86,5 +98,16 @@ func TestLoadPool(t *testing.T) {
 	c, err := Load()
 	if err != nil || c.DB.MaxConns != 4 || c.DB.StatementTimeout.Seconds() != 5 {
 		t.Fatalf("pool %+v, %v", c.DB, err)
+	}
+}
+
+func TestLoadSAM(t *testing.T) {
+	setEnv(t, map[string]string{"DGS_ENV": "development", "DGS_SAM_URL": "http://sam:8080", "DGS_SIGNING_KEYS_FILE": ""})
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.SAM.URL != "http://sam:8080" || c.SAM.Audience != "sam" || c.SAM.Issuer != "https://dgs.example" || c.SigningKeysFile != "" {
+		t.Fatalf("SAM in development: %+v, keys %q", c.SAM, c.SigningKeysFile)
 	}
 }

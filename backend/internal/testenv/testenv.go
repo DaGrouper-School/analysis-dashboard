@@ -18,10 +18,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/dagrouper-school/sam/client"
 
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/testutil"
 )
 
@@ -45,22 +44,10 @@ type SAM struct {
 	URL string
 	// OperatorKey is the deployment operator's key.
 	OperatorKey string
-	// Tenant is what onboarding printed.
-	Tenant Tenant
-}
-
-// Tenant is what `sam tenant create -json` prints about this service as a
-// tenant.
-type Tenant struct {
-	Name        string      `json:"name"`
-	RootSpaceID uuid.UUID   `json:"root_space_id"`
-	ServiceID   uuid.UUID   `json:"service_id"`
-	IssuerIDs   []uuid.UUID `json:"issuer_ids"`
-	Namespace   string      `json:"namespace"`
-	AnonymousID uuid.UUID   `json:"anonymous_id"`
-	Key         struct {
-		Secret string `json:"key"`
-	} `json:"key"`
+	// Tenant is what onboarding printed, and TenantFile the file holding it,
+	// as this service reads it.
+	Tenant     samaccess.Tenant
+	TenantFile string
 }
 
 // Options are how this service is onboarded: the issuer, key set and
@@ -88,10 +75,19 @@ func Start(t testing.TB, o Options) *SAM {
 			Secret string `json:"key"`
 		} `json:"operator_key"`
 	}
-	run(t, bin, env, &boot, "bootstrap", "-json")
-	s := &SAM{OperatorKey: boot.OperatorKey.Secret}
-	run(t, bin, env, &s.Tenant, "tenant", "create", "-name", TenantName, "-registry",
+	if err := json.Unmarshal(run(t, bin, env, "bootstrap", "-json"), &boot); err != nil {
+		t.Fatalf("sam bootstrap: %v", err)
+	}
+	s := &SAM{OperatorKey: boot.OperatorKey.Secret, TenantFile: filepath.Join(t.TempDir(), "tenant.json")}
+	tenant := run(t, bin, env, "tenant", "create", "-name", TenantName, "-registry",
 		"-issuer", o.Issuer, "-jwks", o.KeySetURL, "-audience", o.Audience, "-json")
+	if err := os.WriteFile(s.TenantFile, tenant, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var err error
+	if s.Tenant, err = samaccess.LoadTenant(s.TenantFile); err != nil {
+		t.Fatalf("sam tenant create: %v", err)
+	}
 
 	addr := freeAddr(t)
 	s.URL = "http://" + addr
@@ -104,14 +100,19 @@ func (s *SAM) Service() *client.Client {
 	return client.New(s.URL, client.WithKey(s.Tenant.Key.Secret))
 }
 
+// Config is how this service reaches this SAM, onboarded with o.
+func (s *SAM) Config(o Options) samaccess.Config {
+	return samaccess.Config{URL: s.URL, TenantFile: s.TenantFile, Issuer: o.Issuer, Audience: o.Audience}
+}
+
 // Operator is a client acting as the deployment's operator.
 func (s *SAM) Operator() *client.Client {
 	return client.New(s.URL, client.WithKey(s.OperatorKey))
 }
 
-// run runs one of SAM's commands to completion and decodes what it prints
-// into out.
-func run(t testing.TB, bin string, env []string, out any, args ...string) {
+// run runs one of SAM's commands to completion and returns what it
+// printed.
+func run(t testing.TB, bin string, env []string, args ...string) []byte {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), commandTimeout)
 	defer cancel()
@@ -122,9 +123,7 @@ func run(t testing.TB, bin string, env []string, out any, args ...string) {
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("sam %s: %v\n%s", strings.Join(args, " "), err, stderr.String())
 	}
-	if err := json.Unmarshal(stdout.Bytes(), out); err != nil {
-		t.Fatalf("sam %s printed %q: %v", strings.Join(args, " "), stdout.String(), err)
-	}
+	return stdout.Bytes()
 }
 
 // serve starts `sam serve`, waits until it answers, and stops it when t
