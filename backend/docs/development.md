@@ -83,7 +83,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 
 | Package | Responsibility |
 |---|---|
-| `cmd/dgs` | The command. `dgs serve` (the default) applies new migrations, reads the tenant file and signing keys, then serves until `SIGINT` or `SIGTERM`, then stops taking requests and waits up to ten seconds for those in flight. `dgs migrate` applies new migrations and exits. `dgs keys new` prints a new signing key ([Operations](operations.md#signing-keys)). `dgs outbox held` and `dgs outbox release ENTITY` list and release changes held for an operator ([Operations](operations.md#held-changes)). `dgs accounts renumber USER` gives an account not yet in SAM a new participant ID ([Operations](operations.md#after-a-database-restore)) |
+| `cmd/dgs` | The command. `dgs serve` (the default) applies new migrations, reads the tenant file and signing keys, then serves until `SIGINT` or `SIGTERM`, then stops taking requests and waits up to ten seconds for those in flight. `dgs migrate` applies new migrations and exits. `dgs keys new` prints a new signing key ([Operations](operations.md#signing-keys)). `dgs outbox held` and `dgs outbox release ENTITY` list and release changes held for an operator ([Operations](operations.md#held-changes)). `dgs accounts renumber USER` and `dgs accounts adopt USER` resolve a registration held after a database restore ([Operations](operations.md#after-a-database-restore)) |
 | `internal/config` | Reads and checks the configuration |
 | `internal/logx` | Sets up `slog` in text or JSON; carries the request ID so every log line written while serving a request names it |
 | `internal/httpx` | The error format, `WriteJSON`, `WriteError`, the `Handler` type, strict decoding |

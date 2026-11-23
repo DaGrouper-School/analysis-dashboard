@@ -235,3 +235,38 @@ func TestRegistrationsWaitForTheGuard(t *testing.T) {
 		t.Fatal("the registration did not go through")
 	}
 }
+
+// TestARestoredUserIsAdopted: a user restored from a backup whose
+// registration reached SAM after the backup is held like any 409; once an
+// operator adopts SAM's principal as theirs, the registration completes.
+func TestARestoredUserIsAdopted(t *testing.T) {
+	t.Parallel()
+	e := apitest.New(t)
+	b := newAccounts(t, e, e.Access)
+	ctx := context.Background()
+	a := b.create()
+	theirs := inSAM(t, e, a.ParticipantID)
+	b.guard()
+	b.pass()
+	if s, _ := state(t, e, accounts.Entity(a.ID)); s != "held" {
+		t.Fatalf("the registration: %s", s)
+	}
+	p, err := b.m.Adopt(ctx, a.ID)
+	if err != nil || p.ID != theirs.ID {
+		t.Fatalf("adopting: %+v, %v", p, err)
+	}
+	b.pass()
+	if s, _ := state(t, e, accounts.Entity(a.ID)); s != "done" {
+		t.Fatalf("after adopting: %s", s)
+	}
+	if got := b.get(a); got.Principal == nil || *got.Principal != theirs.ID {
+		t.Fatalf("user %+v", got)
+	}
+	if _, err := b.m.Adopt(ctx, a.ID); !errors.Is(err, accounts.ErrRegistered) {
+		t.Fatalf("adopting again: %v", err)
+	}
+	other := b.create()
+	if _, err := b.m.Adopt(ctx, other.ID); !errors.Is(err, accounts.ErrNotInSAM) {
+		t.Fatalf("adopting with nothing in SAM: %v", err)
+	}
+}

@@ -41,15 +41,21 @@ Release a change once what refused it is fixed, for example once the person has 
 
 ## After a database restore
 
-A database restored from a backup has forgotten the accounts made after the backup, but SAM still knows their participant IDs. At start-up the restore guard moves the participant ID sequence past every ID SAM knows, and logs `participant ID guard moved the sequence`. New accounts then get IDs SAM has never seen.
+A database restored from a backup has forgotten what happened after the backup was taken, but SAM has not. Users who signed up after the backup are gone from this database, yet SAM still holds their principals under their participant IDs. At start-up the restore guard moves the participant ID sequence past every ID SAM knows, and logs `participant ID guard moved the sequence`. New users then get IDs SAM has never seen.
 
-An account made after the restore but before the guard ran, such as one that signed up while SAM could not be asked, may have an ID SAM knows as someone else's. Its registration is held, never adopted, with the error saying so: `dgs outbox held` lists it as `user:<user id>`. Give it a new ID, and its registration is queued again:
+A registration can still be held after a restore, with SAM answering that a principal already exists under the user's participant ID. `dgs outbox held` lists it as `user:<user id>`, with an error saying so. Which of two cases it is decides what to do, and the service cannot tell them apart, so it never adopts the principal itself:
 
-```sh
-dgs accounts renumber USER
-```
+| The user | SAM's principal is | Do |
+|---|---|---|
+| Signed up after the restore, before the guard ran, such as while SAM could not be asked at start-up | Someone else's: a user the restore lost, who had this ID | `dgs accounts renumber USER` |
+| Was in the backup, but their registration reached SAM after the backup was taken. Its answer is lost with the restore, and SAM no longer replays it after a day | Their own | `dgs accounts adopt USER` |
 
-Renumbering refuses an account SAM already has, whose ID is settled.
+To tell them apart, compare when the user was created here (`SELECT created_at FROM users WHERE id = '<user id>'`) with when the backup was taken. A user created before the backup is the second case; one created after the restore is the first. `dgs accounts adopt` prints when SAM registered the principal, which falls after the backup in the second case.
+
+- **Renumbering** gives the user the next free participant ID and queues their registration under it.
+- **Adopting** records SAM's principal as the user's and completes their held registration.
+
+Both refuse a user whose principal is already recorded. Never adopt a principal you have not checked: adopting someone else's lets one person act as another in SAM, with their grants and their data.
 
 ## The tenant file
 

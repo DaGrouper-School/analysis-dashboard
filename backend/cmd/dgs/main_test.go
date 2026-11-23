@@ -79,7 +79,7 @@ func setSAM(t *testing.T) {
 }
 
 func TestRunRefuses(t *testing.T) {
-	for _, args := range [][]string{{"frobnicate"}, {"keys"}, {"keys", "old"}, {"serve", "now"}, {"outbox"}, {"outbox", "release"}, {"accounts", "renumber"}} {
+	for _, args := range [][]string{{"frobnicate"}, {"keys"}, {"keys", "old"}, {"serve", "now"}, {"outbox"}, {"outbox", "release"}, {"accounts", "renumber"}, {"accounts", "adopt"}} {
 		if err := run(context.Background(), io.Discard, args); err == nil || !strings.Contains(err.Error(), "unknown command") {
 			t.Fatalf("%v: %v", args, err)
 		}

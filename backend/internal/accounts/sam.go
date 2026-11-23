@@ -63,10 +63,11 @@ func (m *Module) Person(ctx context.Context, id uuid.UUID) (samaccess.Person, er
 //
 // The registration's idempotency key names the user and the version, so
 // when an answer is lost the retry gets SAM's first answer back: the user's
-// own principal, which is adopted. A principal SAM already has under that
-// subject for any other request, 409 already_exists, belongs to a user this
-// database does not know, which happens only after a restore. It is never
-// adopted: the change is held for an operator.
+// own principal, which is adopted. SAM answers 409 already_exists for a
+// principal registered by any other request: after a database restore,
+// either someone this database no longer knows, or this user's own
+// registration whose answer is no longer replayed. Only an operator can
+// tell which, so the change is held, never adopted on its own.
 func (m *Module) applyUser(ctx context.Context, a samaccess.Attempt) error {
 	if !m.guard.Done() {
 		return samaccess.ErrNotYet
@@ -94,11 +95,47 @@ func (m *Module) applyUser(ctx context.Context, a samaccess.Attempt) error {
 	reg, err := a.SAM.Register(a.WithKey(ctx, "principal"), client.PrincipalInput{Type: "user",
 		HomeSpaceID: tenant.RootSpaceID, IssuerID: &issuer, Subject: strconv.FormatInt(want.ParticipantID, 10)})
 	if client.IsCode(err, client.CodeAlreadyExists) {
-		return samaccess.Hold(fmt.Errorf("participant ID %d is already the SAM principal of a user this database does not know: "+
-			"give this user a new ID with `dgs accounts renumber %s`", want.ParticipantID, id))
+		return samaccess.Hold(fmt.Errorf("SAM already has a principal under participant ID %d. If this user was restored from a "+
+			"backup and registered after it, it is theirs: `dgs accounts adopt %s`. Otherwise it is someone else's: "+
+			"`dgs accounts renumber %s` (see docs/operations.md, \"After a database restore\")", want.ParticipantID, id, id))
 	}
 	if err != nil {
 		return err
 	}
 	return setPrincipal(ctx, m.db, id, reg.Principal.ID, want.ParticipantID)
+}
+
+// ErrNotInSAM is Adopt's answer when SAM has no principal under the user's
+// participant ID.
+var ErrNotInSAM = errors.New("SAM has no principal under the user's participant ID")
+
+// Adopt records as the user's own the principal SAM has under their
+// participant ID, and sends their held registration again, so it completes.
+// It is for a user restored from a backup whose registration reached SAM
+// after the backup was taken: the registration is held because its answer
+// is no longer replayed, yet the principal is theirs. An operator adopts
+// only after checking that: a principal belonging to someone else must
+// never be adopted. It returns the principal adopted.
+func (m *Module) Adopt(ctx context.Context, id uuid.UUID) (client.Principal, error) {
+	cur, err := getUser(ctx, m.db, id)
+	if err != nil {
+		return client.Principal{}, err
+	}
+	if cur.Principal != nil {
+		return client.Principal{}, ErrRegistered
+	}
+	p, err := m.sam.Service().FindUser(ctx, m.sam.Tenant().IssuerID(), strconv.FormatInt(cur.ParticipantID, 10))
+	if client.IsCode(err, client.CodeNotFound) {
+		return client.Principal{}, ErrNotInSAM
+	}
+	if err != nil {
+		return client.Principal{}, err
+	}
+	if err := setPrincipal(ctx, m.db, id, p.ID, cur.ParticipantID); err != nil {
+		return client.Principal{}, err
+	}
+	if err := samaccess.Release(ctx, m.db, m.now(), Entity(id)); err != nil && !errors.Is(err, samaccess.ErrNothingHeld) {
+		return client.Principal{}, err
+	}
+	return p, nil
 }
