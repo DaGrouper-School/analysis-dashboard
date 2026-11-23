@@ -1,6 +1,8 @@
 // Command dgs runs the DaGrouper School backend.
 //
-//	dgs serve   serve the API until SIGINT or SIGTERM (the default)
+//	dgs serve     apply new migrations, then serve the API until SIGINT or
+//	              SIGTERM (the default)
+//	dgs migrate   apply new migrations and exit
 //
 // Configuration comes from the environment; docs/development.md lists every
 // variable and its default.
@@ -18,7 +20,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/config"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/logx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/server"
 )
@@ -37,8 +42,8 @@ func main() {
 }
 
 func run(ctx context.Context, cmd string) error {
-	if cmd != "serve" {
-		return fmt.Errorf("unknown command %q (serve)", cmd)
+	if cmd != "serve" && cmd != "migrate" {
+		return fmt.Errorf("unknown command %q (serve, migrate)", cmd)
 	}
 	cfg, err := config.Load()
 	if err != nil {
@@ -49,13 +54,41 @@ func run(ctx context.Context, cmd string) error {
 		return err
 	}
 	slog.SetDefault(logger)
+	pool, err := migrate(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	if cmd == "migrate" {
+		return nil
+	}
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return err
 	}
-	app := server.New(server.Deps{AllowedOrigins: cfg.AllowedOrigins, Now: time.Now})
+	app := server.New(server.Deps{DB: pool, AllowedOrigins: cfg.AllowedOrigins, Now: time.Now})
 	slog.InfoContext(ctx, "listening", "addr", ln.Addr().String(), "env", cfg.Environment)
 	return serve(ctx, ln, app.Handler())
+}
+
+// migrate opens the database and applies the migrations it has not had,
+// logging each. Every instance does this on start; the migration lock
+// makes the others wait while one applies them.
+func migrate(ctx context.Context, cfg config.Config) (*pgxpool.Pool, error) {
+	pool, err := db.Open(ctx, cfg.DatabaseURL, cfg.DB)
+	if err != nil {
+		return nil, err
+	}
+	applied, err := db.Migrate(ctx, pool)
+	if err != nil {
+		pool.Close()
+		return nil, err
+	}
+	for _, name := range applied {
+		slog.InfoContext(ctx, "applied migration", "name", name)
+	}
+	slog.InfoContext(ctx, "database is up to date", "applied", len(applied))
+	return pool, nil
 }
 
 // Server timeouts. A whole request, body included, must arrive within

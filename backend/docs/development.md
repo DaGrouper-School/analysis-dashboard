@@ -1,20 +1,21 @@
 # Development
 
-How to build, run and test the service as it stands, and the conventions its code follows. So far the service has configuration, logging with request IDs, the HTTP conventions, `/healthz` and graceful shutdown.
+How to build, run and test the service as it stands, and the conventions its code follows. So far the service has configuration, logging with request IDs, the HTTP conventions, its PostgreSQL database with migrations, `/healthz` and graceful shutdown.
 
 ## Prerequisites
 
 | Tool | Version | For |
 |---|---|---|
-| Go | 1.25 (`go.mod`) | Building and testing |
+| Go | 1.27 (`go.mod`) | Building and testing |
 | golangci-lint | v2 (CI pins v2.15.0) | `make lint` |
-| Docker with Compose | Recent | `make up`, the image |
+| Docker with Compose | Recent | The databases, `make up`, the image |
 | Node and npm | 22 | Regenerating and checking the API contract, from the repository root |
 
 ## Running
 
 ```sh
-make run                     # in development, on :8090
+make db-up                   # the development and test databases
+make run                     # in development, on :8090, against the development database
 curl -s localhost:8090/healthz
 ```
 
@@ -25,23 +26,32 @@ make up                      # builds the image and starts it, waiting until hea
 make down                    # stops it
 ```
 
-`compose.yaml` runs the service alone, in development, with `http://localhost:5173` as its front-end origin, published on `127.0.0.1:8090`.
+`compose.yaml` runs the service in development, with `http://localhost:5173` as its front-end origin, published on `127.0.0.1:8090`, and its databases:
+
+| Service | Published on | For |
+|---|---|---|
+| `db` | `127.0.0.1:5433`, database `dgs` | The development data, kept in the `dgs-db` volume until `make down` |
+| `test-db` | `127.0.0.1:55433` | The server the tests create their databases on. Its data is in memory, and it starts only with the `test` profile, which `make test` and `make db-up` use |
+
+The ports differ from SAM's, so both stacks run side by side.
 
 ## Make targets
 
-The targets are the same as SAM's. `make help` lists them. The Makefile sets `DGS_ENV=development` unless the environment already sets it.
+The targets are the same as SAM's. `make help` lists them. The Makefile sets `DGS_ENV=development`, and `DGS_DATABASE_URL` to the compose `db` service, unless the environment already sets them.
 
 | Target | What it does |
 |---|---|
 | `help` | Lists the targets |
 | `build` | Builds `bin/dgs` |
 | `run` | Serves the API locally (`go run ./cmd/dgs serve`) |
-| `test` | Runs every test with the race detector |
+| `migrate` | Applies new migrations to `DGS_DATABASE_URL` (`go run ./cmd/dgs migrate`) |
+| `test` | Runs every test with the race detector, against `DGS_TEST_DATABASE_URL` when it is set, otherwise against the compose `test-db`, which it starts |
 | `test-short` | Runs the tests that need no database or SAM (`-short`) |
 | `lint` | `go vet`, a `gofmt` check and `golangci-lint` |
 | `tidy-check` | Fails when `go.mod` or `go.sum` is not tidy |
 | `vulncheck` | Reports known vulnerabilities in dependencies (`govulncheck`) |
-| `up` | Builds and starts the compose stack, waiting until healthy |
+| `db-up` | Starts the development and test databases |
+| `up` | Builds and starts the service and its database, waiting until healthy |
 | `down` | Stops the stack and discards its data |
 
 ## Configuration
@@ -55,18 +65,23 @@ Configuration comes from the environment (`internal/config`). Every problem is r
 | `DGS_ALLOWED_ORIGINS` | `http://localhost:5173` in development and test; required elsewhere | Front-end origins allowed to call with credentials and to send writes, comma-separated. Each must be a bare origin such as `https://app.example`; a trailing `/` is dropped. Outside development and test each must use `https` |
 | `DGS_LOG_FORMAT` | `text` in development and test, `json` elsewhere | `text` or `json` |
 | `DGS_LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error` |
+| `DGS_DATABASE_URL` | none: required (`make` sets the compose `db`) | The PostgreSQL connection string |
+| `DGS_DB_MAX_CONNS` | `10` | The most connections the pool opens, a whole number from 1 |
+| `DGS_DB_STATEMENT_TIMEOUT` | `30s` | How long one statement may run before PostgreSQL cancels it, a Go duration of at least `1ms` |
 
-Every variable the service reads is listed here.
+Every variable the service reads is listed here. The tests also read `DGS_TEST_DATABASE_URL` ([Testing](#testing)).
 
 ## Package layout
 
 | Package | Responsibility |
 |---|---|
-| `cmd/dgs` | The command. `dgs serve` (the default) serves until `SIGINT` or `SIGTERM`, then stops taking requests and waits up to ten seconds for those in flight |
+| `cmd/dgs` | The command. `dgs serve` (the default) applies new migrations, then serves until `SIGINT` or `SIGTERM`, then stops taking requests and waits up to ten seconds for those in flight. `dgs migrate` applies new migrations and exits |
 | `internal/config` | Reads and checks the configuration |
 | `internal/logx` | Sets up `slog` in text or JSON; carries the request ID so every log line written while serving a request names it |
 | `internal/httpx` | The error format, `WriteJSON`, `WriteError`, the `Handler` type, strict decoding |
+| `internal/db` | Opens the pool, applies the migrations, transactions (`InTx`) and advisory locks |
 | `internal/server` | `server.New(Deps)`, the `Module` interface, the middleware, `/healthz` and the API's not-found answer |
+| `internal/testutil` | A fresh database per test (test code only) |
 
 The areas the code is organised into, and the data each owns, are in the design overview ([Data ownership](design/README.md#data-ownership)).
 
@@ -78,7 +93,7 @@ Every request passes through, in order:
 2. **Request log.** One line per request with method, path, status and duration in milliseconds, except `/healthz`.
 3. **CORS.** For an `Origin` in `DGS_ALLOWED_ORIGINS`: `Access-Control-Allow-Origin` with credentials and `Vary: Origin`. A preflight is answered `204` with methods `GET, POST, PUT, PATCH, DELETE`, header `Content-Type` and a ten-minute max age.
 4. **Cross-site write check.** A request other than `GET`, `HEAD` or `OPTIONS` whose `Origin` is neither this service's own nor in `DGS_ALLOWED_ORIGINS` is refused with `403 forbidden`.
-5. **Routes.** `GET /healthz` answers `{"status":"ok"}`. Modules mount their routes under `/api`. Any other path under `/api/` answers `404 not_found`.
+5. **Routes.** `GET /healthz` answers `200 {"status":"ok"}` while the database answers a ping within two seconds, and `503 {"status":"unavailable"}` otherwise. Modules mount their routes under `/api`. Any other path under `/api/` answers `404 not_found`.
 
 Server timeouts: ten seconds for headers, sixty for the whole request, two minutes for an idle keep-alive connection.
 
@@ -97,6 +112,16 @@ Every error is JSON `{code, message, fields}`. `code` is one of the front end's 
 | `rate_limited` | 429 | `httpx.RateLimited(message, retryAfter)`, which sets `Retry-After` |
 | `internal` | 500 | Any error that is not an `*httpx.Error`: logged with the request ID, shown as a generic message |
 
+## The database
+
+PostgreSQL 17, through `pgx` (`internal/db`). `db.Open` opens a pool of at most `DGS_DB_MAX_CONNS` connections, each with `statement_timeout` set to `DGS_DB_STATEMENT_TIMEOUT`, and fails unless the database answers.
+
+**Migrations** are SQL files in `internal/db/migrations`, embedded in the binary and applied in name order, each in its own transaction and recorded in `schema_migrations`. Every instance applies them on start, before it listens; an advisory lock makes the others wait while one applies them, and a failed migration stops start-up with nothing of it applied. The rules for writing one are in [the migrations folder](../internal/db/migrations/README.md).
+
+**Transactions.** `db.InTx(ctx, q, fn)` runs `fn` in a transaction. When `ctx` already carries one (`db.WithTx`), `fn` runs in a savepoint of it, so a service function that needs a transaction works the same alone or inside a caller's.
+
+**Advisory locks** are taken only through `db.Lock` (held by a connection until released) and `db.TryLock` (held until the transaction ends), and every key is a constant in `internal/db/locks.go`, so no two uses share one by accident.
+
 ## Conventions
 
 - **Modules.** A module implements `server.Module`: `Routes(mux *http.ServeMux, prefix string)`. It is built in `server.New` from `Deps` and added to the list its routes are mounted from. The command and tests both build the service through `server.New`. The full module pattern is in the [design overview](design/README.md#modules).
@@ -109,10 +134,18 @@ Every error is JSON `{code, message, fields}`. `code` is one of the front end's 
 - **Time.** Anything that expires, a window or a cache uses `Deps.Now`, so tests can move the clock.
 - **Constants.** Limits, intervals and defaults get a named constant with a comment, next to the code that uses them.
 - **Lint limits** (`.golangci.yml`): cognitive complexity 25; functions at most 80 lines or 50 statements. Tests are exempt. Split a long function by what each part decides, not into numbered steps.
-- **Tables.** Each table belongs to one package, and a test enforces it: a query on another package's table fails unless the test lists it with its reason. A new table or column gets a new migration, never an edit to an old one, and the migration starts with a comment that says why.
+- **Tables.** Each table belongs to one package, and a test enforces it ([Table ownership](#table-ownership)). A new table or column gets a new migration, never an edit to an old one, and the migration starts with a comment that says why.
 - **SAM.** Each domain lives in one package, including how it is sent to SAM. The SAM package holds only the outbox, the client and token signing. A change SAM must reflect is written to the outbox in the same transaction, never sent to SAM from a handler.
 - **Demo data** is a separate tool. It is never part of the service's packages or migrations.
 - **Contract changes** start in the front end (`frontend/src/lib/services`). Then `openapi.yaml` is regenerated ([the API contract](#the-api-contract)).
+
+## Table ownership
+
+Each table is read and written only by the package that owns it ([Data ownership](design/README.md#data-ownership)); other packages call the owner's functions. A package other than the owner uses a table only where the last column names it, with the reason. `TestTableOwnership` reads this table and fails when code reads or writes a table it neither owns nor is listed against, when a migration creates a table missing here, when code outside migrations changes the schema without a reason in the test, or when a package other than `internal/db` takes an advisory lock itself.
+
+| Table | Owner | Also used by |
+|---|---|---|
+| `schema_migrations` | `internal/db` | |
 
 ## Testing
 
@@ -122,14 +155,14 @@ make test-short   # only those that need no database or SAM
 make lint
 ```
 
-Every test so far is a unit test that needs nothing running. The integration harness, with a real SAM built from source and every response checked against `openapi.yaml`, is described in the [design overview](design/README.md#testing-approach).
+Tests that need the database call `testutil.DB(t)`, which gives the test a database of its own, migrated and dropped when it ends, so tests run in parallel without seeing each other's rows. Each is a copy of a template migrated once per set of migrations. `DGS_TEST_DATABASE_URL` is an admin connection to the server they are created on; `make test` starts the compose `test-db` and points it there unless the variable is already set. Under `-short` these tests are skipped. The integration harness, with a real SAM built from source and every response checked against `openapi.yaml`, is described in the [design overview](design/README.md#testing-approach).
 
 - **Unit tests** cover pure logic, in the package that holds it. Integration tests cover behaviour across the API, and are never the only test of a rule such as validation, permissions, cutoffs or alerts.
 - **Every fix** comes with a test that fails without it.
 - **Every endpoint** is called by an integration test in `internal/apitest`, so the contract check covers it.
 - Tests call `t.Parallel()`.
 
-CI (`.github/workflows/backend.yml`) runs on changes to `backend/`, the front end's services and domain, and the contract generator. It checks the contract is current, then runs `make tidy-check`, `make lint`, `make test` and `make vulncheck`, and builds the image.
+CI (`.github/workflows/backend.yml`) runs on changes to `backend/`, the front end's services and domain, and the contract generator. It checks the contract is current, then runs `make tidy-check`, `make lint`, `make test` (against a PostgreSQL service container) and `make vulncheck`, and builds the image.
 
 ## The API contract
 

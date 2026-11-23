@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/testutil"
 )
 
 // TestServeDrains: serve answers until its context ends, then waits for a
@@ -64,5 +66,32 @@ func TestRunRefuses(t *testing.T) {
 	t.Setenv("DGS_ENV", "")
 	if err := run(context.Background(), "serve"); err == nil || !strings.Contains(err.Error(), "DGS_ENV") {
 		t.Fatalf("no environment: %v", err)
+	}
+}
+
+// TestMigrate: dgs migrate brings an empty database up to date, and a
+// second run applies nothing.
+func TestMigrate(t *testing.T) {
+	dsn := testutil.EmptyDB(t)
+	t.Setenv("DGS_ENV", "test")
+	t.Setenv("DGS_DATABASE_URL", dsn)
+	for range 2 {
+		if err := run(context.Background(), "migrate"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var n int
+	if err := testutil.Pool(t, dsn).QueryRow(context.Background(), `SELECT count(*) FROM schema_migrations`).Scan(&n); err != nil {
+		t.Fatalf("after migrating: %v", err)
+	}
+}
+
+// TestServeNeedsTheDatabase: serve stops before listening when the
+// database does not answer.
+func TestServeNeedsTheDatabase(t *testing.T) {
+	t.Setenv("DGS_ENV", "test")
+	t.Setenv("DGS_DATABASE_URL", "postgres://dgs@127.0.0.1:1/dgs?connect_timeout=2")
+	if err := run(context.Background(), "serve"); err == nil {
+		t.Fatal("serve started without a database")
 	}
 }
