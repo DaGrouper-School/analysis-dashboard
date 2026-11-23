@@ -16,7 +16,7 @@ import (
 // Change is a change SAM must reflect: an entity's whole desired state, for
 // the applier of its kind to send.
 type Change struct {
-	// Entity names what the change is about, such as user:<account id>.
+	// Entity names what the change is about, such as user:<user id>.
 	// It must not hold a participant ID or a row ID a restored database
 	// could give out again, since idempotency keys are built from it.
 	Entity string

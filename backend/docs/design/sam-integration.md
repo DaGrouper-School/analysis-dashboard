@@ -136,11 +136,9 @@ A user it cannot compare is logged and tried again on the next pass. It reads us
 ### Participant IDs and the restore guard
 
 - The participant ID is the subject of a person's SAM principal and the only identifier of a person SAM holds. It comes from a sequence and is never reused.
-- Every principal is registered with a tag naming its account.
-- A principal is registered only for an account with none stored. When SAM answers that the participant ID already exists:
-  - with this account's tag, it is this account's own attempt whose answer was lost, and it is adopted;
-  - otherwise it belongs to an account this database does not know. That happens only after a restore. The row is held for an operator and the principal is never adopted.
-- **At start-up** the guard moves the sequence past every ID SAM already knows. IDs are given in order, so the registered ones above the next ID are a run: the guard finds its end by doubling, then halving, with a bounded number of lookups, and logs a warning when it moves the sequence.
+- A principal is registered only for an account with none stored, under an idempotency key naming the account and the change's version.
+- **Adoption.** When an answer is lost, the retry carries the same key and SAM replays its first answer: the account's own principal, which is adopted. SAM answers `409 already_exists` only when the participant ID is a principal registered by some other request: one belonging to an account this database does not know, which happens only after a restore. That is never adopted: the row is held for an operator, who gives the account a new participant ID. SAM replays an answer for 24 hours, so a lost registration retried after that is held the same way.
+- **At start-up** the guard moves the sequence past every ID SAM already knows. IDs are given in order, so the registered ones above the next ID are a run: the guard finds its end by doubling, then halving, with a bounded number of lookups, and logs a warning when it moves the sequence. While SAM cannot be asked, the service starts anyway, the guard retries in the background, and registrations wait for it.
 
 ### Reads
 
@@ -166,7 +164,7 @@ The message is this service's own. SAM's developer-facing detail is logged, neve
 - **Falling back to this service's authority when a person's does not suffice.** It would let a person do through this service what SAM refuses them, such as a head making heads. Rejected.
 - **Idempotency keys from row IDs or participant IDs.** A restored database gives them out again, and SAM would replay an answer meant for another change. Rejected for keys that name the change.
 - **A key per attempt.** A retry after a lost answer would publish a release twice. Rejected for stable keys.
-- **Adopting a principal that already exists.** After a restore, one person would act as another. Rejected: only this account's own tagged attempt is adopted.
+- **Adopting a principal that already exists.** After a restore, one person would act as another. Rejected: only the replayed answer to this account's own request is adopted.
 - **Reconciling memberships.** SAM cannot list a group's members, so there is nothing to compare. The applier records confirmed steps instead.
 
 ## Risks

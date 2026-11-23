@@ -13,6 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/testutil"
 )
@@ -76,7 +79,7 @@ func setSAM(t *testing.T) {
 }
 
 func TestRunRefuses(t *testing.T) {
-	for _, args := range [][]string{{"frobnicate"}, {"keys"}, {"keys", "old"}, {"serve", "now"}, {"outbox"}, {"outbox", "release"}} {
+	for _, args := range [][]string{{"frobnicate"}, {"keys"}, {"keys", "old"}, {"serve", "now"}, {"outbox"}, {"outbox", "release"}, {"accounts", "renumber"}} {
 		if err := run(context.Background(), io.Discard, args); err == nil || !strings.Contains(err.Error(), "unknown command") {
 			t.Fatalf("%v: %v", args, err)
 		}
@@ -166,5 +169,32 @@ func TestOutboxCommands(t *testing.T) {
 	}
 	if err := run(ctx, io.Discard, []string{"outbox", "release", "user:a"}); !errors.Is(err, samaccess.ErrNothingHeld) {
 		t.Fatalf("releasing it again: %v", err)
+	}
+}
+
+// TestAccountsRenumber: dgs accounts renumber gives an account a new
+// participant ID, and refuses what is not an account.
+func TestAccountsRenumber(t *testing.T) {
+	dsn := testutil.EmptyDB(t)
+	t.Setenv("DGS_ENV", "test")
+	t.Setenv("DGS_DATABASE_URL", dsn)
+	setSAM(t)
+	ctx := context.Background()
+	if err := run(ctx, io.Discard, []string{"migrate"}); err != nil {
+		t.Fatal(err)
+	}
+	a, err := accounts.Create(ctx, testutil.Pool(t, dsn), time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	if err := run(ctx, &out, []string{"accounts", "renumber", a.ID.String()}); err != nil || !strings.Contains(out.String(), "participant ID 2") {
+		t.Fatalf("renumbering: %q, %v", out.String(), err)
+	}
+	if err := run(ctx, io.Discard, []string{"accounts", "renumber", "someone"}); err == nil || !strings.Contains(err.Error(), "not a user ID") {
+		t.Fatalf("not an ID: %v", err)
+	}
+	if err := run(ctx, io.Discard, []string{"accounts", "renumber", uuid.NewString()}); err == nil || !strings.Contains(err.Error(), "no user") {
+		t.Fatalf("an unknown account: %v", err)
 	}
 }

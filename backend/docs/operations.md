@@ -39,6 +39,18 @@ dgs outbox release ENTITY      # send the entity's latest held change again on t
 
 Release a change once what refused it is fixed, for example once the person has the rights SAM asked for. A released change that SAM refuses again is held again.
 
+## After a database restore
+
+A database restored from a backup has forgotten the accounts made after the backup, but SAM still knows their participant IDs. At start-up the restore guard moves the participant ID sequence past every ID SAM knows, and logs `participant ID guard moved the sequence`. New accounts then get IDs SAM has never seen.
+
+An account made after the restore but before the guard ran, such as one that signed up while SAM could not be asked, may have an ID SAM knows as someone else's. Its registration is held, never adopted, with the error saying so: `dgs outbox held` lists it as `user:<user id>`. Give it a new ID, and its registration is queued again:
+
+```sh
+dgs accounts renumber USER
+```
+
+Renumbering refuses an account SAM already has, whose ID is settled.
+
 ## The tenant file
 
 `DGS_SAM_TENANT_FILE` is what `sam tenant create -json` printed when this service was onboarded, and holds its service key, shown that once. Keep it as a secret. Onboarding again for an onboarded tenant prints no key: a lost service key is replaced with an emergency key issued by SAM's operator ([SAM's tenants](https://github.com/DaGrouper-School/sam/blob/main/docs/tenants.md)).
