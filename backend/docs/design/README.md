@@ -151,7 +151,7 @@ This service has its own database and SAM has its own; neither reads the other's
 ```
  transport      HTTP: CORS, the cross-site check, request IDs, sessions, decoding, errors
      │
- modules        one per area of the product: accounts and sign-in, profiles, classrooms,
+ modules        one per area of the product: accounts, sign-in and profiles, classrooms,
      │          consent, hosting, labs and readings, registry, content, public site
      │
  shared         SAM access (connection, tokens, outbox, reconciler); delivery (SMS, email);
@@ -184,7 +184,7 @@ Each table belongs to one module, and no other module queries it; a test checks 
 
 | Area | Holds |
 |---|---|
-| Accounts and sign-in | Users and their identities, sessions, phone challenges and their limits |
+| Accounts and sign-in | Users and their profiles, their identities, sessions, phone challenges and their limits |
 | Classrooms | Classrooms, memberships, invitations, consent records, and what each is in SAM |
 | Hosting | Host applications |
 | Labs and readings | Labs, devices, relayed and synced records, alert levels, and what each is in SAM |
