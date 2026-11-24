@@ -76,7 +76,7 @@ type Env struct {
 	// Clock is the service's clock, which a test moves.
 	Clock *Clock
 	// SMS keeps the texts the service sends.
-	SMS *notify.Recorder
+	SMS *notify.SMSRecorder
 	// Access is how this service calls SAM, and App the service, as last
 	// started.
 	Access *samaccess.Access
@@ -122,7 +122,7 @@ func NewWith(t testing.TB, o Options) *Env {
 	url := "http://" + srv.Listener.Addr().String()
 	sam := testenv.Options{Issuer: url, KeySetURL: url + "/api" + samaccess.KeySetPath, Audience: Audience}
 	e := &Env{URL: url, Pool: testutil.DB(t), SAM: testenv.Start(t, sam), Google: newFakeGoogle(t), Clock: &Clock{now: time.Now()},
-		SMS: &notify.Recorder{},
+		SMS: &notify.SMSRecorder{},
 		t:   t, opts: o,
 		check: func(h http.Handler) http.Handler {
 			return c.Checked(h, func(err error) { t.Errorf("contract: %v", err) }, Outside...)

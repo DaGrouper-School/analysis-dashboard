@@ -8,6 +8,14 @@ Running the service once it is deployed. Configuration is in [Development](devel
 - **The overall send limit.** `DGS_SMS_SENDS_PER_HOUR` (200 by default) caps the codes sent per hour across every number and address, which caps what SMS pumping can cost. Set it from the expected sign-up rate. Past it, people asking for a code get `429` with `Retry-After` until the oldest send of the hour leaves the window.
 - **The client address behind a proxy.** The per-address limits key on the client's address. Behind a load balancer or proxy that is the proxy's own, so set `DGS_CLIENT_IP_HEADER` to the header it puts the client's address in, such as `X-Forwarded-For`: the service takes the last address in it, the one the proxy added. Set it only behind a proxy that sets the header itself, or a client could name any address.
 
+## Email
+
+Email goes through the SMTP server in `DGS_SMTP_*` ([Configuration](development.md#configuration)); any mail service that offers SMTP will do. Outside development and test the server is required, and the connection is encrypted: STARTTLS on 587 by default, or TLS from the start with `DGS_SMTP_SECURITY=tls`, usually on 465. The server's certificate is checked against the system's roots.
+
+- **Checking the settings.** `dgs email test ADDRESS` reads the same configuration as `dgs serve` and sends a test email to `ADDRESS`. An error names the step that failed: connecting, TLS, signing in or sending. It needs no database.
+- **The sender.** `DGS_SMTP_FROM` is the sender on every email. Its domain also ends each Message-ID; publish SPF and DKIM for it with the mail service, or mail may land as spam.
+- **In development.** Without `DGS_SMTP_HOST`, email is written to the log. To see it as email, point `DGS_SMTP_*` at a local catcher such as Mailpit with `DGS_SMTP_SECURITY=none`.
+
 ## Places
 
 `DGS_PLACES_API_KEY` is a Google Places key with the Places API enabled. Restrict it to that API and to the service's outbound addresses: it is sent to Google from the server only, in a request header. Each signed-in person may look up 300 places an hour; autocomplete asks as they type, so this covers filling in a few addresses and stops a script.

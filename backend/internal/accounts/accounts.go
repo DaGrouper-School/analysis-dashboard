@@ -73,7 +73,7 @@ func New(q db.Querier, sam *samaccess.Access, now func() time.Time, cfg Config) 
 		cfg.SMSSendsPerHour = DefaultSendsPerHour
 	}
 	if cfg.SMS == nil {
-		cfg.SMS = notify.None{}
+		cfg.SMS = notify.NoSMS{}
 	}
 	return &Module{db: q, sam: sam, now: now, cfg: cfg, google: newGoogle(cfg.GoogleClientID, cfg.GoogleKeysURL, now),
 		guard: &Guard{db: q, sam: sam}, sessions: &Sessions{db: q, now: now, ttl: cfg.SessionTTL, secure: cfg.SecureCookies}}

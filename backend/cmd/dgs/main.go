@@ -11,6 +11,7 @@
 //	                            participant ID
 //	dgs accounts adopt USER     record the principal SAM has under a
 //	                            restored user's participant ID as theirs
+//	dgs email test ADDRESS      send a test email, to check the SMTP settings
 //
 // Configuration comes from the environment; docs/development.md lists every
 // variable and its default.
@@ -60,14 +61,14 @@ func main() {
 	}
 }
 
-const usage = "usage: dgs serve|migrate|keys new|outbox held|outbox release ENTITY|accounts renumber USER|accounts adopt USER"
+const usage = "usage: dgs serve|migrate|keys new|outbox held|outbox release ENTITY|accounts renumber USER|accounts adopt USER|email test ADDRESS"
 
 func run(ctx context.Context, out io.Writer, args []string) error {
 	switch {
 	case is(args, "keys", "new"):
 		return newKey(out)
 	case is(args, "serve"), is(args, "migrate"), is(args, "outbox", "held"), len(args) == 3 && is(args[:2], "outbox", "release"),
-		len(args) == 3 && (is(args[:2], "accounts", "renumber") || is(args[:2], "accounts", "adopt")):
+		len(args) == 3 && (is(args[:2], "accounts", "renumber") || is(args[:2], "accounts", "adopt") || is(args[:2], "email", "test")):
 	default:
 		return fmt.Errorf("unknown command %q; %s", strings.Join(args, " "), usage)
 	}
@@ -80,6 +81,9 @@ func run(ctx context.Context, out io.Writer, args []string) error {
 		return err
 	}
 	slog.SetDefault(logger)
+	if args[0] == "email" {
+		return testEmail(ctx, out, cfg, args[2])
+	}
 	pool, err := migrate(ctx, cfg)
 	if err != nil {
 		return err
@@ -110,9 +114,9 @@ func serveAll(ctx context.Context, cfg config.Config, pool *pgxpool.Pool) error 
 	if err != nil {
 		return err
 	}
-	// Until a deployment configures a provider, codes go to the log in
-	// development and test, and nowhere elsewhere.
-	cfg.Accounts.SMS = notify.ForEnvironment(cfg.Local())
+	// There is no SMS provider yet: codes go to the log in development and
+	// test, and nowhere elsewhere.
+	cfg.Accounts.SMS = notify.SMSFor(cfg.Local())
 	app := server.New(server.Deps{DB: pool, SAM: sam, AllowedOrigins: cfg.AllowedOrigins, Now: time.Now, Accounts: cfg.Accounts,
 		Places: cfg.Places})
 	worker, err := samaccess.NewWorker(pool, sam, app.OutboxKinds(), app.Actors(), time.Now)
@@ -138,6 +142,26 @@ func serveAll(ctx context.Context, cfg config.Config, pool *pgxpool.Pool) error 
 	err = serve(ctx, ln, app.Handler())
 	stop()
 	wg.Wait()
+	return err
+}
+
+// testEmail sends a test email to address, so an operator can check the
+// SMTP settings.
+func testEmail(ctx context.Context, out io.Writer, cfg config.Config, address string) error {
+	email, err := notify.EmailFor(cfg.Local(), cfg.SMTP)
+	if err != nil {
+		return err
+	}
+	err = email.Send(ctx, notify.Mail{To: address, Subject: "DaGrouper School test email",
+		Text: "This is a test email from DaGrouper School (" + cfg.Environment + "). Its arrival means the SMTP settings work.\n"})
+	if err != nil {
+		return err
+	}
+	where := "through " + cfg.SMTP.Host
+	if cfg.SMTP.Host == "" {
+		where = "to the log, as no SMTP server is configured"
+	}
+	_, err = fmt.Fprintf(out, "sent a test email to %s %s\n", address, where)
 	return err
 }
 

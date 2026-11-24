@@ -89,7 +89,11 @@ With these limits, guessing one code needs on the order of 10^5 numbers' worth o
 
 ### Delivery
 
-Codes, invitations, guardian links and host-application links are sent through `notify`: an SMS provider and an email provider behind interfaces. Development and test use log providers. Staging uses the real providers in test mode, so it behaves like production.
+Codes, invitations, guardian links and host-application links are sent through `notify`: an SMS provider and an email provider behind interfaces, so a module never names a provider.
+
+- **Email** goes through an SMTP server, so any mail service that offers SMTP can carry it. Outside development and test a server is required and the connection is encrypted.
+- **SMS** has no provider: outside development and test, sending a code is refused and the error is logged.
+- **Development and test** use providers that write each message to the log, which no other environment may.
 
 ### Environments
 
@@ -102,6 +106,7 @@ Codes, invitations, guardian links and host-application links are sent through `
 | Signing key | Generated when missing | Required, or start-up is refused |
 | Demo mode (`DGS_DEMO`) | Allowed | Start-up refused |
 | One-time codes in the log | Yes | Never |
+| Email | To the log, or an SMTP server, which may be unencrypted | An SMTP server, encrypted; required |
 | Log format | `text` | `json` |
 
 **Demo mode** offers three conveniences, each only with `DGS_DEMO` on:
@@ -110,7 +115,7 @@ Codes, invitations, guardian links and host-application links are sent through `
 - the phone code returned in the response instead of texted;
 - link tokens (invitation, guardian consent, host application) returned to the client as `devToken`, which is otherwise null.
 
-Staging gets demo-like data from seeded accounts that sign in normally, with an SMS provider in test mode.
+Staging gets demo-like data from seeded accounts that sign in normally.
 
 ### Demo data
 
