@@ -11,7 +11,8 @@ import (
 func setEnv(t *testing.T, kv map[string]string) {
 	t.Helper()
 	for _, k := range []string{"DGS_ENV", "DGS_LISTEN", "DGS_ALLOWED_ORIGINS", "DGS_LOG_FORMAT", "DGS_LOG_LEVEL",
-		"DGS_DB_MAX_CONNS", "DGS_DB_STATEMENT_TIMEOUT", "DGS_SAM_AUDIENCE", "DGS_SIGNING_KEYS_FILE", "DGS_RECONCILE_INTERVAL", "DGS_SESSION_TTL", "DGS_DEMO", "DGS_SMS_SENDS_PER_HOUR", "DGS_CLIENT_IP_HEADER", "DGS_PLACES_API_KEY"} {
+		"DGS_DB_MAX_CONNS", "DGS_DB_STATEMENT_TIMEOUT", "DGS_SAM_AUDIENCE", "DGS_SIGNING_KEYS_FILE", "DGS_RECONCILE_INTERVAL", "DGS_SESSION_TTL", "DGS_DEMO", "DGS_SMS_SENDS_PER_HOUR", "DGS_CLIENT_IP_HEADER", "DGS_PLACES_API_KEY",
+		"DGS_SMTP_HOST", "DGS_SMTP_PORT", "DGS_SMTP_SECURITY", "DGS_SMTP_USERNAME", "DGS_SMTP_PASSWORD", "DGS_SMTP_FROM"} {
 		t.Setenv(k, "")
 	}
 	// Every case has a database, SAM and signing keys unless it says otherwise.
@@ -23,6 +24,8 @@ func setEnv(t *testing.T, kv map[string]string) {
 	t.Setenv("DGS_PUBLIC_URL", "https://dgs.example")
 	t.Setenv("DGS_GOOGLE_CLIENT_ID", "dgs.apps.googleusercontent.com")
 	t.Setenv("DGS_PLACES_API_KEY", "places-key")
+	t.Setenv("DGS_SMTP_HOST", "smtp.example")
+	t.Setenv("DGS_SMTP_FROM", "DaGrouper School <no-reply@dgs.example>")
 	for k, v := range kv {
 		t.Setenv(k, v)
 	}
@@ -95,6 +98,15 @@ func TestLoadRefuses(t *testing.T) {
 		{"no places key in production", map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example",
 			"DGS_PLACES_API_KEY": ""}, "DGS_PLACES_API_KEY"},
 		{"a bad reconcile interval", map[string]string{"DGS_ENV": "test", "DGS_RECONCILE_INTERVAL": "often"}, "DGS_RECONCILE_INTERVAL"},
+		{"no SMTP server in production", map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example",
+			"DGS_SMTP_HOST": ""}, "DGS_SMTP_HOST"},
+		{"SMTP in the clear in staging", map[string]string{"DGS_ENV": "staging", "DGS_ALLOWED_ORIGINS": "https://a.example",
+			"DGS_SMTP_SECURITY": "none"}, "DGS_SMTP_SECURITY"},
+		{"unknown SMTP security", map[string]string{"DGS_ENV": "test", "DGS_SMTP_SECURITY": "ssl"}, "DGS_SMTP_SECURITY"},
+		{"a bad SMTP port", map[string]string{"DGS_ENV": "test", "DGS_SMTP_PORT": "70000"}, "DGS_SMTP_PORT"},
+		{"an SMTP user without a password", map[string]string{"DGS_ENV": "test", "DGS_SMTP_USERNAME": "dgs"}, "DGS_SMTP_PASSWORD"},
+		{"no sender", map[string]string{"DGS_ENV": "test", "DGS_SMTP_FROM": ""}, "DGS_SMTP_FROM"},
+		{"not a sender", map[string]string{"DGS_ENV": "test", "DGS_SMTP_FROM": "DaGrouper School"}, "DGS_SMTP_FROM"},
 		{"no signing keys in production", map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example",
 			"DGS_SIGNING_KEYS_FILE": ""}, "DGS_SIGNING_KEYS_FILE"},
 	}
@@ -160,5 +172,30 @@ func TestOfflinePlacesInDevelopment(t *testing.T) {
 	setEnv(t, map[string]string{"DGS_ENV": "development", "DGS_PLACES_API_KEY": ""})
 	if c, err := Load(); err != nil || c.Places.APIKey != "" {
 		t.Fatalf("places in development without a key: %+v, %v", c.Places, err)
+	}
+}
+
+func TestLoadSMTP(t *testing.T) {
+	setEnv(t, map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example",
+		"DGS_SMTP_USERNAME": "dgs", "DGS_SMTP_PASSWORD": "secret"})
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.SMTP.Host != "smtp.example" || c.SMTP.Port != 587 || c.SMTP.Security != "starttls" || c.SMTP.Username != "dgs" ||
+		c.SMTP.From != "DaGrouper School <no-reply@dgs.example>" {
+		t.Fatalf("SMTP in production: %+v", c.SMTP)
+	}
+	setEnv(t, map[string]string{"DGS_ENV": "test", "DGS_SMTP_SECURITY": "tls"})
+	if c, err := Load(); err != nil || c.SMTP.Port != 465 {
+		t.Fatalf("implicit TLS: port %d, %v", c.SMTP.Port, err)
+	}
+	setEnv(t, map[string]string{"DGS_ENV": "development", "DGS_SMTP_SECURITY": "none", "DGS_SMTP_PORT": "1025"})
+	if c, err := Load(); err != nil || c.SMTP.Port != 1025 {
+		t.Fatalf("a local catcher: port %d, %v", c.SMTP.Port, err)
+	}
+	setEnv(t, map[string]string{"DGS_ENV": "development", "DGS_SMTP_HOST": "", "DGS_SMTP_FROM": ""})
+	if c, err := Load(); err != nil || c.SMTP.Host != "" {
+		t.Fatalf("development without a server: %+v, %v", c.SMTP, err)
 	}
 }

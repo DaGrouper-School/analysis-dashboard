@@ -5,6 +5,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/mail"
 	"net/url"
 	"os"
 	"regexp"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/notify"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/places"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 )
@@ -62,6 +64,9 @@ type Config struct {
 	Accounts accounts.Config
 	// Places is how places are looked up.
 	Places places.Config
+	// SMTP is the server email is sent through. Required outside
+	// development and test; there, without one, email goes to the log.
+	SMTP notify.SMTPConfig
 	// SigningKeysFile is the key file user tokens are signed with. Required
 	// outside development and test; there, without one, a key is generated
 	// at start-up and lasts until the process exits.
@@ -133,6 +138,10 @@ func Load() (Config, error) {
 	if c.Places.APIKey == "" && !c.Local() {
 		errs = append(errs, fmt.Errorf("DGS_PLACES_API_KEY must be set in %s: the Google Places key address lookup uses; "+
 			"the offline list exists only in development and test", c.Environment))
+	}
+	c.SMTP, err = c.smtp()
+	if err != nil {
+		errs = append(errs, err)
 	}
 	c.SigningKeysFile = os.Getenv("DGS_SIGNING_KEYS_FILE")
 	if c.SigningKeysFile == "" && !c.Local() {
@@ -286,6 +295,50 @@ func (c Config) origins(v string) ([]string, error) {
 		return nil, errors.New("DGS_ALLOWED_ORIGINS names no origin")
 	}
 	return out, nil
+}
+
+// The SMTP port for each kind of security, unless DGS_SMTP_PORT says
+// otherwise.
+var smtpPorts = map[string]int{notify.SecuritySTARTTLS: 587, notify.SecurityTLS: 465, notify.SecurityNone: 25}
+
+// smtp reads DGS_SMTP_*. Outside development and test a server is
+// required and the connection is encrypted.
+func (c Config) smtp() (notify.SMTPConfig, error) {
+	s := notify.SMTPConfig{Host: os.Getenv("DGS_SMTP_HOST"), Security: env("DGS_SMTP_SECURITY", notify.SecuritySTARTTLS),
+		Username: os.Getenv("DGS_SMTP_USERNAME"), Password: os.Getenv("DGS_SMTP_PASSWORD"), From: os.Getenv("DGS_SMTP_FROM")}
+	if s.Host == "" {
+		if c.Local() {
+			return s, nil
+		}
+		return s, fmt.Errorf("DGS_SMTP_HOST must be set in %s: the SMTP server email is sent through; "+
+			"email goes to the log only in development and test", c.Environment)
+	}
+	var errs []error
+	port, known := smtpPorts[s.Security]
+	if !known {
+		errs = append(errs, fmt.Errorf("DGS_SMTP_SECURITY must be starttls, tls or none, not %q", s.Security))
+	}
+	if s.Security == notify.SecurityNone && !c.Local() {
+		errs = append(errs, fmt.Errorf("DGS_SMTP_SECURITY may be none only in development and test, not in %s", c.Environment))
+	}
+	s.Port = port
+	if v := os.Getenv("DGS_SMTP_PORT"); v != "" {
+		p, err := strconv.Atoi(v)
+		if err != nil || p < 1 || p > 65535 {
+			errs = append(errs, fmt.Errorf("DGS_SMTP_PORT must be a port from 1 to 65535, not %q", v))
+		}
+		s.Port = p
+	}
+	if (s.Username == "") != (s.Password == "") {
+		errs = append(errs, errors.New("DGS_SMTP_USERNAME and DGS_SMTP_PASSWORD must be set together"))
+	}
+	if s.From == "" {
+		errs = append(errs, errors.New("DGS_SMTP_FROM must be set with DGS_SMTP_HOST: the sender, such as "+
+			"\"DaGrouper School <no-reply@dgs.example>\""))
+	} else if _, err := mail.ParseAddress(s.From); err != nil {
+		errs = append(errs, fmt.Errorf("DGS_SMTP_FROM is not an email address: %q", s.From))
+	}
+	return s, errors.Join(errs...)
 }
 
 // Local reports whether the service runs for development or tests.

@@ -81,6 +81,11 @@ Configuration comes from the environment (`internal/config`). Every problem is r
 | `DGS_SMS_SENDS_PER_HOUR` | `200` | The most phone codes sent per hour overall, a whole number from 1, set from the expected sign-up rate ([Operations](operations.md#phone-codes)) |
 | `DGS_CLIENT_IP_HEADER` | none | The header a trusted proxy puts the client's address in, such as `X-Forwarded-For`; the last address in it is the client's. Without it, the connection's address is |
 | `DGS_PLACES_API_KEY` | none in development and test, where the offline list is used; required elsewhere | The Google Places key address lookup uses. It is sent to Google in a request header only, never to the browser |
+| `DGS_SMTP_HOST` | none in development and test, where email goes to the log; required elsewhere | The SMTP server email is sent through ([Operations](operations.md#email)) |
+| `DGS_SMTP_SECURITY` | `starttls` | `starttls` (STARTTLS required before anything is sent), `tls` (TLS from the start) or `none`, which only development and test allow, for a local catcher such as Mailpit |
+| `DGS_SMTP_PORT` | `587` for `starttls`, `465` for `tls`, `25` for `none` | The SMTP server's port |
+| `DGS_SMTP_USERNAME`, `DGS_SMTP_PASSWORD` | none: email is sent without signing in | The SMTP credentials, set together. They are sent with `AUTH PLAIN`, over an encrypted connection only, unless the server is this machine |
+| `DGS_SMTP_FROM` | none; required with `DGS_SMTP_HOST` | The sender, such as `DaGrouper School <no-reply@dgs.example>` |
 | `DGS_RECONCILE_INTERVAL` | `15m` | How often the reconciler compares SAM with this database, a Go duration of at least `1m` |
 | `DGS_SIGNING_KEYS_FILE` | none in development and test, where a key is generated at start-up; required elsewhere | The key file user tokens are signed with ([Operations](operations.md#signing-keys)) |
 
@@ -90,13 +95,13 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 
 | Package | Responsibility |
 |---|---|
-| `cmd/dgs` | The command. `dgs serve` (the default) applies new migrations, reads the tenant file and signing keys, then serves until `SIGINT` or `SIGTERM`, then stops taking requests and waits up to ten seconds for those in flight. `dgs migrate` applies new migrations and exits. `dgs keys new` prints a new signing key ([Operations](operations.md#signing-keys)). `dgs outbox held` and `dgs outbox release ENTITY` list and release changes held for an operator ([Operations](operations.md#held-changes)). `dgs accounts renumber USER` and `dgs accounts adopt USER` resolve a registration held after a database restore ([Operations](operations.md#after-a-database-restore)) |
+| `cmd/dgs` | The command. `dgs serve` (the default) applies new migrations, reads the tenant file and signing keys, then serves until `SIGINT` or `SIGTERM`, then stops taking requests and waits up to ten seconds for those in flight. `dgs migrate` applies new migrations and exits. `dgs keys new` prints a new signing key ([Operations](operations.md#signing-keys)). `dgs outbox held` and `dgs outbox release ENTITY` list and release changes held for an operator ([Operations](operations.md#held-changes)). `dgs accounts renumber USER` and `dgs accounts adopt USER` resolve a registration held after a database restore ([Operations](operations.md#after-a-database-restore)). `dgs email test ADDRESS` sends a test email ([Operations](operations.md#email)) |
 | `internal/config` | Reads and checks the configuration |
 | `internal/logx` | Sets up `slog` in text or JSON; carries the request ID so every log line written while serving a request names it |
 | `internal/httpx` | The error format, `WriteJSON`, `WriteError`, the `Handler` type, strict decoding |
 | `internal/db` | Opens the pool, applies the migrations, transactions (`InTx`) and advisory locks |
 | `internal/accounts` | Accounts and their participant IDs; registering each account's SAM principal through the outbox; the restore guard |
-| `internal/notify` | Delivers messages: the SMS interface, the log provider for development and test, and a recorder for tests |
+| `internal/notify` | Delivers messages: the SMS and email interfaces, the SMTP provider, the log providers for development and test, and a recorder of texts for tests |
 | `internal/places` | The places module: address autocomplete and lookup through a provider, and the calling codes |
 | `internal/samaccess` | Calls SAM as this service, as a person through a user token or as anonymous; the signing keys and the key set; SAM's errors translated; the outbox, its worker and the reconciler |
 | `internal/server` | `server.New(Deps)`, the `Module` interface, the middleware, `/healthz` and the API's not-found answer |

@@ -79,7 +79,7 @@ func setSAM(t *testing.T) {
 }
 
 func TestRunRefuses(t *testing.T) {
-	for _, args := range [][]string{{"frobnicate"}, {"keys"}, {"keys", "old"}, {"serve", "now"}, {"outbox"}, {"outbox", "release"}, {"accounts", "renumber"}, {"accounts", "adopt"}} {
+	for _, args := range [][]string{{"frobnicate"}, {"keys"}, {"keys", "old"}, {"serve", "now"}, {"outbox"}, {"outbox", "release"}, {"accounts", "renumber"}, {"accounts", "adopt"}, {"email", "test"}} {
 		if err := run(context.Background(), io.Discard, args); err == nil || !strings.Contains(err.Error(), "unknown command") {
 			t.Fatalf("%v: %v", args, err)
 		}
@@ -87,6 +87,27 @@ func TestRunRefuses(t *testing.T) {
 	t.Setenv("DGS_ENV", "")
 	if err := run(context.Background(), io.Discard, []string{"serve"}); err == nil || !strings.Contains(err.Error(), "DGS_ENV") {
 		t.Fatalf("no environment: %v", err)
+	}
+}
+
+// TestEmailTest: dgs email test sends through the configured server, or
+// to the log in development and test without one, and needs no database.
+func TestEmailTest(t *testing.T) {
+	t.Setenv("DGS_ENV", "test")
+	t.Setenv("DGS_DATABASE_URL", "postgres://dgs@127.0.0.1:1/dgs")
+	setSAM(t)
+	var out bytes.Buffer
+	if err := run(context.Background(), &out, []string{"email", "test", "amara@example.org"}); err != nil ||
+		!strings.Contains(out.String(), "to the log") {
+		t.Fatalf("printed %q: %v", out.String(), err)
+	}
+	t.Setenv("DGS_SMTP_HOST", "127.0.0.1")
+	t.Setenv("DGS_SMTP_PORT", "1")
+	t.Setenv("DGS_SMTP_SECURITY", "none")
+	t.Setenv("DGS_SMTP_FROM", "no-reply@dgs.example")
+	if err := run(context.Background(), io.Discard, []string{"email", "test", "amara@example.org"}); err == nil ||
+		!strings.Contains(err.Error(), "SMTP server") {
+		t.Fatalf("a server that does not answer: %v", err)
 	}
 }
 
