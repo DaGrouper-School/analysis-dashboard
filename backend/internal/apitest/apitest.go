@@ -21,6 +21,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/contract"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/notify"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/places"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/server"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/testenv"
@@ -56,6 +57,8 @@ type Options struct {
 	Demo bool
 	// SendsPerHour is the overall SMS limit; zero for the default.
 	SendsPerHour int
+	// Places is how places are looked up; zero for the offline list.
+	Places places.Config
 }
 
 // ClientHeader is the header the service reads a test client's address
@@ -144,7 +147,8 @@ func (e *Env) Restart(keys *samaccess.Keys) {
 	e.Access = access
 	e.App = server.New(server.Deps{DB: e.Pool, SAM: access, AllowedOrigins: []string{FrontEnd}, Now: e.Clock.Now,
 		Accounts: accounts.Config{GoogleClientID: e.Google.ClientID, GoogleKeysURL: e.Google.KeysURL, Demo: e.opts.Demo,
-			SMS: e.SMS, SMSSendsPerHour: e.opts.SendsPerHour, ClientIPHeader: ClientHeader}})
+			SMS: e.SMS, SMSSendsPerHour: e.opts.SendsPerHour, ClientIPHeader: ClientHeader},
+		Places: e.opts.Places})
 	h := e.check(e.App.Handler())
 	e.handler.Store(&h)
 }

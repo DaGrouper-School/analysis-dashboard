@@ -11,7 +11,7 @@ import (
 func setEnv(t *testing.T, kv map[string]string) {
 	t.Helper()
 	for _, k := range []string{"DGS_ENV", "DGS_LISTEN", "DGS_ALLOWED_ORIGINS", "DGS_LOG_FORMAT", "DGS_LOG_LEVEL",
-		"DGS_DB_MAX_CONNS", "DGS_DB_STATEMENT_TIMEOUT", "DGS_SAM_AUDIENCE", "DGS_SIGNING_KEYS_FILE", "DGS_RECONCILE_INTERVAL", "DGS_SESSION_TTL", "DGS_DEMO", "DGS_SMS_SENDS_PER_HOUR", "DGS_CLIENT_IP_HEADER"} {
+		"DGS_DB_MAX_CONNS", "DGS_DB_STATEMENT_TIMEOUT", "DGS_SAM_AUDIENCE", "DGS_SIGNING_KEYS_FILE", "DGS_RECONCILE_INTERVAL", "DGS_SESSION_TTL", "DGS_DEMO", "DGS_SMS_SENDS_PER_HOUR", "DGS_CLIENT_IP_HEADER", "DGS_PLACES_API_KEY"} {
 		t.Setenv(k, "")
 	}
 	// Every case has a database, SAM and signing keys unless it says otherwise.
@@ -22,6 +22,7 @@ func setEnv(t *testing.T, kv map[string]string) {
 	t.Setenv("DGS_SIGNING_KEYS_FILE", "/run/secrets/keys.json")
 	t.Setenv("DGS_PUBLIC_URL", "https://dgs.example")
 	t.Setenv("DGS_GOOGLE_CLIENT_ID", "dgs.apps.googleusercontent.com")
+	t.Setenv("DGS_PLACES_API_KEY", "places-key")
 	for k, v := range kv {
 		t.Setenv(k, v)
 	}
@@ -91,6 +92,8 @@ func TestLoadRefuses(t *testing.T) {
 		{"no SMS at all", map[string]string{"DGS_ENV": "test", "DGS_SMS_SENDS_PER_HOUR": "0"}, "DGS_SMS_SENDS_PER_HOUR"},
 		{"a bad SMS limit", map[string]string{"DGS_ENV": "test", "DGS_SMS_SENDS_PER_HOUR": "lots"}, "DGS_SMS_SENDS_PER_HOUR"},
 		{"not a header", map[string]string{"DGS_ENV": "test", "DGS_CLIENT_IP_HEADER": "X Forwarded"}, "DGS_CLIENT_IP_HEADER"},
+		{"no places key in production", map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example",
+			"DGS_PLACES_API_KEY": ""}, "DGS_PLACES_API_KEY"},
 		{"a bad reconcile interval", map[string]string{"DGS_ENV": "test", "DGS_RECONCILE_INTERVAL": "often"}, "DGS_RECONCILE_INTERVAL"},
 		{"no signing keys in production", map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example",
 			"DGS_SIGNING_KEYS_FILE": ""}, "DGS_SIGNING_KEYS_FILE"},
@@ -150,5 +153,12 @@ func TestLoadSignIn(t *testing.T) {
 	if c, err = Load(); err != nil || !c.Accounts.SecureCookies || c.Accounts.Demo || c.Accounts.SessionTTL != 48*time.Hour ||
 		c.Accounts.GoogleClientID == "" || c.Accounts.SMSSendsPerHour != 50 || c.Accounts.ClientIPHeader != "X-Forwarded-For" {
 		t.Fatalf("sign-in in production: %+v, %v", c.Accounts, err)
+	}
+}
+
+func TestOfflinePlacesInDevelopment(t *testing.T) {
+	setEnv(t, map[string]string{"DGS_ENV": "development", "DGS_PLACES_API_KEY": ""})
+	if c, err := Load(); err != nil || c.Places.APIKey != "" {
+		t.Fatalf("places in development without a key: %+v, %v", c.Places, err)
 	}
 }

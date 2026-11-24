@@ -16,6 +16,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/logx"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/places"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 )
 
@@ -44,6 +45,8 @@ type Deps struct {
 	SAM *samaccess.Access
 	// Accounts is how people sign in.
 	Accounts accounts.Config
+	// Places is how places are looked up.
+	Places places.Config
 }
 
 // Module is a group of endpoints. Each module registers its own routes
@@ -71,7 +74,7 @@ func New(d Deps) *App {
 	}
 	if d.SAM != nil && d.DB != nil {
 		a.accounts = accounts.New(d.DB, d.SAM, d.Now, d.Accounts)
-		a.modules = append(a.modules, a.accounts)
+		a.modules = append(a.modules, a.accounts, places.New(d.Places, a.accounts.Sessions(), a.accounts))
 	}
 	return a
 }
