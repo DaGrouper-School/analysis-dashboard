@@ -1,0 +1,7 @@
+[
+	{"id": "storage", "label": "Is there a safe, dry place to keep the Lab in a Bag?", "help": "A locked cupboard or room is enough.", "kind": "yes_no", "required": true},
+	{"id": "lead", "label": "Is there a staff member who can lead a session each week?", "help": "They would become the classroom’s facilitator.", "kind": "yes_no", "required": true},
+	{"id": "connection", "label": "Is there mobile data or wifi at least once a week?", "help": "Observations are saved on the phone and sync when there is a connection.", "kind": "yes_no", "required": true},
+	{"id": "learners", "label": "About how many learners would take part?", "help": "", "kind": "number", "required": true},
+	{"id": "notes", "label": "Anything else we should know?", "help": "", "kind": "text", "required": false}
+]

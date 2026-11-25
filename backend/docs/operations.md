@@ -16,6 +16,22 @@ Email goes through the SMTP server in `DGS_SMTP_*` ([Configuration](development.
 - **The sender.** `DGS_SMTP_FROM` is the sender on every email. Its domain also ends each Message-ID; publish SPF and DKIM for it with the mail service, or mail may land as spam.
 - **In development.** Without `DGS_SMTP_HOST`, email is written to the log. To see it as email, point `DGS_SMTP_*` at a local catcher such as Mailpit with `DGS_SMTP_SECURITY=none`.
 
+## Platform configuration
+
+Platform admins keep the stages, regions, host questions and settings ([Platform configuration](development.md#platform-configuration)). Pages read them on each request, so a change shows at once, with no restart.
+
+```sh
+dgs seed                                  # once on a new deployment; safe to run again
+dgs settings                              # the settings, and whether the seed set each
+dgs settings get privacy > privacy.json   # edit, then
+dgs settings put privacy privacy.json     # - reads standard input
+```
+
+- **The seed.** `dgs seed` loads the configuration built into the binary. It is safe to run in every environment and on every release: it adds a list's rows only while the list is empty, updates what it wrote last to the running release's seed, and keeps whatever an admin or operator has changed. It prints what it did with each setting and row.
+- **Checks.** `dgs settings put` refuses a value that is not the setting's shape or breaks one of its rules, and lists every problem with where it is. Nothing is stored then.
+- **The log.** Every change is logged with who made it: an admin by name, `operator` for `dgs settings put`, `seed` for the seed.
+- **Back to the seed.** A setting someone changed stays theirs. To take the seed's value again, put it from the release's `internal/settings/seed.json`, such as `jq .privacy internal/settings/seed.json | dgs settings put privacy -`.
+
 ## Places
 
 `DGS_PLACES_API_KEY` is a Google Places key with the Places API enabled. Restrict it to that API and to the service's outbound addresses: it is sent to Google from the server only, in a request header. Each signed-in person may look up 300 places an hour; autocomplete asks as they type, so this covers filling in a few addresses and stops a script.

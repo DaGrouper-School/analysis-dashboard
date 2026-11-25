@@ -12,6 +12,13 @@
 //	dgs accounts adopt USER     record the principal SAM has under a
 //	                            restored user's participant ID as theirs
 //	dgs email test ADDRESS      send a test email, to check the SMTP settings
+//	dgs settings                list the platform's settings
+//	dgs settings get KEY        print a setting's value
+//	dgs settings put KEY FILE   check a setting's value and store it; - reads
+//	                            standard input
+//	dgs seed                    load the platform's configuration from the
+//	                            seed built into the binary, keeping what
+//	                            admins and operators changed
 //
 // Configuration comes from the environment; docs/development.md lists every
 // variable and its default.
@@ -61,14 +68,16 @@ func main() {
 	}
 }
 
-const usage = "usage: dgs serve|migrate|keys new|outbox held|outbox release ENTITY|accounts renumber USER|accounts adopt USER|email test ADDRESS"
+const usage = "usage: dgs serve|migrate|keys new|outbox held|outbox release ENTITY|accounts renumber USER|accounts adopt USER|email test ADDRESS|settings|settings get KEY|settings put KEY FILE|seed"
 
 func run(ctx context.Context, out io.Writer, args []string) error {
 	switch {
 	case is(args, "keys", "new"):
 		return newKey(out)
 	case is(args, "serve"), is(args, "migrate"), is(args, "outbox", "held"), len(args) == 3 && is(args[:2], "outbox", "release"),
-		len(args) == 3 && (is(args[:2], "accounts", "renumber") || is(args[:2], "accounts", "adopt") || is(args[:2], "email", "test")):
+		len(args) == 3 && (is(args[:2], "accounts", "renumber") || is(args[:2], "accounts", "adopt") || is(args[:2], "email", "test")),
+		is(args, "settings"), is(args, "seed"), len(args) == 3 && is(args[:2], "settings", "get"),
+		len(args) == 4 && is(args[:2], "settings", "put"):
 	default:
 		return fmt.Errorf("unknown command %q; %s", strings.Join(args, " "), usage)
 	}
@@ -94,6 +103,10 @@ func run(ctx context.Context, out io.Writer, args []string) error {
 		return nil
 	case "outbox":
 		return outbox(ctx, out, pool, args[1:])
+	case "settings":
+		return settingsCommand(ctx, out, pool, args[1:])
+	case "seed":
+		return seed(ctx, out, pool)
 	case "accounts":
 		if args[1] == "adopt" {
 			return adopt(ctx, out, cfg, pool, args[2])

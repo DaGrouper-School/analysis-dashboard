@@ -1,6 +1,6 @@
 # Development
 
-How to build, run and test the service as it stands, and the conventions its code follows. So far the service has configuration, logging with request IDs, the HTTP conventions, its PostgreSQL database with migrations, calls to SAM as itself, as a person or as anonymous, the key set SAM verifies user tokens with, the outbox that delivers changes to SAM and the reconciler, `/healthz`, graceful shutdown, and integration tests against SAM and the API contract.
+How to build, run and test the service as it stands, and the conventions its code follows. So far the service has configuration, logging with request IDs, the HTTP conventions, its PostgreSQL database with migrations, calls to SAM as itself, as a person or as anonymous, the key set SAM verifies user tokens with, the outbox that delivers changes to SAM and the reconciler, the platform's configuration and its seed, `/healthz`, graceful shutdown, and integration tests against SAM and the API contract.
 
 ## Prerequisites
 
@@ -95,7 +95,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 
 | Package | Responsibility |
 |---|---|
-| `cmd/dgs` | The command. `dgs serve` (the default) applies new migrations, reads the tenant file and signing keys, then serves until `SIGINT` or `SIGTERM`, then stops taking requests and waits up to ten seconds for those in flight. `dgs migrate` applies new migrations and exits. `dgs keys new` prints a new signing key ([Operations](operations.md#signing-keys)). `dgs outbox held` and `dgs outbox release ENTITY` list and release changes held for an operator ([Operations](operations.md#held-changes)). `dgs accounts renumber USER` and `dgs accounts adopt USER` resolve a registration held after a database restore ([Operations](operations.md#after-a-database-restore)). `dgs email test ADDRESS` sends a test email ([Operations](operations.md#email)) |
+| `cmd/dgs` | The command. `dgs serve` (the default) applies new migrations, reads the tenant file and signing keys, then serves until `SIGINT` or `SIGTERM`, then stops taking requests and waits up to ten seconds for those in flight. `dgs migrate` applies new migrations and exits. `dgs keys new` prints a new signing key ([Operations](operations.md#signing-keys)). `dgs outbox held` and `dgs outbox release ENTITY` list and release changes held for an operator ([Operations](operations.md#held-changes)). `dgs accounts renumber USER` and `dgs accounts adopt USER` resolve a registration held after a database restore ([Operations](operations.md#after-a-database-restore)). `dgs email test ADDRESS` sends a test email ([Operations](operations.md#email)). `dgs settings`, `dgs settings get KEY` and `dgs settings put KEY FILE` list, read and set the platform's settings, and `dgs seed` loads the platform's configuration ([Operations](operations.md#platform-configuration)) |
 | `internal/config` | Reads and checks the configuration |
 | `internal/logx` | Sets up `slog` in text or JSON; carries the request ID so every log line written while serving a request names it |
 | `internal/httpx` | The error format, `WriteJSON`, `WriteError`, the `Handler` type, strict decoding |
@@ -103,6 +103,10 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/accounts` | Accounts and their participant IDs; registering each account's SAM principal through the outbox; the restore guard |
 | `internal/notify` | Delivers messages: the SMS and email interfaces, the SMTP provider, the log providers for development and test, and a recorder of texts for tests |
 | `internal/places` | The places module: address autocomplete and lookup through a provider, and the calling codes |
+| `internal/settings` | The platform's settings, their checks and seed, the configuration change log, and seeding a list |
+| `internal/classrooms` | The classrooms module. So far, the stages and regions and their seed |
+| `internal/hosting` | The hosting module. So far, the host application's questions and their seed |
+| `internal/jsoncheck` | Strict decoding and checks of configuration, reporting every problem at once |
 | `internal/samaccess` | Calls SAM as this service, as a person through a user token or as anonymous; the signing keys and the key set; SAM's errors translated; the outbox, its worker and the reconciler |
 | `internal/server` | `server.New(Deps)`, the `Module` interface, the middleware, `/healthz` and the API's not-found answer |
 | `internal/testutil` | A fresh database per test (test code only) |
@@ -222,6 +226,21 @@ The profile is the accounts module's too: name, email, phone and address stay in
 - **Providers.** With `DGS_PLACES_API_KEY`, Google Places (the Places API): autocomplete, and a lookup asking only for the address's parts and location. Without it, the offline list, the same pilot-region places as the front end's mock; only development and test may run without a key.
 - **Limits.** Autocomplete and lookups need a session, and each person has 300 an hour together, counted with the accounts module's limits; past it they get `429` with `Retry-After`.
 
+### Platform configuration
+
+The configuration platform admins keep ([Platform configuration](design/registry-and-content.md#platform-configuration)):
+
+| What | Kept in | Module |
+|---|---|---|
+| Stages and regions | `stages`, `regions`: a row each, in display order | `internal/classrooms` |
+| Host questions | `host_questions`: a row each, in order; a retired one has `retired_at` | `internal/hosting` |
+| Settings | `platform_settings`: one value per key, `core_parameters`, `default_terms`, `privacy` | `internal/settings` |
+| The change log | `configuration_changes`: who changed what, newest first | `internal/settings` |
+
+- **Checks.** `settings.Check` decodes a setting strictly into its Go shape, the same as the front end's, with `internal/jsoncheck`: no unknown or missing field, no `null` where a value is required, no blank text, then the key's own rules, such as decimals from 0 to 4 or a rain reference that is one of the daily rain values. Every problem is reported at once, with where it is. A value is stored as it re-encodes from its shape, so the same value always stores the same way.
+- **The log.** `settings.Record` writes a change to `configuration_changes`, with the admin's account and their name at the time, or `operator` or `seed`. Every module that keeps part of the configuration records its changes through it, in the same transaction as the change.
+- **The seed.** Each module embeds its part of the seed: `internal/settings/seed.json`, `internal/classrooms/seed.json` and `internal/hosting/seed.json`, the same values as the front end's seed (`frontend/src/lib/data/seed.ts`). Change both together; a test checks each seed passes its checks. `dgs seed` runs them in one transaction under `db.SeedLock`. A list's rows are added only while the list is empty, so a row an admin deleted stays deleted; `settings.SeedList` holds that rule for every list. A setting or row is updated to the seed's while the seed wrote it last, which `seeded` records; anything else changed it, and the seed keeps it.
+
 ### Accounts in SAM
 
 - **Participant IDs** come from the `participant_ids` sequence, in order, and are never reused. An account's ID is its SAM principal's subject, as a decimal string.
@@ -238,7 +257,7 @@ PostgreSQL 17, through `pgx` (`internal/db`). `db.Open` opens a pool of at most 
 
 **Transactions.** `db.InTx(ctx, q, fn)` runs `fn` in a transaction. When `ctx` already carries one (`db.WithTx`), `fn` runs in a savepoint of it, so a service function that needs a transaction works the same alone or inside a caller's.
 
-**Advisory locks** are taken only through `db.Lock` (held by a connection until released) and `db.TryLock` (held until the transaction ends), and every key is a constant in `internal/db/locks.go`, so no two uses share one by accident. `MigrationLock` is held while migrations apply, `OutboxLock` for each pass of the outbox worker and `ReconcilerLock` for each pass of the reconciler.
+**Advisory locks** are taken only through `db.Lock` (held by a connection until released), and `db.TryLock` and `db.LockTx` (held until the transaction ends), and every key is a constant in `internal/db/locks.go`, so no two uses share one by accident. `db.LockTx` waits for a lock held until the transaction ends. `MigrationLock` is held while migrations apply, `OutboxLock` for each pass of the outbox worker, `ReconcilerLock` for each pass of the reconciler, and `SeedLock` while `dgs seed` runs.
 
 ## Conventions
 
@@ -274,6 +293,11 @@ Each table is read and written only by the package that owns it ([Data ownership
 | `rate_limits` | `internal/accounts` | |
 | `rate_events` | `internal/accounts` | |
 | `sam_outbox_versions` | `internal/samaccess` | |
+| `stages` | `internal/classrooms` | |
+| `regions` | `internal/classrooms` | |
+| `host_questions` | `internal/hosting` | |
+| `platform_settings` | `internal/settings` | |
+| `configuration_changes` | `internal/settings` | |
 
 ## Testing
 
