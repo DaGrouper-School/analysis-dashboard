@@ -1,6 +1,6 @@
 # Registry and content
 
-How the registry the front end reads is built from SAM's registry and this service's overlay, what platform admins may change, and how configuration that no page writes gets in. The front end's `RegistryService` and `PublicService.content` are the contract.
+How the registry the front end reads is built from SAM's registry and this service's overlay, what platform admins may change, and how they keep the platform's configuration: stages, regions, host questions and settings. The front end's `RegistryService` and `PublicService.content` are the contract.
 
 ## Context
 
@@ -13,7 +13,7 @@ SAM's registry is the source for domains, parameters, device types and observati
 
 The front end needs more than SAM holds: plain-language labels, icons, colours, chart kinds, explanations, which values show as tiles and cards, display units, noise thresholds and default alert levels. Platform admins change all of this from the admin page, and every change is logged. Platform admin is this service's own role: admins hold no SAM grants, and `registry:manage` on the tenant root belongs to this service's principal.
 
-The public pages also depend on configuration that no API operation writes: the site's content, stages and regions, the core readings' parameters, a new classroom's data terms, privacy rounding, the host application's questions, and each classroom's stage, region and profile fields.
+The public pages and some of this service's rules also depend on the platform's configuration: classroom stages and regions, the host application's questions, the core readings' parameters, a new classroom's data terms, privacy rounding, and each classroom's stage, region and profile fields. Classrooms and applications refer to the stages, regions and questions, and the server applies the settings itself, so they are kept here rather than in the front end. The site's own words are not configuration: they live in the front end, with its translations. Words someone agrees to are the exception: the guardian consent text is kept here, in versions, so every consent names the text it was given against ([Guardian consent](classrooms-and-permissions.md#guardian-consent)).
 
 ## Goals
 
@@ -21,12 +21,15 @@ The public pages also depend on configuration that no API operation writes: the 
 - Only SAM's core entries and this tenant's own entries are shown.
 - An admin sees their change at once.
 - Configuration is checked before it is stored, so a mistake never reaches a page.
+- Platform admins keep the configuration from the admin page, and every change is logged.
+- Nothing a classroom or an application refers to can be removed from under it.
 
 ## Non-goals
 
 - Changing SAM's core entries.
 - Domains or units in SAM owned by this tenant.
-- Pages or endpoints that edit operator configuration.
+- The site's words: the home page, sections and policies, the hosting and join wording, and its languages. The front end holds them with its translations, and they change with a release. The consent text is not among them: a guardian agrees to it, so it is kept here.
+- Platform configuration in SAM's back office. Stages, regions and questions are DaGrouper's, and a second tenant would not use them.
 
 ## Design
 
@@ -85,35 +88,62 @@ The platform's default alert levels are this service's own (`alert_defaults`), i
 
 Templates are SAM registry entries, presented through the overlay. `listObservationTemplates` adds a plain one for each device type that has none, under the `device:` prefix.
 
-### Operator configuration
+### Platform configuration
 
-No API writes this configuration. It changes rarely, through the people who run the service, and the front end only reads it.
+| What | Kept as | Owned by | Read by |
+|---|---|---|---|
+| Stages | Rows in `stages`: ID, label, description, colour, position | Classrooms | Classroom profiles, the directory and the map. A classroom's `stageId` refers to one |
+| Regions | Rows in `regions`: ID, label, position | Classrooms | The directory. A classroom's `regionId` refers to one |
+| Host questions | Rows in `host_questions`: ID, label, help, kind, required, position, when retired | Hosting | The host application. An application's answers refer to them |
+| Settings | One checked value per key in `platform_settings`: `core_parameters`, `default_terms`, `privacy` | `internal/settings` | Station pages and the network map; classroom creation; readings from minors |
+| Each classroom | `stageId`, `regionId`, and profile fields such as `hostAgreementSigned`, projects and sessions | Classrooms | Its profile |
+| Consent text | Published versions in `consent_texts`, one row per version and language, never changed | Classrooms | The printed consent sheet and the guardian's link page |
 
-| Where | Keys or fields |
+All of it is kept from the admin page in the dashboard, and the same changes can be made from a terminal.
+
+- **Lists are rows.** A stage, region or question is a row that other rows point to, through a foreign key. A stage or region in use cannot be deleted (`409 in_use`), and a classroom cannot name one that does not exist. A question that has answers is retired rather than deleted, so earlier applications keep their meaning, and its kind no longer changes. Order is a position.
+- **Settings are checked values.** Nothing points to a setting, so each is one value with a strict shape: no unknown or missing fields, no null where a value is required, and the key's own rules, such as rounding from 0 to 4 decimals, or a rain reference that is one of the rain values. A refusal names every problem.
+- **Privacy rounding and the consent text are bounded, not hidden.** Both are on the admin page. A minor's positions are never rounded more finely than their consent's text stated, so loosening `privacy` reaches only consents given afterwards, whose guardians see the new figure. The consent text is published as a new version and never edited, so every consent keeps the words it was given against.
+- **One way in.** Endpoints, commands and the seed write through the same functions and checks.
+- **Logged.** Every change is logged in `configuration_changes`, with the admin's name at the time and a summary, newest first, as registry changes are.
+- **At once.** Pages read the configuration on each request, so a change shows on the next one. The front end reads stages and regions through `publicSite.content`.
+
+The admin endpoints, for platform admins only:
+
+| Endpoint | Does |
 |---|---|
-| Content store (`site_config`), one JSON value per key | `site_content` (sections, policies, stages, regions), `core_parameters`, `default_terms`, `privacy` (rounding, including the minors' coordinate decimals), `host_questions` |
-| Each classroom | `stageId`, `regionId`, and profile fields such as `hostAgreementSigned`, projects and sessions |
+| `GET /admin/stages`, `PUT /admin/stages/{stageId}`, `DELETE /admin/stages/{stageId}` | Lists, adds or changes, and deletes a stage not in use |
+| `GET /admin/regions`, `PUT /admin/regions/{regionId}`, `DELETE /admin/regions/{regionId}` | The same for regions |
+| `GET /admin/host-questions`, `PUT /admin/host-questions/{questionId}`, `POST /admin/host-questions/{questionId}/retire` | Lists, adds or changes, and retires a question |
+| `GET /admin/settings`, `PUT /admin/settings/{key}` | Reads every setting, and replaces one |
+| `GET /admin/consent-texts`, `GET /admin/consent-texts/{version}`, `POST /admin/consent-texts` | Lists the versions, reads one in every language, and publishes a new one |
+| `PATCH /admin/classrooms/{classroomId}` | Sets a classroom's stage, region and profile fields; a field left out stays as it is |
+| `GET /admin/configuration-changes` | The change log, a page at a time |
+
+From a terminal:
 
 ```sh
-dgs content keys                           # the keys above
-dgs content get site_content > site.json   # edit, then
-dgs content put site_content site.json
+dgs settings get privacy > privacy.json   # edit, then
+dgs settings put privacy privacy.json
 dgs classroom configure DGC-HG2W5K classroom.json
+dgs consent publish consent.json            # a new version, every language
 ```
 
-- A classroom file may hold any of `stageId`, `regionId` (null clears it) and `profile` fields. A field left out stays as it is, and profile fields replace their own value only. A stage or region must be one the site content names.
-- Every value is checked before it is stored, by `dgs content`, `dgs classroom configure` and `dgs seed` alike: known keys, strict shapes, and the fields each page reads.
-- Pages read these values on each request, so a change shows at once.
+- A classroom file holds the same fields as `PATCH /admin/classrooms/{classroomId}`: any of `stageId`, `regionId` (null clears it) and `profile` fields. Profile fields replace their own value only.
 - What belongs to other modules stays there: a lab's parameter notes are set with labs; templates are registry entries.
-- **The seed.** `dgs seed` loads the overlay and the site content from the front end's seed, exported as `seed/frontend-seed.json` by `npm run seed:export` in `frontend/`. It updates the same rows on a re-run and is safe in every environment.
+- **The seed.** `dgs seed` loads the overlay, the stages, regions and host questions, the settings, and the first consent version while there is none, from the service's own seed, built into the binary. It adds a list's rows only while the list is empty, so a stage an admin deleted stays deleted. On a re-run it updates the rows and settings it wrote that no admin has changed since, and keeps those an admin has, so it is safe in every environment.
 
 ## Alternatives considered
 
 - **Presentation in SAM.** Labels, charts and tiles are DaGrouper's, and a second tenant would not use them unchanged. Rejected for the overlay.
 - **Admins holding `registry:manage` themselves.** Platform admin is this service's role, and SAM would see admins as registry authorities for every purpose. Rejected: this service sends the entries and records the admin in its change log.
 - **Calling SAM for each admin change.** The page would wait on SAM and fail in an outage. Rejected: the definition is shown at once and sent through the outbox.
-- **Endpoints and pages to edit configuration.** The values change rarely and no page needs an editor. Deferred: an editor would write through the same checks.
-- **Configuration in environment variables or files read at start-up.** A change would need a restart, and nothing would check the shapes the pages read. Rejected for the checked content store.
+- **One JSON value per key for all configuration, edited by command.** Lists that other rows point to would have no foreign keys: a region in use could be removed, and a question's answers would lose their meaning. Rejected for lists; kept for settings, which nothing points to.
+- **The site's words as configuration.** They would be kept in one language, apart from the front end's translations, and checked by a service that never reads them. Rejected: they live in the front end.
+- **Privacy rounding and the consent text by command only.** Admins would need someone with access to the deployment for changes that are theirs to make. Rejected: both are on the admin page, bounded by the consent's promise and kept in versions.
+- **The consent text in the front end, with the site's words.** A release would change what guardians agree to with no record, and no consent could name the text it was given against. Rejected: it is kept here, in versions.
+- **Configuration in SAM's back office.** Stages, regions and questions mean nothing to another tenant. Rejected: SAM's back office runs the platform, and this service keeps its own configuration.
+- **Configuration in environment variables or files read at start-up.** A change would need a restart, and nothing would check the shapes the pages read. Rejected.
 
 ## Risks
 
@@ -122,13 +152,16 @@ dgs classroom configure DGC-HG2W5K classroom.json
 | SAM refuses a tenant entry | The row is held for an operator; the admin page shows the definition, so an admin may see a value devices cannot yet send |
 | SAM's registry is unreachable | The cached copy is served |
 | A configuration mistake breaks a page | Checked before it is stored |
+| An admin removes a stage, region or question that is in use | Foreign keys refuse it; questions with answers are retired instead |
+| A setting change alters every station page, or a new classroom's terms | Logged with the admin's name; the checks bound each value |
+| An admin loosens `privacy` or changes the consent text | Minors already consented keep the rounding their text stated; new guardians see the new figure and words; each change is a logged version or setting with the admin's name |
 
 ## Testing approach
 
-- **Unit:** the merge of SAM's registry with the overlay and own entries; unit conversion; each configuration key's checks.
-- **Integration:** only this tenant's and core entries show; a new value reaches SAM as `dgs:<id>`; a core device type's values are refused; a device type waits for its parameters; `dgs content put` refuses a bad shape.
+- **Unit:** the merge of SAM's registry with the overlay and own entries; unit conversion; each setting's checks.
+- **Integration:** only this tenant's and core entries show; a new value reaches SAM as `dgs:<id>`; a core device type's values are refused; a device type waits for its parameters; a setting with a bad shape is refused; a stage or region in use cannot be deleted; a question with answers is retired, not deleted; loosening `privacy` never rounds a minor more finely than their consent stated; a published consent version cannot be changed; a seed re-run keeps an admin's changes.
 
 ## Open questions
 
 - Whether SAM will allow tenant parameters without a core domain, or tenant-owned domains, so the admin page can match the mock.
-- Whether admins will want an editor for site content.
+- **Translated labels.** Stage, region and question labels are kept in the site's default language. When the front end translates the site, they need a label per language, or keys the front end translates.

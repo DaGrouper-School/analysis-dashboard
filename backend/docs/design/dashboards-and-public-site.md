@@ -109,7 +109,7 @@ A classroom's sharing settings:
 
 | Page | Shows |
 |---|---|
-| Home | The site's content, and every classroom with its stage and core readings |
+| Home | The stages and regions, and every classroom with its stage and core readings |
 | Station | A classroom's latest released value of each parameter, with the device each came from |
 | Parameter | One parameter's registry entry and released values over time |
 | Classroom profile | Who they are, what they study, their kit, and contributors who asked for credit |

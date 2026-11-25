@@ -57,7 +57,7 @@ Readings and observations are relayed to SAM synchronously, as the person record
 1. **Check here first.** The person must hold `recordReadings` and be a member. A minor needs given consent: this service checks its own record, since SAM reflects a withdrawal only once the outbox delivers it. The refusal names the reason ("Your guardian needs to give consent…").
 2. **Check readiness.** A lab or device not yet in SAM answers `409 conflict`, "still being set up".
 3. **Convert at the edge.** The front end sends values by parameter, in display units and with category labels. They are sent as the device's keys or the template's fields, in their own units and values, using the registry snapshot, and converted back with the same snapshot when read.
-4. **Place it.** A GPS fix is sent with the reading. For a minor it is first rounded to the decimals in the `privacy` configuration. Without a fix, SAM uses the lab's site, and the front end shows `locationSource: 'lab'`.
+4. **Place it.** A GPS fix is sent with the reading. For a minor it is first rounded to the coarser of the `privacy` setting and the rounding their consent's text stated ([Guardian consent](classrooms-and-permissions.md#guardian-consent)). Without a fix, SAM uses the lab's site, and the front end shows `locationSource: 'lab'`.
 5. **Send it.** Device uploads and device-template entries go to SAM's device readings; form templates go to SAM's template submissions in the lab's space. Every reading of a multi-reading upload is sent and stored.
 6. **Return SAM's answer** in the front end's shape.
 

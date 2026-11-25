@@ -14,13 +14,12 @@ The front end decides every permission with one function, `permissionsFor(viewer
 - Joining, changing role and leaving change only that member's group membership. Nobody's departure voids anyone else's access.
 - A change of sharing settings touches one group grant, not every member.
 - An invitation never outlives the authority that issued it.
-- A minor's consent is recorded with who gave it, and SAM enforces it.
+- A minor's consent is recorded with who gave it and the text they agreed to, and SAM enforces it.
 
 ## Non-goals
 
 - Per-person grants.
 - Classroom roles other than the four in the grid.
-- An admin editor for classroom configuration that no page writes ([Registry and content](registry-and-content.md#operator-configuration)).
 
 ## Design
 
@@ -112,9 +111,17 @@ A participant under 18 is a minor. Consent is `pending` until a guardian answers
 - A minor without given consent is refused every submission, here and by SAM ([Labs and readings](labs-and-readings.md#relaying-readings)).
 - The guardian's contact is stored as a lower-case email or an E.164 number.
 
+**The consent text.** What a guardian agrees to is kept here, not in the front end, so every consent can name the words it was given against.
+
+- **Versions.** The text is kept in `consent_texts`: a version number, a language, and the sheet's parts (title, introduction, sections, the two choices, the contributor and signature lines, the note for the classroom), with `{classroom}`, `{institution}` and `{decimals}` where each classroom's details go. Platform admins publish a version in every language at once, from the admin page or with `dgs consent publish`, and it is never changed or deleted ([Platform configuration](registry-and-content.md#platform-configuration)). The latest published version is the current one.
+- **Shown from here.** The printed sheet (`consentSheet`) and the guardian's link page (`consent.get`) carry the current version's words in the reader's language, filled in here for the classroom, with the version number. The front end lays them out and adds nothing to them. The printed sheet shows its version.
+- **Recorded with each consent.** A link decision (`consent.decide`) names the version the guardian was shown; a decision against a version that is no longer current is `409 consent_text_changed`, and the page shows the new words. A paper record names the version printed on the sheet, which must be a published one. Each record keeps the version and the rounding the text promised.
+- **The promise holds.** A minor's positions are rounded to the coarser of the `privacy` setting and the rounding their consent's text stated, so tightening the setting applies to everyone at once, and loosening it never goes past what a guardian agreed to.
+- **Words someone only reads stay in the front end:** the site's pages and policies, and the hosting and join wording ([Platform configuration](registry-and-content.md#platform-configuration)).
+
 ### Host applications
 
-- Anyone may apply to host a Global Classroom, without signing in. The readiness questions come from configuration (`host_questions`).
+- Anyone may apply to host a Global Classroom, without signing in. The readiness questions are the host questions platform admins keep ([Platform configuration](registry-and-content.md#platform-configuration)).
 - The application is checked with the same rules as the front end's `validateHostApplication`, and only the answers to the configured questions are kept.
 - The applicant gets a status link by email, whose token is stored as its hash.
 - Platform admins list applications, newest first, and accept or decline a submitted one. Accepting creates the classroom.
@@ -127,6 +134,8 @@ A participant under 18 is a minor. Consent is `pending` until a guardian answers
 - **Platform admins holding `dataset:publish`.** An admin could make public data they cannot read, which the grid gives to heads and facilitators only. Rejected.
 - **Returning link tokens to the client.** Anyone who saw the response could act as the recipient. Rejected outside demo mode.
 - **Invitations without expiry or bound to this service's authority.** They would outlive the right that issued them. Rejected.
+- **The consent text in the front end.** A release would change what guardians agree to, and no record could say which words a consent was given against. Rejected for versions kept here.
+- **Rounding to the current setting only.** Loosening `privacy` would show a minor's position more precisely than their guardian agreed to. Rejected: the coarser of the two applies.
 
 ## Risks
 
@@ -136,14 +145,15 @@ A participant under 18 is a minor. Consent is `pending` until a guardian answers
 | An inviter's demotion voids invitations already sent | The invitee sees that the invitation is not valid, and is invited again |
 | A classroom set up by an admin shows nothing publicly until it has a head or facilitator to release | Expected: release needs someone who can read the data |
 | A forged paper sheet | The record names who checked it; SAM's audit names them too |
+| A guardian decides on words that changed while the page was open | The decision names the version shown, and a stale one is refused |
 | Platform admins collude to read data | Caught by reviewing the audit, not prevented ([SAM integration](sam-integration.md#who-acts-in-sam)) |
 
 ## Testing approach
 
 - **Unit, `roles`:** every cell of the grid, written here; the grant templates, checking that for every grant a group holds, the role that adds members holds one grant that can hand it on, with depth to spare and no rule the held grant lacks.
 - **Parity:** every data permission in the grid matches SAM's `authz/check` for each role, against a real SAM.
-- **Unit, `classrooms`:** who a change is sent as, invitation expiry and acceptance, paper-consent dates.
-- **Integration:** joining and leaving change membership only; an expired or orphaned invitation is refused; a minor without consent is refused by SAM; an approval becomes a classroom.
+- **Unit, `classrooms`:** who a change is sent as, invitation expiry and acceptance, paper-consent dates, filling in a consent text, a minor's rounding against their consent's.
+- **Integration:** joining and leaving change membership only; an expired or orphaned invitation is refused; a minor without consent is refused by SAM; a consent records its text version; a decision on a stale version is refused; a published version cannot be changed; an approval becomes a classroom.
 
 ## Open questions
 
@@ -151,3 +161,4 @@ A participant under 18 is a minor. Consent is `pending` until a guardian answers
 - Whether a non-member admin may record or see unreleased readings, as the mock allows (a contract question with the front end).
 - Whether guardian links should expire, and whether a guardian's identity needs any check beyond holding the link.
 - At what age consent is needed in each pilot country.
+- Whether a new consent version asks guardians who already consented to consent again, and whether minors keep contributing meanwhile, decided with the data-protection review.

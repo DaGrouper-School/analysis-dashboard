@@ -10,7 +10,7 @@ This is the design the service is built to. The pages under `docs/design/` descr
 | [Classrooms and permissions](classrooms-and-permissions.md) | Roles, the permission grid, role groups and grants in SAM, invitations, consent, host applications |
 | [Labs and readings](labs-and-readings.md) | Labs, devices, reading upload, manual observations, offline sync |
 | [Dashboards and public site](dashboards-and-public-site.md) | Current conditions, alert levels, the raw table, member views, sharing and release, public pages, CSV, photos |
-| [Registry and content](registry-and-content.md) | SAM's registry with this service's overlay, registry admin, site content and operator configuration |
+| [Registry and content](registry-and-content.md) | SAM's registry with this service's overlay, registry admin, and platform configuration |
 | [Security and privacy](security-and-privacy.md) | The threat model and the data-protection points |
 
 SAM's own design is in SAM's design (`docs/design/` in the sam repository). These pages refer to SAM by concept: spaces, principals, groups, grants with rules and obligations, attribute assertions, the registry, observations and publication.
@@ -57,7 +57,6 @@ The full permission grid is in [Classrooms and permissions](classrooms-and-permi
 - Anything a second SAM tenant would use unchanged. That belongs in SAM.
 - Real device pairing in the browser with gateway signing. The front end's pairing stays simulated.
 - Push notifications for alerts. Alert levels are evaluated when read.
-- Editors for configuration that no page writes. Operators set it ([Registry and content](registry-and-content.md#operator-configuration)).
 - Generating Go types from `openapi.yaml`. Go types are written by hand and held to the contract by tests.
 
 ## Requirements
@@ -95,7 +94,7 @@ The full permission grid is in [Classrooms and permissions](classrooms-and-permi
 | Security | No secret is stored in plain text; no development convenience runs outside development and test |
 | Scale | The pilot: tens of stations, one reading a minute each. Pages stay bounded reads of SAM; the design moves to SAM's aggregates before that bound bites |
 | Operability | Anything retrying cannot fix is held for an operator and listed by a command |
-| Contract | Every response matches `openapi.yaml`, which is generated from the front end |
+| Contract | Every response matches `openapi.yaml`, which is generated from the front end, or the backend's addendum for what the front end has not adopted yet |
 
 ## The boundary with SAM
 
@@ -117,7 +116,7 @@ A capability goes into SAM only if it can be described without DaGrouper words (
 | Data terms | The space's data policy | Display copy |
 | Registry | SAM's registry: core entries plus this tenant's own under `dgs:` | Presentation overlay, change log, alert defaults |
 | Alerts, current conditions, completeness | Nothing: computed from SAM's reads | Alert rules, tile and card selection |
-| Invitations, host applications, places, one-time codes, site content, photos | Nothing | All of it |
+| Invitations, host applications, places, one-time codes, platform configuration, photos | Nothing | All of it |
 
 ## Architecture
 
@@ -125,7 +124,7 @@ A capability goes into SAM only if it can be described without DaGrouper words (
 
 | Requirement | Architectural consequence |
 |---|---|
-| The front end talks to one service, over the contract generated from its routes | This service implements `openapi.yaml` exactly, and tests hold every response to it |
+| The front end talks to one service, over the contract generated from its routes | This service implements `openapi.yaml` exactly, with the operations and shapes its addendum lists, and tests hold every response to them ([The contract](#the-contract)) |
 | SAM is the record for observations and decides who may read and write them | This service keeps no copy of readings. It reads them from SAM as the viewer, so SAM's answer is the user's answer |
 | People, classrooms and memberships live here, and SAM must reflect them | Every change SAM must know about is queued in the same transaction as the change, and delivered and reconciled in the background ([SAM integration](sam-integration.md)) |
 | SAM's checks must see the person who acts | Changes a person makes reach SAM as that person, with a short-lived token this service signs; policy changes go as this service |
@@ -185,10 +184,10 @@ Each table belongs to one module, and no other module queries it; a test checks 
 | Area | Holds |
 |---|---|
 | Accounts and sign-in | Users and their profiles, their identities, sessions, phone challenges and their limits |
-| Classrooms | Classrooms, memberships, invitations, consent records, and what each is in SAM |
-| Hosting | Host applications |
+| Classrooms | Classrooms, stages and regions, memberships, invitations, consent records and consent texts, and what each is in SAM |
+| Hosting | Host questions and applications |
 | Labs and readings | Labs, devices, relayed and synced records, alert levels, and what each is in SAM |
-| Registry and content | The registry overlay and its change log, alert defaults, site content and configuration |
+| Registry and content | The registry overlay and its change log, alert defaults, settings and the configuration change log |
 | Media | Stored photos |
 | SAM access | The outbox |
 | Demo data | What the demo tool has loaded (development only) |
@@ -225,6 +224,15 @@ sequenceDiagram
 
 Writes to SAM never happen in the request: the change commits here, and the outbox delivers it. Reads from SAM and relayed submissions do happen in the request, because SAM's answer is the user's answer.
 
+### The contract
+
+`openapi.yaml` is generated from the front end's routes and is never edited here. Some of what this service serves comes before the front end has it: the platform configuration admin, consent text versions. Those are kept in `contract-addendum.yaml`, owned by this service:
+
+- **What it holds.** Operations the generated contract lacks, and operations whose request or response shape changes, each with the front-end change it waits for. An entry for a changed operation replaces that operation's shapes; everything else comes from `openapi.yaml`.
+- **Checked the same way.** The integration tests load both and hold every response to them, so an addendum operation is as tested as any other.
+- **Shrinks to nothing.** When the front end adopts an entry, the regenerated contract has it and the entry is removed. A test fails on an entry the generated contract already matches, so none outlives its need.
+- **Listed for the front end.** Each entry names what the front end must add, so the two meet at one contract.
+
 ### Errors
 
 Every error the front end sees is `{code, message, fields}`. `code` is one of the front end's `ServiceErrorCode` values, `message` is shown to the user as it is, and `fields` holds a message per input. Anything unexpected is logged with the request ID and answered as `internal`, with a generic message, so no internal detail reaches the user. SAM's refusals are translated ([SAM integration](sam-integration.md#translating-sams-errors)).
@@ -250,6 +258,7 @@ Instances are stateless apart from the database and run behind the front end's o
 | Keeping a copy of readings here | Two records of the same data, and this service would have to repeat SAM's read rules for every viewer |
 | Sending every change to SAM as this service | SAM's checks on the actor would protect nothing, and its audit would name the service instead of the person |
 | The front end calling SAM directly | SAM holds no personal data and knows nothing of classrooms; every page needs both in one answer |
+| Waiting for the front end's contract before serving anything new | Backend work that admins need, such as platform configuration, would wait on pages that are built later. The addendum keeps it tested and visible until the front end adopts it |
 | A service per area | One database and one small team. Modules that own their tables keep the boundaries without the cost of running several services |
 
 ## Risks
@@ -258,13 +267,14 @@ Instances are stateless apart from the database and run behind the front end's o
 |---|---|
 | SAM reflects a change only once it is delivered, so it may be more permissive meanwhile (consent still given after a withdrawal, a removed member still in a group, a public grant not yet revoked) | Every call for a person or a visitor checks this service's own record first: consent, membership and role, and the sharing settings ([SAM integration](sam-integration.md#the-outbox)) |
 | The contract drifts from the front end | The contract is generated from the front end's routes and checked in CI; every integration response is validated against it |
+| The addendum and the front end diverge | Each entry names the front-end change it waits for, and a test fails on an entry the generated contract already matches |
 | A module reaches into another's tables | The ownership test fails, unless the exception is listed with its reason |
 | A change is held in the outbox and nobody notices | Held changes are logged as warnings and listed for operators ([SAM integration](sam-integration.md)) |
 
 ## Testing approach
 
 - **Unit tests** for pure logic, in the package that holds it, written here rather than translated from the front end's specs. They are never replaced by an end-to-end test.
-- **Integration tests** (`internal/apitest`) build SAM from its source, start it on a fresh database, onboard this service as its tenant, and drive this service over HTTP. Every response is validated against `openapi.yaml`, and a route-coverage report lists every operation without a handler; once every operation is served, it fails on any that is not.
+- **Integration tests** (`internal/apitest`) build SAM from its source, start it on a fresh database, onboard this service as its tenant, and drive this service over HTTP. Every response is validated against `openapi.yaml` and the addendum, and a route-coverage report lists every operation without a handler; once every operation is served, it fails on any that is not.
 - **Parity:** the permission grid is checked cell by cell against SAM's answer.
 - **End to end:** the front end's own HTTP client runs against the compose stack, and a generated Postman collection walks every operation.
 - **Every fix ships with a test that fails without it.**
