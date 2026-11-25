@@ -121,7 +121,7 @@ Staging gets demo-like data from seeded accounts that sign in normally.
 
 The demo people, classrooms, labs, devices and their history come from the front end's seed. They are loaded by a separate command, `dgs-demo`. Its code lives under `cmd/dgs-demo`, and the service's packages never import it.
 
-- `dgs seed` stays in the service and loads only configuration: the registry overlay and the site content. It is safe in every environment.
+- `dgs seed` stays in the service and loads only configuration: the registry overlay, stages, regions, host questions, settings and the first consent text. It is safe in every environment.
 - `dgs-demo` loads the demo people and classrooms, sends their history to SAM as the people who recorded it, and releases it. A re-run keeps later releases and changes.
 - It refuses to run outside development and test, and needs the backend running, since SAM checks the senders' tokens against this service's key set. It reads the signing key from a read-only mount and never creates one.
 - The compose stack runs it once the backend is healthy, so one `make up` gives a seeded stack.

@@ -70,7 +70,7 @@ The service holds personal data about participants, many of them minors, and the
 **Points.**
 
 - **Minimisation.** SAM holds no name, email or phone: only the participant ID and the attributes `minor` and `consent`.
-- **Consent.** A minor's data is collected only with a guardian's consent, recorded with how and by whom it was given. Withdrawal stops new submissions at once here and in SAM once delivered.
+- **Consent.** A minor's data is collected only with a guardian's consent, recorded with how and by whom it was given and the version of the text agreed to. The text is published by platform admins as a logged version, never changed once published, and a minor's positions are never rounded more finely than it states. Withdrawal stops new submissions at once here and in SAM once delivered.
 - **Processors.** Google (sign-in), an SMS provider, an email provider, an address provider and object storage. Each receives only what its task needs.
 - **Logs** carry request IDs, methods, paths, statuses and durations; no request bodies.
 - **Production gate.** Real data from minors does not enter production until SAM's consent withdrawal, deletion and retention are in place, together with the data-protection review.
