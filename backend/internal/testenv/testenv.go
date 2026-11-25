@@ -126,6 +126,20 @@ func (s *SAM) Config(o Options) samaccess.Config {
 	return samaccess.Config{URL: s.URL, TenantFile: s.TenantFile, Issuer: o.Issuer, Audience: o.Audience}
 }
 
+// AnotherTenant onboards a second tenant, name, with registry entries of
+// its own under its namespace, the same as its name, and is a client
+// acting as that tenant's service.
+func (s *SAM) AnotherTenant(name string) *client.Client {
+	s.t.Helper()
+	out := run(s.t, s.bin, s.env, "tenant", "create", "-name", name, "-registry",
+		"-issuer", "https://"+name+".test", "-jwks", "https://"+name+".test/jwks.json", "-audience", "sam", "-json")
+	var t samaccess.Tenant
+	if err := json.Unmarshal(out, &t); err != nil {
+		s.t.Fatalf("sam tenant create -name %s: %v", name, err)
+	}
+	return client.New(s.URL, client.WithKey(t.Key.Secret))
+}
+
 // Operator is a client acting as the deployment's operator.
 func (s *SAM) Operator() *client.Client {
 	return client.New(s.URL, client.WithKey(s.OperatorKey))

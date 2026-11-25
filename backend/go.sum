@@ -1,5 +1,5 @@
-github.com/dagrouper-school/sam v0.0.0-20261123165323-4318dc1a703b h1:5nMUsgIGxFb8s75croLfab+Xil97DJO/9A249E9/t8s=
-github.com/dagrouper-school/sam v0.0.0-20261123165323-4318dc1a703b/go.mod h1:HaRLDTPKOdMz6dhER5quuE20hCYJ0HyqIqMuFavLYg8=
+github.com/dagrouper-school/sam v0.0.0-20261125231617-dbf452ea9590 h1:uvaa33Ccd/WnuSHtBn+DJ31v+zpf3SdZ5vEQe+34RGc=
+github.com/dagrouper-school/sam v0.0.0-20261125231617-dbf452ea9590/go.mod h1:HaRLDTPKOdMz6dhER5quuE20hCYJ0HyqIqMuFavLYg8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

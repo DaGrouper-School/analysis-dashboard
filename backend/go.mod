@@ -5,7 +5,7 @@ go 1.27.0
 toolchain go1.27.4
 
 require (
-	github.com/dagrouper-school/sam v0.0.0-20261123165323-4318dc1a703b
+	github.com/dagrouper-school/sam v0.0.0-20261125231617-dbf452ea9590
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.13.0

@@ -6,9 +6,9 @@ How the registry the front end reads is built from SAM's registry and this servi
 
 SAM's registry is the source for domains, parameters, device types and observation templates: a shared core, plus entries a tenant owns under its namespace (`dgs:`), owned by its root space. SAM's rules limit what a tenant may change:
 
-- domains and units are core only;
-- a tenant may add parameters, device types and templates under its namespace;
-- a tenant parameter needs one of SAM's domains;
+- units are core only, in one catalogue;
+- a tenant may add domains, parameters, device types and templates under its namespace;
+- a tenant parameter uses one of the core's domains or one of its own;
 - SAM keeps readings in a parameter's unit, and refuses a unit change while a device type sends another unit or observations use it.
 
 The front end needs more than SAM holds: plain-language labels, icons, colours, chart kinds, explanations, which values show as tiles and cards, display units, noise thresholds and default alert levels. Platform admins change all of this from the admin page, and every change is logged. Platform admin is this service's own role: admins hold no SAM grants, and `registry:manage` on the tenant root belongs to this service's principal.
@@ -27,7 +27,7 @@ The public pages and some of this service's rules also depend on the platform's 
 ## Non-goals
 
 - Changing SAM's core entries.
-- Domains or units in SAM owned by this tenant.
+- Units of this tenant's own. SAM's catalogue is the core's.
 - The site's words: the home page, sections and policies, the hosting and join wording, and its languages. The front end holds them with its translations, and they change with a release. The consent text is not among them: a guardian agrees to it, so it is kept here.
 - Platform configuration in SAM's back office. Stages, regions and questions are DaGrouper's, and a second tenant would not use them.
 
@@ -35,10 +35,13 @@ The public pages and some of this service's rules also depend on the platform's 
 
 ### Reading the registry
 
-- SAM's effective registry for this tenant is read and cached apart from the overlay. Concurrent misses share one call to SAM. When SAM cannot be reached, the cached copy is served and SAM is asked again after ten seconds.
-- The registry the front end reads is SAM's entries merged with the overlay and this tenant's own definitions. Everyone signed in can read it.
-- IDs are SAM's, as they are: the front end sees `dgs:soil_ec` and `air_pressure.barometric`.
-- `getCalculation` returns a value's formula, inputs and SAM version, for "How is this calculated?".
+- This service reads SAM's registry as itself, effective in the tenant's root (`?space_id=` the root): the domains, parameters, device types and templates, each page by page, so only the core's entries and this tenant's show. It also reads the unit catalogue and the derivations. All of these are open to every caller.
+- The copy is cached apart from the overlay and served for ten minutes. It is read again sooner once one of this tenant's entries reaches SAM. Concurrent misses share one read. When SAM cannot be reached, the cached copy is served and SAM is asked again after ten seconds.
+- The registry the front end reads is SAM's entries merged with the overlay and this tenant's own definitions. Everyone signed in can read it, and it is merged on each request, so an overlay change shows on the next one.
+- IDs are SAM's, as they are: the front end sees `dgs:soil_ec` and `barometric_pressure`.
+- **Units.** A unit is shown as people read it, `°C` for SAM's `degC`. A value's other units are the catalogue's units of its dimension, each with the factor and offset that convert it to the value's own.
+- **Device types** list the values their keys map, in key order. A device type with no sensor lists the values of the templates read off it.
+- `getCalculation` returns a value's formula, inputs and SAM version, for "How is this calculated?". A derived value's come from its SAM derivation; a measured or entered one says how its source takes it.
 
 ### The overlay
 
@@ -48,7 +51,9 @@ Presentation stays here, in overlay rows keyed by SAM ID. SAM never sees them:
 |---|---|
 | Text | Label, plain-language description, explanation of how it is calculated |
 | Display | Icon, colour, chart kind, display unit, display order, noise threshold |
-| Placement | Which domain a value is shown under; which values are tiles and cards |
+| Placement | Which domain a value is shown under; which values are tiles and cards; a template's domain and the device type it is read off |
+
+There is one table per kind of entry: `registry_domains`, `registry_parameters`, `registry_device_types` and `registry_templates`, in display order. An entry with no row is shown as SAM defines it, after those with one, with a plain icon and colour. A value with no row has the source a device type implies: a device if one with a sensor maps it, a person otherwise.
 
 ### Domains
 
@@ -70,7 +75,7 @@ Presentation stays here, in overlay rows keyed by SAM ID. SAM never sees them:
 |---|---|---|
 | A core device type's values, or whether it is read by hand | 409 | SAM defines them; its label, description and presentation can change |
 | A value's unit or kind after it is registered | 400 | SAM keeps readings in the registered unit; an admin adds a new value for another unit |
-| A new value without one of SAM's domains | 400 on `values.<i>.domain` | SAM requires a core domain for a tenant parameter. Once added, it can be shown under any display group |
+| A new value without one of SAM's domains | 400 on `values.<i>.domain` | SAM requires one of its domains for a tenant parameter, the core's or this tenant's own; a display group kept only here is neither. Once added, it can be shown under any display group |
 
 The mock also allows "no domain" and the admins' own domains for a new value; SAM refuses both, so this service cannot follow the mock there.
 
@@ -163,5 +168,4 @@ dgs consent publish consent.json            # a new version, every language
 
 ## Open questions
 
-- Whether SAM will allow tenant parameters without a core domain, or tenant-owned domains, so the admin page can match the mock.
 - **Translated labels.** Stage, region and question labels are kept in the site's default language. When the front end translates the site, they need a label per language, or keys the front end translates.
