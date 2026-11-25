@@ -1,0 +1,56 @@
+# An addendum with one new operation and one changed one.
+paths:
+  /platform/settings:
+    get:
+      operationId: platform.listSettings
+      x-change: new
+      x-waits-for: The platform configuration page
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Setting"
+        "401":
+          $ref: "openapi.yaml#/components/responses/Unauthenticated"
+  /places/dial-codes:
+    get:
+      operationId: places.dialCodes
+      x-change: changed
+      x-waits-for: Flags beside the calling codes
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FlaggedDialCode"
+components:
+  schemas:
+    Setting:
+      type: object
+      properties:
+        key:
+          type: string
+        value: {}
+      required: [key, value]
+      additionalProperties: false
+    FlaggedDialCode:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        dial:
+          type: string
+        flag:
+          type: string
+      required: [code, name, dial, flag]
+      additionalProperties: false

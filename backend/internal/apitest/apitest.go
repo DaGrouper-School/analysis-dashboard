@@ -1,7 +1,7 @@
 // Package apitest drives this service over HTTP, as the front end does,
 // against a database of its own, a SAM built from source with this service
 // onboarded, and a fake Google. Every response is checked against the
-// contract, and a breach fails the test. Test code only.
+// contract and its addendum, and a breach fails the test. Test code only.
 package apitest
 
 import (

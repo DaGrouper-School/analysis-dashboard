@@ -1,0 +1,35 @@
+# An addendum the generated contract has caught up with: dial codes as
+# openapi.yaml has them, written out, and an address it serves now.
+paths:
+  /places/dial-codes:
+    get:
+      operationId: places.dialCodes
+      x-change: changed
+      x-waits-for: Dial codes
+      responses:
+        "200":
+          description: The calling codes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  description: A calling code.
+                  properties:
+                    code:
+                      type: string
+                    name:
+                      type: string
+                    dial:
+                      type: string
+                  required: [code, name, dial]
+                  additionalProperties: false
+  /places/{id}:
+    get:
+      operationId: places.address
+      x-change: new
+      x-waits-for: Addresses
+      responses:
+        "204":
+          description: No content

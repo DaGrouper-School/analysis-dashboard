@@ -110,7 +110,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/samaccess` | Calls SAM as this service, as a person through a user token or as anonymous; the signing keys and the key set; SAM's errors translated; the outbox, its worker and the reconciler |
 | `internal/server` | `server.New(Deps)`, the `Module` interface, the middleware, `/healthz` and the API's not-found answer |
 | `internal/testutil` | A fresh database per test (test code only) |
-| `internal/contract` | Reads `openapi.yaml` and checks responses against it (test code only) |
+| `internal/contract` | Reads `openapi.yaml` and its addendum and checks responses against them (test code only) |
 | `internal/testenv` | Runs SAM built from source, with this service onboarded (test code only) |
 | `internal/apitest` | The integration harness and its tests (test code only) |
 
@@ -274,7 +274,7 @@ PostgreSQL 17, through `pgx` (`internal/db`). `db.Open` opens a pool of at most 
 - **Tables.** Each table belongs to one package, and a test enforces it ([Table ownership](#table-ownership)). A new table or column gets a new migration, never an edit to an old one, and the migration starts with a comment that says why.
 - **SAM.** Each domain lives in one package, including how it is sent to SAM. The SAM package holds only the outbox, the client and token signing. A change SAM must reflect is written to the outbox in the same transaction, never sent to SAM from a handler.
 - **Demo data** is a separate tool. It is never part of the service's packages or migrations.
-- **Contract changes** start in the front end (`frontend/src/lib/services`). Then `openapi.yaml` is regenerated ([the API contract](#the-api-contract)).
+- **Contract changes** start in the front end (`frontend/src/lib/services`). Then `openapi.yaml` is regenerated ([the API contract](#the-api-contract)). What this service serves before the front end has it goes in the addendum ([The contract addendum](#the-contract-addendum)).
 
 ## Table ownership
 
@@ -315,11 +315,11 @@ Tests that need the database call `testutil.DB(t)`, which gives the test a datab
 
 1. **SAM.** `internal/testenv` builds `cmd/sam` from SAM's module at the version `go.mod` names, once per test run, and keeps the binary under the system's temporary directory by version. It gives SAM a new database on the test server, runs `sam bootstrap -json`, onboards this service with `sam tenant create -name dgs -registry`, naming this service's key set, and runs `sam serve` on a free loopback port until the test ends. A test that fails shows SAM's log.
 2. **This service** gets a database of its own and listens on the address SAM was told about.
-3. **The contract.** Every response to a request under `/api` is checked against `openapi.yaml`: its status must be one the operation declares, and its body must match the declared schema. Any operation may also answer `500` with the `internal` error. A breach, or a request for a path the contract lacks, fails the test. The key set (`/api/.well-known/`) and media files (`/api/media/`) lie outside the contract.
+3. **The contract.** Every response to a request under `/api` is checked against `openapi.yaml` and its addendum: its status must be one the operation declares, and its body must match the declared schema. Any operation may also answer `500` with the `internal` error. A breach, or a request for a path the contract lacks, fails the test. The key set (`/api/.well-known/`) and media files (`/api/media/`) lie outside the contract.
 
 `e.SAM.Service()` and `e.SAM.Operator()` are SAM clients acting as this service and as the deployment's operator, for setting a test up or checking what reached SAM.
 
-**Route coverage.** `TestRouteCoverage` lists every operation in the contract this service does not serve yet, and how many it does, from the service built as it runs, with its database and SAM, so every module is mounted. It reports and does not fail while the service is built.
+**Route coverage.** `TestRouteCoverage` lists every operation in the contract and its addendum this service does not serve yet, and how many it does, from the service built as it runs, with its database and SAM, so every module is mounted. It reports and does not fail while the service is built.
 
 **Contract gaps.** `apitest.Gaps` lists the statuses this service answers that an operation does not declare yet, each with why, such as `401` on `auth.getCurrentUser`. They belong in the front end's routes, which the contract is generated from; until they are there, the check lets them through, provided the body is an `Error`.
 
@@ -350,3 +350,19 @@ CI (`.github/workflows/backend.yml`) runs on changes to `backend/`, the front en
 - Both are generated from the front end: `routes.ts` (method, path, access and body of each call), `services/types.ts` (descriptions and error codes) and `domain/types.ts` (the data types).
 - After changing any of them, run `npm run openapi -w frontend` from the repository root. `npm run openapi:check -w frontend` fails when the committed files are out of date; CI runs it.
 - Go types are written by hand and held to the contract by tests, not generated.
+
+### The contract addendum
+
+[`contract-addendum.yaml`](../contract-addendum.yaml) holds what this service serves before the front end's contract has it. `openapi.yaml` is never edited here; the addendum is. `internal/contract` loads the two together, and the integration tests and route coverage treat an addendum operation like any other.
+
+**Adding an entry.** Write the operation under `paths`, as `openapi.yaml` would have it, with:
+
+- `x-change: new` for an operation `openapi.yaml` lacks, or `x-change: changed` for one it has whose request or response shapes change. A changed entry replaces that operation whole and keeps its `operationId`.
+- `x-waits-for`: the front-end change that brings it into `openapi.yaml`. Also list it in what the front end is asked to adopt.
+
+Shapes of its own go under `components`. The contract's are referred to by its file name, such as `openapi.yaml#/components/responses/Unauthenticated`. A malformed entry, or one marked changed for an operation `openapi.yaml` lacks, fails every test that loads the contract.
+
+**Removing it.** When the front end adopts an entry and `openapi.yaml` is regenerated, `TestAddendumIsCurrent` fails until the entry is removed:
+
+- a changed entry fails once `openapi.yaml` has the same parameters, request body and responses, with references followed and descriptions ignored;
+- a new entry fails once `openapi.yaml` has its method and path. Remove it if the two match, or mark it changed if the front end adopted it differently.

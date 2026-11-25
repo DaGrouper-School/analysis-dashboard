@@ -1,0 +1,21 @@
+# What this service serves before the front end's contract has it, checked
+# with openapi.yaml by the integration tests. openapi.yaml is generated from
+# the front end and never edited here; this file is.
+#
+# Each entry is an operation under paths, as in openapi.yaml, with two more
+# fields:
+#
+#   x-change: new        an operation openapi.yaml lacks
+#   x-change: changed    an operation openapi.yaml has, whose shapes this
+#                        service changes; it replaces that operation and
+#                        keeps its operationId
+#   x-waits-for: ...     the front-end change that brings it into
+#                        openapi.yaml
+#
+# Shapes of its own go under components; openapi.yaml's are referred to by
+# its name, such as "openapi.yaml#/components/responses/Unauthenticated".
+# Once the regenerated openapi.yaml has an entry, a test fails until the
+# entry is removed. See docs/development.md, "The contract addendum".
+paths: {}
+components:
+  schemas: {}
