@@ -20,6 +20,9 @@ const (
 	// ReconcilerLock is held by the instance comparing SAM with this
 	// database, for one pass at a time.
 	ReconcilerLock int64 = 8301003
+	// SeedLock is held while dgs seed runs, so two seeds never both find a
+	// list empty and add its rows twice.
+	SeedLock int64 = 8301004
 	// TestTemplateLock is held while tests build their migrated template
 	// database.
 	TestTemplateLock int64 = 8301999
@@ -33,6 +36,13 @@ func TryLock(ctx context.Context, tx pgx.Tx, key int64) (bool, error) {
 	var ok bool
 	err := tx.QueryRow(ctx, `SELECT pg_try_advisory_xact_lock($1)`, key).Scan(&ok)
 	return ok, err
+}
+
+// LockTx takes the transaction-level advisory lock key in tx, waiting
+// until it is free. The lock is released when tx ends.
+func LockTx(ctx context.Context, tx pgx.Tx, key int64) error {
+	_, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, key)
+	return err
 }
 
 // Lock takes the session-level advisory lock key on q, a single

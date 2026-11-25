@@ -1,0 +1,18 @@
+{
+	"core_parameters": {
+		"rainDaily": ["precip_accum_local_day", "rain_gauge_daily_accumulation"],
+		"airTemperature": ["air_temperature"],
+		"rainTolerance": 2,
+		"rainReference": "rain_gauge_daily_accumulation"
+	},
+	"default_terms": {
+		"licence": "CC BY 4.0",
+		"licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+		"attribution": "{classroom}, {institution}. DaGrouper Global Classrooms.",
+		"restrictions": [],
+		"coordinateDecimals": null
+	},
+	"privacy": {
+		"minorCoordinateDecimals": 2
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/testutil"
 )
 
@@ -79,7 +81,7 @@ func setSAM(t *testing.T) {
 }
 
 func TestRunRefuses(t *testing.T) {
-	for _, args := range [][]string{{"frobnicate"}, {"keys"}, {"keys", "old"}, {"serve", "now"}, {"outbox"}, {"outbox", "release"}, {"accounts", "renumber"}, {"accounts", "adopt"}, {"email", "test"}} {
+	for _, args := range [][]string{{"frobnicate"}, {"keys"}, {"keys", "old"}, {"serve", "now"}, {"outbox"}, {"outbox", "release"}, {"accounts", "renumber"}, {"accounts", "adopt"}, {"email", "test"}, {"settings", "get"}, {"settings", "put", "privacy"}, {"settings", "list"}, {"seed", "now"}} {
 		if err := run(context.Background(), io.Discard, args); err == nil || !strings.Contains(err.Error(), "unknown command") {
 			t.Fatalf("%v: %v", args, err)
 		}
@@ -217,5 +219,67 @@ func TestAccountsRenumber(t *testing.T) {
 	}
 	if err := run(ctx, io.Discard, []string{"accounts", "renumber", uuid.NewString()}); err == nil || !strings.Contains(err.Error(), "no user") {
 		t.Fatalf("an unknown account: %v", err)
+	}
+}
+
+// TestConfigurationCommands: dgs seed loads every setting and row, and a
+// second run changes nothing; dgs settings put refuses a bad shape,
+// naming every problem, and stores a good one, which the next seed keeps.
+func TestConfigurationCommands(t *testing.T) {
+	dsn := testutil.Migrated(t)
+	t.Setenv("DGS_ENV", "test")
+	t.Setenv("DGS_DATABASE_URL", dsn)
+	setSAM(t)
+	ctx := context.Background()
+	cmd := func(args ...string) (string, error) {
+		t.Helper()
+		var out bytes.Buffer
+		err := run(ctx, &out, args)
+		return out.String(), err
+	}
+	if out, err := cmd("settings"); err != nil || strings.Count(out, "not set") != 3 {
+		t.Fatalf("settings before the seed: %q, %v", out, err)
+	}
+	if _, err := cmd("settings", "get", "privacy"); !errors.Is(err, settings.ErrNotSet) {
+		t.Fatalf("a setting before the seed: %v", err)
+	}
+	if out, err := cmd("seed"); err != nil || strings.Count(out, ": added") != 13 {
+		t.Fatalf("the seed: %q, %v", out, err)
+	}
+	if out, err := cmd("seed"); err != nil || strings.Count(out, ": unchanged") != 13 {
+		t.Fatalf("the seed again: %q, %v", out, err)
+	}
+	out, err := cmd("settings", "get", "privacy")
+	var privacy settings.Privacy
+	if err != nil || json.Unmarshal([]byte(out), &privacy) != nil || privacy.MinorCoordinateDecimals != 2 || !strings.HasPrefix(out, "{\n  ") {
+		t.Fatalf("get: %q, %v", out, err)
+	}
+
+	dir := t.TempDir()
+	bad, good := filepath.Join(dir, "bad.json"), filepath.Join(dir, "good.json")
+	if err := os.WriteFile(bad, []byte(`{"minorCoordinateDecimals": "two", "extra": true}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(good, []byte(`{"minorCoordinateDecimals": 1}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := cmd("settings", "put", "privacy", bad); err == nil || !strings.Contains(err.Error(), "extra: not a field here") ||
+		!strings.Contains(err.Error(), "minorCoordinateDecimals: a string where a number belongs") {
+		t.Fatalf("a bad shape: %v", err)
+	}
+	if out, err := cmd("settings", "put", "privacy", good); err != nil || !strings.Contains(out, "stored privacy") {
+		t.Fatalf("a good value: %q, %v", out, err)
+	}
+	if out, err := cmd("settings", "put", "privacy", good); err != nil || !strings.Contains(out, "unchanged") {
+		t.Fatalf("the same again: %q, %v", out, err)
+	}
+	if out, err := cmd("seed"); err != nil || !strings.Contains(out, "privacy: kept") {
+		t.Fatalf("the seed after a put: %q, %v", out, err)
+	}
+	if out, err := cmd("settings"); err != nil || !strings.Contains(out, "an admin or operator") || strings.Contains(out, "not set") {
+		t.Fatalf("settings: %q, %v", out, err)
+	}
+	if _, err := cmd("settings", "get", "theme"); !errors.Is(err, settings.ErrUnknownKey) {
+		t.Fatalf("an unknown key: %v", err)
 	}
 }

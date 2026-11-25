@@ -1,0 +1,11 @@
+{
+	"stages": [
+		{"id": "preparing", "label": "Preparing", "description": "Setting up the lab and training people.", "color": "#f6921e"},
+		{"id": "pilot", "label": "Pilot", "description": "Measuring, with the first data in review.", "color": "#00bdff"},
+		{"id": "operating", "label": "Operating", "description": "Measuring and releasing data regularly.", "color": "#3cc04b"}
+	],
+	"regions": [
+		{"id": "caribbean", "label": "Caribbean"},
+		{"id": "east_africa", "label": "East Africa"}
+	]
+}
