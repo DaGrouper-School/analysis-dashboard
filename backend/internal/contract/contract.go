@@ -1,7 +1,8 @@
 // Package contract holds this service to openapi.yaml, the contract the
-// front end generates: it finds the operation a request is for and checks a
-// response against the statuses and schemas the operation declares. Tests
-// use it; the service itself never reads the contract.
+// front end generates, and to contract-addendum.yaml, what this service
+// serves before the front end has it: it finds the operation a request is
+// for and checks a response against the statuses and schemas the operation
+// declares. Tests use it; the service itself never reads the contract.
 package contract
 
 import (
@@ -13,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -24,8 +26,26 @@ import (
 // Prefix is where the contract's paths are served, its one server URL.
 const Prefix = "/api"
 
-// File is the contract's path from the backend's root.
-const File = "openapi.yaml"
+// File is the contract's path from the backend's root, and AddendumFile
+// the addendum's. The addendum refers to the contract's parts by this name,
+// such as "openapi.yaml#/components/responses/Unauthenticated".
+const (
+	File         = "openapi.yaml"
+	AddendumFile = "contract-addendum.yaml"
+)
+
+// base is where both files are found by the schema compiler, so that a
+// reference from one to the other resolves.
+const base = "https://contract.dgs.test/"
+
+// How an addendum entry relates to the generated contract, in its x-change.
+const (
+	// ChangeNew is an operation the contract lacks.
+	ChangeNew = "new"
+	// ChangeChanged is an operation the contract has, with shapes this
+	// service changes.
+	ChangeChanged = "changed"
+)
 
 // internalSchema is the answer to an unexpected failure, which any
 // operation may give: an Error whose code is internal (httpx.CodeInternal).
@@ -42,9 +62,11 @@ const internalSchema = `{
 	"additionalProperties": false
 }`
 
-// Contract is openapi.yaml, compiled.
+// Contract is openapi.yaml with its addendum, compiled.
 type Contract struct {
-	ops      []*Operation
+	ops []*Operation
+	// stale are the addendum's entries the contract has caught up with.
+	stale    []string
 	internal *jsonschema.Schema
 	// errorBody is the contract's Error, the body of every refusal.
 	errorBody *jsonschema.Schema
@@ -92,38 +114,38 @@ type Operation struct {
 	Method string
 	// Path is the template under Prefix, such as /classrooms/{classroomId}.
 	Path string
-	segs []string
+	// WaitsFor is, for an operation from the addendum, the front-end change
+	// it waits for; it is empty for one from openapi.yaml.
+	WaitsFor string
+	segs     []string
+	// src is the file the operation is from, raw the operation as written
+	// and shared the parameters its path declares for every method.
+	src    *source
+	raw    map[string]any
+	shared any
 	// responses maps each declared status to its body's schema, nil for a
 	// response without a body.
 	responses map[int]*jsonschema.Schema
 	internal  *jsonschema.Schema
 }
 
-// Load reads and compiles the contract at path.
-func Load(path string) (*Contract, error) {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	var doc map[string]any
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
-	}
-	// The schema compiler takes JSON values, with numbers as json.Number.
-	js, err := json.Marshal(doc)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
-	}
-	value, err := jsonschema.UnmarshalJSON(bytes.NewReader(js))
-	if err != nil {
-		return nil, err
-	}
-	const url, internalURL = "urn:dgs:openapi.json", "urn:dgs:internal.json"
+// Load reads and compiles the contract at path and the addendum at
+// addendum. An addendum entry marked new adds an operation, and one marked
+// changed replaces the contract's operation on its method and path; an
+// entry that is malformed, or changes an operation the contract lacks, is
+// refused.
+func Load(path, addendum string) (*Contract, error) {
 	comp := jsonschema.NewCompiler()
 	comp.DefaultDraft(jsonschema.Draft2020)
-	if err := comp.AddResource(url, value); err != nil {
+	gen, err := addSource(comp, path, File)
+	if err != nil {
 		return nil, err
 	}
+	add, err := addSource(comp, addendum, AddendumFile)
+	if err != nil {
+		return nil, err
+	}
+	const internalURL = "urn:dgs:internal.json"
 	internal, err := jsonschema.UnmarshalJSON(strings.NewReader(internalSchema))
 	if err != nil {
 		return nil, err
@@ -135,18 +157,26 @@ func Load(path string) (*Contract, error) {
 	if c.internal, err = comp.Compile(internalURL); err != nil {
 		return nil, err
 	}
-	l := loader{comp: comp, url: url, doc: doc, internal: c.internal}
-	if c.errorBody, err = l.schema("#/components/schemas/Error"); err != nil {
+	l := loader{comp: comp, sources: map[string]*source{File: gen, AddendumFile: add}, internal: c.internal}
+	if c.errorBody, err = l.schema(gen.url() + "#/components/schemas/Error"); err != nil {
 		return nil, err
 	}
-	if err := l.operations(c); err != nil {
-		return nil, err
+	if c.ops, err = l.operations(gen); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	entries, err := l.operations(add)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", addendum, err)
+	}
+	if err := l.merge(c, entries); err != nil {
+		return nil, fmt.Errorf("%s: %w", addendum, err)
 	}
 	return c, nil
 }
 
-// Find loads the contract from the backend's root, found from the working
-// directory upward, as tests run in their package's directory.
+// Find loads the contract and its addendum from the backend's root, found
+// from the working directory upward, as tests run in their package's
+// directory.
 func Find() (*Contract, error) {
 	dir, err := os.Getwd()
 	if err != nil {
@@ -154,7 +184,7 @@ func Find() (*Contract, error) {
 	}
 	for {
 		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return Load(filepath.Join(dir, File))
+			return Load(filepath.Join(dir, File), filepath.Join(dir, AddendumFile))
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
@@ -163,6 +193,13 @@ func Find() (*Contract, error) {
 		dir = parent
 	}
 }
+
+// Stale lists the addendum's entries the generated contract has caught up
+// with, each saying what to do: an entry marked changed whose shapes the
+// contract now has, and one marked new for an operation the contract now
+// has. Each is removed from the addendum, or, if the front end adopted it
+// differently, marked changed.
+func (c *Contract) Stale() []string { return slices.Clone(c.stale) }
 
 // Operations lists every operation, in the contract's order.
 func (c *Contract) Operations() []*Operation { return slices.Clone(c.ops) }
@@ -258,24 +295,60 @@ func split(path string) []string {
 	return strings.Split(strings.TrimPrefix(path, "/"), "/")
 }
 
+// source is one of the two files, parsed.
+type source struct {
+	name string
+	doc  map[string]any
+}
+
+func (s *source) url() string { return base + s.name }
+
+// addSource reads the file at path and adds it to comp as name.
+func addSource(comp *jsonschema.Compiler, path, name string) (*source, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	src := &source{name: name}
+	if err := yaml.Unmarshal(raw, &src.doc); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if src.doc == nil {
+		src.doc = map[string]any{}
+	}
+	// The schema compiler takes JSON values, with numbers as json.Number.
+	js, err := json.Marshal(src.doc)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	value, err := jsonschema.UnmarshalJSON(bytes.NewReader(js))
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if err := comp.AddResource(src.url(), value); err != nil {
+		return nil, err
+	}
+	return src, nil
+}
+
 // loader compiles the parts of the contract an operation needs.
 type loader struct {
 	comp     *jsonschema.Compiler
-	url      string
-	doc      map[string]any
+	sources  map[string]*source
 	internal *jsonschema.Schema
 }
 
 var methods = []string{"get", "put", "post", "delete", "patch", "head", "options"}
 
-// operations adds every operation in the contract to c.
-func (l loader) operations(c *Contract) error {
-	paths, _ := l.doc["paths"].(map[string]any)
+// operations lists every operation in src, in path order.
+func (l loader) operations(src *source) ([]*Operation, error) {
+	paths, _ := src.doc["paths"].(map[string]any)
 	keys := make([]string, 0, len(paths))
 	for p := range paths {
 		keys = append(keys, p)
 	}
 	slices.Sort(keys)
+	var ops []*Operation
 	for _, p := range keys {
 		item, _ := paths[p].(map[string]any)
 		for _, m := range methods {
@@ -283,34 +356,35 @@ func (l loader) operations(c *Contract) error {
 			if !ok {
 				continue
 			}
-			op, err := l.operation(p, m, raw)
+			op, err := l.operation(src, p, m, raw)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			c.ops = append(c.ops, op)
+			op.shared = item["parameters"]
+			ops = append(ops, op)
 		}
 	}
-	return nil
+	return ops, nil
 }
 
-func (l loader) operation(path, method string, raw map[string]any) (*Operation, error) {
+func (l loader) operation(src *source, path, method string, raw map[string]any) (*Operation, error) {
 	id, _ := raw["operationId"].(string)
 	op := &Operation{ID: id, Method: strings.ToUpper(method), Path: path, segs: split(path),
-		responses: map[int]*jsonschema.Schema{}}
+		src: src, raw: raw, responses: map[int]*jsonschema.Schema{}}
 	responses, _ := raw["responses"].(map[string]any)
 	for code, r := range responses {
 		status, err := strconv.Atoi(code)
 		if err != nil {
 			return nil, fmt.Errorf("%s %s: response %q is not a status code", op.Method, path, code)
 		}
-		at := "#/paths/" + escape(path) + "/" + method + "/responses/" + code
+		at := src.url() + "#/paths/" + escape(path) + "/" + method + "/responses/" + code
 		resp, _ := r.(map[string]any)
 		if ref, ok := resp["$ref"].(string); ok {
-			at = ref
-			resp = l.resolve(ref)
-			if resp == nil {
+			target, pointer, node := l.resolve(src, ref)
+			if resp, _ = node.(map[string]any); resp == nil {
 				return nil, fmt.Errorf("%s %s: %s does not exist", op.Method, path, ref)
 			}
+			at = target.url() + pointer
 		}
 		content, _ := resp["content"].(map[string]any)
 		if _, ok := content["application/json"]; !ok {
@@ -327,22 +401,146 @@ func (l loader) operation(path, method string, raw map[string]any) (*Operation, 
 	return op, nil
 }
 
-func (l loader) schema(pointer string) (*jsonschema.Schema, error) {
-	return l.comp.Compile(l.url + pointer)
+func (l loader) schema(url string) (*jsonschema.Schema, error) {
+	return l.comp.Compile(url)
 }
 
-// resolve follows a local reference such as #/components/responses/X.
-func (l loader) resolve(ref string) map[string]any {
-	var at any = l.doc
-	for _, part := range strings.Split(strings.TrimPrefix(ref, "#/"), "/") {
+// merge applies the addendum's entries to c's operations, noting the ones
+// the contract has caught up with.
+func (l loader) merge(c *Contract, entries []*Operation) error {
+	at := map[string]int{}
+	for i, op := range c.ops {
+		at[op.key()] = i
+	}
+	seen := map[string]bool{}
+	for _, e := range entries {
+		name := e.Method + " " + e.Path
+		if seen[e.key()] {
+			return fmt.Errorf("%s is in the addendum twice", name)
+		}
+		seen[e.key()] = true
+		if e.ID == "" {
+			return fmt.Errorf("%s has no operationId", name)
+		}
+		waits, _ := e.raw["x-waits-for"].(string)
+		if e.WaitsFor = strings.TrimSpace(waits); e.WaitsFor == "" {
+			return fmt.Errorf("%s: x-waits-for names no front-end change", name)
+		}
+		i, has := at[e.key()]
+		switch change, _ := e.raw["x-change"].(string); change {
+		case ChangeNew:
+			if !has {
+				c.ops = append(c.ops, e)
+				continue
+			}
+			c.stale = append(c.stale, fmt.Sprintf("%s is marked new, but %s has it now as %s: remove the entry if they match, or mark it changed",
+				name, File, c.ops[i].ID))
+		case ChangeChanged:
+			if !has {
+				return fmt.Errorf("%s is marked changed, but %s has no such operation", name, File)
+			}
+			if gen := c.ops[i]; gen.ID != e.ID {
+				return fmt.Errorf("%s is %s in %s, not %s", name, gen.ID, File, e.ID)
+			}
+			if reflect.DeepEqual(l.shapes(c.ops[i]), l.shapes(e)) {
+				c.stale = append(c.stale, fmt.Sprintf("%s is marked changed, but %s matches it now: remove the entry", name, File))
+			}
+		default:
+			return fmt.Errorf("%s: x-change is %q, not %s or %s", name, change, ChangeNew, ChangeChanged)
+		}
+		c.ops[i] = e
+	}
+	return nil
+}
+
+// key is the operation's method and path, with its parameters unnamed, so
+// /classrooms/{id} and /classrooms/{classroomId} are the same operation.
+func (o *Operation) key() string {
+	segs := slices.Clone(o.segs)
+	for i, s := range segs {
+		if strings.HasPrefix(s, "{") {
+			segs[i] = "{}"
+		}
+	}
+	return o.Method + " /" + strings.Join(segs, "/")
+}
+
+// shapes is what an operation takes and answers, with every reference
+// followed and the prose left out, so an operation compares equal to one
+// written differently that means the same.
+func (l loader) shapes(o *Operation) any {
+	var params []any
+	for _, p := range [2]any{o.shared, o.raw["parameters"]} {
+		list, _ := p.([]any)
+		params = append(params, list...)
+	}
+	return []any{
+		l.plain(o.src, params, false, nil),
+		l.plain(o.src, o.raw["requestBody"], false, nil),
+		l.plain(o.src, o.raw["responses"], true, nil),
+	}
+}
+
+// prose are the keys that describe rather than shape.
+var prose = []string{"description", "summary", "title", "example", "examples", "tags", "operationId", "deprecated"}
+
+// named are the keys whose values are maps of names, not of keywords: a
+// property called description is a shape, not prose.
+var named = []string{"properties", "patternProperties", "$defs", "content", "responses", "headers"}
+
+// plain is v from src with references followed and prose dropped. names
+// says v's keys are names; seen are the references being followed, so a
+// schema that refers to itself ends.
+func (l loader) plain(src *source, v any, names bool, seen []string) any {
+	switch v := v.(type) {
+	case map[string]any:
+		if ref, ok := v["$ref"].(string); ok && !names {
+			target, pointer, node := l.resolve(src, ref)
+			if target == nil || node == nil || slices.Contains(seen, target.name+pointer) {
+				return map[string]any{"$ref": ref}
+			}
+			return l.plain(target, node, false, append(seen, target.name+pointer))
+		}
+		out := map[string]any{}
+		for k, x := range v {
+			if !names && (slices.Contains(prose, k) || strings.HasPrefix(k, "x-")) {
+				continue
+			}
+			out[k] = l.plain(src, x, !names && slices.Contains(named, k), seen)
+		}
+		return out
+	case []any:
+		out := make([]any, len(v))
+		for i, x := range v {
+			out[i] = l.plain(src, x, false, seen)
+		}
+		return out
+	default:
+		return v
+	}
+}
+
+// resolve follows a reference from src, such as #/components/responses/X
+// or, from the addendum, openapi.yaml#/components/schemas/Error, to the
+// file it is in, the pointer within it, and what it points to (nil if
+// nothing).
+func (l loader) resolve(src *source, ref string) (*source, string, any) {
+	file, frag, _ := strings.Cut(ref, "#")
+	target := src
+	if file != "" {
+		if target = l.sources[file]; target == nil {
+			return nil, "", nil
+		}
+	}
+	var at any = target.doc
+	for _, part := range strings.Split(strings.TrimPrefix(frag, "/"), "/") {
 		m, ok := at.(map[string]any)
 		if !ok {
-			return nil
+			return target, "#" + frag, nil
 		}
 		at = m[unescape(part)]
 	}
-	m, _ := at.(map[string]any)
-	return m
+	return target, "#" + frag, at
 }
 
 // escape and unescape a JSON pointer segment.

@@ -42,10 +42,11 @@ func TestTheHarness(t *testing.T) {
 	}
 }
 
-// TestRouteCoverage lists the contract's operations this service does not
-// serve yet, built as it runs, with its database and SAM, so every module
-// is mounted. It reports rather than fails while the service is being
-// built; once every operation is served it fails on any that is not.
+// TestRouteCoverage lists the contract's operations, its addendum's
+// included, this service does not serve yet, built as it runs, with its
+// database and SAM, so every module is mounted. It reports rather than
+// fails while the service is being built; once every operation is served
+// it fails on any that is not.
 func TestRouteCoverage(t *testing.T) {
 	t.Parallel()
 	c, err := contract.Find()
@@ -58,6 +59,10 @@ func TestRouteCoverage(t *testing.T) {
 		t.Fatal("the service was built without its modules, so nothing appears served")
 	}
 	for _, op := range unserved {
+		if op.WaitsFor != "" {
+			t.Logf("not served: %s %s (%s, from the addendum)", op.Method, op.Path, op.ID)
+			continue
+		}
 		t.Logf("not served: %s %s (%s)", op.Method, op.Path, op.ID)
 	}
 	t.Logf("%d of %d operations served", len(c.Operations())-len(unserved), len(c.Operations()))
