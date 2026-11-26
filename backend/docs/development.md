@@ -269,6 +269,8 @@ The registry the front end reads ([Reading the registry](design/registry-and-con
 - **Who sees one.** `roles.PermissionsFor` decides, from the viewer's membership in `classroom_members`, the admin flag and the sharing settings. A classroom someone may not see answers `404`.
 - **Configuring.** `classrooms.Configure` sets a classroom's stage, region and profile fields from `PATCH /api/admin/classrooms/{classroomId}` (in the contract's addendum) or `dgs classroom configure CODE FILE`. A field left out stays as it is, each value is checked strictly first, and the change is logged in `configuration_changes`. A stage or region a classroom is at is not deleted.
 
+- **Sharing and release.** `classrooms.SetSharing` stores a classroom's sharing settings and terms and queues the classroom kind, whose applier replaces a role's grant when the settings change what it allows (`roles.Reconcile`) and keeps the public's grants (`roles.PublicGrants`), and the terms as the space's data policy (kind `classroom_policy`, entity `policy:<classroom id>`), sent as the person. `classrooms.Release` moves `released_through` and queues a publish (kind `release`, entity `release:<classroom id>`), sent as the person releasing. Release review and release are served by `internal/labs`, beside the devices whose values wait. The reconciler's `public` check compares the public grants with the settings.
+
 ### Invitations and members
 
 - **Invitations** are emailed, one per address, with a link to the front end's `/invite/<token>`. Only the token's hash is kept; the token reaches the client only in demo mode. One stays open for `DGS_INVITATION_TTL`. Inviting an address again replaces its pending invitation. A new classroom's head is invited as this service.

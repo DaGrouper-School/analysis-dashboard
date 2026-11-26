@@ -158,7 +158,9 @@ func TestInvitationsAndMembers(t *testing.T) {
 		{"the head", head, map[string]bool{roles.ObservationRead: true, roles.DeviceConnect: true, roles.AttributeAssert: true, roles.DatasetPublish: true}},
 		{"the facilitator", facilitator, map[string]bool{roles.ObservationRead: true, roles.DeviceConnect: true, roles.AttributeAssert: true, roles.DatasetPublish: true}},
 		{"the community scientist", scientist, map[string]bool{roles.ObservationRead: true, roles.DeviceConnect: true}},
-		{"a stranger", stranger, map[string]bool{}},
+		// Anyone reads the classroom's published records, through its
+		// public grant; nothing else.
+		{"a stranger", stranger, map[string]bool{roles.ObservationRead: true}},
 	} {
 		got := samAllows(t, e, w.p, space, actions...)
 		for _, act := range actions {
@@ -192,8 +194,10 @@ func TestInvitationsAndMembers(t *testing.T) {
 		t.Errorf("a classroom after leaving it: %d", status)
 	}
 	deliver(t, e, "member:")
-	if got := samAllows(t, e, scientist, space, roles.ObservationRead); got[roles.ObservationRead] {
-		t.Errorf("read after leaving: %v", got)
+	// A researcher who left exports nothing; reading published records
+	// stays open to anyone.
+	if got := samAllows(t, e, scientist, space, roles.ExportCreate); got[roles.ExportCreate] {
+		t.Errorf("export after leaving: %v", got)
 	}
 	var d classrooms.Detail
 	if call(head, "GET", "/classrooms/"+c.ID, nil, &d); len(d.Members) != 2 || d.Members[0].Role != roles.Head || d.Members[1].Role != roles.Facilitator {

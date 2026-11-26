@@ -61,7 +61,7 @@ tenant root space ─── admins group: device:register, device:maintain, data
 
 - A classroom is a SAM space under the tenant root, created with its four role groups and their grants by this service through the outbox.
 - Each group holds its role's grants from the grant templates in `internal/roles`, issued by this service from its tenant grant, whose depth is four. Actions that reach different depths are separate grants, and a grant with a rule is one of its own that hands nothing on.
-  - **Heads:** read, submit, release and device management, in one grant of depth two that delegates everything the other three groups hold under any sharing settings.
+  - **Heads:** read, submit, release, device management and the classroom's data terms (`dataset:set_policy`), in one grant of depth two that delegates everything the other three groups hold under any sharing settings.
   - **Facilitators:** read and submit, with device management and release while the sharing settings allow them. While `facilitatorsInvite` is on, the same grant has depth one and delegates what community scientists hold; off, it hands nothing on.
   - **Community scientists:** read and submit, in one grant. It carries no consent rule: SAM refuses a minor's submission without consent itself, so withdrawn consent stops new submissions inside SAM while reading keeps working.
   - **Researchers:** read, in a grant of depth one, more than facilitators hand on, so only heads add researchers although their reading is a community scientist's. Its `subject_types` rule names only anonymous, which joins no group and is granted to only by an issuer holding `dataset:publish`, so it hands nothing on.

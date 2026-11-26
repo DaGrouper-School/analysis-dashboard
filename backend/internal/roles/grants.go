@@ -3,6 +3,9 @@ package roles
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"math"
 	"reflect"
 	"slices"
 
@@ -44,12 +47,36 @@ type Grant struct {
 	Delegate []string
 	Depth    int
 	Rules    []client.Rule
+	// Labels are more labels than its name.
+	Labels []string
 }
 
 // Input is the grant to issue to group on space.
 func (g Grant) Input(group, space uuid.UUID) client.GrantInput {
 	return client.GrantInput{SubjectID: group, SpaceID: space, Use: g.Use, Delegate: g.Delegate, Depth: g.Depth,
-		Rules: g.Rules, Labels: []string{g.Name}}
+		Rules: g.Rules, Labels: append([]string{g.Name}, g.Labels...)}
+}
+
+// same reports whether held grants what g does: the same uses, hand-ons,
+// depth and rules.
+func (g Grant) same(held client.Grant) bool {
+	sorted := func(l []string) []string {
+		out := slices.Clone(l)
+		slices.Sort(out)
+		return out
+	}
+	if !slices.Equal(sorted(g.Use), sorted(held.Use)) || !slices.Equal(sorted(g.Delegate), sorted(held.Delegate)) || g.Depth != held.Depth ||
+		len(g.Rules) != len(held.Rules) {
+		return false
+	}
+	for i, r := range g.Rules {
+		h := held.Rules[i]
+		var a, b any
+		if r.Type != h.Type || r.Version != h.Version || json.Unmarshal(r.Params, &a) != nil || json.Unmarshal(h.Params, &b) != nil || !reflect.DeepEqual(a, b) {
+			return false
+		}
+	}
+	return true
 }
 
 // Actions are what the grant uses and hands on.
@@ -66,6 +93,7 @@ var (
 	record  = []string{ObservationSubmit, DeviceConnect}
 	devices = []string{DeviceRegister, DeviceMaintain}
 	release = []string{DatasetPublish}
+	terms   = []string{DatasetSetPolicy}
 )
 
 // export lets whoever reads the classroom download it, through this
@@ -120,13 +148,48 @@ func Grants(role Role, sharing Sharing) []Grant {
 		return []Grant{main, export(), consent("facilitator-consent")}
 	case Head:
 		return []Grant{
-			{Name: "head", Use: union(read, record, devices, release),
+			{Name: "head", Use: union(read, record, devices, release, terms),
 				Delegate: handsOn(Facilitator, CommunityScientist, Researcher),
 				Depth:    depthFor(Facilitator, CommunityScientist, Researcher)},
 			export(), consent("head-consent"),
 		}
 	}
 	return nil
+}
+
+// PublicLabel labels every grant to anonymous that shows a classroom's
+// data to visitors.
+const PublicLabel = "classroom-public"
+
+// PublicDecimals are the finest a public position may be: about a
+// kilometre, whatever a classroom's terms allow.
+const PublicDecimals = 2
+
+// metresPerDegree is about the length of a degree of latitude.
+const metresPerDegree = 111_320
+
+// PublicGrants are the grants to anonymous on a classroom's space while it
+// shows its data publicly: its published records, and with automatic
+// review those older than the review period too, each with positions on a
+// grid of about the classroom's coordinate decimals, never finer than two,
+// and identities stripped. None while it does not show its data.
+func PublicGrants(sharing Sharing, decimals *int) []Grant {
+	if !sharing.ShowPublic {
+		return nil
+	}
+	d := PublicDecimals
+	if decimals != nil && *decimals < d {
+		d = *decimals
+	}
+	grid := int(math.Round(metresPerDegree / math.Pow(10, float64(d))))
+	shown := []client.Rule{rule("generalise_location", map[string]any{"grid_m": grid}), rule("strip_identity", map[string]any{})}
+	out := []Grant{{Name: "public:published", Labels: []string{PublicLabel}, Use: read,
+		Rules: append([]client.Rule{rule("record_attr", map[string]any{"clauses": [][]map[string]string{{{"name": "publication_status", "value": "published"}}}})}, shown...)}}
+	if sharing.Review == ReviewAuto {
+		out = append(out, Grant{Name: "public:embargo", Labels: []string{PublicLabel}, Use: read,
+			Rules: append([]client.Rule{rule("embargo", map[string]any{"duration": fmt.Sprintf("%dd", sharing.AutoReleaseDays)})}, shown...)})
+	}
+	return out
 }
 
 // AdminGrants are what the platform admins' group holds at the tenant
@@ -211,18 +274,59 @@ func union(lists ...[]string) []string {
 }
 
 // IssueMissing issues the grants group does not hold yet on space, each
-// named by its label, as the attempt's caller. Each has its own
-// idempotency key, so a retry resumes where an attempt stopped.
+// named by its label, as the attempt's caller, and replaces one it holds
+// that grants something else. Each has its own idempotency key, so a retry
+// resumes where an attempt stopped.
 func IssueMissing(ctx context.Context, a samaccess.Attempt, group, space uuid.UUID, grants []Grant, key string) error {
-	held, err := a.SAM.Grants(ctx, client.GrantQuery{SubjectID: &group, SpaceID: &space}, client.PageQuery{Limit: 100})
+	return Reconcile(ctx, a, group, space, grants, key, "")
+}
+
+// Reconcile brings subject's grants on space to grants: each named by its
+// label is issued when subject holds none, and replaced, revoked then
+// issued again, when the one held grants something else. With family set,
+// a grant subject holds with that label and a name not in grants is
+// revoked.
+func Reconcile(ctx context.Context, a samaccess.Attempt, subject, space uuid.UUID, grants []Grant, key, family string) error {
+	page, err := a.SAM.Grants(ctx, client.GrantQuery{SubjectID: &subject, SpaceID: &space}, client.PageQuery{Limit: 100})
 	if err != nil {
 		return err
 	}
+	var held []client.Grant
+	for _, h := range page.Items {
+		if h.RevokedAt == nil {
+			held = append(held, h)
+		}
+	}
+	revoke := func(h client.Grant, name string) error {
+		_, err := a.SAM.Revoke(a.WithKey(ctx, key+":revoke:"+name+":"+h.ID.String()), h.ID, client.RevokeInput{})
+		var e *client.Error
+		if errors.As(err, &e) && e.Status == 404 {
+			return nil
+		}
+		return err
+	}
 	for _, g := range grants {
-		if slices.ContainsFunc(held.Items, func(h client.Grant) bool { return h.RevokedAt == nil && slices.Contains(h.Labels, g.Name) }) {
+		i := slices.IndexFunc(held, func(h client.Grant) bool { return slices.Contains(h.Labels, g.Name) })
+		if i >= 0 && g.same(held[i]) {
 			continue
 		}
-		if _, err := a.SAM.Issue(a.WithKey(ctx, key+":"+g.Name), g.Input(group, space)); err != nil {
+		if i >= 0 {
+			if err := revoke(held[i], g.Name); err != nil {
+				return err
+			}
+		}
+		if _, err := a.SAM.Issue(a.WithKey(ctx, key+":"+g.Name), g.Input(subject, space)); err != nil {
+			return err
+		}
+	}
+	if family == "" {
+		return nil
+	}
+	for _, h := range held {
+		if !slices.Contains(h.Labels, family) || slices.ContainsFunc(grants, func(g Grant) bool { return slices.Contains(h.Labels, g.Name) }) {
+			continue
+		}
+		if err := revoke(h, family); err != nil {
 			return err
 		}
 	}

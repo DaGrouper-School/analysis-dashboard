@@ -99,14 +99,15 @@ A classroom's sharing settings:
 - The grid is about 1 km, from the classroom's coordinate decimals, never finer than two.
 - Automatic review adds a second grant with an `embargo` of the review period.
 - Grants to anonymous only read; this service's tenant grant holds `dataset:publish`, which SAM requires of their issuer.
-- Each grant is named after what it allows, so a change of settings revokes the old grant and issues the new one. Turning "show public" off revokes both.
-- They follow this service's rules, not a person's rights, so they are sent as this service, and the reconciler repairs them ([SAM integration](sam-integration.md#the-reconciler)).
+- Each grant is named after what it allows, `public:published` and `public:embargo`, and labelled `classroom-public`, so a change of settings revokes the old grant and issues the new one. Turning "show public" off revokes both, queued as a change that takes access away.
+- They follow this service's rules, not a person's rights, so they are sent as this service, by the classroom kind, and the reconciler's `public` check repairs them ([SAM integration](sam-integration.md#the-reconciler)).
+- A role's grant is replaced the same way when a setting changes what it allows: `releasers` and `facilitatorsManageDevices` change the facilitators' uses, and `facilitatorsInvite` what they hand on. A change that narrows a role is queued as taking access away.
 
-**Data terms are the space's data policy.** Licence, attribution and restrictions travel with every result SAM returns. The policy is sent as the head who changed the terms or, for a classroom with no head yet, as the platform admin who created it.
+**Data terms are the space's data policy.** Licence, attribution and restrictions travel with every result SAM returns. The policy (kind `classroom_policy`) is sent as the head who changed the terms, whose grant holds `dataset:set_policy`, or, for a classroom with no head yet, as the platform admin who created it. It waits until SAM holds that person's rights, names the policy version SAM holds, recorded in `sam_policy_version`, and reads SAM's version back when another was set meanwhile. A licence address must be https, as SAM takes.
 
 **A release is a SAM publish up to a time, as the person releasing.**
 
-- `releaseData(through)` stores the cutoff and queues a publish through the outbox. SAM checks the person's `dataset:publish` and records them as publisher. It never moves the cutoff back.
+- `releaseData(through)` stores the cutoff in `released_through` and queues a publish (kind `release`) through the outbox, once SAM holds the person's membership. SAM checks the person's `dataset:publish` and records them as publisher. A `through` later than now is taken as now, and the cutoff never moves back: a release at or before it changes and queues nothing.
 - Its idempotency key names the release, so a retry after a lost answer gets the first answer back and nothing is published twice.
 - Platform admins do not release.
 - `releaseReview` counts what waits: SAM's summary of unpublished values observed after the cutoff, as the viewer may read them, by source. Values are counted, not readings, so a weather station reading counts once per value.

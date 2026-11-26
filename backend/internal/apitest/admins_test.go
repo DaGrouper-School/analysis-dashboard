@@ -60,6 +60,11 @@ func TestPlatformAdmins(t *testing.T) {
 	for name, space := range map[string]uuid.UUID{"the tenant root": root, "a classroom": *stored.SpaceID} {
 		got := samAllows(t, e, p, space, actions...)
 		for _, a := range actions {
+			// Anyone reads a classroom's published records, admins
+			// included, through its public grant.
+			if a == roles.ObservationRead && name == "a classroom" {
+				continue
+			}
 			if got[a] != want[a] {
 				t.Errorf("an admin on %s: %s is %v in SAM", name, a, got[a])
 			}

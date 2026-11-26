@@ -3,6 +3,8 @@ package roles
 import (
 	"slices"
 	"testing"
+
+	"github.com/dagrouper-school/sam/client"
 )
 
 // sharings are the settings that change a role's grants.
@@ -67,7 +69,7 @@ func TestGrants(t *testing.T) {
 		{CommunityScientist, DefaultSharing, []string{ObservationRead, ObservationSubmit, DeviceConnect, ExportCreate}},
 		{Facilitator, narrow, []string{ObservationRead, ObservationSubmit, DeviceConnect, ExportCreate, AttributeAssert}},
 		{Facilitator, DefaultSharing, []string{ObservationRead, ObservationSubmit, DeviceConnect, DeviceRegister, DeviceMaintain, DatasetPublish, ExportCreate, AttributeAssert}},
-		{Head, narrow, []string{ObservationRead, ObservationSubmit, DeviceConnect, DeviceRegister, DeviceMaintain, DatasetPublish, ExportCreate, AttributeAssert}},
+		{Head, narrow, []string{ObservationRead, ObservationSubmit, DeviceConnect, DeviceRegister, DeviceMaintain, DatasetPublish, DatasetSetPolicy, ExportCreate, AttributeAssert}},
 	} {
 		if got := uses(c.role, c.s); !slices.Equal(got, union(c.want)) {
 			t.Errorf("%s under %+v uses %v", c.role, c.s, got)
@@ -86,5 +88,60 @@ func TestGrants(t *testing.T) {
 	}
 	if got := AdminGrants()[0].Use; !slices.Equal(got, union([]string{DeviceRegister, DeviceMaintain, DatasetSetPolicy})) {
 		t.Errorf("the admins use %v", got)
+	}
+}
+
+// TestPublicGrants: none while a classroom does not show its data; its
+// published records, generalised and stripped, while it does; and those
+// past the review period too under automatic review; never finer than two
+// decimal places.
+func TestPublicGrants(t *testing.T) {
+	t.Parallel()
+	if got := PublicGrants(Sharing{ShowPublic: false}, nil); len(got) != 0 {
+		t.Errorf("not shown: %+v", got)
+	}
+	manual := PublicGrants(Sharing{ShowPublic: true, Review: ReviewManual}, nil)
+	if len(manual) != 1 || manual[0].Name != "public:published" || !slices.Equal(manual[0].Use, []string{ObservationRead}) ||
+		!slices.Contains(manual[0].Labels, PublicLabel) || len(manual[0].Rules) != 3 || manual[0].Rules[0].Type != "record_attr" ||
+		string(manual[0].Rules[1].Params) != `{"grid_m":1113}` || manual[0].Rules[2].Type != "strip_identity" {
+		t.Errorf("manual review: %+v", manual)
+	}
+	one, four := 1, 4
+	if got := PublicGrants(Sharing{ShowPublic: true}, &one); string(got[0].Rules[1].Params) != `{"grid_m":11132}` {
+		t.Errorf("one decimal: %s", got[0].Rules[1].Params)
+	}
+	if got := PublicGrants(Sharing{ShowPublic: true}, &four); string(got[0].Rules[1].Params) != `{"grid_m":1113}` {
+		t.Errorf("finer than two: %s", got[0].Rules[1].Params)
+	}
+	auto := PublicGrants(Sharing{ShowPublic: true, Review: ReviewAuto, AutoReleaseDays: 3}, nil)
+	if len(auto) != 2 || auto[1].Name != "public:embargo" || auto[1].Rules[0].Type != "embargo" || string(auto[1].Rules[0].Params) != `{"duration":"3d"}` {
+		t.Errorf("automatic review: %+v", auto)
+	}
+}
+
+// TestSame: a held grant is the same as a template whatever the order of
+// its actions and the spacing of its rules' parameters, and differs when
+// an action or a rule's parameter does.
+func TestSame(t *testing.T) {
+	t.Parallel()
+	g := Grants(Facilitator, DefaultSharing)[0]
+	held := client.Grant{Use: slices.Clone(g.Use), Delegate: g.Delegate, Depth: g.Depth, Rules: g.Rules}
+	slices.Reverse(held.Use)
+	if !g.same(held) {
+		t.Error("the same grant differs")
+	}
+	narrowed := Grants(Facilitator, Sharing{Releasers: ReleasersHead, FacilitatorsInvite: true, FacilitatorsManageDevices: true})[0]
+	if narrowed.same(held) {
+		t.Error("a facilitator who no longer releases holds the same grant")
+	}
+	p := PublicGrants(Sharing{ShowPublic: true}, nil)[0]
+	spaced := client.Grant{Use: p.Use, Rules: slices.Clone(p.Rules)}
+	spaced.Rules[1] = client.Rule{Type: "generalise_location", Version: 1, Params: []byte(`{ "grid_m" : 1113 }`)}
+	if !p.same(spaced) {
+		t.Error("spacing makes a rule differ")
+	}
+	spaced.Rules[1] = client.Rule{Type: "generalise_location", Version: 1, Params: []byte(`{"grid_m":11132}`)}
+	if p.same(spaced) {
+		t.Error("another grid is the same")
 	}
 }
