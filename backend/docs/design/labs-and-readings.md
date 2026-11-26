@@ -80,8 +80,9 @@ This service keeps one row per relayed record in `relayed_records`: the form it 
 
 The front end keeps observations made offline on the device and sends them as one batch to `POST /observations/batch`. Each record gets its own result.
 
-- **Idempotent twice over.** A record's SAM ID is derived from the person and the client's ID (a UUID v5), so SAM deduplicates a retry even if this service never saw the answer. The answer is also stored by the client's ID in `synced_records`, so a retry gets it back without asking SAM again. A record stored before comes back as a duplicate.
-- **The device clock.** The offset is measured from the batch's `sentAt`. Records off by more than five minutes are flagged, not refused.
+- **Each record** is checked and relayed as a manual observation is, from the lab it names, as the person may record there, and kept in `relayed_records` as a batch record. A refusal, such as a value off its template or a lab the person cannot record in, is that record's result, `rejected` with its message and fields; the batch still answers 200. A batch holds at most 100 records.
+- **Idempotent twice over.** A record's SAM ID is derived from the person and the client's ID (a UUID v5), so SAM deduplicates a retry even if this service never saw the answer. The answer is also stored by the client's ID in `synced_records`, so a retry gets it back without asking SAM again. A record stored before comes back as a duplicate, from `synced_records`, or from SAM when the answer was lost.
+- **The device clock.** The batch's `sentAt` is passed to SAM as `sent_at`, so SAM checks the records' times against the device's clock. `clockOffsetMs` is this service's clock minus the device's. Every record of a batch whose clock is off by more than five minutes, or unreadable, is flagged `device_clock_off`, and a record dated more than five minutes after the batch was sent `observed_after_sent`. Records are flagged, not refused, except as `future_observations` says.
 
 ### Records made elsewhere
 
