@@ -1,6 +1,7 @@
 package classrooms
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -14,8 +15,8 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings"
 )
 
-// Module is the classrooms module. So far it serves the consent text's
-// versions to platform admins.
+// Module is the classrooms module. So far it serves platform admins the
+// stages, regions and the consent text's versions.
 type Module struct {
 	db       db.Querier
 	sessions *accounts.Sessions
@@ -27,17 +28,23 @@ func New(q db.Querier, sessions *accounts.Sessions, now func() time.Time) *Modul
 	return &Module{db: q, sessions: sessions, now: now}
 }
 
-// Routes serves the consent text's admin operations, which are in the
-// contract's addendum.
+// Routes serves the admin operations on the stages, regions and consent
+// text, which are in the contract's addendum.
 func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	admin := func(h httpx.Handler) http.Handler {
-		return m.sessions.RequireUser(httpx.Handler(func(w http.ResponseWriter, r *http.Request) error {
-			if u, _ := accounts.CurrentUser(r.Context()); !u.PlatformAdmin {
-				return httpx.Forbidden("Only platform admins can publish the consent text.")
-			}
-			return h(w, r)
-		}))
+		return m.sessions.RequireAdmin("Only platform admins can publish the consent text.", h)
 	}
+	config := func(h httpx.Handler) http.Handler {
+		return m.sessions.RequireAdmin("Only platform admins can change the platform's configuration.", h)
+	}
+	mux.Handle("GET "+prefix+"/admin/stages", config(m.listStages))
+	mux.Handle("PUT "+prefix+"/admin/stages/{stageId}", config(m.putList(PutStage, "stageId", m.listStages)))
+	mux.Handle("DELETE "+prefix+"/admin/stages/{stageId}", config(m.deleteFrom(DeleteStage, "stageId", "That stage no longer exists.",
+		"A classroom is at this stage. Move it to another stage first.")))
+	mux.Handle("GET "+prefix+"/admin/regions", config(m.listRegions))
+	mux.Handle("PUT "+prefix+"/admin/regions/{regionId}", config(m.putList(PutRegion, "regionId", m.listRegions)))
+	mux.Handle("DELETE "+prefix+"/admin/regions/{regionId}", config(m.deleteFrom(DeleteRegion, "regionId", "That region no longer exists.",
+		"A classroom is in this region. Move it to another region first.")))
 	mux.Handle("GET "+prefix+"/admin/consent-texts", admin(m.listConsentTexts))
 	mux.Handle("GET "+prefix+"/admin/consent-texts/{version}", admin(m.getConsentText))
 	mux.Handle("POST "+prefix+"/admin/consent-texts", admin(m.publishConsentText))
@@ -90,8 +97,7 @@ func (m *Module) publishConsentText(w http.ResponseWriter, r *http.Request) erro
 	if err != nil {
 		return httpx.New(httpx.CodeInvalidInput, "The request could not be read.")
 	}
-	u, _ := accounts.CurrentUser(r.Context())
-	version, err := PublishConsent(r.Context(), m.db, m.now(), settings.Actor{UserID: &u.ID, Name: u.FullName}, raw)
+	version, err := PublishConsent(r.Context(), m.db, m.now(), actor(r), raw)
 	var invalid *jsoncheck.Invalid
 	switch {
 	case errors.As(err, &invalid):
@@ -102,4 +108,74 @@ func (m *Module) publishConsentText(w http.ResponseWriter, r *http.Request) erro
 		return err
 	}
 	return m.writeVersion(w, r, version)
+}
+
+func (m *Module) listStages(w http.ResponseWriter, r *http.Request) error {
+	list, err := Stages(r.Context(), m.db)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, nonNil(list))
+	return nil
+}
+
+func (m *Module) listRegions(w http.ResponseWriter, r *http.Request) error {
+	list, err := Regions(r.Context(), m.db)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, nonNil(list))
+	return nil
+}
+
+func nonNil[T any](l []T) []T {
+	if l == nil {
+		return []T{}
+	}
+	return l
+}
+
+// actor is the signed-in admin, as the change log names them.
+func actor(r *http.Request) settings.Actor {
+	u, _ := accounts.CurrentUser(r.Context())
+	return settings.Actor{UserID: &u.ID, Name: u.FullName}
+}
+
+// putList adds or changes the row named by the path's param with put, as
+// the admin, and answers with the list.
+func (m *Module) putList(put func(context.Context, db.Querier, time.Time, settings.Actor, string, []byte) (bool, error),
+	param string, list httpx.Handler) httpx.Handler {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, httpx.MaxBody))
+		if err != nil {
+			return httpx.New(httpx.CodeInvalidInput, "The request could not be read.")
+		}
+		_, err = put(r.Context(), m.db, m.now(), actor(r), r.PathValue(param), raw)
+		if invalid := (*jsoncheck.Invalid)(nil); errors.As(err, &invalid) {
+			return httpx.Invalid(invalid.Fields())
+		}
+		if err != nil {
+			return err
+		}
+		return list(w, r)
+	}
+}
+
+// deleteFrom deletes the row named by the path's param with del, as the
+// admin.
+func (m *Module) deleteFrom(del func(context.Context, db.Querier, time.Time, settings.Actor, string) error,
+	param, gone, inUse string) httpx.Handler {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		err := del(r.Context(), m.db, m.now(), actor(r), r.PathValue(param))
+		switch {
+		case errors.Is(err, ErrNotFound):
+			return httpx.NotFound(gone)
+		case errors.Is(err, ErrInUse):
+			return httpx.New(httpx.CodeConflict, inUse)
+		case err != nil:
+			return err
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
 }

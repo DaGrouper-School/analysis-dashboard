@@ -79,10 +79,12 @@ func record(ctx context.Context, q db.Querier, now time.Time, actor Actor, c Cha
 	return err
 }
 
-func changes(ctx context.Context, q db.Querier, limit int) ([]Logged, error) {
+// changes are the newest changes, before the change with ID before when
+// it is not zero.
+func changes(ctx context.Context, q db.Querier, before int64, limit int) ([]Logged, error) {
 	rows, err := q.Query(ctx, `
 		SELECT id, at, actor_id, actor_name, kind, subject, summary FROM configuration_changes
-		ORDER BY at DESC, id DESC LIMIT $1`, limit)
+		WHERE $1 = 0 OR id < $1 ORDER BY id DESC LIMIT $2`, before, limit)
 	if err != nil {
 		return nil, err
 	}

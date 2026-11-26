@@ -114,7 +114,7 @@ Templates are SAM registry entries, presented through the overlay. `listObservat
 
 All of it is kept from the admin page in the dashboard, and the same changes can be made from a terminal.
 
-- **Lists are rows.** A stage, region or question is a row that other rows point to, through a foreign key. A stage or region in use cannot be deleted (`409 in_use`), and a classroom cannot name one that does not exist. A question that has answers is retired rather than deleted, so earlier applications keep their meaning, and its kind no longer changes. Order is a position.
+- **Lists are rows.** A stage, region or question is a row that other rows point to, through a foreign key. A stage or region in use cannot be deleted (`409 conflict`), and a classroom cannot name one that does not exist. A question that has answers is retired rather than deleted, so earlier applications keep their meaning, and its kind no longer changes. Order is a position.
 - **Settings are checked values.** Nothing points to a setting, so each is one value with a strict shape: no unknown or missing fields, no null where a value is required, and the key's own rules, such as rounding from 0 to 4 decimals, or a rain reference that is one of the rain values. A refusal names every problem.
 - **Privacy rounding and the consent text are bounded, not hidden.** Both are on the admin page. A minor's positions are never rounded more finely than their consent's text stated, so loosening `privacy` reaches only consents given afterwards, whose guardians see the new figure. The consent text is published as a new version and never edited, so every consent keeps the words it was given against.
 - **One way in.** Endpoints, commands and the seed write through the same functions and checks.

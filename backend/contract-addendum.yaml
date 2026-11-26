@@ -23,85 +23,391 @@ paths:
       x-change: new
       x-waits-for: The consent text admin page, with its operations in routes.ts
       summary: List the consent text's versions
-      description: "The published versions of the guardian consent text, newest first. Access: platform admins only."
+      description: 'The published versions of the guardian consent text, newest first. Access: platform admins only.'
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/ConsentTextVersion"
-        "401":
-          $ref: "openapi.yaml#/components/responses/Unauthenticated"
-        "403":
-          $ref: "openapi.yaml#/components/responses/Forbidden"
+                  $ref: '#/components/schemas/ConsentTextVersion'
+        '401':
+          $ref: openapi.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: openapi.yaml#/components/responses/Forbidden
     post:
       operationId: admin.publishConsentText
       x-change: new
       x-waits-for: The consent text admin page, with its operations in routes.ts
       summary: Publish a consent text
-      description: >-
-        Publishes a new version in every language at once; it becomes the current one and is never
-        changed. It keeps every language of the current version and has the default one, `en`.
-        Access: platform admins only.
+      description: 'Publishes a new version in every language at once; it becomes the current one and is never changed.
+        It keeps every language of the current version and has the default one, `en`. Access: platform admins only.'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ConsentTexts"
+              $ref: '#/components/schemas/ConsentTexts'
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConsentText"
-        "400":
-          $ref: "openapi.yaml#/components/responses/BadRequest"
-        "401":
-          $ref: "openapi.yaml#/components/responses/Unauthenticated"
-        "403":
-          $ref: "openapi.yaml#/components/responses/Forbidden"
-        "409":
-          $ref: "openapi.yaml#/components/responses/Conflict"
+                $ref: '#/components/schemas/ConsentText'
+        '400':
+          $ref: openapi.yaml#/components/responses/BadRequest
+        '401':
+          $ref: openapi.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: openapi.yaml#/components/responses/Forbidden
+        '409':
+          $ref: openapi.yaml#/components/responses/Conflict
   /admin/consent-texts/{version}:
     get:
       operationId: admin.getConsentText
       x-change: new
       x-waits-for: The consent text admin page, with its operations in routes.ts
       summary: Get a consent text
-      description: "One version in every language. Access: platform admins only."
+      description: 'One version in every language. Access: platform admins only.'
       parameters:
-        - name: version
-          in: path
-          required: true
-          schema:
-            type: integer
+      - name: version
+        in: path
+        required: true
+        schema:
+          type: integer
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConsentText"
-        "401":
-          $ref: "openapi.yaml#/components/responses/Unauthenticated"
-        "403":
-          $ref: "openapi.yaml#/components/responses/Forbidden"
-        "404":
-          $ref: "openapi.yaml#/components/responses/NotFound"
+                $ref: '#/components/schemas/ConsentText'
+        '401':
+          $ref: openapi.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: openapi.yaml#/components/responses/Forbidden
+        '404':
+          $ref: openapi.yaml#/components/responses/NotFound
+  /admin/stages:
+    get:
+      operationId: admin.listStages
+      x-change: new
+      x-waits-for: The platform configuration admin page, with its operations in routes.ts
+      summary: List stages
+      description: 'The classroom stages, in display order. Access: platform admins only.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: &id001
+                type: array
+                items:
+                  $ref: openapi.yaml#/components/schemas/ClassroomStage
+        '401':
+          $ref: openapi.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: openapi.yaml#/components/responses/Forbidden
+  /admin/stages/{stageId}:
+    put:
+      operationId: admin.putStage
+      x-change: new
+      x-waits-for: The platform configuration admin page, with its operations in routes.ts
+      summary: Add or change a stage
+      description: 'Adds the stage, or changes it, at its position in the list; answers with the list. Access: platform
+        admins only.'
+      parameters:
+      - name: stageId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StageInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: *id001
+        '400':
+          $ref: openapi.yaml#/components/responses/BadRequest
+        '401':
+          $ref: openapi.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: openapi.yaml#/components/responses/Forbidden
+    delete:
+      operationId: admin.deleteStage
+      x-change: new
+      x-waits-for: The platform configuration admin page, with its operations in routes.ts
+      summary: Delete a stage
+      description: 'Deletes a stage no classroom is at. Access: platform admins only.'
+      parameters:
+      - name: stageId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: No content
+        '401':
+          $ref: openapi.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: openapi.yaml#/components/responses/Forbidden
+        '404':
+          $ref: openapi.yaml#/components/responses/NotFound
+        '409':
+          $ref: openapi.yaml#/components/responses/Conflict
+  /admin/regions:
+    get:
+      operationId: admin.listRegions
+      x-change: new
+      x-waits-for: The platform configuration admin page, with its operations in routes.ts
+      summary: List regions
+      description: 'The regions, in display order. Access: platform admins only.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: &id002
+                type: array
+                items:
+                  $ref: '#/components/schemas/Region'
+        '401':
+          $ref: openapi.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: openapi.yaml#/components/responses/Forbidden
+  /admin/regions/{regionId}:
+    put:
+      operationId: admin.putRegion
+      x-change: new
+      x-waits-for: The platform configuration admin page, with its operations in routes.ts
+      summary: Add or change a region
+      description: 'Adds the region, or changes it, at its position in the list; answers with the list. Access:
+        platform admins only.'
+      parameters:
+      - name: regionId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegionInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: *id002
+        '400':
+          $ref: openapi.yaml#/components/responses/BadRequest
+        '401':
+          $ref: openapi.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: openapi.yaml#/components/responses/Forbidden
+    delete:
+      operationId: admin.deleteRegion
+      x-change: new
+      x-waits-for: The platform configuration admin page, with its operations in routes.ts
+      summary: Delete a region
+      description: 'Deletes a region no classroom is in. Access: platform admins only.'
+      parameters:
+      - name: regionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: No content
+        '401':
+          $ref: openapi.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: openapi.yaml#/components/responses/Forbidden
+        '404':
+          $ref: openapi.yaml#/components/responses/NotFound
+        '409':
+          $ref: openapi.yaml#/components/responses/Conflict
+  /admin/host-questions:
+    get:
+      operationId: admin.listHostQuestions
+      x-change: new
+      x-waits-for: The platform configuration admin page, with its operations in routes.ts
+      summary: List host questions
+      description: 'Every readiness question, retired ones included, in order. Access: platform admins only.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: &id003
+                type: array
+                items:
+                  $ref: '#/components/schemas/KeptHostQuestion'
+        '401':
+          $ref: openapi.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: openapi.yaml#/components/responses/Forbidden
+  /admin/host-questions/{questionId}:
+    put:
+      operationId: admin.putHostQuestion
+      x-change: new
+      x-waits-for: The platform configuration admin page, with its operations in routes.ts
+      summary: Add or change a host question
+      description: 'Adds the question, or changes it, at its position; a retired one no longer changes. Answers
+        with the list. Access: platform admins only.'
+      parameters:
+      - name: questionId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HostQuestionInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: *id003
+        '400':
+          $ref: openapi.yaml#/components/responses/BadRequest
+        '401':
+          $ref: openapi.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: openapi.yaml#/components/responses/Forbidden
+        '409':
+          $ref: openapi.yaml#/components/responses/Conflict
+  /admin/host-questions/{questionId}/retire:
+    post:
+      operationId: admin.retireHostQuestion
+      x-change: new
+      x-waits-for: The platform configuration admin page, with its operations in routes.ts
+      summary: Retire a host question
+      description: 'Applicants are no longer asked it; earlier applications keep their answers. Answers with the
+        list. Access: platform admins only.'
+      parameters:
+      - name: questionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: *id003
+        '401':
+          $ref: openapi.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: openapi.yaml#/components/responses/Forbidden
+        '404':
+          $ref: openapi.yaml#/components/responses/NotFound
+  /admin/settings:
+    get:
+      operationId: admin.listSettings
+      x-change: new
+      x-waits-for: The platform configuration admin page, with its operations in routes.ts
+      summary: List settings
+      description: 'Every setting, null before the seed sets it. Access: platform admins only.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Setting'
+        '401':
+          $ref: openapi.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: openapi.yaml#/components/responses/Forbidden
+  /admin/settings/{key}:
+    put:
+      operationId: admin.putSetting
+      x-change: new
+      x-waits-for: The platform configuration admin page, with its operations in routes.ts
+      summary: Replace a setting
+      description: 'Checks the value strictly, naming every problem, and stores it. The body is the value: CoreParameters,
+        DataTerms or Privacy. Access: platform admins only.'
+      parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Setting'
+        '400':
+          $ref: openapi.yaml#/components/responses/BadRequest
+        '401':
+          $ref: openapi.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: openapi.yaml#/components/responses/Forbidden
+        '404':
+          $ref: openapi.yaml#/components/responses/NotFound
+  /admin/configuration-changes:
+    get:
+      operationId: admin.listConfigurationChanges
+      x-change: new
+      x-waits-for: The platform configuration admin page, with its operations in routes.ts
+      summary: List configuration changes
+      description: 'Every change to the platform''s configuration, newest first, a page at a time. Access: platform
+        admins only.'
+      parameters:
+      - name: before
+        in: query
+        required: false
+        schema:
+          type: string
+        description: The next cursor of the page before.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigurationChanges'
+        '400':
+          $ref: openapi.yaml#/components/responses/BadRequest
+        '401':
+          $ref: openapi.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: openapi.yaml#/components/responses/Forbidden
 components:
   schemas:
     ConsentTexts:
       type: object
-      description: One version's words by language code, such as en or am, with `{classroom}`, `{institution}` and `{decimals}` where each classroom's details go.
+      description: One version's words by language code, such as en or am, with `{classroom}`, `{institution}` and
+        `{decimals}` where each classroom's details go.
       propertyNames:
-        pattern: "^[a-z]{2,3}(-[A-Z]{2})?$"
+        pattern: ^[a-z]{2,3}(-[A-Z]{2})?$
       additionalProperties:
-        $ref: "openapi.yaml#/components/schemas/ConsentSheetContent"
+        $ref: openapi.yaml#/components/schemas/ConsentSheetContent
     ConsentTextVersion:
       type: object
       properties:
@@ -116,7 +422,11 @@ components:
           type: array
           items:
             type: string
-      required: [version, publishedAt, publishedBy, languages]
+      required:
+      - version
+      - publishedAt
+      - publishedBy
+      - languages
       additionalProperties: false
     ConsentText:
       type: object
@@ -132,6 +442,173 @@ components:
           items:
             type: string
         texts:
-          $ref: "#/components/schemas/ConsentTexts"
-      required: [version, publishedAt, publishedBy, languages, texts]
+          $ref: '#/components/schemas/ConsentTexts'
+      required:
+      - version
+      - publishedAt
+      - publishedBy
+      - languages
+      - texts
+      additionalProperties: false
+    Region:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+      required:
+      - id
+      - label
+      additionalProperties: false
+      description: A region the directory groups classrooms by.
+    StageInput:
+      type: object
+      properties:
+        label:
+          type: string
+        description:
+          type: string
+        color:
+          type: string
+          description: 'As #rgb or #rrggbb.'
+        position:
+          type: integer
+          minimum: 0
+          description: Where it goes in the list, from 0.
+      required:
+      - label
+      - description
+      - color
+      - position
+      additionalProperties: false
+    RegionInput:
+      type: object
+      properties:
+        label:
+          type: string
+        position:
+          type: integer
+          minimum: 0
+      required:
+      - label
+      - position
+      additionalProperties: false
+    KeptHostQuestion:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        help:
+          type: string
+        kind:
+          type: string
+          enum:
+          - yes_no
+          - number
+          - text
+        required:
+          type: boolean
+        retiredAt:
+          type:
+          - string
+          - 'null'
+          description: When it was retired; null while applicants are asked it.
+      required:
+      - id
+      - label
+      - help
+      - kind
+      - required
+      - retiredAt
+      additionalProperties: false
+      description: A readiness question as admins keep it.
+    HostQuestionInput:
+      type: object
+      properties:
+        label:
+          type: string
+        help:
+          type: string
+        kind:
+          type: string
+          enum:
+          - yes_no
+          - number
+          - text
+        required:
+          type: boolean
+        position:
+          type: integer
+          minimum: 0
+      required:
+      - label
+      - help
+      - kind
+      - required
+      - position
+      additionalProperties: false
+    Setting:
+      type: object
+      properties:
+        key:
+          type: string
+          enum:
+          - core_parameters
+          - default_terms
+          - privacy
+        value:
+          description: The setting's value, or null before the seed sets it.
+        seeded:
+          type: boolean
+          description: Whether the seed wrote it last.
+        updatedAt:
+          type:
+          - string
+          - 'null'
+      required:
+      - key
+      - value
+      - seeded
+      - updatedAt
+      additionalProperties: false
+    ConfigurationChanges:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              at:
+                type: string
+              byName:
+                type: string
+                description: The admin's name at the time, or operator or seed.
+              kind:
+                type: string
+              subject:
+                type: string
+              summary:
+                type: string
+            required:
+            - id
+            - at
+            - byName
+            - kind
+            - subject
+            - summary
+            additionalProperties: false
+        next:
+          type:
+          - string
+          - 'null'
+          description: Pass as before for the next page; null on the last.
+      required:
+      - items
+      - next
       additionalProperties: false

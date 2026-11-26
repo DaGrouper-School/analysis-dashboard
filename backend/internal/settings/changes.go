@@ -61,5 +61,11 @@ func Record(ctx context.Context, q db.Querier, now time.Time, actor Actor, c Cha
 
 // Changes are the latest limit changes, newest first.
 func Changes(ctx context.Context, q db.Querier, limit int) ([]Logged, error) {
-	return changes(ctx, q, limit)
+	return changes(ctx, q, 0, limit)
+}
+
+// ChangesBefore are the newest changes logged before the one with ID
+// before, at most limit, newest first: the next page of the log.
+func ChangesBefore(ctx context.Context, q db.Querier, before int64, limit int) ([]Logged, error) {
+	return changes(ctx, q, before, limit)
 }

@@ -114,3 +114,24 @@ func TestPutAndSeed(t *testing.T) {
 		t.Fatalf("the oldest entry: %+v", l)
 	}
 }
+
+func TestPlace(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		ids      []string
+		id       string
+		position int
+		want     string
+	}{
+		{[]string{"a", "b", "c"}, "c", 0, "c a b"},
+		{[]string{"a", "b", "c"}, "a", 1, "b a c"},
+		{[]string{"a", "b"}, "x", 1, "a x b"},
+		{[]string{"a", "b"}, "x", 9, "a b x"},
+		{[]string{"a", "b"}, "b", -1, "b a"},
+		{nil, "x", 0, "x"},
+	} {
+		if got := strings.Join(settings.Place(c.ids, c.id, c.position), " "); got != c.want {
+			t.Errorf("%v %s at %d: %q, want %q", c.ids, c.id, c.position, got, c.want)
+		}
+	}
+}
