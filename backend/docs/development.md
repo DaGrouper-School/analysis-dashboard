@@ -107,6 +107,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/settings` | The platform's settings, their checks and seed, the configuration change log, and seeding a list |
 | `internal/settings/settingsapi` | The settings' and the change log's admin endpoints |
 | `internal/classrooms` | The classrooms module: classrooms, kept here and created in SAM, their members, and what platform admins keep of them: the stages and regions and their seed, and the guardian consent text's versions |
+| `internal/consent` | Guardian consent by link: the links sent to guardians and the decisions recorded, which reach SAM as the user's `consent` |
 | `internal/hosting` | The hosting module: host applications, their status links and decisions, and the readiness questions and their seed |
 | `internal/roles` | The permission grid, as the front end's, and the grants each classroom's role groups and the platform admins' group hold in SAM |
 | `internal/labs` | The labs module: labs, kept here and created in SAM as a space under the classroom's with a site at the lab, and their devices, registered and retired in SAM as the person who did it |
@@ -338,6 +339,8 @@ Each table is read and written only by the package that owns it ([Data ownership
 | `host_questions` | `internal/hosting` | |
 | `host_applications` | `internal/hosting` | |
 | `host_answers` | `internal/hosting` | |
+| `guardian_links` | `internal/consent` | |
+| `consent_records` | `internal/consent` | |
 | `platform_settings` | `internal/settings` | |
 | `configuration_changes` | `internal/settings` | |
 | `tenant_groups` | `internal/accounts` | |

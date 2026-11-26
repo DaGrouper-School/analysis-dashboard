@@ -433,8 +433,147 @@ paths:
           $ref: openapi.yaml#/components/responses/Forbidden
         '404':
           $ref: openapi.yaml#/components/responses/NotFound
+  /consent/{token}:
+    get:
+      operationId: consent.get
+      x-change: changed
+      x-waits-for: The guardian's page showing the consent text from the backend, and naming its version when deciding
+      tags:
+      - Guardian consent
+      summary: Get
+      description: 'What the guardian sees when they open their link, with the current consent text in their language
+        (or the default, en), filled in, and its version, which a decision names. Access: public, no session needed.'
+      security: []
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: language
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentLinkRequest'
+        '404':
+          $ref: openapi.yaml#/components/responses/NotFound
+    post:
+      operationId: consent.decide
+      x-change: changed
+      x-waits-for: The guardian's page showing the consent text from the backend, and naming its version when deciding
+      tags:
+      - Guardian consent
+      summary: Decide
+      description: 'Gives consent, or withdraws it, against the version of the consent text the page showed. A version
+        that is no longer current is refused with consent_text_changed, and the page shows the new words. Access: public,
+        no session needed.'
+      security: []
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: language
+        in: query
+        required: false
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsentLinkDecision'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentLinkRequest'
+        '400':
+          $ref: openapi.yaml#/components/responses/BadRequest
+        '404':
+          $ref: openapi.yaml#/components/responses/NotFound
+        '409':
+          description: The consent text changed since the page showed it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentTextChanged'
 components:
   schemas:
+    ConsentLinkRequest:
+      type: object
+      description: The front end's ConsentRequest, with the current consent text filled in and its version.
+      properties:
+        contributorName:
+          type: string
+          description: The contributor's first name only.
+        guardianName:
+          type: string
+        classroomNames:
+          type: array
+          items:
+            type: string
+        status:
+          $ref: openapi.yaml#/components/schemas/ConsentStatus
+        decidedAt:
+          type:
+          - string
+          - 'null'
+        coordinateDecimals:
+          type: number
+          description: Positions from the contributor's phone are rounded to this many decimal places.
+        version:
+          type: integer
+          description: The consent text's version, which a decision names.
+        text:
+          $ref: openapi.yaml#/components/schemas/ConsentSheetContent
+      required:
+      - contributorName
+      - guardianName
+      - classroomNames
+      - status
+      - decidedAt
+      - coordinateDecimals
+      - version
+      - text
+      additionalProperties: false
+    ConsentLinkDecision:
+      type: object
+      properties:
+        give:
+          type: boolean
+        version:
+          type: integer
+          description: The consent text's version the page showed.
+      required:
+      - give
+      - version
+      additionalProperties: false
+    ConsentTextChanged:
+      type: object
+      description: The Error for a decision on words that are no longer the current consent text.
+      properties:
+        code:
+          type: string
+          enum:
+          - consent_text_changed
+        message:
+          type: string
+      required:
+      - code
+      - message
+      additionalProperties: false
     ConsentTexts:
       type: object
       description: One version's words by language code, such as en or am, with `{classroom}`, `{institution}` and

@@ -14,6 +14,7 @@ import (
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/classrooms"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/consent"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/hosting"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
@@ -91,7 +92,9 @@ func New(d Deps) *App {
 			classrooms.New(d.DB, a.accounts.Sessions(), d.Now, d.SAM.Tenant().RootSpaceID, classrooms.Config{
 				Email: d.Email, InvitationTTL: d.InvitationTTL, FrontEnd: frontEnd(d.AllowedOrigins), ShowTokens: d.Accounts.Demo}), hosting.New(d.DB, a.accounts.Sessions(), d.Now, hosting.Config{
 				Email: d.Email, FrontEnd: frontEnd(d.AllowedOrigins), ShowTokens: d.Accounts.Demo, Limits: a.accounts}),
-			settingsapi.New(d.DB, a.accounts.Sessions(), d.Now), labs.New(d.DB, a.accounts.Sessions(), d.Now, a.registry.DeviceType))
+			settingsapi.New(d.DB, a.accounts.Sessions(), d.Now),
+			consent.New(d.DB, a.accounts.Sessions(), d.Now, consent.Config{Email: d.Email, SMS: d.Accounts.SMS, FrontEnd: frontEnd(d.AllowedOrigins),
+				ShowTokens: d.Accounts.Demo, Limits: a.accounts}), labs.New(d.DB, a.accounts.Sessions(), d.Now, a.registry.DeviceType))
 	}
 	return a
 }

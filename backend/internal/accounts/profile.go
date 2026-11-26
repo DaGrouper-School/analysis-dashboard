@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -166,6 +167,26 @@ func (m *Module) MarkMinor(ctx context.Context, id uuid.UUID) (User, error) {
 		}
 		return setPublicProfile(ctx, tx, id, false, now)
 	})
+}
+
+// AwaitConsent marks the user a minor, if they are not one yet, with no
+// public profile, and their consent pending until a guardian answers,
+// whatever an earlier answer was, within tx. A given consent made pending
+// is queued for SAM as taking access away.
+func AwaitConsent(ctx context.Context, tx db.Querier, now time.Time, id uuid.UUID) error {
+	cur, err := lockUser(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	if cur.Minor == nil || !*cur.Minor {
+		if _, err := SetMinor(ctx, tx, now, id, true); err != nil {
+			return err
+		}
+	}
+	if _, err := SetConsent(ctx, tx, now, id, ConsentPending); err != nil {
+		return err
+	}
+	return setPublicProfile(ctx, tx, id, false, now)
 }
 
 // CompleteOnboarding finishes onboarding once the user has a name, an
