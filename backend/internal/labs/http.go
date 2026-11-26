@@ -1,6 +1,7 @@
 package labs
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/classrooms"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/registry"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/roles"
 )
 
@@ -19,11 +21,15 @@ type Module struct {
 	db       db.Querier
 	sessions *accounts.Sessions
 	now      func() time.Time
+	types    DeviceTypes
 }
 
+// DeviceTypes finds a device type in the registry the front end reads.
+type DeviceTypes func(ctx context.Context, id string) (*registry.DeviceType, error)
+
 // New builds the module.
-func New(q db.Querier, sessions *accounts.Sessions, now func() time.Time) *Module {
-	return &Module{db: q, sessions: sessions, now: now}
+func New(q db.Querier, sessions *accounts.Sessions, now func() time.Time, types DeviceTypes) *Module {
+	return &Module{db: q, sessions: sessions, now: now, types: types}
 }
 
 // Routes serves the labs operations of the front end's contract.
@@ -35,6 +41,9 @@ func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	h("POST "+prefix+"/classrooms/{classroomId}/labs", m.create)
 	h("GET "+prefix+"/labs/{labId}", m.get)
 	h("PUT "+prefix+"/labs/{labId}", m.update)
+	h("GET "+prefix+"/classrooms/{classroomId}/devices", m.listDevices)
+	h("POST "+prefix+"/labs/{labId}/devices", m.registerDevice)
+	h("DELETE "+prefix+"/devices/{deviceId}", m.removeDevice)
 }
 
 const (
@@ -136,16 +145,16 @@ func (m *Module) update(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// Detail is the front end's LabDetail. Devices, readings and observations
-// are added by the modules that keep them.
+// Detail is the front end's LabDetail. Readings and observations are added
+// by the modules that keep them.
 type Detail struct {
-	Lab           Lab    `json:"lab"`
-	ClassroomName string `json:"classroomName"`
-	Devices       []any  `json:"devices"`
-	Readings      []any  `json:"readings"`
-	Observations  []any  `json:"observations"`
-	CanManage     bool   `json:"canManage"`
-	CanRecord     bool   `json:"canRecord"`
+	Lab           Lab          `json:"lab"`
+	ClassroomName string       `json:"classroomName"`
+	Devices       []DeviceView `json:"devices"`
+	Readings      []any        `json:"readings"`
+	Observations  []any        `json:"observations"`
+	CanManage     bool         `json:"canManage"`
+	CanRecord     bool         `json:"canRecord"`
 }
 
 func (m *Module) get(w http.ResponseWriter, r *http.Request) error {
@@ -153,7 +162,15 @@ func (m *Module) get(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.WriteJSON(w, http.StatusOK, Detail{Lab: l, ClassroomName: c.Name, Devices: []any{}, Readings: []any{}, Observations: []any{},
+	list, err := LabDevices(r.Context(), m.db, l.ID)
+	if err != nil {
+		return err
+	}
+	devices := make([]DeviceView, len(list))
+	for i, d := range list {
+		devices[i] = view(d, l.Name, c, can)
+	}
+	httpx.WriteJSON(w, http.StatusOK, Detail{Lab: l, ClassroomName: c.Name, Devices: devices, Readings: []any{}, Observations: []any{},
 		CanManage: can.ManageDevices, CanRecord: can.RecordReadings && can.SeeUnreleased})
 	return nil
 }

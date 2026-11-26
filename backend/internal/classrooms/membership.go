@@ -235,3 +235,10 @@ func parseMember(entity string) (classroom, user uuid.UUID, err error) {
 	user, err = uuid.Parse(ids[1])
 	return
 }
+
+// InSAM reports whether SAM holds user as a member of a classroom in the
+// role they hold here, so a change sent as them can rely on it.
+func InSAM(ctx context.Context, q db.Querier, classroom, user uuid.UUID) (bool, error) {
+	m, found, err := readMember(ctx, q, classroom, user)
+	return found && !m.removed && m.samRole != nil && *m.samRole == m.role, err
+}

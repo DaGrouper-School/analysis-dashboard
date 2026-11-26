@@ -14,9 +14,10 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 )
 
-// OutboxKinds is the lab kind, sent as this service.
+// OutboxKinds are the lab kind, sent as this service, and the device kind,
+// sent as the person who registered or removed the device.
 func (m *Module) OutboxKinds() []samaccess.Kind {
-	return []samaccess.Kind{{Name: Kind, Apply: m.applyLab}}
+	return []samaccess.Kind{{Name: Kind, Apply: m.applyLab}, {Name: DeviceKind, ByPerson: true, Apply: m.applyDevice}}
 }
 
 // applyLab brings a lab in SAM to its desired state: a space under its
