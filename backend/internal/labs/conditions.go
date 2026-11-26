@@ -16,6 +16,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/classrooms"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/registry"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/roles"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 )
@@ -38,8 +39,8 @@ type Conditions struct {
 	Device        DeviceView `json:"device"`
 	ClassroomName string     `json:"classroomName"`
 	Reading       Reading    `json:"reading"`
-	// Alerts are added by device alert levels.
-	Alerts []any `json:"alerts"`
+	// Alerts are those the reading trips of the levels in force.
+	Alerts []Alert `json:"alerts"`
 }
 
 // relayed is what this service kept of a record it relayed.
@@ -269,6 +270,40 @@ func (m *Module) currentConditions(w http.ResponseWriter, r *http.Request) error
 	return nil
 }
 
+// newestReadings are SAM's latest values grouped by device, keeping each
+// device's newest reading's values.
+func newestReadings(records []client.ObservationRecord) map[uuid.UUID][]client.ObservationRecord {
+	newest := map[uuid.UUID][]client.ObservationRecord{}
+	for _, rec := range records {
+		if rec.DeviceID == nil {
+			continue
+		}
+		list := newest[*rec.DeviceID]
+		switch {
+		case len(list) == 0 || rec.ObservedAt.After(list[0].ObservedAt):
+			newest[*rec.DeviceID] = []client.ObservationRecord{rec}
+		case rec.ReadingID == list[0].ReadingID:
+			newest[*rec.DeviceID] = append(list, rec)
+		}
+	}
+	return newest
+}
+
+// latestReading is a device's newest reading from SAM's latest values of
+// it, in the front end's shape.
+func latestReading(d Device, l Lab, list []client.ObservationRecord) Reading {
+	first := list[0]
+	rd := Reading{ID: first.ReadingID, DeviceID: d.ID, LabID: d.LabID, ClassroomID: d.ClassroomID, ObservedAt: first.ObservedAt,
+		ReceivedAt: first.IngestedAt, Values: map[string]any{}}
+	fromSite := false
+	for _, rec := range list {
+		rd.Values[rec.ParameterID] = rec.Value
+		fromSite = fromSite || slices.Contains(rec.Flags, flagFromSite)
+	}
+	place(&rd, l, first.Location, fromSite)
+	return rd
+}
+
 // conditionsIn are the latest reading of each of a classroom's devices SAM
 // holds values of: the values of each device's newest reading.
 func (m *Module) conditionsIn(ctx context.Context, as *client.Client, c classrooms.Classroom, role roles.Role, u accounts.User,
@@ -291,19 +326,7 @@ func (m *Module) conditionsIn(ctx context.Context, as *client.Client, c classroo
 	if err != nil {
 		return nil, samaccess.Translate(ctx, err)
 	}
-	newest := map[uuid.UUID][]client.ObservationRecord{}
-	for _, rec := range records {
-		if rec.DeviceID == nil {
-			continue
-		}
-		list := newest[*rec.DeviceID]
-		switch {
-		case len(list) == 0 || rec.ObservedAt.After(list[0].ObservedAt):
-			newest[*rec.DeviceID] = []client.ObservationRecord{rec}
-		case rec.ReadingID == list[0].ReadingID:
-			newest[*rec.DeviceID] = append(list, rec)
-		}
-	}
+	newest := newestReadings(records)
 	var readingIDs []uuid.UUID
 	for _, list := range newest {
 		readingIDs = append(readingIDs, list[0].ReadingID)
@@ -313,6 +336,14 @@ func (m *Module) conditionsIn(ctx context.Context, as *client.Client, c classroo
 		return nil, err
 	}
 	can := roles.PermissionsFor(&roles.Viewer{PlatformAdmin: u.PlatformAdmin}, role, c.Sharing)
+	defaults, err := registry.AlertDefaults(ctx, m.db)
+	if err != nil {
+		return nil, err
+	}
+	v, err := m.reg.View(ctx)
+	if err != nil {
+		return nil, err
+	}
 	labs := map[uuid.UUID]Lab{}
 	out := []Conditions{}
 	for samID, list := range newest {
@@ -324,18 +355,18 @@ func (m *Module) conditionsIn(ctx context.Context, as *client.Client, c classroo
 			}
 			labs[d.LabID] = l
 		}
-		first := list[0]
-		rd := Reading{ID: first.ReadingID, DeviceID: d.ID, LabID: d.LabID, ClassroomID: d.ClassroomID, ObservedAt: first.ObservedAt,
-			ReceivedAt: first.IngestedAt, Values: map[string]any{}}
-		fromSite := false
-		for _, rec := range list {
-			rd.Values[rec.ParameterID] = rec.Value
-			fromSite = fromSite || slices.Contains(rec.Flags, flagFromSite)
-		}
-		place(&rd, l, first.Location, fromSite)
-		k, found := kept[first.ReadingID]
+		rd := latestReading(d, l, list)
+		k, found := kept[rd.ID]
 		p.credit(&rd, k, found)
-		out = append(out, Conditions{Device: view(d, l.Name, c, can), ClassroomName: c.Name, Reading: rd, Alerts: []any{}})
+		rules, err := m.rulesFor(ctx, d, defaults, p)
+		if err != nil {
+			return nil, err
+		}
+		alerts := AlertsFor(rd.Values, rules, v.Parameter)
+		if alerts == nil {
+			alerts = []Alert{}
+		}
+		out = append(out, Conditions{Device: view(d, l.Name, c, can), ClassroomName: c.Name, Reading: rd, Alerts: alerts})
 	}
 	return out, nil
 }

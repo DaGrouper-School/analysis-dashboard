@@ -33,6 +33,7 @@ type Registry interface {
 	DeviceType(ctx context.Context, id string) (*registry.DeviceType, error)
 	KeyValues(ctx context.Context, typeID string, values map[string]any) (map[string]any, map[string]string, error)
 	CheckEntry(ctx context.Context, templateID string, values map[string]any) (registry.Entry, map[string]string, error)
+	View(ctx context.Context) (*registry.View, error)
 }
 
 // New builds the module. Readings are relayed to SAM through sam, as the
@@ -59,6 +60,11 @@ func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	h("GET "+prefix+"/me/observation-targets", m.observationTargets)
 	h("POST "+prefix+"/labs/{labId}/observations", m.submitObservation)
 	h("POST "+prefix+"/observations/batch", m.syncObservations)
+	h("GET "+prefix+"/devices/{deviceId}/alerts", m.listDeviceAlerts)
+	h("POST "+prefix+"/devices/{deviceId}/alerts", m.createAlert)
+	h("DELETE "+prefix+"/devices/{deviceId}/alerts", m.resetAlerts)
+	h("PUT "+prefix+"/devices/{deviceId}/alerts/{ruleId}", m.updateAlert)
+	h("DELETE "+prefix+"/devices/{deviceId}/alerts/{ruleId}", m.deleteAlert)
 }
 
 const (

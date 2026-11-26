@@ -298,7 +298,7 @@ PostgreSQL 17, through `pgx` (`internal/db`). `db.Open` opens a pool of at most 
 
 **Transactions.** `db.InTx(ctx, q, fn)` runs `fn` in a transaction. When `ctx` already carries one (`db.WithTx`), `fn` runs in a savepoint of it, so a service function that needs a transaction works the same alone or inside a caller's.
 
-**Advisory locks** are taken only through `db.Lock` (held by a connection until released), and `db.TryLock` and `db.LockTx` (held until the transaction ends), and every key is a constant in `internal/db/locks.go`, so no two uses share one by accident. `db.LockTx` waits for a lock held until the transaction ends. `MigrationLock` is held while migrations apply, `OutboxLock` for each pass of the outbox worker, `ReconcilerLock` for each pass of the reconciler, `SeedLock` while `dgs seed` runs, and `RegistryLock` while an admin changes the registry.
+**Advisory locks** are taken only through `db.Lock` (held by a connection until released), and `db.TryLock` and `db.LockTx` (held until the transaction ends), and every key is a constant in `internal/db/locks.go`, so no two uses share one by accident. `db.LockTx` waits for a lock held until the transaction ends. `MigrationLock` is held while migrations apply, `OutboxLock` for each pass of the outbox worker, `ReconcilerLock` for each pass of the reconciler, `SeedLock` while `dgs seed` runs, `RegistryLock` while an admin changes the registry, and `AlertRulesLock` while alert levels change.
 
 ## Conventions
 
@@ -352,6 +352,7 @@ Each table is read and written only by the package that owns it ([Data ownership
 | `devices` | `internal/labs` | |
 | `relayed_records` | `internal/labs` | |
 | `synced_records` | `internal/labs` | |
+| `alert_rules` | `internal/labs` | |
 | `registry_domains` | `internal/registry` | |
 | `registry_parameters` | `internal/registry` | |
 | `registry_device_types` | `internal/registry` | |

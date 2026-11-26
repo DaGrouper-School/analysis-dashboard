@@ -26,6 +26,9 @@ const (
 	// RegistryLock is held while an admin changes the registry, so changes
 	// run one at a time, each against the registry the one before left.
 	RegistryLock int64 = 8301005
+	// AlertRulesLock is held while alert levels change, so two first
+	// changes at a layer never both copy the levels below.
+	AlertRulesLock int64 = 8301006
 	// TestTemplateLock is held while tests build their migrated template
 	// database.
 	TestTemplateLock int64 = 8301999
