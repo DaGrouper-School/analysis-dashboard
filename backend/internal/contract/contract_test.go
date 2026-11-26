@@ -231,7 +231,7 @@ func TestAddendum(t *testing.T) {
 	if dial == nil || dial.WaitsFor != "Flags beside the calling codes" {
 		t.Fatalf("the changed operation: %+v", dial)
 	}
-	if n := len(c.Operations()); n != len(load(t).Operations())+1 {
+	if n := len(c.Operations()); n != len(loadAddendum(t, "empty.yaml").Operations())+1 {
 		t.Fatalf("%d operations", n)
 	}
 	unauthenticated := `{"code":"unauthenticated","message":"Sign in first.","fields":{}}`

@@ -31,6 +31,7 @@ const (
 	KindStage        = "stage"
 	KindRegion       = "region"
 	KindHostQuestion = "host_question"
+	KindConsentText  = "consent_text"
 )
 
 // Change is one change to the platform's configuration.

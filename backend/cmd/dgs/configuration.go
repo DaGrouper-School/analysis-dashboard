@@ -92,7 +92,7 @@ func seed(ctx context.Context, out io.Writer, pool *pgxpool.Pool) error {
 			return err
 		}
 		for _, step := range []func(context.Context, db.Querier, time.Time) ([]settings.Seeded, error){
-			settings.SeedSettings, classrooms.SeedLists, hosting.SeedQuestions, registry.SeedOverlay,
+			settings.SeedSettings, classrooms.SeedLists, hosting.SeedQuestions, registry.SeedOverlay, classrooms.SeedConsent,
 		} {
 			seeded, err := step(ctx, tx, now)
 			done = append(done, seeded...)
@@ -118,4 +118,19 @@ func seed(ctx context.Context, out io.Writer, pool *pgxpool.Pool) error {
 		}
 	}
 	return nil
+}
+
+// publishConsent publishes the consent text in file as a new version, as
+// the operator's.
+func publishConsent(ctx context.Context, out io.Writer, pool *pgxpool.Pool, file string) error {
+	raw, err := readFile(file)
+	if err != nil {
+		return err
+	}
+	version, err := classrooms.PublishConsent(ctx, pool, time.Now(), settings.Operator, raw)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(out, "published consent text version %d; sheets and links show it at once\n", version)
+	return err
 }

@@ -32,6 +32,16 @@ dgs settings put privacy privacy.json     # - reads standard input
 - **The log.** Every change is logged with who made it: an admin by name, `operator` for `dgs settings put`, `seed` for the seed.
 - **Back to the seed.** A setting someone changed stays theirs. To take the seed's value again, put it from the release's `internal/settings/seed.json`, such as `jq .privacy internal/settings/seed.json | dgs settings put privacy -`.
 
+### Publishing a consent text
+
+The guardian consent text is published in versions, every language at once, from the admin page or from a terminal. A version is never changed: a correction is a new version. Consents name the version they were given against, so a guardian who opened their link before a new version reloads the new words.
+
+```sh
+dgs consent publish consent.json   # the next version; - reads standard input
+```
+
+The file maps each language code to the sheet's parts, as `internal/classrooms/consent.json` does: `title`, `intro`, `sections` (each a `heading` and `body`), `choices` (`give` and `withdraw`), `contributorField`, `fields` and `officeNote`. `{classroom}`, `{institution}` and `{decimals}` are filled in for each classroom. A version keeps every language of the one before and always has `en`. A file that breaks a rule is refused with every problem named, and nothing is published.
+
 ## Places
 
 `DGS_PLACES_API_KEY` is a Google Places key with the Places API enabled. Restrict it to that API and to the service's outbound addresses: it is sent to Google from the server only, in a request header. Each signed-in person may look up 300 places an hour; autocomplete asks as they type, so this covers filling in a few addresses and stops a script.

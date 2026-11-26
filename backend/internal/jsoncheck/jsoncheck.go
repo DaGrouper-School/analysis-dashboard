@@ -34,6 +34,24 @@ func (e *Invalid) Error() string {
 	return b.String()
 }
 
+// Fields are the problems by where each is, as an API's field errors:
+// "texts.en.title: blank" is "blank" under texts.en.title. Problems about
+// several fields at once are joined under the first part of their path.
+func (e *Invalid) Fields() map[string]string {
+	out := map[string]string{}
+	for _, p := range e.Problems {
+		at, msg, ok := strings.Cut(p, ": ")
+		if !ok || strings.ContainsAny(at, " ") {
+			at, msg = "value", p
+		}
+		if prev, dup := out[at]; dup {
+			msg = prev + "; " + msg
+		}
+		out[at] = msg
+	}
+	return out
+}
+
 // Refuse is an *Invalid for subject when there are problems, and nil
 // otherwise.
 func Refuse(subject string, problems []string) error {

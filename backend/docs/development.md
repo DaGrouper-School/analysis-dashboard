@@ -104,7 +104,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/notify` | Delivers messages: the SMS and email interfaces, the SMTP provider, the log providers for development and test, and a recorder of texts for tests |
 | `internal/places` | The places module: address autocomplete and lookup through a provider, and the calling codes |
 | `internal/settings` | The platform's settings, their checks and seed, the configuration change log, and seeding a list |
-| `internal/classrooms` | The classrooms module. So far, the stages and regions and their seed |
+| `internal/classrooms` | The classrooms module. So far, the stages and regions and their seed, and the guardian consent text's versions, published by platform admins |
 | `internal/hosting` | The hosting module. So far, the host application's questions and their seed |
 | `internal/roles` | The permission grid, as the front end's, and the grants each classroom's role groups and the platform admins' group hold in SAM |
 | `internal/registry` | The registry module: SAM's registry read as this service and cached, the overlay that presents it, their merge, admins' changes with this tenant's own entries sent through the outbox, and the default alert levels |
@@ -236,12 +236,14 @@ The configuration platform admins keep ([Platform configuration](design/registry
 |---|---|---|
 | Stages and regions | `stages`, `regions`: a row each, in display order | `internal/classrooms` |
 | Host questions | `host_questions`: a row each, in order; a retired one has `retired_at` | `internal/hosting` |
+| The consent text | `consent_texts`: a row per version and language, never changed; the latest version is current | `internal/classrooms` |
 | Settings | `platform_settings`: one value per key, `core_parameters`, `default_terms`, `privacy` | `internal/settings` |
 | The change log | `configuration_changes`: who changed what, newest first | `internal/settings` |
 
 - **Checks.** `settings.Check` decodes a setting strictly into its Go shape, the same as the front end's, with `internal/jsoncheck`: no unknown or missing field, no `null` where a value is required, no blank text, then the key's own rules, such as decimals from 0 to 4 or a rain reference that is one of the daily rain values. Every problem is reported at once, with where it is. A value is stored as it re-encodes from its shape, so the same value always stores the same way.
 - **The log.** `settings.Record` writes a change to `configuration_changes`, with the admin's account and their name at the time, or `operator` or `seed`. Every module that keeps part of the configuration records its changes through it, in the same transaction as the change.
-- **The seed.** Each module embeds its part of the seed: `internal/settings/seed.json`, `internal/classrooms/seed.json`, `internal/hosting/seed.json` and the registry's overlay in `internal/registry/seed.json`, the same values as the front end's seed (`frontend/src/lib/data/seed.ts`). Change both together; a test checks each seed passes its checks. `dgs seed` runs them in one transaction under `db.SeedLock`. A list's rows are added only while the list is empty, so a row an admin deleted stays deleted; `settings.SeedList` holds that rule for every list. A setting or row is updated to the seed's while the seed wrote it last, which `seeded` records; anything else changed it, and the seed keeps it.
+- **The consent text.** `classrooms.PublishConsent` checks a version's words strictly, every language with every part and only `{classroom}`, `{institution}` and `{decimals}`, keeping every language of the current version and the default, `en`, and stores it as the next version, logged. A trigger refuses any change to a published row, so no code can change a version a consent names. `classrooms.CurrentConsent` fills the current version in for a classroom, in the reader's language or the default. The admin endpoints are in the contract's addendum. The seed publishes the first version while there is none.
+- **The seed.** Each module embeds its part of the seed: `internal/settings/seed.json`, `internal/classrooms/seed.json`, `internal/hosting/seed.json`, the registry's overlay in `internal/registry/seed.json` and the first consent text in `internal/classrooms/consent.json`, the same values as the front end's seed (`frontend/src/lib/data/seed.ts`). Change both together; a test checks each seed passes its checks. `dgs seed` runs them in one transaction under `db.SeedLock`. A list's rows are added only while the list is empty, so a row an admin deleted stays deleted; `settings.SeedList` holds that rule for every list. A setting or row is updated to the seed's while the seed wrote it last, which `seeded` records; anything else changed it, and the seed keeps it.
 
 ### The registry
 
@@ -312,6 +314,7 @@ Each table is read and written only by the package that owns it ([Data ownership
 | `host_questions` | `internal/hosting` | |
 | `platform_settings` | `internal/settings` | |
 | `configuration_changes` | `internal/settings` | |
+| `consent_texts` | `internal/classrooms` | |
 | `registry_domains` | `internal/registry` | |
 | `registry_parameters` | `internal/registry` | |
 | `registry_device_types` | `internal/registry` | |

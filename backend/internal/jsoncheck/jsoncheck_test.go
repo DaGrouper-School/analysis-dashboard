@@ -68,3 +68,18 @@ func TestChecks(t *testing.T) {
 		t.Errorf("Refuse: %v", err)
 	}
 }
+
+func TestFields(t *testing.T) {
+	t.Parallel()
+	e := &Invalid{Subject: "x", Problems: []string{"texts.en.title: blank", "texts.en.title: too long", "texts: there is no en text", "not JSON: the value ends early"}}
+	got := e.Fields()
+	want := map[string]string{"texts.en.title": "blank; too long", "texts": "there is no en text", "value": "not JSON: the value ends early"}
+	if len(got) != len(want) {
+		t.Fatalf("%v", got)
+	}
+	for k, v := range want {
+		if got[k] != v {
+			t.Errorf("%s: %q, want %q", k, got[k], v)
+		}
+	}
+}
