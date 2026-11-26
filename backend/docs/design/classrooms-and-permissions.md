@@ -60,12 +60,16 @@ tenant root space ─── admins group: device:register, device:maintain, data
 ```
 
 - A classroom is a SAM space under the tenant root, created with its four role groups and their grants by this service through the outbox.
-- Each group holds its role's grants from the grant templates in `internal/roles`, issued by this service from its tenant grant. Different delegation depths are separate grants.
-  - **Heads:** read, submit, release, device management, and a grant that delegates everything facilitators, community scientists and researchers hold.
-  - **Facilitators:** read and submit; device management and release while the sharing settings allow them; and a grant that delegates what community scientists hold.
-  - **Community scientists:** a read grant and a submit grant. The submit grant carries a `principal_attr` rule, `minor=false` or `consent=given`, so withdrawn consent stops new submissions inside SAM while reading keeps working.
-  - **Researchers:** a read grant.
-  - **Consent:** `attribute:assert`, limited to `consent` by `attribute_names`, is in separate `head-consent` and `facilitator-consent` grants. The main grants carry no rules, because SAM lets a person add members to a group only if their delegating chain carries no rule the group's grants lack.
+- Each group holds its role's grants from the grant templates in `internal/roles`, issued by this service from its tenant grant, whose depth is four. Actions that reach different depths are separate grants, and a grant with a rule is one of its own that hands nothing on.
+  - **Heads:** read, submit, release and device management, in one grant of depth two that delegates everything the other three groups hold under any sharing settings.
+  - **Facilitators:** read and submit, with device management and release while the sharing settings allow them. While `facilitatorsInvite` is on, the same grant has depth one and delegates what community scientists hold; off, it hands nothing on.
+  - **Community scientists:** read and submit, in one grant. It carries no consent rule: SAM refuses a minor's submission without consent itself, so withdrawn consent stops new submissions inside SAM while reading keeps working.
+  - **Researchers:** read, in a grant of depth one, more than facilitators hand on, so only heads add researchers although their reading is a community scientist's. Its `subject_types` rule names only anonymous, which joins no group and is granted to only by an issuer holding `dataset:publish`, so it hands nothing on.
+  - SAM so allows exactly what the grid does, membership included: a role adds members to a group only where the grid lets it invite.
+  - **Export:** every group that reads holds `export:create` in a grant of its own, limited by `export_to` to this service, so whoever can see the raw table can download it, through this service only. The grid gains no column for it.
+  - **Consent:** `attribute:assert`, limited to `consent` by `attribute_names`, is in separate `head-consent` and `facilitator-consent` grants.
+  - Submitting needs `device:connect` beside `observation:submit`, since relayed device readings need both.
+  - The grants that hand others theirs carry no rules, because SAM lets a person add members to a group only if their delegating chain carries no rule the group's grants lack.
 - Sharing settings that change a role's rights, such as whether facilitators manage devices or release, re-issue that group's grant.
 - **Platform admins** are one group at the tenant root. It holds `device:register` and `device:maintain`, so admins set up any classroom's devices as themselves, and `dataset:set_policy`, so they set a classroom's terms before it has a head. It holds no read grant and never `dataset:publish`: an admin who needs a classroom's unreleased data is invited as a member.
 - **Creating classrooms.** Platform admins create classrooms, directly or by accepting a host application. Each gets a code such as `DGC-HG2W5K`, which never changes and is shown only to admins, heads and facilitators.
@@ -151,7 +155,7 @@ A participant under 18 is a minor. Consent is `pending` until a guardian answers
 ## Testing approach
 
 - **Unit, `roles`:** every cell of the grid, written here; the grant templates, checking that for every grant a group holds, the role that adds members holds one grant that can hand it on, with depth to spare and no rule the held grant lacks.
-- **Parity:** every data permission in the grid matches SAM's `authz/check` for each role, against a real SAM.
+- **Parity:** every cell the grid marks as SAM's matches SAM's `authz/check` for each role, export included, against a real SAM with the members' `minor=false` asserted. Adding members in SAM succeeds exactly where the grid's `invite` says, and a researcher hands nothing on.
 - **Unit, `classrooms`:** who a change is sent as, invitation expiry and acceptance, paper-consent dates, filling in a consent text, a minor's rounding against their consent's.
 - **Integration:** joining and leaving change membership only; an expired or orphaned invitation is refused; a minor without consent is refused by SAM; a consent records its text version; a decision on a stale version is refused; a published version cannot be changed; an approval becomes a classroom.
 

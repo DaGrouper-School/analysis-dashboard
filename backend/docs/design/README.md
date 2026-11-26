@@ -78,7 +78,8 @@ The full permission grid is in [Classrooms and permissions](classrooms-and-permi
 
 ### Privacy for minors
 
-- A minor submits nothing until their guardian has consented. This service checks its own record before relaying, and SAM refuses the submission through a rule on the community scientists' grant.
+- A minor submits nothing until their guardian has consented. This service checks its own record before relaying, and SAM refuses a minor's submission without consent itself, so the submit grants carry no consent rule.
+- Whoever reads a classroom may export it, through this service only: each reading group holds `export:create` limited by `export_to`. Heads and facilitators record consent through grants of their own, limited to the `consent` attribute.
 - A withdrawal takes effect here at once, and in SAM as soon as the outbox delivers it.
 - A minor is never named on public pages, never listed as a contributor, and cannot turn on a public profile.
 - A minor's GPS position is rounded before it is sent to SAM. Public reads generalise every position further.
