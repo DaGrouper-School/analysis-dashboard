@@ -14,6 +14,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/registry"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/roles"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 )
 
 // Module is the labs module.
@@ -21,15 +22,21 @@ type Module struct {
 	db       db.Querier
 	sessions *accounts.Sessions
 	now      func() time.Time
-	types    DeviceTypes
+	reg      Registry
+	sam      *samaccess.Access
 }
 
-// DeviceTypes finds a device type in the registry the front end reads.
-type DeviceTypes func(ctx context.Context, id string) (*registry.DeviceType, error)
+// Registry is what the module reads of the registry the front end reads:
+// a device type, and a reading's values under a type's keys.
+type Registry interface {
+	DeviceType(ctx context.Context, id string) (*registry.DeviceType, error)
+	KeyValues(ctx context.Context, typeID string, values map[string]any) (map[string]any, map[string]string, error)
+}
 
-// New builds the module.
-func New(q db.Querier, sessions *accounts.Sessions, now func() time.Time, types DeviceTypes) *Module {
-	return &Module{db: q, sessions: sessions, now: now, types: types}
+// New builds the module. Readings are relayed to SAM through sam, as the
+// person recording.
+func New(q db.Querier, sessions *accounts.Sessions, now func() time.Time, reg Registry, sam *samaccess.Access) *Module {
+	return &Module{db: q, sessions: sessions, now: now, reg: reg, sam: sam}
 }
 
 // Routes serves the labs operations of the front end's contract.
@@ -44,6 +51,7 @@ func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	h("GET "+prefix+"/classrooms/{classroomId}/devices", m.listDevices)
 	h("POST "+prefix+"/labs/{labId}/devices", m.registerDevice)
 	h("DELETE "+prefix+"/devices/{deviceId}", m.removeDevice)
+	h("POST "+prefix+"/devices/{deviceId}/readings", m.uploadReadings)
 }
 
 const (

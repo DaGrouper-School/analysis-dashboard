@@ -80,7 +80,7 @@ func (m *Module) registerDevice(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.Decode(r, &in); err != nil {
 		return err
 	}
-	t, err := m.types(r.Context(), in.Type)
+	t, err := m.reg.DeviceType(r.Context(), in.Type)
 	if err != nil {
 		return err
 	}

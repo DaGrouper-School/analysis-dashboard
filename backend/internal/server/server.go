@@ -94,7 +94,7 @@ func New(d Deps) *App {
 				Email: d.Email, FrontEnd: frontEnd(d.AllowedOrigins), ShowTokens: d.Accounts.Demo, Limits: a.accounts}),
 			settingsapi.New(d.DB, a.accounts.Sessions(), d.Now),
 			consent.New(d.DB, a.accounts.Sessions(), d.Now, consent.Config{Email: d.Email, SMS: d.Accounts.SMS, FrontEnd: frontEnd(d.AllowedOrigins),
-				ShowTokens: d.Accounts.Demo, Limits: a.accounts}), labs.New(d.DB, a.accounts.Sessions(), d.Now, a.registry.DeviceType))
+				ShowTokens: d.Accounts.Demo, Limits: a.accounts}), labs.New(d.DB, a.accounts.Sessions(), d.Now, a.registry, d.SAM))
 	}
 	return a
 }

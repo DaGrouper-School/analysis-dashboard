@@ -42,6 +42,27 @@ type Privacy struct {
 	MinorCoordinateDecimals int `json:"minorCoordinateDecimals"`
 }
 
+// Future is future_observations: what becomes of a reading or observation
+// dated after it is received, by more than the clock tolerance. SAM
+// refuses one dated more than a day ahead whatever this says.
+type Future struct {
+	// Action is flag, to store it flagged, or refuse.
+	Action string `json:"action"`
+}
+
+// The actions on future-dated observations.
+const (
+	FutureFlag   = "flag"
+	FutureRefuse = "refuse"
+)
+
+func (f Future) check() []string {
+	if f.Action != FutureFlag && f.Action != FutureRefuse {
+		return []string{fmt.Sprintf("action: %q is not flag or refuse", f.Action)}
+	}
+	return nil
+}
+
 // MaxDecimals is the finest rounding a position may have: about 10 m.
 const MaxDecimals = 4
 

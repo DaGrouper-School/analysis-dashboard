@@ -239,16 +239,16 @@ func TestConfigurationCommands(t *testing.T) {
 		err := run(ctx, &out, args)
 		return out.String(), err
 	}
-	if out, err := cmd("settings"); err != nil || strings.Count(out, "not set") != 3 {
+	if out, err := cmd("settings"); err != nil || strings.Count(out, "not set") != 4 {
 		t.Fatalf("settings before the seed: %q, %v", out, err)
 	}
 	if _, err := cmd("settings", "get", "privacy"); !errors.Is(err, settings.ErrNotSet) {
 		t.Fatalf("a setting before the seed: %v", err)
 	}
-	// 3 settings, 3 stages, 2 regions, 5 questions, the registry's 10
+	// 4 settings, 3 stages, 2 regions, 5 questions, the registry's 10
 	// domains, 49 parameters, 7 device types, 7 templates and 8 default
 	// alert levels, and the first consent text.
-	const seeded = 95
+	const seeded = 96
 	if out, err := cmd("seed"); err != nil || strings.Count(out, ": added") != seeded {
 		t.Fatalf("the seed: %q, %v", out, err)
 	}

@@ -14,5 +14,8 @@
 	},
 	"privacy": {
 		"minorCoordinateDecimals": 2
+	},
+	"future_observations": {
+		"action": "flag"
 	}
 }

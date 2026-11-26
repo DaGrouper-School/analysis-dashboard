@@ -113,7 +113,7 @@ func TestConfigurationAdmin(t *testing.T) {
 		t.Errorf("a setting: %d %+v", status, setting)
 	}
 	var all []settingsapi.SettingView
-	if status, _ := do("GET", "/settings", nil, &all); status != 200 || len(all) != 3 || all[2].Key != "privacy" || all[0].Seeded != true {
+	if status, _ := do("GET", "/settings", nil, &all); status != 200 || len(all) != 4 || all[2].Key != "privacy" || all[3].Key != "future_observations" || all[0].Seeded != true {
 		t.Errorf("the settings: %d %+v", status, all)
 	}
 
@@ -124,7 +124,7 @@ func TestConfigurationAdmin(t *testing.T) {
 	}
 	var older settingsapi.ChangesView
 	if status, _ := do("GET", "/configuration-changes?before="+*page.Next, nil, &older); status != 200 || older.Next != nil ||
-		len(older.Items) != 19 || older.Items[18].Subject != "core_parameters" || older.Items[0].ID != strconv.Itoa(mustAtoi(t, *page.Next)-1) {
+		len(older.Items) != 20 || older.Items[19].Subject != "core_parameters" || older.Items[0].ID != strconv.Itoa(mustAtoi(t, *page.Next)-1) {
 		t.Errorf("the page before: %d %+v", status, older)
 	}
 	if status, _ := do("GET", "/configuration-changes?before=x", nil, nil); status != 400 {
