@@ -96,7 +96,7 @@ func New(d Deps) *App {
 			settingsapi.New(d.DB, a.accounts.Sessions(), d.Now),
 			consent.New(d.DB, a.accounts.Sessions(), d.Now, consent.Config{Email: d.Email, SMS: d.Accounts.SMS, FrontEnd: frontEnd(d.AllowedOrigins),
 				ShowTokens: d.Accounts.Demo, Limits: a.accounts}), labs.New(d.DB, a.accounts.Sessions(), d.Now, a.registry, d.SAM),
-			publicsite.New(d.DB, a.registry, d.SAM, d.Now))
+			publicsite.New(d.DB, a.registry, d.SAM, a.accounts.Sessions(), d.Now))
 	}
 	return a
 }

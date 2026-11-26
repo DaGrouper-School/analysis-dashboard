@@ -58,6 +58,24 @@ func (s *Sessions) RequireUser(next http.Handler) http.Handler {
 	})
 }
 
+// OptionalUser serves next for every request, with the user in its
+// context when it has a live session, so a public page can tell its
+// members from visitors. A session that has ended is cleared and the
+// request goes on as a visitor's.
+func (s *Sessions) OptionalUser(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		u, err := s.authenticate(w, r)
+		switch {
+		case httpx.IsCode(err, httpx.CodeUnauthenticated):
+			next.ServeHTTP(w, r)
+		case err != nil:
+			httpx.WriteError(w, r, err)
+		default:
+			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), userKey{}, u)))
+		}
+	})
+}
+
 // RequireAdmin is RequireUser for platform admins only: anyone else
 // signed in gets 403 forbidden with message.
 func (s *Sessions) RequireAdmin(message string, next http.Handler) http.Handler {

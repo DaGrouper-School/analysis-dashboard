@@ -31,15 +31,9 @@ The mock computes every view in the browser from its own copy of every reading, 
 
 ### Reads from SAM
 
-- Views are computed from bounded history, read from SAM as the viewer (anonymous for a visitor), so SAM's read rules decide what is in it.
-
-  | View | Window |
-  |---|---|
-  | Station page | 62 days |
-  | Parameter page | 92 days |
-  | Home page | 8 days |
-
-- Each read is capped at 50,000 records. At one reading a minute a device sends about 45,000 readings a month, so the bounds suit the pilot. At larger scale the station and parameter pages move to SAM's aggregates and latest values; no view logic changes shape.
+- Views are computed from SAM's aggregates, latest values and summaries, read as the viewer (anonymous for a visitor), so SAM's read rules decide what is in them. Nothing is copied here.
+- A page's values span a window up to its latest value, in whole UTC days as the front end counts them: a parameter page the 91 days of its longest range, the season; the home page the 7 days of its rain strip. Numbers older than a day come as each hour's last value, from hourly aggregates SAM answers from its rollups; the last day's readings come one by one, so a day's chart shows every reading. Values that are not numbers come one by one, up to 5,000.
+- An aggregate is read in spans short enough to stay under SAM's 10,000 groups: a span holds 10,000 hours divided by the sources and values read.
 - Every summary asked of SAM carries a start, the start of time when the page has none, so SAM can answer from its hourly rollups.
 - Derived values (heat index, feels-like, dew point, wind chill) come from SAM's reading-scoped derivations.
 - The view logic lives in `internal/views`, carried over from the front end with its rounding and wording: rain totals, the seven-day strip, sparklines, trends, the spread between sources against tolerance, month completeness, the last 24 hours and device summaries.
@@ -81,6 +75,11 @@ for each parameter of a device, the first layer with rules is in force:
 ### Member views of station and parameter pages
 
 The station and parameter pages a member sees are the public pages read as the member: the classroom's own members also get values still in review, and the last sync of any device.
+
+- The public routes read a session when there is one. A caller this service records as a member of the classroom reads SAM as themselves; anyone else, a platform admin who is not a member included, reads as anonymous.
+- A visitor reads released values only, and a classroom that does not show its data publicly answers 404 on its parameter pages, whatever SAM still lets anonymous read. Its members still read it.
+- `inReview` is a member's alone: whether values observed after the cutoff are unpublished. A visitor's is false, as visitors learn nothing of what waits.
+- A parameter page offers to compare with every other classroom that shows its data and whose released values include the parameter, as anonymous reads them, each answer kept for a minute.
 
 ### Sharing and release
 
@@ -162,7 +161,7 @@ A classroom's sharing settings:
 - **A new idempotency key per release attempt.** A retry after a lost answer would publish twice. Rejected.
 - **Listing everyone who recorded a released record.** It would name people who never asked for credit, and a page for every participant ID would let IDs be enumerated. Rejected for credit only.
 - **Keeping each record's device here for public tiles.** It would cover only relayed readings. Rejected: SAM keeps devices for visitors.
-- **Reading aggregates from the start.** More calls and shapes to build for the pilot's scale. Deferred: bounded history first, aggregates when the bound bites.
+- **Bounded history, every reading over each page's window.** At one reading a minute a season is about 130,000 readings a value, too many to read for each page. Rejected for hourly aggregates beyond the last day.
 
 ## Risks
 

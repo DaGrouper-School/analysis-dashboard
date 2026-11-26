@@ -18,6 +18,7 @@ import (
 	"github.com/dagrouper-school/sam/client"
 	"github.com/google/uuid"
 
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/classrooms"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
@@ -40,13 +41,15 @@ type Registry interface {
 
 // Module is the public site.
 type Module struct {
-	db  db.Querier
-	reg Registry
-	sam *samaccess.Access
-	now func() time.Time
+	db       db.Querier
+	reg      Registry
+	sam      *samaccess.Access
+	sessions *accounts.Sessions
+	now      func() time.Time
 
-	mu    sync.Mutex
-	cache map[uuid.UUID]cached
+	mu        sync.Mutex
+	cache     map[uuid.UUID]cached
+	hasValues map[string]hasValues
 }
 
 type cached struct {
@@ -54,15 +57,18 @@ type cached struct {
 	at   time.Time
 }
 
-// New builds the module. SAM is read as its anonymous principal.
-func New(q db.Querier, reg Registry, sam *samaccess.Access, now func() time.Time) *Module {
-	return &Module{db: q, reg: reg, sam: sam, now: now, cache: map[uuid.UUID]cached{}}
+// New builds the module. SAM is read as its anonymous principal, and as
+// the caller on the pages a member sees more of.
+func New(q db.Querier, reg Registry, sam *samaccess.Access, sessions *accounts.Sessions, now func() time.Time) *Module {
+	return &Module{db: q, reg: reg, sam: sam, sessions: sessions, now: now, cache: map[uuid.UUID]cached{}, hasValues: map[string]hasValues{}}
 }
 
-// Routes serves the public site, which needs no session.
+// Routes serves the public site, which needs no session; a page a member
+// sees more of reads theirs when there is one.
 func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	mux.Handle("GET "+prefix+"/public/home", httpx.Handler(m.home))
 	mux.Handle("GET "+prefix+"/public/content", httpx.Handler(m.content))
+	mux.Handle("GET "+prefix+"/public/classrooms/{classroomId}/parameters/{parameterId}", m.sessions.OptionalUser(httpx.Handler(m.parameter)))
 }
 
 // Content is the site content this service keeps: the stages and

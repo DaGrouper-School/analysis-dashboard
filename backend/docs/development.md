@@ -104,7 +104,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/accounts` | Accounts and their participant IDs; registering each account's SAM principal through the outbox; the restore guard |
 | `internal/notify` | Delivers messages: the SMS and email interfaces, the SMTP provider, the log providers for development and test, and a recorder of texts for tests |
 | `internal/places` | The places module: address autocomplete and lookup through a provider, and the calling codes |
-| `internal/publicsite` | The public site: the home page and its content, read from SAM as its anonymous principal, the sharing settings deciding first |
+| `internal/publicsite` | The public site: the home page and its content, and the parameter pages, read from SAM as its anonymous principal or as a member, the sharing settings deciding first |
 | `internal/settings` | The platform's settings, their checks and seed, the configuration change log, and seeding a list |
 | `internal/settings/settingsapi` | The settings' and the change log's admin endpoints |
 | `internal/classrooms` | The classrooms module: classrooms, kept here and created in SAM, their members, and what platform admins keep of them: the stages and regions and their seed, and the guardian consent text's versions |

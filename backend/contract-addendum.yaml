@@ -509,6 +509,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ConsentTextChanged'
+  /public/classrooms/{classroomId}/parameters/{parameterId}:
+    get:
+      operationId: publicSite.parameter
+      x-change: changed
+      x-waits-for: The site's words kept in the front end, with only the stages and regions from the backend
+      tags:
+      - Public site
+      summary: Parameter
+      description: 'One parameter of a classroom: its registry entry and its values over the season up to the latest,
+        each hour''s last value and every reading of the last day. Read from SAM as the member when the caller is one, so
+        its members also get values still in review; anyone else reads released values only, and a classroom that does
+        not show its data publicly is not found. Access: public, no session needed.'
+      security: []
+      parameters:
+      - name: classroomId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: parameterId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicParameterPageWithContent'
+        '404':
+          $ref: openapi.yaml#/components/responses/NotFound
   /public/home:
     get:
       operationId: publicSite.home
@@ -573,6 +606,51 @@ components:
       required:
       - stages
       - regions
+      additionalProperties: false
+    PublicParameterPageWithContent:
+      type: object
+      description: The front end's PublicParameterPage, with the site content the backend keeps.
+      properties:
+        content:
+          $ref: '#/components/schemas/PublicSiteContent'
+        classroom:
+          $ref: openapi.yaml#/components/schemas/PublicParameterPage/properties/classroom
+        parameter:
+          $ref: openapi.yaml#/components/schemas/PublicParameterPage/properties/parameter
+        domain:
+          $ref: openapi.yaml#/components/schemas/PublicParameterPage/properties/domain
+        note:
+          $ref: openapi.yaml#/components/schemas/PublicParameterPage/properties/note
+        series:
+          $ref: openapi.yaml#/components/schemas/PublicParameterPage/properties/series
+        rain:
+          $ref: openapi.yaml#/components/schemas/PublicParameterPage/properties/rain
+        releasedThrough:
+          $ref: openapi.yaml#/components/schemas/PublicParameterPage/properties/releasedThrough
+        inReview:
+          $ref: openapi.yaml#/components/schemas/PublicParameterPage/properties/inReview
+        compare:
+          $ref: openapi.yaml#/components/schemas/PublicParameterPage/properties/compare
+        deviceTypes:
+          $ref: openapi.yaml#/components/schemas/PublicParameterPage/properties/deviceTypes
+        terms:
+          $ref: openapi.yaml#/components/schemas/PublicParameterPage/properties/terms
+        member:
+          $ref: openapi.yaml#/components/schemas/PublicParameterPage/properties/member
+      required:
+      - content
+      - classroom
+      - parameter
+      - domain
+      - note
+      - series
+      - rain
+      - releasedThrough
+      - inReview
+      - compare
+      - deviceTypes
+      - terms
+      - member
       additionalProperties: false
     PublicHomePage:
       type: object

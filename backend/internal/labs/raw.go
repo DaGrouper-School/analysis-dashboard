@@ -13,6 +13,7 @@ import (
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/classrooms"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings"
@@ -277,7 +278,13 @@ func (m *Module) rawScope(r *http.Request, id string) (rawScope, *client.Client,
 
 // allDevices calls each with every device of a classroom, removed or not.
 func (m *Module) allDevices(ctx context.Context, classroom uuid.UUID, each func(Device)) error {
-	rows, err := m.db.Query(ctx, `SELECT `+deviceColumns+` FROM devices WHERE classroom_id = $1`, classroom)
+	return AllDevices(ctx, m.db, classroom, each)
+}
+
+// AllDevices calls each with every device of a classroom, removed or not:
+// a removed device's values stay where they were shown.
+func AllDevices(ctx context.Context, q db.Querier, classroom uuid.UUID, each func(Device)) error {
+	rows, err := q.Query(ctx, `SELECT `+deviceColumns+` FROM devices WHERE classroom_id = $1`, classroom)
 	if err != nil {
 		return err
 	}

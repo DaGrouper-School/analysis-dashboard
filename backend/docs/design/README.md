@@ -93,7 +93,7 @@ The full permission grid is in [Classrooms and permissions](classrooms-and-permi
 | Consistency | Every change SAM must reflect is delivered in order per entity, at least once, and applied once |
 | Availability | Sign-in, profile and classroom changes work while SAM is down; reads and submissions that need SAM fail with a clear message |
 | Security | No secret is stored in plain text; no development convenience runs outside development and test |
-| Scale | The pilot: tens of stations, one reading a minute each. Pages stay bounded reads of SAM; the design moves to SAM's aggregates before that bound bites |
+| Scale | The pilot: tens of stations, one reading a minute each. Pages read SAM's aggregates, latest values and summaries, each answered from its hourly rollups |
 | Operability | Anything retrying cannot fix is held for an operator and listed by a command |
 | Contract | Every response matches `openapi.yaml`, which is generated from the front end, or the backend's addendum for what the front end has not adopted yet |
 
