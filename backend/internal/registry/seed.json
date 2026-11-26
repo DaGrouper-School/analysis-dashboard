@@ -82,7 +82,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": 0.3,
-      "chart": "line_band"
+      "chart": "line_band",
+      "method": null,
+      "inputs": []
     },
     {
       "id": "feels_like",
@@ -94,7 +96,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": 0.5,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "heat_index",
@@ -106,7 +110,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": 0.5,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "wind_chill",
@@ -118,7 +124,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": 0.5,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "relative_humidity",
@@ -130,7 +138,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": 2,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "dew_point",
@@ -142,7 +152,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": 0.5,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "wet_bulb_temperature",
@@ -154,7 +166,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "wet_bulb_globe_temperature",
@@ -166,7 +180,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "delta_t",
@@ -178,7 +194,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "air_density",
@@ -190,7 +208,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "station_pressure",
@@ -202,7 +222,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": 0.5,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "barometric_pressure",
@@ -214,7 +236,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "sea_level_pressure",
@@ -226,7 +250,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "pressure_trend",
@@ -238,7 +264,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "solar_radiation",
@@ -250,7 +278,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "uv",
@@ -262,7 +292,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": 0.3,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "brightness",
@@ -274,7 +306,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "precip",
@@ -286,7 +320,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "precip_accum_last_1hr",
@@ -298,7 +334,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "precip_accum_local_day",
@@ -310,7 +348,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": 0.2,
-      "chart": "daily_bars"
+      "chart": "daily_bars",
+      "method": null,
+      "inputs": []
     },
     {
       "id": "precip_accum_local_day_final",
@@ -322,7 +362,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "precip_accum_local_yesterday",
@@ -334,7 +376,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "precip_accum_local_yesterday_final",
@@ -346,7 +390,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "precip_analysis_type_yesterday",
@@ -358,7 +404,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "precip_minutes_local_day",
@@ -370,7 +418,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "precip_minutes_local_yesterday",
@@ -382,7 +432,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "precip_minutes_local_yesterday_final",
@@ -394,7 +446,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "wind_avg",
@@ -406,7 +460,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": 0.5,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "wind_gust",
@@ -418,7 +474,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "wind_lull",
@@ -430,7 +488,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "wind_direction",
@@ -442,7 +502,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "lightning_strike_count",
@@ -454,7 +516,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "lightning_strike_count_last_1hr",
@@ -466,7 +530,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "lightning_strike_count_last_3hr",
@@ -478,7 +544,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "lightning_strike_last_distance",
@@ -490,7 +558,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "lightning_strike_last_epoch",
@@ -502,7 +572,9 @@
       "unit": null,
       "source": "weather_station",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "rain_gauge_daily_accumulation",
@@ -514,7 +586,9 @@
       "unit": null,
       "source": "manual",
       "noise": 0.5,
-      "chart": "daily_bars"
+      "chart": "daily_bars",
+      "method": null,
+      "inputs": []
     },
     {
       "id": "soil_moisture",
@@ -526,7 +600,9 @@
       "unit": null,
       "source": "device",
       "noise": 1,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "soil_temperature",
@@ -538,7 +614,9 @@
       "unit": null,
       "source": "device",
       "noise": 0.3,
-      "chart": "line_band"
+      "chart": "line_band",
+      "method": null,
+      "inputs": []
     },
     {
       "id": "water_temperature",
@@ -550,7 +628,9 @@
       "unit": null,
       "source": "device",
       "noise": 0.2,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "water_ph",
@@ -562,7 +642,9 @@
       "unit": null,
       "source": "device",
       "noise": 0.1,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "pm2_5",
@@ -574,7 +656,9 @@
       "unit": null,
       "source": "device",
       "noise": 2,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "pm10",
@@ -586,7 +670,9 @@
       "unit": null,
       "source": "device",
       "noise": 3,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "coral_spawning_observed",
@@ -598,7 +684,9 @@
       "unit": null,
       "source": "manual",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "coral_colonies_spawning",
@@ -610,7 +698,9 @@
       "unit": "colonies",
       "source": "manual",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "species_name",
@@ -622,7 +712,9 @@
       "unit": null,
       "source": "manual",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "species_count",
@@ -634,7 +726,9 @@
       "unit": "individuals",
       "source": "manual",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "sound_level",
@@ -646,7 +740,9 @@
       "unit": null,
       "source": "device",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     },
     {
       "id": "precipitation_amount",
@@ -658,7 +754,9 @@
       "unit": null,
       "source": "device",
       "noise": null,
-      "chart": null
+      "chart": null,
+      "method": null,
+      "inputs": []
     }
   ],
   "deviceTypes": [
@@ -820,6 +918,80 @@
       "description": "A plant or animal you identified, and how many you saw.",
       "domain": "LIFE",
       "deviceType": null
+    }
+  ],
+  "alertDefaults": [
+    {
+      "id": "alr_default_uv_warning",
+      "parameterId": "uv",
+      "direction": "above",
+      "value": 8,
+      "level": "warning",
+      "title": "Very high UV",
+      "enabled": true
+    },
+    {
+      "id": "alr_default_uv_caution",
+      "parameterId": "uv",
+      "direction": "above",
+      "value": 6,
+      "level": "caution",
+      "title": "High UV",
+      "enabled": true
+    },
+    {
+      "id": "alr_default_heat_index_warning",
+      "parameterId": "heat_index",
+      "direction": "above",
+      "value": 39,
+      "level": "warning",
+      "title": "Dangerous heat",
+      "enabled": true
+    },
+    {
+      "id": "alr_default_air_temperature_caution",
+      "parameterId": "air_temperature",
+      "direction": "above",
+      "value": 32,
+      "level": "caution",
+      "title": "Hot",
+      "enabled": true
+    },
+    {
+      "id": "alr_default_wind_gust_warning",
+      "parameterId": "wind_gust",
+      "direction": "above",
+      "value": 17,
+      "level": "warning",
+      "title": "Strong gusts",
+      "enabled": true
+    },
+    {
+      "id": "alr_default_precip_accum_local_day_warning",
+      "parameterId": "precip_accum_local_day",
+      "direction": "above",
+      "value": 50,
+      "level": "warning",
+      "title": "Heavy rain",
+      "enabled": true
+    },
+    {
+      "id": "alr_default_rain_gauge_daily_accumulation_warning",
+      "parameterId": "rain_gauge_daily_accumulation",
+      "direction": "above",
+      "value": 50,
+      "level": "warning",
+      "title": "Heavy rain",
+      "enabled": true
+    },
+    {
+      "id": "alr_default_soil_moisture_caution",
+      "parameterId": "soil_moisture",
+      "direction": "below",
+      "value": 15,
+      "level": "caution",
+      "title": "Dry soil",
+      "enabled": true
     }
   ]
 }

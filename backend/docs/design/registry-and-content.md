@@ -58,14 +58,16 @@ There is one table per kind of entry: `registry_domains`, `registry_parameters`,
 ### Domains
 
 - SAM's domains are shown unless an admin removes them here, which only hides them. Adding one of SAM's codes again shows it again.
-- A domain an admin adds is this service's own display group, stored here alone. Its code never changes. It cannot be deleted while a value is shown under it.
-- Moving a value changes where it is shown. A move of one of this tenant's own values to one of SAM's domains also reaches SAM.
+- A domain an admin adds is this tenant's own SAM domain, `dgs:<CODE>`, sent through the outbox, so a new value may use it. Its code never changes. It cannot be removed while a value is shown under it or held under it in SAM; removing it removes it from SAM once this tenant's values have moved out of it there.
+- Moving a value changes where it is shown. A move of one of this tenant's own values to a domain also reaches SAM, since every domain shown is one of SAM's. A value taken out of every domain is shown under none and stays where it is in SAM.
 
 ### This tenant's own entries
 
 - A value new to the registry becomes the parameter `dgs:<id>`; a new device type becomes `dgs:<name>`. The device type maps each value under the key the admin typed, which is the key its devices send.
-- Each definition is kept in `registry_own_entries` and sent to SAM through the outbox, as this service, the holder of `registry:manage`. The admin's identity is recorded in this service's change log, not in SAM's audit.
-- A device type is sent only after the parameters it maps.
+- A device type read by hand has no sensor, so SAM gives it no keys. Its values become the fields of a template of the same ID, read off it, with the first value required.
+- Each definition is kept in `registry_own_entries` and sent to SAM through the outbox, as this service, the holder of `registry:manage`. Each write names the version SAM holds, `0` to create. The admin's identity is recorded in this service's change log, not in SAM's audit.
+- A value is sent only after the domain it names, and a device type or template only after the values it maps. Once SAM has an entry, the cached copy of SAM's registry is read again.
+- An entry SAM refuses is held for an operator, like any change SAM refuses.
 - The registry shows this service's definition until SAM has it.
 - When an admin types an ID that is already this tenant's own, it names that value again.
 
@@ -74,10 +76,16 @@ There is one table per kind of entry: `registry_domains`, `registry_parameters`,
 | Change | Answer | Why |
 |---|---|---|
 | A core device type's values, or whether it is read by hand | 409 | SAM defines them; its label, description and presentation can change |
+| Whether one of this tenant's device types is read by hand, once registered | 409 | A device type read by hand has a template instead of keys |
 | A value's unit or kind after it is registered | 400 | SAM keeps readings in the registered unit; an admin adds a new value for another unit |
-| A new value without one of SAM's domains | 400 on `values.<i>.domain` | SAM requires one of its domains for a tenant parameter, the core's or this tenant's own; a display group kept only here is neither. Once added, it can be shown under any display group |
+| A new value without a domain | 400 on `values.<i>.domain` | SAM files every parameter under a domain. Once added, it can be shown under no domain |
+| A value SAM derives explained as measured, or with other inputs; a value SAM does not derive explained as derived | 400 | SAM's derivation is the calculation; an admin rewords its formula only |
 
-The mock also allows "no domain" and the admins' own domains for a new value; SAM refuses both, so this service cannot follow the mock there.
+The mock also allows "no domain" for a new value; SAM refuses it, so this service cannot follow the mock there.
+
+### Explanations
+
+An admin sets what a value means and how it is calculated. For a value SAM derives, the method stays derived and the inputs SAM's, and the formula may be reworded. For any other value, the method is measured or entered by hand, with no inputs, and the wording replaces that of its source.
 
 ### Change log
 
@@ -87,7 +95,7 @@ An admin's change recomputes the merged registry from the cached copy of SAM's a
 
 ### Alert defaults
 
-The platform's default alert levels are this service's own (`alert_defaults`), in each parameter's display unit. They are the lowest layer of a device's alert levels ([Dashboards and public site](dashboards-and-public-site.md#alert-levels)).
+The platform's default alert levels are this service's own (`alert_defaults`), in each parameter's display unit. They are the lowest layer of a device's alert levels ([Dashboards and public site](dashboards-and-public-site.md#alert-levels)). Everyone signed in reads them; platform admins add, change, turn off and remove them, each a number value of the registry within its range, and each logged. `dgs seed` loads the front end's defaults.
 
 ### Observation templates
 
@@ -136,7 +144,7 @@ dgs consent publish consent.json            # a new version, every language
 
 - A classroom file holds the same fields as `PATCH /admin/classrooms/{classroomId}`: any of `stageId`, `regionId` (null clears it) and `profile` fields. Profile fields replace their own value only.
 - What belongs to other modules stays there: a lab's parameter notes are set with labs; templates are registry entries.
-- **The seed.** `dgs seed` loads the overlay, the stages, regions and host questions, the settings, and the first consent version while there is none, from the service's own seed, built into the binary. It adds a list's rows only while the list is empty, so a stage an admin deleted stays deleted. On a re-run it updates the rows and settings it wrote that no admin has changed since, and keeps those an admin has, so it is safe in every environment.
+- **The seed.** `dgs seed` loads the overlay and the default alert levels, the stages, regions and host questions, the settings, and the first consent version while there is none, from the service's own seed, built into the binary. It adds a list's rows only while the list is empty, so a stage an admin deleted stays deleted. On a re-run it updates the rows and settings it wrote that no admin has changed since, and keeps those an admin has, so it is safe in every environment.
 
 ## Alternatives considered
 

@@ -243,9 +243,10 @@ func TestConfigurationCommands(t *testing.T) {
 	if _, err := cmd("settings", "get", "privacy"); !errors.Is(err, settings.ErrNotSet) {
 		t.Fatalf("a setting before the seed: %v", err)
 	}
-	// 3 settings, 3 stages, 2 regions, 5 questions and the registry's
-	// overlay: 10 domains, 49 parameters, 7 device types, 7 templates.
-	const seeded = 86
+	// 3 settings, 3 stages, 2 regions, 5 questions and the registry's:
+	// 10 domains, 49 parameters, 7 device types, 7 templates and 8 default
+	// alert levels.
+	const seeded = 94
 	if out, err := cmd("seed"); err != nil || strings.Count(out, ": added") != seeded {
 		t.Fatalf("the seed: %q, %v", out, err)
 	}

@@ -106,7 +106,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/settings` | The platform's settings, their checks and seed, the configuration change log, and seeding a list |
 | `internal/classrooms` | The classrooms module. So far, the stages and regions and their seed |
 | `internal/hosting` | The hosting module. So far, the host application's questions and their seed |
-| `internal/registry` | The registry module: SAM's registry read as this service and cached, the overlay that presents it, and their merge |
+| `internal/registry` | The registry module: SAM's registry read as this service and cached, the overlay that presents it, their merge, admins' changes with this tenant's own entries sent through the outbox, and the default alert levels |
 | `internal/jsoncheck` | Strict decoding and checks of configuration, reporting every problem at once |
 | `internal/samaccess` | Calls SAM as this service, as a person through a user token or as anonymous; the signing keys and the key set; SAM's errors translated; the outbox, its worker and the reconciler |
 | `internal/server` | `server.New(Deps)`, the `Module` interface, the middleware, `/healthz` and the API's not-found answer |
@@ -249,7 +249,10 @@ The registry the front end reads ([Reading the registry](design/registry-and-con
 - **SAM's registry** is read as this service, effective in the tenant's root: domains, parameters, device types and templates page by page, then the derivations and the unit catalogue (`registry.Fetch`). `registry.Cache` serves the copy for `RefreshInterval` (ten minutes) and shares one read between concurrent misses. When a read fails, it serves the copy from before and tries again after `RetryAfter` (ten seconds). `Cache.Refresh` makes the next request read SAM again; call it once one of this tenant's entries reaches SAM.
 - **The overlay** is `registry_domains`, `registry_parameters`, `registry_device_types` and `registry_templates`, keyed by SAM's IDs, each in display order. A null column shows SAM's own, and an entry with no row is shown as SAM defines it.
 - **The merge** (`registry.Merge`) is pure, and unit-tested on its own. Units are shown as people read them, and a value's other units come from the catalogue. A device type with no sensor lists its templates' values, and each device type no template is read off gets a plain one, `device:<type>`.
-- **The seed.** `internal/registry/seed.json` is the front end's registry seed keyed by SAM's IDs. `dgs seed` loads it with the platform's configuration, by the same rules. Its changes are not logged in `configuration_changes`.
+- **Admins' changes** are for platform admins (`users.platform_admin`), every other caller gets `403`. Each runs in one transaction under `db.RegistryLock`, against the registry merged from the cached copy of SAM's without calling SAM (`Cache.Copy`), and is logged in `registry_changes` with the admin's name and the mock's summary.
+- **This tenant's own entries**, such as `dgs:MARINE` or `dgs:soil_ec`, are kept in `registry_own_entries` as SAM's input and shown at once (`withOwn`). Each is sent through the outbox as `registry:<kind>:<id>`, by the kinds `registry_domain`, `registry_parameter`, `registry_device_type` and `registry_template`. An applier reads the version SAM holds, puts the definition naming it, and returns `ErrNotYet` while an own entry it names is still waiting; a domain's removal also waits on this tenant's values. Once SAM has the entry, the cache is refreshed.
+- **Default alert levels** are `alert_defaults`, in each value's own unit and in display order.
+- **The seed.** `internal/registry/seed.json` is the front end's registry seed keyed by SAM's IDs, with its default alert levels. `dgs seed` loads it with the platform's configuration, by the same rules. Its changes are not logged in `configuration_changes`.
 
 ### Accounts in SAM
 
@@ -267,7 +270,7 @@ PostgreSQL 17, through `pgx` (`internal/db`). `db.Open` opens a pool of at most 
 
 **Transactions.** `db.InTx(ctx, q, fn)` runs `fn` in a transaction. When `ctx` already carries one (`db.WithTx`), `fn` runs in a savepoint of it, so a service function that needs a transaction works the same alone or inside a caller's.
 
-**Advisory locks** are taken only through `db.Lock` (held by a connection until released), and `db.TryLock` and `db.LockTx` (held until the transaction ends), and every key is a constant in `internal/db/locks.go`, so no two uses share one by accident. `db.LockTx` waits for a lock held until the transaction ends. `MigrationLock` is held while migrations apply, `OutboxLock` for each pass of the outbox worker, `ReconcilerLock` for each pass of the reconciler, and `SeedLock` while `dgs seed` runs.
+**Advisory locks** are taken only through `db.Lock` (held by a connection until released), and `db.TryLock` and `db.LockTx` (held until the transaction ends), and every key is a constant in `internal/db/locks.go`, so no two uses share one by accident. `db.LockTx` waits for a lock held until the transaction ends. `MigrationLock` is held while migrations apply, `OutboxLock` for each pass of the outbox worker, `ReconcilerLock` for each pass of the reconciler, `SeedLock` while `dgs seed` runs, and `RegistryLock` while an admin changes the registry.
 
 ## Conventions
 
@@ -312,6 +315,9 @@ Each table is read and written only by the package that owns it ([Data ownership
 | `registry_parameters` | `internal/registry` | |
 | `registry_device_types` | `internal/registry` | |
 | `registry_templates` | `internal/registry` | |
+| `registry_own_entries` | `internal/registry` | |
+| `registry_changes` | `internal/registry` | |
+| `alert_defaults` | `internal/registry` | |
 
 ## Testing
 

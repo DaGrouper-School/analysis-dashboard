@@ -7,6 +7,7 @@ package registry
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/dagrouper-school/sam/client"
@@ -22,27 +23,53 @@ type Module struct {
 	db       db.Querier
 	cache    *Cache
 	sessions *accounts.Sessions
+	now      func() time.Time
 }
 
 // New builds the module. SAM's registry is read through sam, as this
 // service, effective in the tenant's root.
 func New(q db.Querier, sam *client.Client, root uuid.UUID, now func() time.Time, sessions *accounts.Sessions) *Module {
 	fetch := func(ctx context.Context) (*SAM, error) { return Fetch(ctx, sam, root, now()) }
-	return &Module{db: q, cache: NewCache(fetch, now), sessions: sessions}
+	return &Module{db: q, cache: NewCache(fetch, now), sessions: sessions, now: now}
 }
 
 // Cache is the copy of SAM's registry the module serves from.
 func (m *Module) Cache() *Cache { return m.cache }
 
-// Routes serves the registry's read operations of the front end's
-// contract, for everyone signed in.
+// Routes serves the registry's operations of the front end's contract:
+// reads for everyone signed in, changes for platform admins.
 func (m *Module) Routes(mux *http.ServeMux, prefix string) {
-	read := func(h httpx.Handler) http.Handler { return m.sessions.RequireUser(h) }
-	mux.Handle("GET "+prefix+"/registry/parameters", read(m.list(func(v *View) any { return v.Parameters })))
-	mux.Handle("GET "+prefix+"/registry/domains", read(m.list(func(v *View) any { return v.Domains })))
-	mux.Handle("GET "+prefix+"/registry/device-types", read(m.list(func(v *View) any { return v.DeviceTypes })))
-	mux.Handle("GET "+prefix+"/registry/observation-templates", read(m.list(func(v *View) any { return v.Templates })))
-	mux.Handle("GET "+prefix+"/registry/parameters/{parameterId}/calculation", read(httpx.Handler(m.calculation)))
+	h := func(pattern string, handler httpx.Handler) {
+		mux.Handle(strings.Replace(pattern, " ", " "+prefix+"/registry", 1), m.sessions.RequireUser(handler))
+	}
+	h("GET /parameters", m.list(func(v *View) any { return v.Parameters }))
+	h("GET /domains", m.list(func(v *View) any { return v.Domains }))
+	h("GET /device-types", m.list(func(v *View) any { return v.DeviceTypes }))
+	h("GET /observation-templates", m.list(func(v *View) any { return v.Templates }))
+	h("GET /parameters/{parameterId}/calculation", m.calculation)
+	h("GET /alert-defaults", m.listAlertDefaults)
+
+	h = func(pattern string, handler httpx.Handler) {
+		guarded := func(w http.ResponseWriter, r *http.Request) error {
+			if err := admin(r); err != nil {
+				return err
+			}
+			return handler(w, r)
+		}
+		mux.Handle(strings.Replace(pattern, " ", " "+prefix+"/registry", 1), m.sessions.RequireUser(httpx.Handler(guarded)))
+	}
+	h("POST /domains", m.createDomain)
+	h("PATCH /domains/{domainId}", m.updateDomain)
+	h("DELETE /domains/{domainId}", m.deleteDomain)
+	h("POST /device-types", m.createDeviceType)
+	h("PATCH /device-types/{deviceTypeId}", m.updateDeviceType)
+	h("PATCH /parameters/{parameterId}", m.mapParameter)
+	h("PUT /parameters/{parameterId}/chart", m.chartParameter)
+	h("PUT /parameters/{parameterId}/explanation", m.explainParameter)
+	h("POST /alert-defaults", m.createAlertDefault)
+	h("PUT /alert-defaults/{ruleId}", m.updateAlertDefault)
+	h("DELETE /alert-defaults/{ruleId}", m.deleteAlertDefault)
+	h("GET /changes", m.listChanges)
 }
 
 // View is the registry as the front end reads it now.
@@ -51,11 +78,7 @@ func (m *Module) View(ctx context.Context) (*View, error) {
 	if err != nil {
 		return nil, err
 	}
-	o, err := LoadOverlay(ctx, m.db)
-	if err != nil {
-		return nil, err
-	}
-	return Merge(s, o), nil
+	return merged(ctx, m.db, s)
 }
 
 func (m *Module) list(part func(*View) any) httpx.Handler {

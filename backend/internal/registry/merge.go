@@ -18,6 +18,10 @@ type View struct {
 	// that has none.
 	Templates []Template
 	byID      map[string]*Parameter
+	// sam is SAM's registry it was merged from, and owns this tenant's own
+	// entries in it.
+	sam  *SAM
+	owns []Own
 }
 
 // Parameter is the front end's Parameter.
@@ -145,7 +149,7 @@ func unitLabel(symbol string) string {
 // Merge builds the registry the front end reads from SAM's and the
 // overlay.
 func Merge(s *SAM, o Overlay) *View {
-	v := &View{Domains: []Domain{}, Templates: []Template{}, byID: map[string]*Parameter{}}
+	v := &View{Domains: []Domain{}, Templates: []Template{}, byID: map[string]*Parameter{}, sam: s}
 	shown := v.domains(s, o)
 	v.parameters(s, o, shown)
 	v.deviceTypes(s, o)
@@ -236,13 +240,13 @@ func (v *View) parameters(s *SAM, o Overlay, shown map[string]bool) {
 				out.Chart = *ov.Chart
 			}
 		}
-		if !shown[*out.Domain] {
+		if out.Domain != nil && !shown[*out.Domain] {
 			out.Domain = nil
 		}
 		if out.ValueType == valueNumber {
 			out.AltUnits = altUnits(units, p.Unit)
 		}
-		out.Calculation = calculation(p, out.Source, ov.Explanation, derived)
+		out.Calculation = calculation(p, out.Source, ov, derived)
 		v.Parameters = append(v.Parameters, out)
 	}
 	for i := range v.Parameters {
@@ -311,23 +315,37 @@ func altUnits(units map[string]client.Unit, symbol string) []AltUnit {
 	return out
 }
 
-// calculation is how SAM gets p: its derivation's formula, or how a value
-// from its source is taken.
-func calculation(p client.Parameter, source string, explanation *string, derived map[string]client.Derivation) *Calculation {
+// Methods of a calculation.
+const (
+	MethodMeasured = "measured"
+	MethodDerived  = "derived"
+	MethodManual   = "manual"
+)
+
+// calculation is how SAM gets p: its derivation's inputs, with its formula
+// or an admin's wording of it; otherwise how a value from its source is
+// taken, or as an admin explains it.
+func calculation(p client.Parameter, source string, ov ParameterOverlay, derived map[string]client.Derivation) *Calculation {
 	if d, ok := derived[p.ID]; ok {
-		return &Calculation{Method: "derived", Formula: d.Definition.Formula, Inputs: nonNil(d.Inputs),
+		c := &Calculation{Method: MethodDerived, Formula: d.Definition.Formula, Inputs: nonNil(d.Inputs),
 			Version: fmt.Sprintf("SAM %s v%d", d.Function, d.FunctionVersion), PublishedAt: day(d.UpdatedAt)}
+		if ov.Explanation != nil {
+			c.Formula = *ov.Explanation
+		}
+		return c
 	}
-	method := "measured"
-	if source == SourceManual {
-		method = "manual"
-	}
-	formula := sourceWording[source]
-	if explanation != nil {
-		formula = *explanation
-	}
-	return &Calculation{Method: method, Formula: formula, Inputs: []string{},
+	c := &Calculation{Method: MethodMeasured, Formula: sourceWording[source], Inputs: []string{},
 		Version: fmt.Sprintf("SAM %s v%d", p.ID, p.Version), PublishedAt: day(p.UpdatedAt)}
+	if source == SourceManual {
+		c.Method = MethodManual
+	}
+	if ov.Method != nil {
+		c.Method, c.Inputs = *ov.Method, nonNil(ov.Inputs)
+	}
+	if ov.Explanation != nil {
+		c.Formula = *ov.Explanation
+	}
+	return c
 }
 
 func day(t time.Time) string { return t.UTC().Format(time.DateOnly) }
@@ -462,4 +480,34 @@ func deref(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// own is this tenant's own entry of kind with id.
+func (v *View) own(kind, id string) (Own, bool) {
+	i := slices.IndexFunc(v.owns, func(o Own) bool { return o.Kind == kind && o.ID == id })
+	if i < 0 {
+		return Own{}, false
+	}
+	return v.owns[i], true
+}
+
+// hasDomain reports whether SAM's registry has the domain id.
+func (s *SAM) hasDomain(id string) bool {
+	return slices.ContainsFunc(s.Domains, func(d client.Domain) bool { return d.ID == id })
+}
+
+// domainOf is the domain SAM holds a parameter under, or "".
+func (s *SAM) domainOf(id string) string {
+	if i := slices.IndexFunc(s.Parameters, func(p client.Parameter) bool { return p.ID == id }); i >= 0 {
+		return s.Parameters[i].DomainID
+	}
+	return ""
+}
+
+// derivation is how SAM derives a parameter, or nil.
+func (s *SAM) derivation(id string) *client.Derivation {
+	if i := slices.IndexFunc(s.Derivations, func(d client.Derivation) bool { return d.ParameterID == id }); i >= 0 {
+		return &s.Derivations[i]
+	}
+	return nil
 }

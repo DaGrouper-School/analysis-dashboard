@@ -48,7 +48,8 @@ func TestCheckOverlay(t *testing.T) {
 	}
 }
 
-// TestSeedOverlay: the seed fills the overlay, a second run changes
+// TestSeedOverlay: the seed fills the overlay and the default alert
+// levels, a second run changes
 // nothing, and a row an admin changed is kept; what is stored reads back
 // as the seed wrote it.
 func TestSeedOverlay(t *testing.T) {
@@ -56,7 +57,8 @@ func TestSeedOverlay(t *testing.T) {
 	ctx := context.Background()
 	pool := testutil.DB(t)
 	now := time.Date(2026, 11, 26, 9, 0, 0, 0, time.UTC)
-	seed, _ := seedOverlay()
+	all, _ := readSeed()
+	seed := all.Overlay
 	count := func(seeded []settings.Seeded, o settings.Outcome) int {
 		n := 0
 		for _, s := range seeded {
@@ -66,7 +68,7 @@ func TestSeedOverlay(t *testing.T) {
 		}
 		return n
 	}
-	total := len(seed.Domains) + len(seed.Parameters) + len(seed.DeviceTypes) + len(seed.Templates)
+	total := len(seed.Domains) + len(seed.Parameters) + len(seed.DeviceTypes) + len(seed.Templates) + len(all.AlertDefaults)
 	seeded, err := SeedOverlay(ctx, pool, now)
 	if err != nil || count(seeded, settings.Added) != total || seeded[0].What != KindDomain+" AIR" {
 		t.Fatalf("the seed: %v", err)

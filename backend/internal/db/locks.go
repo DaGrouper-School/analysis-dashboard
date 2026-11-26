@@ -23,6 +23,9 @@ const (
 	// SeedLock is held while dgs seed runs, so two seeds never both find a
 	// list empty and add its rows twice.
 	SeedLock int64 = 8301004
+	// RegistryLock is held while an admin changes the registry, so changes
+	// run one at a time, each against the registry the one before left.
+	RegistryLock int64 = 8301005
 	// TestTemplateLock is held while tests build their migrated template
 	// database.
 	TestTemplateLock int64 = 8301999

@@ -13,8 +13,9 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings"
 )
 
-// seedFile is the overlay's seed, built into the binary: the front end's
-// seed (frontend/src/lib/data/seed.ts) keyed by SAM's IDs.
+// seedFile is the registry's seed, built into the binary: the front end's
+// registry seed (frontend/src/lib/data/seed.ts) keyed by SAM's IDs, and its
+// default alert levels.
 //
 //go:embed seed.json
 var seedFile []byte
@@ -27,11 +28,15 @@ const (
 	KindTemplate   = "registry template"
 )
 
-// SeedOverlay brings the overlay in line with the seed, as
-// settings.SeedList does. The overlay's seed is not logged with the
-// platform's configuration.
+// SeedOverlay brings the overlay and the default alert levels in line with
+// the seed, as settings.SeedList does. The registry's seed is not logged
+// with the platform's configuration.
 func SeedOverlay(ctx context.Context, q db.Querier, now time.Time) ([]settings.Seeded, error) {
 	o, err := seedOverlay()
+	if err != nil {
+		return nil, err
+	}
+	alerts, err := seedAlerts()
 	if err != nil {
 		return nil, err
 	}
@@ -43,6 +48,7 @@ func SeedOverlay(ctx context.Context, q db.Querier, now time.Time) ([]settings.S
 			return settings.SeedList(ctx, q, now, deviceTypeList, o.DeviceTypes)
 		},
 		func() ([]settings.Seeded, error) { return settings.SeedList(ctx, q, now, templateList, o.Templates) },
+		func() ([]settings.Seeded, error) { return settings.SeedList(ctx, q, now, alertList, alerts) },
 	} {
 		more, err := seed()
 		out = append(out, more...)
@@ -53,12 +59,28 @@ func SeedOverlay(ctx context.Context, q db.Querier, now time.Time) ([]settings.S
 	return out, nil
 }
 
-func seedOverlay() (Overlay, error) {
-	o, problems := jsoncheck.Decode[Overlay](seedFile)
+// seed is the registry's seed: the overlay and the default alert levels.
+type seed struct {
+	Overlay
+	AlertDefaults []AlertRule `json:"alertDefaults"`
+}
+
+func readSeed() (seed, error) {
+	s, problems := jsoncheck.Decode[seed](seedFile)
 	if len(problems) == 0 {
-		problems = CheckOverlay(o)
+		problems = append(CheckOverlay(s.Overlay), checkAlertSeed(s.AlertDefaults)...)
 	}
-	return o, jsoncheck.Refuse("the registry's seed", problems)
+	return s, jsoncheck.Refuse("the registry's seed", problems)
+}
+
+func seedOverlay() (Overlay, error) {
+	s, err := readSeed()
+	return s.Overlay, err
+}
+
+func seedAlerts() ([]AlertRule, error) {
+	s, err := readSeed()
+	return s.AlertDefaults, err
 }
 
 // samID is an ID in SAM's forms: pm2_5, AIR, or dgs:soil_ec under a
@@ -128,14 +150,15 @@ var parameterList = settings.List[ParameterOverlay]{
 	}),
 	Insert: func(ctx context.Context, q db.Querier, now time.Time, p ParameterOverlay, position int) error {
 		_, err := q.Exec(ctx, `INSERT INTO registry_parameters (`+parameterColumns+`, position, seeded, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true, $12)`,
-			p.ID, p.Label, p.Definition, p.Plain, p.Explanation, p.Domain, p.Unit, p.Source, p.Noise, p.Chart, position, now)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, true, $14)`,
+			p.ID, p.Label, p.Definition, p.Plain, p.Explanation, p.Domain, p.Unit, p.Source, p.Noise, p.Chart, p.Method, p.Inputs, position, now)
 		return err
 	},
 	Update: func(ctx context.Context, q db.Querier, now time.Time, p ParameterOverlay, position int) error {
 		_, err := q.Exec(ctx, `UPDATE registry_parameters SET label = $2, definition = $3, plain = $4, explanation = $5,
-			domain = $6, unit = $7, source = $8, noise = $9, chart = $10, position = $11, updated_at = $12 WHERE id = $1 AND seeded`,
-			p.ID, p.Label, p.Definition, p.Plain, p.Explanation, p.Domain, p.Unit, p.Source, p.Noise, p.Chart, position, now)
+			domain = $6, unit = $7, source = $8, noise = $9, chart = $10, method = $11, inputs = $12, position = $13, updated_at = $14
+			WHERE id = $1 AND seeded`,
+			p.ID, p.Label, p.Definition, p.Plain, p.Explanation, p.Domain, p.Unit, p.Source, p.Noise, p.Chart, p.Method, p.Inputs, position, now)
 		return err
 	},
 }
