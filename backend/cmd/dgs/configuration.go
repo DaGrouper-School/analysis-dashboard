@@ -134,3 +134,21 @@ func publishConsent(ctx context.Context, out io.Writer, pool *pgxpool.Pool, file
 	_, err = fmt.Fprintf(out, "published consent text version %d; sheets and links show it at once\n", version)
 	return err
 }
+
+// configureClassroom sets the classroom with code's stage, region and
+// profile fields from file, as the operator's.
+func configureClassroom(ctx context.Context, out io.Writer, pool *pgxpool.Pool, code, file string) error {
+	raw, err := readFile(file)
+	if err != nil {
+		return err
+	}
+	c, err := classrooms.ByCode(ctx, pool, code)
+	if err != nil {
+		return fmt.Errorf("classroom %s: %w", code, err)
+	}
+	if err := classrooms.Configure(ctx, pool, time.Now(), settings.Operator, c.ID, raw); err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(out, "configured %s; its pages show it at once\n", code)
+	return err
+}

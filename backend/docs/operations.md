@@ -42,6 +42,16 @@ dgs consent publish consent.json   # the next version; - reads standard input
 
 The file maps each language code to the sheet's parts, as `internal/classrooms/consent.json` does: `title`, `intro`, `sections` (each a `heading` and `body`), `choices` (`give` and `withdraw`), `contributorField`, `fields` and `officeNote`. `{classroom}`, `{institution}` and `{decimals}` are filled in for each classroom. A version keeps every language of the one before and always has `en`. A file that breaks a rule is refused with every problem named, and nothing is published.
 
+### Configuring a classroom
+
+Platform admins set a classroom's stage, region and profile fields from the admin page. The same change from a terminal:
+
+```sh
+dgs classroom configure DGC-HG2W5K classroom.json
+```
+
+The file holds any of `stageId`, `regionId` (`null` clears it) and `profile`. A field left out stays as it is, and each profile field replaces only its own value: `areaCode`, `language`, `description`, `ecosystems`, `hostAgreementSigned`, `projects`, `sessions`, `custodianRole`, and `institution` with `history`, `hub` and `website`. A stage or region must already exist. A file that breaks a rule is refused with every problem named, and nothing changes.
+
 ## Places
 
 `DGS_PLACES_API_KEY` is a Google Places key with the Places API enabled. Restrict it to that API and to the service's outbound addresses: it is sent to Google from the server only, in a request header. Each signed-in person may look up 300 places an hour; autocomplete asks as they type, so this covers filling in a few addresses and stops a script.

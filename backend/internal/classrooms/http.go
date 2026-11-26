@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
@@ -15,20 +17,24 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings"
 )
 
-// Module is the classrooms module. So far it serves platform admins the
-// stages, regions and the consent text's versions.
+// Module is the classrooms module: classrooms, kept here and created in
+// SAM, and what platform admins keep of them: the stages, regions and
+// consent text.
 type Module struct {
 	db       db.Querier
 	sessions *accounts.Sessions
 	now      func() time.Time
+	// root is the tenant's root space, under which classrooms are created.
+	root uuid.UUID
 }
 
-// New builds the module.
-func New(q db.Querier, sessions *accounts.Sessions, now func() time.Time) *Module {
-	return &Module{db: q, sessions: sessions, now: now}
+// New builds the module. Classrooms are created in SAM under root.
+func New(q db.Querier, sessions *accounts.Sessions, now func() time.Time, root uuid.UUID) *Module {
+	return &Module{db: q, sessions: sessions, now: now, root: root}
 }
 
-// Routes serves the admin operations on the stages, regions and consent
+// Routes serves the classroom operations of the front end's contract, and
+// the admin operations on classrooms, stages, regions and the consent
 // text, which are in the contract's addendum.
 func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	admin := func(h httpx.Handler) http.Handler {
@@ -37,6 +43,11 @@ func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	config := func(h httpx.Handler) http.Handler {
 		return m.sessions.RequireAdmin("Only platform admins can change the platform's configuration.", h)
 	}
+	mux.Handle("GET "+prefix+"/classrooms", m.sessions.RequireUser(httpx.Handler(m.listMine)))
+	mux.Handle("POST "+prefix+"/classrooms", m.sessions.RequireUser(httpx.Handler(m.create)))
+	mux.Handle("GET "+prefix+"/classrooms/{classroomId}", m.sessions.RequireUser(httpx.Handler(m.get)))
+	mux.Handle("PATCH "+prefix+"/classrooms/{classroomId}", m.sessions.RequireUser(httpx.Handler(m.update)))
+	mux.Handle("PATCH "+prefix+"/admin/classrooms/{classroomId}", config(m.configure))
 	mux.Handle("GET "+prefix+"/admin/stages", config(m.listStages))
 	mux.Handle("PUT "+prefix+"/admin/stages/{stageId}", config(m.putList(PutStage, "stageId", m.listStages)))
 	mux.Handle("DELETE "+prefix+"/admin/stages/{stageId}", config(m.deleteFrom(DeleteStage, "stageId", "That stage no longer exists.",

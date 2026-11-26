@@ -72,7 +72,8 @@ tenant root space ─── admins group: device:register, device:maintain, data
   - The grants that hand others theirs carry no rules, because SAM lets a person add members to a group only if their delegating chain carries no rule the group's grants lack.
 - Sharing settings that change a role's rights, such as whether facilitators manage devices or release, re-issue that group's grant.
 - **Platform admins** are one group at the tenant root. It holds `device:register` and `device:maintain`, so admins set up any classroom's devices as themselves, and `dataset:set_policy`, so they set a classroom's terms before it has a head. It holds no read grant and never `dataset:publish`: an admin who needs a classroom's unreleased data is invited as a member.
-- **Creating classrooms.** Platform admins create classrooms, directly or by accepting a host application. Each gets a code such as `DGC-HG2W5K`, which never changes and is shown only to admins, heads and facilitators.
+- **Creating classrooms.** Platform admins create classrooms, directly or by accepting a host application, naming the head by email, who is invited as its head. Each gets a code such as `DGC-HG2W5K`, which never changes and is shown only to admins, heads and facilitators.
+- SAM gives spaces and groups no name, so each classroom records its space's ID and each role group's ID once SAM confirms them.
 
 ### Membership
 

@@ -15,8 +15,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/classrooms"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/testutil"
@@ -304,5 +306,32 @@ func TestConfigurationCommands(t *testing.T) {
 	}
 	if out, err := cmd("seed"); err != nil || !strings.Contains(out, "consent text: kept") {
 		t.Fatalf("the seed after a publication: %q, %v", out, err)
+	}
+
+	// A classroom configured by its code.
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	c, err := classrooms.Create(ctx, pool, time.Now(), uuid.Nil, classrooms.CreateInput{Name: "Trinity Weather", InstitutionName: "Trinity", HeadEmail: "h@t.example"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf := filepath.Join(dir, "classroom.json")
+	if err := os.WriteFile(conf, []byte(`{"stageId": "pilot", "profile": {"hostAgreementSigned": true}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := cmd("classroom", "configure", c.Code, conf); err != nil || !strings.Contains(out, "configured "+c.Code) {
+		t.Fatalf("configuring a classroom: %q, %v", out, err)
+	}
+	if got, _ := classrooms.Get(ctx, pool, c.ID); got.StageID != "pilot" || !got.Profile.HostAgreementSigned {
+		t.Errorf("configured: %+v", got)
+	}
+	if _, err := cmd("classroom", "configure", "DGC-NONE00", conf); !errors.Is(err, classrooms.ErrNoClassroom) {
+		t.Errorf("an unknown code: %v", err)
+	}
+	if _, err := cmd("classroom", "configure", c.Code, bad); err == nil || !strings.Contains(err.Error(), "minorCoordinateDecimals: not a field here") {
+		t.Errorf("a bad file: %v", err)
 	}
 }

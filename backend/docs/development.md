@@ -104,7 +104,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/notify` | Delivers messages: the SMS and email interfaces, the SMTP provider, the log providers for development and test, and a recorder of texts for tests |
 | `internal/places` | The places module: address autocomplete and lookup through a provider, and the calling codes |
 | `internal/settings` | The platform's settings, their checks and seed, the configuration change log, and seeding a list |
-| `internal/classrooms` | The classrooms module. So far, the stages and regions and their seed, and the guardian consent text's versions, published by platform admins |
+| `internal/classrooms` | The classrooms module: classrooms, kept here and created in SAM, their members, and what platform admins keep of them: the stages and regions and their seed, and the guardian consent text's versions |
 | `internal/hosting` | The hosting module. So far, the host application's questions and their seed |
 | `internal/roles` | The permission grid, as the front end's, and the grants each classroom's role groups and the platform admins' group hold in SAM |
 | `internal/registry` | The registry module: SAM's registry read as this service and cached, the overlay that presents it, their merge, admins' changes with this tenant's own entries sent through the outbox, and the default alert levels |
@@ -258,6 +258,13 @@ The registry the front end reads ([Reading the registry](design/registry-and-con
 - **Default alert levels** are `alert_defaults`, in each value's own unit and in display order.
 - **The seed.** `internal/registry/seed.json` is the front end's registry seed keyed by SAM's IDs, with its default alert levels. `dgs seed` loads it with the platform's configuration, by the same rules. Its changes are not logged in `configuration_changes`.
 
+### Classrooms
+
+- **Creating.** Platform admins create classrooms (`POST /api/classrooms`). Each gets a code such as `DGC-HG2W5K`, which never changes, starts at the first stage with the default sharing settings, and takes the platform's default terms with `{classroom}` and `{institution}` filled in. The head's email is kept with it until their invitation is sent.
+- **In SAM.** The outbox kind `classroom` creates the classroom as this service: a space under the tenant root, its four role groups homed there, and each group's grants from `internal/roles`. SAM gives spaces and groups no name, so the applier records each ID in `classrooms` once SAM confirms it, and each step has its own idempotency key, so a retry resumes where an attempt stopped.
+- **Who sees one.** `roles.PermissionsFor` decides, from the viewer's membership in `classroom_members`, the admin flag and the sharing settings. A classroom someone may not see answers `404`.
+- **Configuring.** `classrooms.Configure` sets a classroom's stage, region and profile fields from `PATCH /api/admin/classrooms/{classroomId}` (in the contract's addendum) or `dgs classroom configure CODE FILE`. A field left out stays as it is, each value is checked strictly first, and the change is logged in `configuration_changes`. A stage or region a classroom is at is not deleted.
+
 ### Accounts in SAM
 
 - **Participant IDs** come from the `participant_ids` sequence, in order, and are never reused. An account's ID is its SAM principal's subject, as a decimal string.
@@ -301,7 +308,7 @@ Each table is read and written only by the package that owns it ([Data ownership
 |---|---|---|
 | `schema_migrations` | `internal/db` | |
 | `sam_outbox` | `internal/samaccess` | |
-| `users` | `internal/accounts` | |
+| `users` | `internal/accounts` | `internal/classrooms` reads members' names and emails, joined for a classroom's member list |
 | `google_identities` | `internal/accounts` | |
 | `sessions` | `internal/accounts` | |
 | `demo_accounts` | `internal/accounts` | |
@@ -316,6 +323,8 @@ Each table is read and written only by the package that owns it ([Data ownership
 | `platform_settings` | `internal/settings` | |
 | `configuration_changes` | `internal/settings` | |
 | `consent_texts` | `internal/classrooms` | |
+| `classrooms` | `internal/classrooms` | |
+| `classroom_members` | `internal/classrooms` | |
 | `registry_domains` | `internal/registry` | |
 | `registry_parameters` | `internal/registry` | |
 | `registry_device_types` | `internal/registry` | |

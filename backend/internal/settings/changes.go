@@ -32,6 +32,7 @@ const (
 	KindRegion       = "region"
 	KindHostQuestion = "host_question"
 	KindConsentText  = "consent_text"
+	KindClassroom    = "classroom"
 )
 
 // Change is one change to the platform's configuration.
