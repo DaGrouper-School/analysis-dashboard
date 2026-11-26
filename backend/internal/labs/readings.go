@@ -325,7 +325,8 @@ func (m *Module) relay(ctx context.Context, d Device, u accounts.User, list []pr
 			continue
 		}
 		a := list[i].answer
-		a.ID, a.ReceivedAt = *res.ReadingID, got.ReceivedAt
+		// To the microsecond, as the database keeps it.
+		a.ID, a.ReceivedAt = *res.ReadingID, got.ReceivedAt.Round(time.Microsecond)
 		if err := keepRelayed(ctx, m.db, a, FormUpload, &u.ID, credit); err != nil {
 			return nil, err
 		}

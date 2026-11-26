@@ -52,6 +52,8 @@ func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	h("POST "+prefix+"/labs/{labId}/devices", m.registerDevice)
 	h("DELETE "+prefix+"/devices/{deviceId}", m.removeDevice)
 	h("POST "+prefix+"/devices/{deviceId}/readings", m.uploadReadings)
+	h("GET "+prefix+"/devices/{deviceId}/readings", m.deviceReadings)
+	h("GET "+prefix+"/me/conditions", m.currentConditions)
 }
 
 const (
