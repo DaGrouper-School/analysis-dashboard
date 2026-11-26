@@ -83,7 +83,7 @@ type ParameterPage struct {
 // reader is how a page reads a classroom from SAM: as the caller when
 // this service's record shows them a member of it, as anonymous otherwise.
 // Membership only: a platform admin who is not a member reads as a
-// visitor.
+// visitor, as does a member SAM does not hold yet.
 func (m *Module) reader(r *http.Request, c classrooms.Classroom) (*client.Client, bool, error) {
 	ctx := r.Context()
 	cur, ok := accounts.CurrentUser(ctx)
@@ -99,7 +99,12 @@ func (m *Module) reader(r *http.Request, c classrooms.Classroom) (*client.Client
 		return nil, false, err
 	}
 	as, err := m.sam.User(samaccess.Person{ParticipantID: u.ParticipantID, Registered: u.Principal != nil})
-	if err != nil {
+	switch {
+	case errors.Is(err, samaccess.ErrUnregistered):
+		// Not in SAM yet, while the outbox brings them: they see what
+		// visitors see until then.
+		return m.sam.Anonymous(), false, nil
+	case err != nil:
 		return nil, false, samaccess.Translate(ctx, err)
 	}
 	return as, true, nil

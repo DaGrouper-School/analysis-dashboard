@@ -68,6 +68,15 @@ Removing takes effect here at once: they lose the admin page and every admin act
 
 `DGS_PLACES_API_KEY` is a Google Places key with the Places API enabled. Restrict it to that API and to the service's outbound addresses: it is sent to Google from the server only, in a request header. Each signed-in person may look up 300 places an hour; autocomplete asks as they type, so this covers filling in a few addresses and stops a script.
 
+## The media store
+
+Photos are kept in an S3-compatible object store, `DGS_MEDIA_URL` with the key in `DGS_MEDIA_ACCESS_KEY` and `DGS_MEDIA_SECRET_KEY`. The compose file runs SeaweedFS's S3 gateway as `media`, with the development key in `media-s3.json`; `make test-media` tests the store against `test-media`.
+
+- **The bucket.** `DGS_MEDIA_BUCKET` (`dgs-media`) is made at start-up when it has none, so the key needs the right to make buckets, or the bucket is made beforehand. The service does not start while the store cannot be reached.
+- **Names.** Each file is named by the SHA-256 of its bytes, with its type's extension, and the `media` table records its type, size and what it belongs to. A file is written once and never changed, so the store can keep versions off.
+- **Serving.** Files are served at `/api/media/{name}` from the store, with the type the table records and a year's cache: a name never changes what it holds. A file the table records that the store lacks answers 404 and logs an error.
+- **Back-ups.** Back the bucket up with the database: a restored database naming files the bucket lacks shows no photos for them.
+
 ## Signing keys
 
 User tokens are signed with Ed25519 keys from the key file `DGS_SIGNING_KEYS_FILE`. Outside development and test, start-up is refused without one. Keep it as a secret, readable only by the service.

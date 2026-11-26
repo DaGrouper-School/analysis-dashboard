@@ -87,6 +87,10 @@ Configuration comes from the environment (`internal/config`). Every problem is r
 | `DGS_SMTP_PORT` | `587` for `starttls`, `465` for `tls`, `25` for `none` | The SMTP server's port |
 | `DGS_SMTP_USERNAME`, `DGS_SMTP_PASSWORD` | none: email is sent without signing in | The SMTP credentials, set together. They are sent with `AUTH PLAIN`, over an encrypted connection only, unless the server is this machine |
 | `DGS_SMTP_FROM` | none; required with `DGS_SMTP_HOST` | The sender, such as `DaGrouper School <no-reply@dgs.example>` |
+| `DGS_MEDIA_URL` | none in development and test, where photos are kept in memory; required elsewhere, over https | The S3-compatible store photos are kept in, such as `https://s3.example` ([Operations](operations.md#the-media-store)) |
+| `DGS_MEDIA_BUCKET` | `dgs-media` | Its bucket, made at start-up when it has none |
+| `DGS_MEDIA_ACCESS_KEY`, `DGS_MEDIA_SECRET_KEY` | none; required with `DGS_MEDIA_URL` | The store's key |
+| `DGS_MEDIA_REGION` | none | The bucket's region, where the store asks for one |
 | `DGS_RECONCILE_INTERVAL` | `15m` | How often the reconciler compares SAM with this database, a Go duration of at least `1m` |
 | `DGS_SIGNING_KEYS_FILE` | none in development and test, where a key is generated at start-up; required elsewhere | The key file user tokens are signed with ([Operations](operations.md#signing-keys)) |
 
@@ -352,6 +356,7 @@ Each table is read and written only by the package that owns it ([Data ownership
 | `classrooms` | `internal/classrooms` | |
 | `classroom_members` | `internal/classrooms` | |
 | `invitations` | `internal/classrooms` | |
+| `media` | `internal/media` | |
 | `labs` | `internal/labs` | |
 | `devices` | `internal/labs` | |
 | `relayed_records` | `internal/labs` | |

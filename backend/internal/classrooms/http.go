@@ -14,6 +14,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/jsoncheck"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/media"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/notify"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings"
@@ -45,6 +46,11 @@ type Config struct {
 	// SAM is how the reconciler reads SAM, and where the public's
 	// principal comes from; nil leaves the public grants alone.
 	SAM *samaccess.Access
+	// Media keeps institution photos, and MediaURL is the address its
+	// files are served under: this service's API, such as
+	// https://dgs.example/api.
+	Media    *media.Media
+	MediaURL string
 }
 
 // New builds the module. Classrooms are created in SAM under root.
@@ -76,6 +82,7 @@ func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	mux.Handle("GET "+prefix+"/classrooms/{classroomId}", m.sessions.RequireUser(httpx.Handler(m.get)))
 	mux.Handle("PATCH "+prefix+"/classrooms/{classroomId}", m.sessions.RequireUser(httpx.Handler(m.update)))
 	mux.Handle("PUT "+prefix+"/classrooms/{classroomId}/sharing", m.sessions.RequireUser(httpx.Handler(m.updateSharing)))
+	mux.Handle("PUT "+prefix+"/classrooms/{classroomId}/institution/photo", m.sessions.RequireUser(httpx.Handler(m.setPhoto)))
 	mux.Handle("PATCH "+prefix+"/admin/classrooms/{classroomId}", config(m.configure))
 	user := func(h httpx.Handler) http.Handler { return m.sessions.RequireUser(h) }
 	mux.Handle("POST "+prefix+"/classrooms/{classroomId}/invitations", user(m.invite))

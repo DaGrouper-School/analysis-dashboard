@@ -76,7 +76,7 @@ for each parameter of a device, the first layer with rules is in force:
 
 The station and parameter pages a member sees are the public pages read as the member: the classroom's own members also get values still in review, and the last sync of any device.
 
-- The public routes read a session when there is one. A caller this service records as a member of the classroom reads SAM as themselves; anyone else, a platform admin who is not a member included, reads as anonymous.
+- The public routes read a session when there is one. A caller this service records as a member of the classroom reads SAM as themselves; anyone else, a platform admin who is not a member included, reads as anonymous, as does a member SAM does not hold yet, until the outbox brings them.
 - A visitor reads released values only, and a classroom that does not show its data publicly answers 404 on its parameter pages, whatever SAM still lets anonymous read. Its members still read it.
 - `inReview` is a member's alone: whether values observed after the cutoff are unpublished. A visitor's is false, as visitors learn nothing of what waits.
 - A station page reads the latest values, each source's values by day over the 31 days up to the newest (the month of air temperature, the week's rain and each device's seven days), and by hour over the last day. The core detail is computed from released values only, for members too, as the front end's `stationCore`; members read the released days apart.
@@ -153,9 +153,10 @@ A classroom's sharing settings:
 
 ### Photos
 
-- An institution's photo is set by its head (`setInstitutionPhoto`) and kept behind a store interface: files on a volume in development, object storage when deployed.
-- Names are content hashes, so a file never changes and is cached for good. Files are served at `/api/media/{name}`; the `media` table records what each belongs to.
-- Uploads are bounded in size and checked to be images.
+- An institution's photo is set by its head (`setInstitutionPhoto`) and kept behind a store interface (`internal/media`): an S3-compatible object store, SeaweedFS's S3 gateway in the compose file until a cloud provider is chosen, or memory in development and test without one.
+- Names are content hashes, so a file never changes and is cached for good. Files are served at `/api/media/{name}`, with the type the `media` table records, which also records what each belongs to. The profile names the photo by its full address, this service's public URL, as the front end may run on another origin.
+- Uploads are bounded in size, 1.5 MB of image, and must be PNG, JPEG or WebP by their bytes as well as by what they say; anything else is refused on `image`, as is an alt text of fewer than three characters on `alt`.
+- Files are served with `nosniff` and a sandboxing content security policy, so a file cannot run as a page.
 
 ## Alternatives considered
 

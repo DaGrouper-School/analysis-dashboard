@@ -20,6 +20,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/labs"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/logx"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/media"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/notify"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/places"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/publicsite"
@@ -60,6 +61,11 @@ type Deps struct {
 	// InvitationTTL is how long an invitation to a classroom stays open;
 	// zero for the default.
 	InvitationTTL time.Duration
+	// Media keeps stored files; nil keeps them in memory.
+	Media media.Store
+	// PublicURL is where the service is reached, such as
+	// https://dgs.example; stored files' addresses start with it.
+	PublicURL string
 }
 
 // Module is a group of endpoints. Each module registers its own routes
@@ -87,11 +93,17 @@ func New(d Deps) *App {
 		a.modules = append(a.modules, d.SAM)
 	}
 	if d.SAM != nil && d.DB != nil {
+		if d.Media == nil {
+			d.Media = media.NewMemory()
+		}
+		files := media.New(d.DB, d.Media, d.Now)
+		a.modules = append(a.modules, files)
 		a.accounts = accounts.New(d.DB, d.SAM, d.Now, d.Accounts)
 		a.registry = registry.New(d.DB, d.SAM.Service(), d.SAM.Tenant().RootSpaceID, d.Now, a.accounts.Sessions())
 		a.modules = append(a.modules, a.accounts, places.New(d.Places, a.accounts.Sessions(), a.accounts), a.registry,
 			classrooms.New(d.DB, a.accounts.Sessions(), d.Now, d.SAM.Tenant().RootSpaceID, classrooms.Config{
-				Email: d.Email, InvitationTTL: d.InvitationTTL, FrontEnd: frontEnd(d.AllowedOrigins), ShowTokens: d.Accounts.Demo, SAM: d.SAM}), hosting.New(d.DB, a.accounts.Sessions(), d.Now, hosting.Config{
+				Email: d.Email, InvitationTTL: d.InvitationTTL, FrontEnd: frontEnd(d.AllowedOrigins), ShowTokens: d.Accounts.Demo, SAM: d.SAM,
+				Media: files, MediaURL: strings.TrimRight(d.PublicURL, "/") + Prefix}), hosting.New(d.DB, a.accounts.Sessions(), d.Now, hosting.Config{
 				Email: d.Email, FrontEnd: frontEnd(d.AllowedOrigins), ShowTokens: d.Accounts.Demo, Limits: a.accounts}),
 			settingsapi.New(d.DB, a.accounts.Sessions(), d.Now),
 			consent.New(d.DB, a.accounts.Sessions(), d.Now, consent.Config{Email: d.Email, SMS: d.Accounts.SMS, FrontEnd: frontEnd(d.AllowedOrigins),

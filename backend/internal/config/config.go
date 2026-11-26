@@ -16,6 +16,7 @@ import (
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/media"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/notify"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/places"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
@@ -69,6 +70,10 @@ type Config struct {
 	// SMTP is the server email is sent through. Required outside
 	// development and test; there, without one, email goes to the log.
 	SMTP notify.SMTPConfig
+	// Media is the S3-compatible store photos are kept in. Required
+	// outside development and test, where without it they are kept in
+	// memory.
+	Media *media.S3Config
 	// SigningKeysFile is the key file user tokens are signed with. Required
 	// outside development and test; there, without one, a key is generated
 	// at start-up and lasts until the process exits.
@@ -146,6 +151,9 @@ func Load() (Config, error) {
 	}
 	c.SMTP, err = c.smtp()
 	if err != nil {
+		errs = append(errs, err)
+	}
+	if c.Media, err = c.media(); err != nil {
 		errs = append(errs, err)
 	}
 	c.SigningKeysFile = os.Getenv("DGS_SIGNING_KEYS_FILE")
@@ -374,4 +382,30 @@ func env(key, def string) string {
 		return v
 	}
 	return def
+}
+
+// media reads DGS_MEDIA_URL, DGS_MEDIA_BUCKET, DGS_MEDIA_ACCESS_KEY,
+// DGS_MEDIA_SECRET_KEY and DGS_MEDIA_REGION: the S3-compatible store
+// photos are kept in.
+func (c *Config) media() (*media.S3Config, error) {
+	m := media.S3Config{Endpoint: os.Getenv("DGS_MEDIA_URL"), Bucket: env("DGS_MEDIA_BUCKET", "dgs-media"),
+		AccessKey: os.Getenv("DGS_MEDIA_ACCESS_KEY"), SecretKey: os.Getenv("DGS_MEDIA_SECRET_KEY"), Region: os.Getenv("DGS_MEDIA_REGION")}
+	if m.Endpoint == "" {
+		if c.Local() {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("DGS_MEDIA_URL must be set in %s: the S3-compatible store photos are kept in; "+
+			"they are kept in memory only in development and test", c.Environment)
+	}
+	u, err := url.Parse(m.Endpoint)
+	switch {
+	case err != nil || u.Host == "" || (u.Scheme != "https" && u.Scheme != "http") || (u.Path != "" && u.Path != "/"):
+		return nil, fmt.Errorf("DGS_MEDIA_URL must be a store's address, such as https://s3.example, not %q", m.Endpoint)
+	case !c.Local() && u.Scheme != "https":
+		return nil, fmt.Errorf("DGS_MEDIA_URL must use https in %s", c.Environment)
+	case m.AccessKey == "" || m.SecretKey == "":
+		return nil, errors.New("DGS_MEDIA_ACCESS_KEY and DGS_MEDIA_SECRET_KEY must be set with DGS_MEDIA_URL")
+	}
+	m.Endpoint = strings.TrimSuffix(m.Endpoint, "/")
+	return &m, nil
 }
