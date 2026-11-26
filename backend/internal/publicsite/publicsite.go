@@ -69,6 +69,8 @@ func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	mux.Handle("GET "+prefix+"/public/home", httpx.Handler(m.home))
 	mux.Handle("GET "+prefix+"/public/content", httpx.Handler(m.content))
 	mux.Handle("GET "+prefix+"/public/classrooms/{classroomId}", m.sessions.OptionalUser(httpx.Handler(m.station)))
+	mux.Handle("GET "+prefix+"/public/classrooms/{classroomId}/profile", m.sessions.OptionalUser(httpx.Handler(m.profile)))
+	mux.Handle("GET "+prefix+"/public/contributors/{participantId}", httpx.Handler(m.contributor))
 	mux.Handle("GET "+prefix+"/public/classrooms/{classroomId}/parameters/{parameterId}", m.sessions.OptionalUser(httpx.Handler(m.parameter)))
 }
 

@@ -254,9 +254,9 @@ func newestReading(latest []client.ObservationRecord, device *uuid.UUID) (*time.
 
 // institution is the institution card: shown to everyone once the host
 // agreement is signed, and to the classroom's members before, so its head
-// can fill it in. Its device types are those of the classroom's kit, in
-// the registry's order.
-func institution(c classrooms.Classroom, shown Classroom, v *registry.View, devices []PublicDevice, member bool) *Institution {
+// can fill it in. Its device types are the kit's, in the registry's
+// order.
+func institution(c classrooms.Classroom, shown Classroom, v *registry.View, types []string, member bool) *Institution {
 	name := shown.InstitutionName
 	if name == nil && member {
 		name = &c.InstitutionName
@@ -266,9 +266,18 @@ func institution(c classrooms.Classroom, shown Classroom, v *registry.View, devi
 	}
 	out := &Institution{Institution: c.Profile.Institution, Name: *name, Location: shown.Location, DeviceTypes: []InstitutionDeviceType{}}
 	for _, t := range v.DeviceTypes {
-		if slices.ContainsFunc(devices, func(d PublicDevice) bool { return d.Type == t.ID }) {
+		if slices.Contains(types, t.ID) {
 			out.DeviceTypes = append(out.DeviceTypes, InstitutionDeviceType{ID: t.ID, Label: t.Label, Icon: t.Icon, Color: t.Color})
 		}
+	}
+	return out
+}
+
+// deviceTypes are the types of devices.
+func deviceTypes(devices []PublicDevice) []string {
+	var out []string
+	for _, d := range devices {
+		out = append(out, d.Type)
 	}
 	return out
 }

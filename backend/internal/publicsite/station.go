@@ -175,7 +175,7 @@ func (m *Module) station(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	out.Devices = devices
-	out.Institution = institution(c, shown, v, devices, member)
+	out.Institution = institution(c, shown, v, deviceTypes(devices), member)
 	httpx.WriteJSON(w, http.StatusOK, out)
 	return nil
 }

@@ -234,6 +234,11 @@ func Create(ctx context.Context, tx db.Querier, now time.Time, n NewUser) (User,
 // Get reads a user; pgx.ErrNoRows when there is none.
 func Get(ctx context.Context, q db.Querier, id uuid.UUID) (User, error) { return getUser(ctx, q, id) }
 
+// ByParticipant is the user with participant ID id, or pgx.ErrNoRows.
+func ByParticipant(ctx context.Context, q db.Querier, id int64) (User, error) {
+	return scanUser(q.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE participant_id = $1`, id))
+}
+
 // ErrRegistered is Renumber's and Adopt's answer for a user whose
 // principal is already recorded: their participant ID is settled.
 var ErrRegistered = errors.New("the user is registered in SAM: their participant ID is settled")
