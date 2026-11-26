@@ -243,10 +243,10 @@ func TestConfigurationCommands(t *testing.T) {
 	if _, err := cmd("settings", "get", "privacy"); !errors.Is(err, settings.ErrNotSet) {
 		t.Fatalf("a setting before the seed: %v", err)
 	}
-	// 3 settings, 3 stages, 2 regions, 5 questions and the registry's:
-	// 10 domains, 49 parameters, 7 device types, 7 templates and 8 default
-	// alert levels.
-	const seeded = 94
+	// 3 settings, 3 stages, 2 regions, 5 questions, the registry's 10
+	// domains, 49 parameters, 7 device types, 7 templates and 8 default
+	// alert levels, and the first consent text.
+	const seeded = 95
 	if out, err := cmd("seed"); err != nil || strings.Count(out, ": added") != seeded {
 		t.Fatalf("the seed: %q, %v", out, err)
 	}
@@ -285,5 +285,24 @@ func TestConfigurationCommands(t *testing.T) {
 	}
 	if _, err := cmd("settings", "get", "theme"); !errors.Is(err, settings.ErrUnknownKey) {
 		t.Fatalf("an unknown key: %v", err)
+	}
+
+	// The seed published version 1; a file publishes the next one.
+	text, err := os.ReadFile("../../internal/classrooms/consent.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	consent := filepath.Join(dir, "consent.json")
+	if err := os.WriteFile(consent, text, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := cmd("consent", "publish", consent); err != nil || !strings.Contains(out, "published consent text version 2") {
+		t.Fatalf("publishing a consent text: %q, %v", out, err)
+	}
+	if _, err := cmd("consent", "publish", bad); err == nil || !strings.Contains(err.Error(), "the consent text is not valid") {
+		t.Fatalf("a bad consent text: %v", err)
+	}
+	if out, err := cmd("seed"); err != nil || !strings.Contains(out, "consent text: kept") {
+		t.Fatalf("the seed after a publication: %q, %v", out, err)
 	}
 }

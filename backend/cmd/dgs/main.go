@@ -16,6 +16,9 @@
 //	dgs settings get KEY        print a setting's value
 //	dgs settings put KEY FILE   check a setting's value and store it; - reads
 //	                            standard input
+//	dgs consent publish FILE    publish a new version of the guardian
+//	                            consent text, every language at once; -
+//	                            reads standard input
 //	dgs seed                    load the platform's configuration and the
 //	                            registry's overlay from the seed built into
 //	                            the binary, keeping what admins and
@@ -69,7 +72,7 @@ func main() {
 	}
 }
 
-const usage = "usage: dgs serve|migrate|keys new|outbox held|outbox release ENTITY|accounts renumber USER|accounts adopt USER|email test ADDRESS|settings|settings get KEY|settings put KEY FILE|seed"
+const usage = "usage: dgs serve|migrate|keys new|outbox held|outbox release ENTITY|accounts renumber USER|accounts adopt USER|email test ADDRESS|settings|settings get KEY|settings put KEY FILE|consent publish FILE|seed"
 
 func run(ctx context.Context, out io.Writer, args []string) error {
 	switch {
@@ -78,7 +81,7 @@ func run(ctx context.Context, out io.Writer, args []string) error {
 	case is(args, "serve"), is(args, "migrate"), is(args, "outbox", "held"), len(args) == 3 && is(args[:2], "outbox", "release"),
 		len(args) == 3 && (is(args[:2], "accounts", "renumber") || is(args[:2], "accounts", "adopt") || is(args[:2], "email", "test")),
 		is(args, "settings"), is(args, "seed"), len(args) == 3 && is(args[:2], "settings", "get"),
-		len(args) == 4 && is(args[:2], "settings", "put"):
+		len(args) == 4 && is(args[:2], "settings", "put"), len(args) == 3 && is(args[:2], "consent", "publish"):
 	default:
 		return fmt.Errorf("unknown command %q; %s", strings.Join(args, " "), usage)
 	}
@@ -106,6 +109,8 @@ func run(ctx context.Context, out io.Writer, args []string) error {
 		return outbox(ctx, out, pool, args[1:])
 	case "settings":
 		return settingsCommand(ctx, out, pool, args[1:])
+	case "consent":
+		return publishConsent(ctx, out, pool, args[2])
 	case "seed":
 		return seed(ctx, out, pool)
 	case "accounts":

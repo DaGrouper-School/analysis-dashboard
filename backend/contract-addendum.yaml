@@ -16,6 +16,122 @@
 # its name, such as "openapi.yaml#/components/responses/Unauthenticated".
 # Once the regenerated openapi.yaml has an entry, a test fails until the
 # entry is removed. See docs/development.md, "The contract addendum".
-paths: {}
+paths:
+  /admin/consent-texts:
+    get:
+      operationId: admin.listConsentTexts
+      x-change: new
+      x-waits-for: The consent text admin page, with its operations in routes.ts
+      summary: List the consent text's versions
+      description: "The published versions of the guardian consent text, newest first. Access: platform admins only."
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConsentTextVersion"
+        "401":
+          $ref: "openapi.yaml#/components/responses/Unauthenticated"
+        "403":
+          $ref: "openapi.yaml#/components/responses/Forbidden"
+    post:
+      operationId: admin.publishConsentText
+      x-change: new
+      x-waits-for: The consent text admin page, with its operations in routes.ts
+      summary: Publish a consent text
+      description: >-
+        Publishes a new version in every language at once; it becomes the current one and is never
+        changed. It keeps every language of the current version and has the default one, `en`.
+        Access: platform admins only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConsentTexts"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsentText"
+        "400":
+          $ref: "openapi.yaml#/components/responses/BadRequest"
+        "401":
+          $ref: "openapi.yaml#/components/responses/Unauthenticated"
+        "403":
+          $ref: "openapi.yaml#/components/responses/Forbidden"
+        "409":
+          $ref: "openapi.yaml#/components/responses/Conflict"
+  /admin/consent-texts/{version}:
+    get:
+      operationId: admin.getConsentText
+      x-change: new
+      x-waits-for: The consent text admin page, with its operations in routes.ts
+      summary: Get a consent text
+      description: "One version in every language. Access: platform admins only."
+      parameters:
+        - name: version
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsentText"
+        "401":
+          $ref: "openapi.yaml#/components/responses/Unauthenticated"
+        "403":
+          $ref: "openapi.yaml#/components/responses/Forbidden"
+        "404":
+          $ref: "openapi.yaml#/components/responses/NotFound"
 components:
-  schemas: {}
+  schemas:
+    ConsentTexts:
+      type: object
+      description: One version's words by language code, such as en or am, with `{classroom}`, `{institution}` and `{decimals}` where each classroom's details go.
+      propertyNames:
+        pattern: "^[a-z]{2,3}(-[A-Z]{2})?$"
+      additionalProperties:
+        $ref: "openapi.yaml#/components/schemas/ConsentSheetContent"
+    ConsentTextVersion:
+      type: object
+      properties:
+        version:
+          type: integer
+        publishedAt:
+          type: string
+        publishedBy:
+          type: string
+          description: The admin's name at the time, or operator or seed.
+        languages:
+          type: array
+          items:
+            type: string
+      required: [version, publishedAt, publishedBy, languages]
+      additionalProperties: false
+    ConsentText:
+      type: object
+      properties:
+        version:
+          type: integer
+        publishedAt:
+          type: string
+        publishedBy:
+          type: string
+        languages:
+          type: array
+          items:
+            type: string
+        texts:
+          $ref: "#/components/schemas/ConsentTexts"
+      required: [version, publishedAt, publishedBy, languages, texts]
+      additionalProperties: false
