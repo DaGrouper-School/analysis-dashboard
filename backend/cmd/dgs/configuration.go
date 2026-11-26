@@ -16,6 +16,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/classrooms"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/hosting"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/registry"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings"
 )
 
@@ -91,7 +92,7 @@ func seed(ctx context.Context, out io.Writer, pool *pgxpool.Pool) error {
 			return err
 		}
 		for _, step := range []func(context.Context, db.Querier, time.Time) ([]settings.Seeded, error){
-			settings.SeedSettings, classrooms.SeedLists, hosting.SeedQuestions,
+			settings.SeedSettings, classrooms.SeedLists, hosting.SeedQuestions, registry.SeedOverlay,
 		} {
 			seeded, err := step(ctx, tx, now)
 			done = append(done, seeded...)

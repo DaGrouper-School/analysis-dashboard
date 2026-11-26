@@ -1,6 +1,6 @@
 # Development
 
-How to build, run and test the service as it stands, and the conventions its code follows. So far the service has configuration, logging with request IDs, the HTTP conventions, its PostgreSQL database with migrations, calls to SAM as itself, as a person or as anonymous, the key set SAM verifies user tokens with, the outbox that delivers changes to SAM and the reconciler, the platform's configuration and its seed, `/healthz`, graceful shutdown, and integration tests against SAM and the API contract.
+How to build, run and test the service as it stands, and the conventions its code follows. So far the service has configuration, logging with request IDs, the HTTP conventions, its PostgreSQL database with migrations, calls to SAM as itself, as a person or as anonymous, the key set SAM verifies user tokens with, the outbox that delivers changes to SAM and the reconciler, the platform's configuration and its seed, the registry the front end reads, `/healthz`, graceful shutdown, and integration tests against SAM and the API contract.
 
 ## Prerequisites
 
@@ -106,6 +106,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/settings` | The platform's settings, their checks and seed, the configuration change log, and seeding a list |
 | `internal/classrooms` | The classrooms module. So far, the stages and regions and their seed |
 | `internal/hosting` | The hosting module. So far, the host application's questions and their seed |
+| `internal/registry` | The registry module: SAM's registry read as this service and cached, the overlay that presents it, and their merge |
 | `internal/jsoncheck` | Strict decoding and checks of configuration, reporting every problem at once |
 | `internal/samaccess` | Calls SAM as this service, as a person through a user token or as anonymous; the signing keys and the key set; SAM's errors translated; the outbox, its worker and the reconciler |
 | `internal/server` | `server.New(Deps)`, the `Module` interface, the middleware, `/healthz` and the API's not-found answer |
@@ -239,7 +240,16 @@ The configuration platform admins keep ([Platform configuration](design/registry
 
 - **Checks.** `settings.Check` decodes a setting strictly into its Go shape, the same as the front end's, with `internal/jsoncheck`: no unknown or missing field, no `null` where a value is required, no blank text, then the key's own rules, such as decimals from 0 to 4 or a rain reference that is one of the daily rain values. Every problem is reported at once, with where it is. A value is stored as it re-encodes from its shape, so the same value always stores the same way.
 - **The log.** `settings.Record` writes a change to `configuration_changes`, with the admin's account and their name at the time, or `operator` or `seed`. Every module that keeps part of the configuration records its changes through it, in the same transaction as the change.
-- **The seed.** Each module embeds its part of the seed: `internal/settings/seed.json`, `internal/classrooms/seed.json` and `internal/hosting/seed.json`, the same values as the front end's seed (`frontend/src/lib/data/seed.ts`). Change both together; a test checks each seed passes its checks. `dgs seed` runs them in one transaction under `db.SeedLock`. A list's rows are added only while the list is empty, so a row an admin deleted stays deleted; `settings.SeedList` holds that rule for every list. A setting or row is updated to the seed's while the seed wrote it last, which `seeded` records; anything else changed it, and the seed keeps it.
+- **The seed.** Each module embeds its part of the seed: `internal/settings/seed.json`, `internal/classrooms/seed.json`, `internal/hosting/seed.json` and the registry's overlay in `internal/registry/seed.json`, the same values as the front end's seed (`frontend/src/lib/data/seed.ts`). Change both together; a test checks each seed passes its checks. `dgs seed` runs them in one transaction under `db.SeedLock`. A list's rows are added only while the list is empty, so a row an admin deleted stays deleted; `settings.SeedList` holds that rule for every list. A setting or row is updated to the seed's while the seed wrote it last, which `seeded` records; anything else changed it, and the seed keeps it.
+
+### The registry
+
+The registry the front end reads ([Reading the registry](design/registry-and-content.md#reading-the-registry)) is SAM's merged with this service's overlay, on each request.
+
+- **SAM's registry** is read as this service, effective in the tenant's root: domains, parameters, device types and templates page by page, then the derivations and the unit catalogue (`registry.Fetch`). `registry.Cache` serves the copy for `RefreshInterval` (ten minutes) and shares one read between concurrent misses. When a read fails, it serves the copy from before and tries again after `RetryAfter` (ten seconds). `Cache.Refresh` makes the next request read SAM again; call it once one of this tenant's entries reaches SAM.
+- **The overlay** is `registry_domains`, `registry_parameters`, `registry_device_types` and `registry_templates`, keyed by SAM's IDs, each in display order. A null column shows SAM's own, and an entry with no row is shown as SAM defines it.
+- **The merge** (`registry.Merge`) is pure, and unit-tested on its own. Units are shown as people read them, and a value's other units come from the catalogue. A device type with no sensor lists its templates' values, and each device type no template is read off gets a plain one, `device:<type>`.
+- **The seed.** `internal/registry/seed.json` is the front end's registry seed keyed by SAM's IDs. `dgs seed` loads it with the platform's configuration, by the same rules. Its changes are not logged in `configuration_changes`.
 
 ### Accounts in SAM
 
@@ -298,6 +308,10 @@ Each table is read and written only by the package that owns it ([Data ownership
 | `host_questions` | `internal/hosting` | |
 | `platform_settings` | `internal/settings` | |
 | `configuration_changes` | `internal/settings` | |
+| `registry_domains` | `internal/registry` | |
+| `registry_parameters` | `internal/registry` | |
+| `registry_device_types` | `internal/registry` | |
+| `registry_templates` | `internal/registry` | |
 
 ## Testing
 

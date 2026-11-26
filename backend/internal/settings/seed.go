@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
@@ -100,9 +101,12 @@ func seedValues() (map[string]json.RawMessage, error) {
 
 // List is how SeedList reaches a list's rows. Its functions are the store
 // functions of the module that owns the list.
-type List[T comparable] struct {
+type List[T any] struct {
 	// Kind is what a row is, for the change log, such as stage.
 	Kind string
+	// Unlogged lists are seeded without logging each change here, for
+	// lists whose changes are logged elsewhere.
+	Unlogged bool
 	// ID is a row's ID.
 	ID func(T) string
 	// Count is how many rows the list has.
@@ -122,7 +126,7 @@ type List[T comparable] struct {
 // lacks is left out, so a row an admin deleted stays deleted. Each
 // addition and update is logged as the seed's. The caller holds the seed
 // lock, so two seeds never both find the list empty.
-func SeedList[T comparable](ctx context.Context, q db.Querier, now time.Time, l List[T], rows []T) ([]Seeded, error) {
+func SeedList[T any](ctx context.Context, q db.Querier, now time.Time, l List[T], rows []T) ([]Seeded, error) {
 	n, err := l.Count(ctx, q)
 	if err != nil {
 		return nil, err
@@ -134,15 +138,17 @@ func SeedList[T comparable](ctx context.Context, q db.Querier, now time.Time, l 
 		if err != nil {
 			return out, fmt.Errorf("seeding %s %s: %w", l.Kind, id, err)
 		}
-		if err := RecordSeed(ctx, q, now, l.Kind, id, outcome); err != nil {
-			return out, err
+		if !l.Unlogged {
+			if err := RecordSeed(ctx, q, now, l.Kind, id, outcome); err != nil {
+				return out, err
+			}
 		}
 		out = append(out, Seeded{What: l.Kind + " " + id, Outcome: outcome})
 	}
 	return out, nil
 }
 
-func seedRow[T comparable](ctx context.Context, q db.Querier, now time.Time, l List[T], empty bool, row T, position int) (Outcome, error) {
+func seedRow[T any](ctx context.Context, q db.Querier, now time.Time, l List[T], empty bool, row T, position int) (Outcome, error) {
 	if empty {
 		return Added, l.Insert(ctx, q, now, row, position)
 	}
@@ -154,7 +160,7 @@ func seedRow[T comparable](ctx context.Context, q db.Querier, now time.Time, l L
 		return LeftOut, nil
 	case !seeded:
 		return Kept, nil
-	case current == row && at == position:
+	case reflect.DeepEqual(current, row) && at == position:
 		return Unchanged, nil
 	}
 	return Updated, l.Update(ctx, q, now, row, position)

@@ -1,0 +1,825 @@
+{
+  "domains": [
+    {
+      "id": "AIR",
+      "label": "Air",
+      "icon": "tree",
+      "description": "Temperature, humidity and air quality.",
+      "hidden": false
+    },
+    {
+      "id": "RAIN",
+      "label": "Rain",
+      "icon": "rain",
+      "description": "Rainfall rates and totals.",
+      "hidden": false
+    },
+    {
+      "id": "WIND",
+      "label": "Wind",
+      "icon": "wind",
+      "description": "Wind speed and direction.",
+      "hidden": false
+    },
+    {
+      "id": "SUN",
+      "label": "Sun",
+      "icon": "sun",
+      "description": "Sunlight, UV and brightness.",
+      "hidden": false
+    },
+    {
+      "id": "WAVES",
+      "label": "Waves",
+      "icon": "waves",
+      "description": "Air pressure and its trend.",
+      "hidden": false
+    },
+    {
+      "id": "LIGHTNING",
+      "label": "Lightning",
+      "icon": "bolt",
+      "description": "Strikes and their distance.",
+      "hidden": false
+    },
+    {
+      "id": "SOIL",
+      "label": "Soil",
+      "icon": "soil",
+      "description": "Soil moisture and temperature.",
+      "hidden": false
+    },
+    {
+      "id": "WATER",
+      "label": "Water",
+      "icon": "water",
+      "description": "Water temperature and acidity.",
+      "hidden": false
+    },
+    {
+      "id": "REEF",
+      "label": "Reefs",
+      "icon": "droplet",
+      "description": "Coral health and spawning.",
+      "hidden": false
+    },
+    {
+      "id": "LIFE",
+      "label": "Wildlife",
+      "icon": "sprout",
+      "description": "Species seen and how many.",
+      "hidden": false
+    }
+  ],
+  "parameters": [
+    {
+      "id": "air_temperature",
+      "label": "Air temperature",
+      "definition": null,
+      "plain": "How warm the air is in the shade, measured about 2 m above the ground.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": 0.3,
+      "chart": "line_band"
+    },
+    {
+      "id": "feels_like",
+      "label": "Feels like",
+      "definition": null,
+      "plain": "How warm or cold it feels to people, from the air temperature, humidity and wind.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": 0.5,
+      "chart": null
+    },
+    {
+      "id": "heat_index",
+      "label": "Heat index",
+      "definition": null,
+      "plain": "How warm it feels to people once humidity is added to the air temperature.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": 0.5,
+      "chart": null
+    },
+    {
+      "id": "wind_chill",
+      "label": "Wind chill",
+      "definition": null,
+      "plain": "How cold it feels to people once the wind is added to the air temperature.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": 0.5,
+      "chart": null
+    },
+    {
+      "id": "relative_humidity",
+      "label": "Relative humidity",
+      "definition": null,
+      "plain": "How much water vapour the air holds, as a share of the most it could hold at this temperature.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": 2,
+      "chart": null
+    },
+    {
+      "id": "dew_point",
+      "label": "Dew point",
+      "definition": null,
+      "plain": "The temperature the air would have to cool to before dew forms. Higher means more moisture in the air.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": 0.5,
+      "chart": null
+    },
+    {
+      "id": "wet_bulb_temperature",
+      "label": "Wet bulb temperature",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "wet_bulb_globe_temperature",
+      "label": "Wet bulb globe temperature",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "delta_t",
+      "label": "Delta T",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "air_density",
+      "label": "Air density",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "station_pressure",
+      "label": "Station pressure",
+      "definition": null,
+      "plain": "The weight of the air above the station. It is lower at higher places and changes with the weather.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": 0.5,
+      "chart": null
+    },
+    {
+      "id": "barometric_pressure",
+      "label": "Barometric pressure",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "sea_level_pressure",
+      "label": "Sea level pressure",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "pressure_trend",
+      "label": "Pressure trend",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "solar_radiation",
+      "label": "Solar radiation",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "uv",
+      "label": "UV index",
+      "definition": null,
+      "plain": "How strong the sun's ultraviolet light is. Higher numbers mean stronger light.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": 0.3,
+      "chart": null
+    },
+    {
+      "id": "brightness",
+      "label": "Brightness",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "precip",
+      "label": "Precipitation rate",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "precip_accum_last_1hr",
+      "label": "Rain, last hour",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "precip_accum_local_day",
+      "label": "Rain, today",
+      "definition": null,
+      "plain": "How much rain has fallen since local midnight, as the depth of water it would leave on flat ground.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": 0.2,
+      "chart": "daily_bars"
+    },
+    {
+      "id": "precip_accum_local_day_final",
+      "label": "Rain, today (final)",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "precip_accum_local_yesterday",
+      "label": "Rain, yesterday",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "precip_accum_local_yesterday_final",
+      "label": "Rain, yesterday (final)",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "precip_analysis_type_yesterday",
+      "label": "Rain analysis type",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "precip_minutes_local_day",
+      "label": "Rain minutes, today",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "precip_minutes_local_yesterday",
+      "label": "Rain minutes, yesterday",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "precip_minutes_local_yesterday_final",
+      "label": "Rain minutes, yesterday (final)",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "wind_avg",
+      "label": "Average wind speed",
+      "definition": null,
+      "plain": "How fast the air is moving, averaged over a short period.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": 0.5,
+      "chart": null
+    },
+    {
+      "id": "wind_gust",
+      "label": "Wind gust",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "wind_lull",
+      "label": "Wind lull",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "wind_direction",
+      "label": "Wind direction",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "lightning_strike_count",
+      "label": "Lightning strikes",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "lightning_strike_count_last_1hr",
+      "label": "Strikes, last hour",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "lightning_strike_count_last_3hr",
+      "label": "Strikes, last 3 hours",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "lightning_strike_last_distance",
+      "label": "Last strike distance",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "lightning_strike_last_epoch",
+      "label": "Last strike time",
+      "definition": null,
+      "plain": "When the most recent lightning strike was, in your own time zone.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "weather_station",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "rain_gauge_daily_accumulation",
+      "label": "Manual rain gauge, daily",
+      "definition": null,
+      "plain": "How much rain a person read from the gauge for the day, as the depth of water collected.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "manual",
+      "noise": 0.5,
+      "chart": "daily_bars"
+    },
+    {
+      "id": "soil_moisture",
+      "label": "Soil moisture",
+      "definition": null,
+      "plain": "How much water the soil holds, as a share of its volume.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "device",
+      "noise": 1,
+      "chart": null
+    },
+    {
+      "id": "soil_temperature",
+      "label": "Soil temperature",
+      "definition": null,
+      "plain": "How warm the soil is a few centimetres below the surface.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "device",
+      "noise": 0.3,
+      "chart": "line_band"
+    },
+    {
+      "id": "water_temperature",
+      "label": "Water temperature",
+      "definition": null,
+      "plain": "How warm the water is where the probe sits.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "device",
+      "noise": 0.2,
+      "chart": null
+    },
+    {
+      "id": "water_ph",
+      "label": "Water pH",
+      "definition": null,
+      "plain": "How acidic or alkaline the water is. 7 is neutral, lower is more acidic and higher is more alkaline.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "device",
+      "noise": 0.1,
+      "chart": null
+    },
+    {
+      "id": "pm2_5",
+      "label": "PM2.5",
+      "definition": null,
+      "plain": "How much fine dust and smoke is in the air, counting particles up to 2.5 µm across.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "device",
+      "noise": 2,
+      "chart": null
+    },
+    {
+      "id": "pm10",
+      "label": "PM10",
+      "definition": null,
+      "plain": "How much dust is in the air, counting particles up to 10 µm across.",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "device",
+      "noise": 3,
+      "chart": null
+    },
+    {
+      "id": "coral_spawning_observed",
+      "label": "Spawning seen",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "manual",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "coral_colonies_spawning",
+      "label": "Colonies spawning",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": "colonies",
+      "source": "manual",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "species_name",
+      "label": "Species",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "manual",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "species_count",
+      "label": "How many",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": "individuals",
+      "source": "manual",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "sound_level",
+      "label": "Sound level",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "device",
+      "noise": null,
+      "chart": null
+    },
+    {
+      "id": "precipitation_amount",
+      "label": "Precipitation amount",
+      "definition": null,
+      "plain": "",
+      "explanation": null,
+      "domain": null,
+      "unit": null,
+      "source": "device",
+      "noise": null,
+      "chart": null
+    }
+  ],
+  "deviceTypes": [
+    {
+      "id": "weather_station",
+      "label": "Weather station",
+      "description": "Tempest-style station: air, rain, wind, sun, pressure and lightning.",
+      "color": "#3cc04b",
+      "icon": "station",
+      "tiles": [
+        "air_temperature",
+        "precip_accum_local_day",
+        "uv",
+        "wind_avg"
+      ],
+      "cards": [
+        "air_temperature",
+        "precip_accum_local_day",
+        "uv"
+      ]
+    },
+    {
+      "id": "manual_rain_gauge",
+      "label": "Rain gauge",
+      "description": "Manual gauge read once a day.",
+      "color": "#00bdff",
+      "icon": "gauge",
+      "tiles": [
+        "rain_gauge_daily_accumulation"
+      ],
+      "cards": [
+        "rain_gauge_daily_accumulation"
+      ]
+    },
+    {
+      "id": "soil_sensor",
+      "label": "Soil sensor",
+      "description": "Probe in the ground: moisture and temperature.",
+      "color": "#f6921e",
+      "icon": "soil",
+      "tiles": [
+        "soil_moisture",
+        "soil_temperature"
+      ],
+      "cards": [
+        "soil_moisture",
+        "soil_temperature"
+      ]
+    },
+    {
+      "id": "water_probe",
+      "label": "Water probe",
+      "description": "Probe in a stream, pond or tank.",
+      "color": "#2f7ff0",
+      "icon": "water",
+      "tiles": [
+        "water_temperature",
+        "water_ph"
+      ],
+      "cards": [
+        "water_temperature",
+        "water_ph"
+      ]
+    },
+    {
+      "id": "air_quality_sensor",
+      "label": "Air quality sensor",
+      "description": "Particulate matter counter.",
+      "color": "#e8457a",
+      "icon": "particles",
+      "tiles": [
+        "pm2_5",
+        "pm10"
+      ],
+      "cards": [
+        "pm2_5",
+        "pm10"
+      ]
+    },
+    {
+      "id": "sen0658",
+      "label": "Weather sensor",
+      "description": "All-in-one sensor of the pilot station: wind, temperature, humidity, pressure, light, sound and particulates.",
+      "color": "#a77bf3",
+      "icon": "station",
+      "tiles": [
+        "air_temperature",
+        "relative_humidity",
+        "wind_avg",
+        "pm2_5"
+      ],
+      "cards": [
+        "air_temperature",
+        "relative_humidity",
+        "wind_avg"
+      ]
+    },
+    {
+      "id": "optical_rain_gauge",
+      "label": "Optical rain gauge",
+      "description": "Rain gauge of the pilot station, read by its sensor.",
+      "color": "#d4b72c",
+      "icon": "rain",
+      "tiles": [
+        "precipitation_amount",
+        "precip"
+      ],
+      "cards": [
+        "precipitation_amount"
+      ]
+    }
+  ],
+  "templates": [
+    {
+      "id": "rain_gauge_reading",
+      "label": "Rain gauge reading",
+      "description": "Read the gauge once a day, at the same time, then empty it.",
+      "domain": "RAIN",
+      "deviceType": "manual_rain_gauge"
+    },
+    {
+      "id": "station_spot_check",
+      "label": "Weather station spot check",
+      "description": "Copy what the station display shows, to check it against what it sends.",
+      "domain": "AIR",
+      "deviceType": "weather_station"
+    },
+    {
+      "id": "soil_check",
+      "label": "Soil check",
+      "description": "Read the soil sensor, or a handheld probe pushed in next to it.",
+      "domain": "SOIL",
+      "deviceType": "soil_sensor"
+    },
+    {
+      "id": "water_check",
+      "label": "Water check",
+      "description": "Take the probe reading at the usual spot, away from the edge.",
+      "domain": "WATER",
+      "deviceType": "water_probe"
+    },
+    {
+      "id": "air_quality_reading",
+      "label": "Air quality reading",
+      "description": "Read the counter after it has run for a minute.",
+      "domain": "AIR",
+      "deviceType": "air_quality_sensor"
+    },
+    {
+      "id": "coral_spawning",
+      "label": "Coral spawning",
+      "description": "A night dive or snorkel check on the reef after the full moon.",
+      "domain": "REEF",
+      "deviceType": null
+    },
+    {
+      "id": "species_sighting",
+      "label": "Species sighting",
+      "description": "A plant or animal you identified, and how many you saw.",
+      "domain": "LIFE",
+      "deviceType": null
+    }
+  ]
+}

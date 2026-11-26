@@ -16,9 +16,10 @@
 //	dgs settings get KEY        print a setting's value
 //	dgs settings put KEY FILE   check a setting's value and store it; - reads
 //	                            standard input
-//	dgs seed                    load the platform's configuration from the
-//	                            seed built into the binary, keeping what
-//	                            admins and operators changed
+//	dgs seed                    load the platform's configuration and the
+//	                            registry's overlay from the seed built into
+//	                            the binary, keeping what admins and
+//	                            operators changed
 //
 // Configuration comes from the environment; docs/development.md lists every
 // variable and its default.

@@ -27,7 +27,7 @@ dgs settings get privacy > privacy.json   # edit, then
 dgs settings put privacy privacy.json     # - reads standard input
 ```
 
-- **The seed.** `dgs seed` loads the configuration built into the binary. It is safe to run in every environment and on every release: it adds a list's rows only while the list is empty, updates what it wrote last to the running release's seed, and keeps whatever an admin or operator has changed. It prints what it did with each setting and row.
+- **The seed.** `dgs seed` loads the configuration and the registry's overlay built into the binary. It is safe to run in every environment and on every release: it adds a list's rows only while the list is empty, updates what it wrote last to the running release's seed, and keeps whatever an admin or operator has changed. It prints what it did with each setting and row.
 - **Checks.** `dgs settings put` refuses a value that is not the setting's shape or breaks one of its rules, and lists every problem with where it is. Nothing is stored then.
 - **The log.** Every change is logged with who made it: an admin by name, `operator` for `dgs settings put`, `seed` for the seed.
 - **Back to the seed.** A setting someone changed stays theirs. To take the seed's value again, put it from the release's `internal/settings/seed.json`, such as `jq .privacy internal/settings/seed.json | dgs settings put privacy -`.

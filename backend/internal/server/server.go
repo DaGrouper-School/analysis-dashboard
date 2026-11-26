@@ -17,6 +17,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/logx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/places"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/registry"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 )
 
@@ -60,6 +61,7 @@ type App struct {
 	Deps
 	modules  []Module
 	accounts *accounts.Module
+	registry *registry.Module
 }
 
 // New builds the service. Each module is built here from d and added to
@@ -74,7 +76,8 @@ func New(d Deps) *App {
 	}
 	if d.SAM != nil && d.DB != nil {
 		a.accounts = accounts.New(d.DB, d.SAM, d.Now, d.Accounts)
-		a.modules = append(a.modules, a.accounts, places.New(d.Places, a.accounts.Sessions(), a.accounts))
+		a.registry = registry.New(d.DB, d.SAM.Service(), d.SAM.Tenant().RootSpaceID, d.Now, a.accounts.Sessions())
+		a.modules = append(a.modules, a.accounts, places.New(d.Places, a.accounts.Sessions(), a.accounts), a.registry)
 	}
 	return a
 }
@@ -139,6 +142,9 @@ func (a *App) Actors() samaccess.Actors {
 // Accounts is the accounts module, whose Sessions the modules that guard
 // signed-in routes are built with; nil without a database and SAM.
 func (a *App) Accounts() *accounts.Module { return a.accounts }
+
+// Registry is the registry module, nil without a database and SAM.
+func (a *App) Registry() *registry.Module { return a.registry }
 
 // Handler is the HTTP API.
 func (a *App) Handler() http.Handler {
