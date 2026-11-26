@@ -165,3 +165,16 @@ func seedRow[T any](ctx context.Context, q db.Querier, now time.Time, l List[T],
 	}
 	return Updated, l.Update(ctx, q, now, row, position)
 }
+
+// Place is ids with id at position, the others keeping their order: added
+// if it is not there, at the end when position is past it.
+func Place(ids []string, id string, position int) []string {
+	out := make([]string, 0, len(ids)+1)
+	for _, x := range ids {
+		if x != id {
+			out = append(out, x)
+		}
+	}
+	position = max(0, min(position, len(out)))
+	return append(out[:position], append([]string{id}, out[position:]...)...)
+}

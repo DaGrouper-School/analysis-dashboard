@@ -58,6 +58,18 @@ func (s *Sessions) RequireUser(next http.Handler) http.Handler {
 	})
 }
 
+// RequireAdmin is RequireUser for platform admins only: anyone else
+// signed in gets 403 forbidden with message.
+func (s *Sessions) RequireAdmin(message string, next http.Handler) http.Handler {
+	return s.RequireUser(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if u, _ := CurrentUser(r.Context()); !u.PlatformAdmin {
+			httpx.WriteError(w, r, httpx.Forbidden(message))
+			return
+		}
+		next.ServeHTTP(w, r)
+	}))
+}
+
 // authenticate is the request's user, extending their session when due.
 func (s *Sessions) authenticate(w http.ResponseWriter, r *http.Request) (User, error) {
 	c, err := r.Cookie(CookieName)
