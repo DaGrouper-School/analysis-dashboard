@@ -1,4 +1,6 @@
-package settings
+// Package settingsapi serves platform admins the platform's settings and
+// the configuration's change log, which internal/settings keeps.
+package settingsapi
 
 import (
 	"encoding/json"
@@ -12,6 +14,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/jsoncheck"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings"
 )
 
 // Module serves platform admins the settings and the configuration's
@@ -22,8 +25,8 @@ type Module struct {
 	now      func() time.Time
 }
 
-// NewModule builds the module.
-func NewModule(q db.Querier, sessions *accounts.Sessions, now func() time.Time) *Module {
+// New builds the module.
+func New(q db.Querier, sessions *accounts.Sessions, now func() time.Time) *Module {
 	return &Module{db: q, sessions: sessions, now: now}
 }
 
@@ -48,12 +51,12 @@ type SettingView struct {
 }
 
 func (m *Module) list(w http.ResponseWriter, r *http.Request) error {
-	stored, err := All(r.Context(), m.db)
+	stored, err := settings.All(r.Context(), m.db)
 	if err != nil {
 		return err
 	}
-	out := make([]SettingView, 0, len(keys))
-	for _, k := range Keys() {
+	out := make([]SettingView, 0, len(settings.Keys()))
+	for _, k := range settings.Keys() {
 		v := SettingView{Key: k.Name, Value: json.RawMessage("null")}
 		if e, ok := stored[k.Name]; ok {
 			v.Value, v.Seeded, v.UpdatedAt = e.Value, e.Seeded, &e.UpdatedAt
@@ -71,17 +74,17 @@ func (m *Module) put(w http.ResponseWriter, r *http.Request) error {
 	}
 	u, _ := accounts.CurrentUser(r.Context())
 	key := r.PathValue("key")
-	_, err = Put(r.Context(), m.db, m.now(), Actor{UserID: &u.ID, Name: u.FullName}, key, raw)
+	_, err = settings.Put(r.Context(), m.db, m.now(), settings.Actor{UserID: &u.ID, Name: u.FullName}, key, raw)
 	var invalid *jsoncheck.Invalid
 	switch {
-	case errors.Is(err, ErrUnknownKey):
+	case errors.Is(err, settings.ErrUnknownKey):
 		return httpx.NotFound("There is no such setting.")
 	case errors.As(err, &invalid):
 		return httpx.Invalid(invalid.Fields())
 	case err != nil:
 		return err
 	}
-	e, err := Get(r.Context(), m.db, key)
+	e, err := settings.Get(r.Context(), m.db, key)
 	if err != nil {
 		return err
 	}
@@ -117,7 +120,7 @@ func (m *Module) changes(w http.ResponseWriter, r *http.Request) error {
 			return httpx.FieldError(httpx.CodeInvalidInput, "before", "Use the next cursor of the page before.")
 		}
 	}
-	list, err := ChangesBefore(r.Context(), m.db, before, ChangesPage+1)
+	list, err := settings.ChangesBefore(r.Context(), m.db, before, ChangesPage+1)
 	if err != nil {
 		return err
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"slices"
 	"strings"
 
 	"github.com/dagrouper-school/sam/client"
@@ -68,25 +67,7 @@ func (m *Module) applyClassroom(ctx context.Context, a samaccess.Attempt) error 
 			}
 			group = reg.Principal.ID
 		}
-		if err := issueGrants(ctx, a, group, *c.SpaceID, role, want.Sharing); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// issueGrants issues the grants of role's template that group does not
-// hold yet, each named by its label.
-func issueGrants(ctx context.Context, a samaccess.Attempt, group, space uuid.UUID, role roles.Role, sharing roles.Sharing) error {
-	held, err := a.SAM.Grants(ctx, client.GrantQuery{SubjectID: &group, SpaceID: &space}, client.PageQuery{Limit: 100})
-	if err != nil {
-		return err
-	}
-	for _, g := range roles.Grants(role, sharing) {
-		if slices.ContainsFunc(held.Items, func(h client.Grant) bool { return h.RevokedAt == nil && slices.Contains(h.Labels, g.Name) }) {
-			continue
-		}
-		if _, err := a.SAM.Issue(a.WithKey(ctx, "grant:"+string(role)+":"+g.Name), g.Input(group, space)); err != nil {
+		if err := roles.IssueMissing(ctx, a, group, *c.SpaceID, roles.Grants(role, want.Sharing), "grant:"+string(role)); err != nil {
 			return err
 		}
 	}

@@ -58,6 +58,7 @@ SAM decides and audits a call made as a person as that person, with this service
 | Asserting `consent` from a paper sheet | The person who checked the sheet, scoped to the classroom's space | They vouch for it; the policy assertion follows |
 | A classroom's space, groups and grants; a lab's space and site | This service | Structure follows this service's rules |
 | A membership change | The person whose decision it carries out, or this service for a platform admin with no role in the classroom | [Classrooms and permissions](classrooms-and-permissions.md#membership) |
+| The platform admins' group and its members | This service | An operator decides who is an admin ([Accounts and sign-in](accounts-and-sign-in.md#platform-admins)) |
 | Registering or removing a device | The person who did it | SAM checks `device:register` or `device:maintain` |
 | A classroom's data policy | The head who set the terms, or the platform admin who created a classroom with no head yet | SAM lets a tenant delegate `dataset:set_policy` but not use it |
 | A release | The person releasing | SAM checks `dataset:publish` and records the publisher |

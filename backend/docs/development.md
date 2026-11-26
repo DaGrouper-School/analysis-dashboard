@@ -105,6 +105,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/notify` | Delivers messages: the SMS and email interfaces, the SMTP provider, the log providers for development and test, and a recorder of texts for tests |
 | `internal/places` | The places module: address autocomplete and lookup through a provider, and the calling codes |
 | `internal/settings` | The platform's settings, their checks and seed, the configuration change log, and seeding a list |
+| `internal/settings/settingsapi` | The settings' and the change log's admin endpoints |
 | `internal/classrooms` | The classrooms module: classrooms, kept here and created in SAM, their members, and what platform admins keep of them: the stages and regions and their seed, and the guardian consent text's versions |
 | `internal/hosting` | The hosting module. So far, the host application's questions and their seed |
 | `internal/roles` | The permission grid, as the front end's, and the grants each classroom's role groups and the platform admins' group hold in SAM |
@@ -285,6 +286,7 @@ The registry the front end reads ([Reading the registry](design/registry-and-con
 - **Registration.** `accounts.Create` makes the user and queues their `user` change in the same transaction. The worker registers the principal, as this service, under the key `user:<user id>:principal:v<version>`, and stores its ID. Until then the account is answered as a person with no grants.
 - **Minor and consent.** `accounts.SetMinor` and `accounts.SetConsent` record them and queue the user, in the caller's transaction. The worker asserts `minor` (`true` or `false`) and `consent` (`given` or `withdrawn`) at the tenant root, as this service, each under its own key such as `user:<user id>:attr:consent:v3`. SAM's assertions are append-only, so the module keeps what SAM last confirmed and asserts only what differs. `minor` is asserted once onboarding knows it; until then SAM treats the user as a minor. `pending` and `not_needed` are this service's own states: SAM is told `withdrawn` only when consent it holds as `given` is no longer given here. Becoming a minor, or consent that was given ceasing to be, is queued as taking access away.
 - **The reconciler** compares every user with SAM, a page of a hundred at a time: a user with no principal and nothing queued is queued; one whose `minor` or `consent` in SAM differs is corrected. A user it cannot compare is logged and compared on the next pass. SAM audits each read of a user's attributes.
+- **Platform admins** (`accounts.SetAdmin`, from `dgs admins`) are `users.platform_admin`, changed at once and logged. The first one queues the admins' group (kind `admins_group`), which the worker registers at the tenant root, records in `tenant_groups` and issues `roles.AdminGrants` there. Each admin's membership is its own change (kind `admin_membership`, entity `admin:<user id>`), sent as this service, following the flag, and recorded in `users.sam_admin`; it waits for the group and the user's principal. The reconciler's `admins` check asks SAM, as each user flagged or held as an admin, whether they may register devices at the tenant root, and queues a correction where SAM differs.
 - **The restore guard** runs at every start-up, in the background. It looks participant IDs up in SAM from the sequence's next one, doubling the step and then halving it, and moves the sequence past the last ID SAM knows, logging a warning when it does. Registrations wait until it has run, so while SAM cannot be asked the service serves and accounts wait to be registered.
 
 ## The database
@@ -336,6 +338,7 @@ Each table is read and written only by the package that owns it ([Data ownership
 | `host_questions` | `internal/hosting` | |
 | `platform_settings` | `internal/settings` | |
 | `configuration_changes` | `internal/settings` | |
+| `tenant_groups` | `internal/accounts` | |
 | `consent_texts` | `internal/classrooms` | |
 | `classrooms` | `internal/classrooms` | |
 | `classroom_members` | `internal/classrooms` | |

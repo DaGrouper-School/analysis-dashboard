@@ -420,7 +420,7 @@ func TestTheReconcilerCorrectsSAM(t *testing.T) {
 		t.Fatal(err)
 	}
 	checks := b.m.Checks()
-	if len(checks) != 1 {
+	if len(checks) != 2 || checks[0].Name != "users" || checks[1].Name != "admins" {
 		t.Fatalf("checks %+v", checks)
 	}
 	if err := checks[0].Run(ctx); err != nil {

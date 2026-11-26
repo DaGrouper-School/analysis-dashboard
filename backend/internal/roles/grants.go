@@ -1,12 +1,15 @@
 package roles
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 	"slices"
 
 	"github.com/dagrouper-school/sam/client"
 	"github.com/google/uuid"
+
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 )
 
 // SAM's actions the grants name.
@@ -205,4 +208,23 @@ func union(lists ...[]string) []string {
 	}
 	slices.Sort(out)
 	return out
+}
+
+// IssueMissing issues the grants group does not hold yet on space, each
+// named by its label, as the attempt's caller. Each has its own
+// idempotency key, so a retry resumes where an attempt stopped.
+func IssueMissing(ctx context.Context, a samaccess.Attempt, group, space uuid.UUID, grants []Grant, key string) error {
+	held, err := a.SAM.Grants(ctx, client.GrantQuery{SubjectID: &group, SpaceID: &space}, client.PageQuery{Limit: 100})
+	if err != nil {
+		return err
+	}
+	for _, g := range grants {
+		if slices.ContainsFunc(held.Items, func(h client.Grant) bool { return h.RevokedAt == nil && slices.Contains(h.Labels, g.Name) }) {
+			continue
+		}
+		if _, err := a.SAM.Issue(a.WithKey(ctx, key+":"+g.Name), g.Input(group, space)); err != nil {
+			return err
+		}
+	}
+	return nil
 }

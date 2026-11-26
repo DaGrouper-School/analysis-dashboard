@@ -128,15 +128,17 @@ type User struct {
 	Consent *Consent
 
 	// The rest of the account, as the front end's User shows it.
-	AuthProvider        string
-	FullName            string
-	Email               *string
-	EmailVerified       bool
-	Phone               *string
-	PhoneVerified       bool
-	AvatarURL           *string
-	Role                string
-	PlatformAdmin       bool
+	AuthProvider  string
+	FullName      string
+	Email         *string
+	EmailVerified bool
+	Phone         *string
+	PhoneVerified bool
+	AvatarURL     *string
+	Role          string
+	PlatformAdmin bool
+	// SAMAdmin is whether SAM holds them in the admins' group.
+	SAMAdmin            bool
 	Address             []byte // JSON; nil for none
 	OnboardingCompleted bool
 	PublicProfile       bool

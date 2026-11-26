@@ -87,6 +87,15 @@ With these limits, guessing one code needs on the order of 10^5 numbers' worth o
 - **Public profile.** `setPublicProfile` shows the person's name and role next to their participant ID on contributor pages. It is refused for a minor ([Dashboards and public site](dashboards-and-public-site.md#contributors-and-credit)).
 - **Minors.** `markMinor` and `requestGuardianConsent` mark the account as a minor's and start consent ([Classrooms and permissions](classrooms-and-permissions.md#guardian-consent)).
 
+### Platform admins
+
+A platform admin runs the programme: they set up classrooms and labs, decide host applications, keep the registry and the platform's configuration, register devices and manage members, and read nothing as admins ([Classrooms and permissions](classrooms-and-permissions.md#classrooms-in-sam)).
+
+- **Who decides.** `users.platform_admin` is the record, and only an operator changes it, from a terminal: `dgs admins add` and `dgs admins remove`, naming the person by their Google email or account ID once they have signed in. Each change is logged in `configuration_changes`. Admins do not make admins from the dashboard, so one compromised account cannot make more.
+- **In SAM** they are one group at the tenant root, holding the admins' grants there. This service creates the group, issues its grants and keeps its members in step with the record, as itself: an operator, not the admin, decided.
+- **At once here.** Every check in this service reads the record, so an admin who is no longer one loses access at once. SAM follows through the outbox, as a change that takes access away.
+- **The reconciler** asks SAM, as each admin and each former admin, whether they may register devices at the tenant root, and corrects a membership SAM holds otherwise. Heads hold that right only on their classroom's space.
+
 ### Delivery
 
 Codes, invitations, guardian links and host-application links are sent through `notify`: an SMS provider and an email provider behind interfaces, so a module never names a provider.

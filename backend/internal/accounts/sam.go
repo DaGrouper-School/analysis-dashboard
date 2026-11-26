@@ -76,14 +76,18 @@ func sameBool(a, b *bool) bool { return (a == nil) == (b == nil) && (a == nil ||
 
 func sameConsent(a, b *Consent) bool { return (a == nil) == (b == nil) && (a == nil || *a == *b) }
 
-// OutboxKinds is the user kind.
+// OutboxKinds are the user kind and the platform admins' kinds.
 func (m *Module) OutboxKinds() []samaccess.Kind {
-	return []samaccess.Kind{{Name: UserKind, Apply: m.applyUser}}
+	return []samaccess.Kind{
+		{Name: UserKind, Apply: m.applyUser},
+		{Name: AdminsGroupKind, Apply: m.applyAdminsGroup},
+		{Name: AdminKind, Apply: m.applyAdmin},
+	}
 }
 
-// Checks is the reconciler's comparison of users with SAM.
+// Checks are the reconciler's comparisons of users and admins with SAM.
 func (m *Module) Checks() []samaccess.Check {
-	return []samaccess.Check{{Name: "users", Run: m.reconcileUsers}}
+	return []samaccess.Check{{Name: "users", Run: m.reconcileUsers}, {Name: "admins", Run: m.reconcileAdmins}}
 }
 
 // Person is the user's SAM identity, for changes sent as them. It

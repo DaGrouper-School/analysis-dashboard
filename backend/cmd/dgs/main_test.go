@@ -334,4 +334,27 @@ func TestConfigurationCommands(t *testing.T) {
 	if _, err := cmd("classroom", "configure", c.Code, bad); err == nil || !strings.Contains(err.Error(), "minorCoordinateDecimals: not a field here") {
 		t.Errorf("a bad file: %v", err)
 	}
+
+	// Platform admins, by Google email or user ID.
+	if _, err := pool.Exec(ctx, `INSERT INTO users (id, full_name, email, email_verified, created_at, updated_at)
+		VALUES ('7d8e9f00-0000-4000-8000-000000000001', 'Amina Yusuf', 'amina@dagrouper.example', true, now(), now())`); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"admins", "add", "Amina@DaGrouper.example"}, "Amina Yusuf is a platform admin"},
+		{[]string{"admins", "add", "7d8e9f00-0000-4000-8000-000000000001"}, "is already a platform admin"},
+		{[]string{"admins"}, "amina@dagrouper.example"},
+		{[]string{"admins", "remove", "amina@dagrouper.example"}, "no longer a platform admin, here at once"},
+		{[]string{"admins", "remove", "amina@dagrouper.example"}, "is not a platform admin"},
+	} {
+		if out, err := cmd(c.args...); err != nil || !strings.Contains(out, c.want) {
+			t.Errorf("%v: %q, %v", c.args, out, err)
+		}
+	}
+	if _, err := cmd("admins", "add", "nobody@dagrouper.example"); !errors.Is(err, accounts.ErrNoAccount) {
+		t.Errorf("an unknown account: %v", err)
+	}
 }

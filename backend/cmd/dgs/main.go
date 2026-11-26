@@ -22,6 +22,10 @@
 //	dgs classroom configure CODE FILE
 //	                            set a classroom's stage, region and profile
 //	                            fields; a field left out stays as it is
+//	dgs admins                  list the platform admins
+//	dgs admins add WHO          make a platform admin, by Google email or
+//	dgs admins remove WHO       user ID, or no longer one; it takes effect
+//	                            here at once and reaches SAM by the outbox
 //	dgs seed                    load the platform's configuration and the
 //	                            registry's overlay from the seed built into
 //	                            the binary, keeping what admins and
@@ -75,7 +79,7 @@ func main() {
 	}
 }
 
-const usage = "usage: dgs serve|migrate|keys new|outbox held|outbox release ENTITY|accounts renumber USER|accounts adopt USER|email test ADDRESS|settings|settings get KEY|settings put KEY FILE|consent publish FILE|classroom configure CODE FILE|seed"
+const usage = "usage: dgs serve|migrate|keys new|outbox held|outbox release ENTITY|accounts renumber USER|accounts adopt USER|email test ADDRESS|settings|settings get KEY|settings put KEY FILE|consent publish FILE|classroom configure CODE FILE|admins|admins add WHO|admins remove WHO|seed"
 
 func run(ctx context.Context, out io.Writer, args []string) error {
 	switch {
@@ -85,7 +89,8 @@ func run(ctx context.Context, out io.Writer, args []string) error {
 		len(args) == 3 && (is(args[:2], "accounts", "renumber") || is(args[:2], "accounts", "adopt") || is(args[:2], "email", "test")),
 		is(args, "settings"), is(args, "seed"), len(args) == 3 && is(args[:2], "settings", "get"),
 		len(args) == 4 && is(args[:2], "settings", "put"), len(args) == 3 && is(args[:2], "consent", "publish"),
-		len(args) == 4 && is(args[:2], "classroom", "configure"):
+		len(args) == 4 && is(args[:2], "classroom", "configure"), is(args, "admins"),
+		len(args) == 3 && (is(args[:2], "admins", "add") || is(args[:2], "admins", "remove")):
 	default:
 		return fmt.Errorf("unknown command %q; %s", strings.Join(args, " "), usage)
 	}
@@ -117,6 +122,8 @@ func run(ctx context.Context, out io.Writer, args []string) error {
 		return publishConsent(ctx, out, pool, args[2])
 	case "classroom":
 		return configureClassroom(ctx, out, pool, args[2], args[3])
+	case "admins":
+		return adminsCommand(ctx, out, pool, args[1:])
 	case "seed":
 		return seed(ctx, out, pool)
 	case "accounts":
