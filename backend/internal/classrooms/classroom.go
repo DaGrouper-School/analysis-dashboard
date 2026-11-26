@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"net/mail"
 	"regexp"
 	"slices"
 	"strings"
@@ -20,6 +19,7 @@ import (
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/jsoncheck"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/notify"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/roles"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings"
@@ -156,10 +156,7 @@ func checkNames(name, institution string) map[string]string {
 	return f
 }
 
-func validEmail(s string) bool {
-	a, err := mail.ParseAddress(s)
-	return err == nil && a.Address == s && strings.Contains(s[strings.LastIndex(s, "@"):], ".")
-}
+func validEmail(s string) bool { return notify.ValidAddress(s) }
 
 // Kind is the outbox kind that creates a classroom in SAM.
 const Kind = "classroom"

@@ -89,7 +89,8 @@ func New(d Deps) *App {
 		a.registry = registry.New(d.DB, d.SAM.Service(), d.SAM.Tenant().RootSpaceID, d.Now, a.accounts.Sessions())
 		a.modules = append(a.modules, a.accounts, places.New(d.Places, a.accounts.Sessions(), a.accounts), a.registry,
 			classrooms.New(d.DB, a.accounts.Sessions(), d.Now, d.SAM.Tenant().RootSpaceID, classrooms.Config{
-				Email: d.Email, InvitationTTL: d.InvitationTTL, FrontEnd: frontEnd(d.AllowedOrigins), ShowTokens: d.Accounts.Demo}), hosting.New(d.DB, a.accounts.Sessions(), d.Now),
+				Email: d.Email, InvitationTTL: d.InvitationTTL, FrontEnd: frontEnd(d.AllowedOrigins), ShowTokens: d.Accounts.Demo}), hosting.New(d.DB, a.accounts.Sessions(), d.Now, hosting.Config{
+				Email: d.Email, FrontEnd: frontEnd(d.AllowedOrigins), ShowTokens: d.Accounts.Demo, Limits: a.accounts}),
 			settingsapi.New(d.DB, a.accounts.Sessions(), d.Now), labs.New(d.DB, a.accounts.Sessions(), d.Now, a.registry.DeviceType))
 	}
 	return a

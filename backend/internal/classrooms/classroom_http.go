@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/hosting"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/jsoncheck"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/roles"
@@ -96,15 +98,17 @@ func (m *Module) create(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.CheckFields(CheckCreate(in)); err != nil {
 		return err
 	}
-	if in.ApplicationID != nil {
-		// No host application is kept yet, so none can be named.
-		return httpx.NotFound("Host application not found.")
-	}
-	c, err := Create(r.Context(), m.db, m.now(), u.ID, in)
-	if errors.Is(err, ErrNoStage) {
+	c, err := m.createFrom(r.Context(), u.ID, in)
+	switch {
+	case errors.Is(err, ErrNoStage):
 		return httpx.New(httpx.CodeConflict, "Add a stage before creating classrooms.")
-	}
-	if err != nil {
+	case errors.Is(err, hosting.ErrNoApplication):
+		return httpx.NotFound("Host application not found.")
+	case errors.Is(err, hosting.ErrHasClassroom):
+		return httpx.New(httpx.CodeConflict, "A classroom was already created from this application.")
+	case errors.Is(err, hosting.ErrNotAccepted):
+		return httpx.New(httpx.CodeConflict, "Accept the application before creating its classroom.")
+	case err != nil:
 		return err
 	}
 	// The head joins by accepting an invitation sent as this service.
@@ -116,6 +120,25 @@ func (m *Module) create(w http.ResponseWriter, r *http.Request) error {
 	m.send(r.Context(), c, list)
 	httpx.WriteJSON(w, http.StatusOK, summary(c, u, "", 0))
 	return nil
+}
+
+// createFrom creates a classroom, set up from the host application in
+// it names, which must be accepted and have no classroom yet.
+func (m *Module) createFrom(ctx context.Context, by uuid.UUID, in CreateInput) (Classroom, error) {
+	if in.ApplicationID == nil {
+		return Create(ctx, m.db, m.now(), by, in)
+	}
+	id, err := uuid.Parse(*in.ApplicationID)
+	if err != nil {
+		return Classroom{}, hosting.ErrNoApplication
+	}
+	var c Classroom
+	err = hosting.CreateClassroom(ctx, m.db, id, func(tx pgx.Tx) (uuid.UUID, error) {
+		var err error
+		c, err = Create(ctx, tx, m.now(), by, in)
+		return c.ID, err
+	})
+	return c, err
 }
 
 // visible is the classroom in the path as the viewer sees it, with their
