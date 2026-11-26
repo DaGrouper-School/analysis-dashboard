@@ -27,18 +27,22 @@ const (
 	CodeConflict        = "conflict"
 	CodeForbidden       = "forbidden"
 	CodeInternal        = "internal"
+	// CodeConsentTextChanged refuses a guardian's decision on words that
+	// are no longer the current consent text.
+	CodeConsentTextChanged = "consent_text_changed"
 )
 
 var statuses = map[string]int{
-	CodeUnauthenticated: http.StatusUnauthorized,
-	CodeInvalidInput:    http.StatusBadRequest,
-	CodeNotFound:        http.StatusNotFound,
-	CodeRateLimited:     http.StatusTooManyRequests,
-	CodeCodeInvalid:     http.StatusBadRequest,
-	CodeCodeExpired:     http.StatusBadRequest,
-	CodeConflict:        http.StatusConflict,
-	CodeForbidden:       http.StatusForbidden,
-	CodeInternal:        http.StatusInternalServerError,
+	CodeUnauthenticated:    http.StatusUnauthorized,
+	CodeInvalidInput:       http.StatusBadRequest,
+	CodeNotFound:           http.StatusNotFound,
+	CodeRateLimited:        http.StatusTooManyRequests,
+	CodeCodeInvalid:        http.StatusBadRequest,
+	CodeCodeExpired:        http.StatusBadRequest,
+	CodeConflict:           http.StatusConflict,
+	CodeForbidden:          http.StatusForbidden,
+	CodeConsentTextChanged: http.StatusConflict,
+	CodeInternal:           http.StatusInternalServerError,
 }
 
 // Error is an error the user should see.
