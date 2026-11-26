@@ -398,6 +398,41 @@ paths:
           $ref: openapi.yaml#/components/responses/Unauthenticated
         '403':
           $ref: openapi.yaml#/components/responses/Forbidden
+  /admin/classrooms/{classroomId}:
+    patch:
+      operationId: admin.configureClassroom
+      x-change: new
+      x-waits-for: The platform configuration admin page, with its operations in routes.ts
+      summary: Configure a classroom
+      description: 'Sets a classroom''s stage, region and profile fields. A field left out stays as it is; regionId
+        null clears it; each profile field replaces its own value only. Access: platform admins only.'
+      parameters:
+      - name: classroomId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassroomConfigurationInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassroomConfiguration'
+        '400':
+          $ref: openapi.yaml#/components/responses/BadRequest
+        '401':
+          $ref: openapi.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: openapi.yaml#/components/responses/Forbidden
+        '404':
+          $ref: openapi.yaml#/components/responses/NotFound
 components:
   schemas:
     ConsentTexts:
@@ -611,4 +646,140 @@ components:
       required:
       - items
       - next
+      additionalProperties: false
+    ResearchProject:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        question:
+          type: string
+        sites:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              name:
+                type: string
+              ecosystem:
+                type: string
+              parameterIds:
+                type: array
+                items:
+                  type: string
+              frequency:
+                type: string
+              readingsPerDay:
+                type: number
+              yearsPlanned:
+                type: number
+            required:
+            - code
+            - name
+            - ecosystem
+            - parameterIds
+            - frequency
+            - readingsPerDay
+            - yearsPlanned
+            additionalProperties: false
+      required:
+      - id
+      - title
+      - question
+      - sites
+      additionalProperties: false
+    ClassroomConfiguration:
+      type: object
+      properties:
+        stageId:
+          type: string
+        regionId:
+          type:
+          - string
+          - 'null'
+        profile:
+          type: object
+          properties:
+            areaCode:
+              type: string
+            language:
+              type: string
+            description:
+              type: string
+            ecosystems:
+              type: array
+              items:
+                type: string
+            hostAgreementSigned:
+              type: boolean
+            projects:
+              type: array
+              items:
+                $ref: '#/components/schemas/ResearchProject'
+            sessions:
+              type: array
+              items:
+                $ref: openapi.yaml#/components/schemas/ClassroomSession
+            custodianRole:
+              $ref: openapi.yaml#/components/schemas/ClassroomRole
+            institution:
+              type: object
+              properties:
+                photoUrl:
+                  type:
+                  - string
+                  - 'null'
+                photoAlt:
+                  type: string
+                history:
+                  type: string
+                hub:
+                  type:
+                  - string
+                  - 'null'
+                website:
+                  type:
+                  - string
+                  - 'null'
+              required:
+              - photoUrl
+              - photoAlt
+              - history
+              - hub
+              - website
+              additionalProperties: false
+          required:
+          - areaCode
+          - language
+          - description
+          - ecosystems
+          - hostAgreementSigned
+          - projects
+          - sessions
+          - custodianRole
+          - institution
+          additionalProperties: false
+      required:
+      - stageId
+      - regionId
+      - profile
+      additionalProperties: false
+      description: What platform admins configure of a classroom.
+    ClassroomConfigurationInput:
+      type: object
+      properties:
+        stageId:
+          type: string
+        regionId:
+          type:
+          - string
+          - 'null'
+        profile:
+          type: object
+          description: Any of the profile's fields; institution takes history, hub and website.
+          additionalProperties: true
       additionalProperties: false

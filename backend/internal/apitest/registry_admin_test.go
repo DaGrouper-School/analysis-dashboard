@@ -46,8 +46,9 @@ func send(t *testing.T, e *apitest.Env, p *profile, method, path string, body, o
 	return res.StatusCode, no
 }
 
-// deliver sends the outbox to SAM until no registry entry waits.
-func deliver(t *testing.T, e *apitest.Env) {
+// deliver sends the outbox to SAM until no change to an entity starting
+// with prefix waits.
+func deliver(t *testing.T, e *apitest.Env, prefix string) {
 	t.Helper()
 	w := e.Worker()
 	for range 20 {
@@ -55,7 +56,7 @@ func deliver(t *testing.T, e *apitest.Env) {
 			t.Fatal(err)
 		}
 		var waiting int
-		if err := e.Pool.QueryRow(context.Background(), `SELECT count(*) FROM sam_outbox WHERE state IN ('pending', 'held') AND entity LIKE 'registry:%'`).Scan(&waiting); err != nil {
+		if err := e.Pool.QueryRow(context.Background(), `SELECT count(*) FROM sam_outbox WHERE state IN ('pending', 'held') AND starts_with(entity, $1)`, prefix).Scan(&waiting); err != nil {
 			t.Fatal(err)
 		}
 		if waiting == 0 {
@@ -63,7 +64,7 @@ func deliver(t *testing.T, e *apitest.Env) {
 		}
 		e.Clock.Add(time.Minute)
 	}
-	rows, _ := e.Pool.Query(context.Background(), `SELECT entity, state, coalesce(last_error, '') FROM sam_outbox WHERE state IN ('pending', 'held') AND entity LIKE 'registry:%'`)
+	rows, _ := e.Pool.Query(context.Background(), `SELECT entity, state, coalesce(last_error, '') FROM sam_outbox WHERE state IN ('pending', 'held') AND starts_with(entity, $1)`, prefix)
 	for rows.Next() {
 		var entity, state, last string
 		_ = rows.Scan(&entity, &state, &last)
@@ -117,7 +118,7 @@ func TestRegistryAdmin(t *testing.T) {
 		t.Fatalf("the new value before SAM has it: %+v", params)
 	}
 
-	deliver(t, e)
+	deliver(t, e, "registry:")
 	sam := e.SAM.Service()
 	if d, err := sam.Domain(ctx, "dgs:MARINE"); err != nil || d.Name != "Marine" {
 		t.Fatalf("the domain in SAM: %+v, %v", d, err)
@@ -191,7 +192,7 @@ func TestRegistryAdmin(t *testing.T) {
 	if i := slices.IndexFunc(params, func(p registry.Parameter) bool { return p.ID == "dgs:soil_ec" }); i < 0 || params[i].Label != "Salts" {
 		t.Errorf("a renamed value with an overlay row: %+v", params[i])
 	}
-	deliver(t, e)
+	deliver(t, e, "registry:")
 	if p, err := sam.Parameter(ctx, "dgs:soil_ec"); err != nil || p.DomainID != "SOIL" {
 		t.Errorf("the moved value in SAM: %+v, %v", p, err)
 	}
