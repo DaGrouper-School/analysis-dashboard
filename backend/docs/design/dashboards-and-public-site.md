@@ -125,8 +125,12 @@ A classroom's sharing settings:
 | Classroom profile | Who they are, what they study, their kit, and contributors who asked for credit |
 | Contributor | A contributor's released values and classrooms |
 
-- Pages are read as SAM's anonymous principal. View models are cached for a short time.
+- Pages are read as SAM's anonymous principal. View models are cached for a short time: a classroom's core readings for a minute.
+- **The settings here decide first.** A classroom that does not show its data publicly is listed with no values, whatever SAM still lets anonymous read before the revocation reaches it. The setting is read on every request, never cached.
 - Visitors see only what has been released. Without an anonymous grant on a classroom's space, SAM gives a visitor nothing: public pages show the classroom without values, and a parameter page is not found.
+- **Review on public pages** is released, or not released while nothing is. A visitor reads released data only, so whether newer data waits is not theirs to know; members' own views show it.
+- **Site content.** `publicSite.content` and the home page's content are the stages and regions from platform configuration; the site's words stay in the front end (the contract's addendum).
+- **The home page's core readings** come from SAM's latest values (today's day, air temperature and last sync) and an aggregate of the rain values by UTC day, source and parameter over the week up to the newest, computed in `internal/views` as the front end's `coreReadings` does: the reference gauge's total over another source's, the week summed over the days with a total, missing values null. The units come from the registry. The host is named once it has signed the host agreement, and positions are rounded to the classroom's coordinate decimals, never finer than two.
 - **Devices.** Station tiles use the `device_id` SAM returns to visitors: `strip_identity` removes people and keeps devices. Readings a device sends straight to SAM show their device too.
 
 ### Contributors and credit

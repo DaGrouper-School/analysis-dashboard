@@ -104,6 +104,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/accounts` | Accounts and their participant IDs; registering each account's SAM principal through the outbox; the restore guard |
 | `internal/notify` | Delivers messages: the SMS and email interfaces, the SMTP provider, the log providers for development and test, and a recorder of texts for tests |
 | `internal/places` | The places module: address autocomplete and lookup through a provider, and the calling codes |
+| `internal/publicsite` | The public site: the home page and its content, read from SAM as its anonymous principal, the sharing settings deciding first |
 | `internal/settings` | The platform's settings, their checks and seed, the configuration change log, and seeding a list |
 | `internal/settings/settingsapi` | The settings' and the change log's admin endpoints |
 | `internal/classrooms` | The classrooms module: classrooms, kept here and created in SAM, their members, and what platform admins keep of them: the stages and regions and their seed, and the guardian consent text's versions |
@@ -115,6 +116,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/jsoncheck` | Strict decoding and checks of configuration, reporting every problem at once |
 | `internal/samaccess` | Calls SAM as this service, as a person through a user token or as anonymous; the signing keys and the key set; SAM's errors translated; the outbox, its worker and the reconciler |
 | `internal/server` | `server.New(Deps)`, the `Module` interface, the middleware, `/healthz` and the API's not-found answer |
+| `internal/views` | The front end's view models, carried over with their rounding and wording: so far the core readings |
 | `internal/testutil` | A fresh database per test (test code only) |
 | `internal/contract` | Reads `openapi.yaml` and its addendum and checks responses against them (test code only) |
 | `internal/testenv` | Runs SAM built from source, with this service onboarded (test code only) |
