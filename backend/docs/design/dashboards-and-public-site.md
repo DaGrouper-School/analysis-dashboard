@@ -79,6 +79,10 @@ The station and parameter pages a member sees are the public pages read as the m
 - The public routes read a session when there is one. A caller this service records as a member of the classroom reads SAM as themselves; anyone else, a platform admin who is not a member included, reads as anonymous.
 - A visitor reads released values only, and a classroom that does not show its data publicly answers 404 on its parameter pages, whatever SAM still lets anonymous read. Its members still read it.
 - `inReview` is a member's alone: whether values observed after the cutoff are unpublished. A visitor's is false, as visitors learn nothing of what waits.
+- A station page reads the latest values, each source's values by day over the 31 days up to the newest (the month of air temperature, the week's rain and each device's seven days), and by hour over the last day. The core detail is computed from released values only, for members too, as the front end's `stationCore`; members read the released days apart.
+- "What's happening now?" shows the tiles of the `now_tiles` setting, each its first value with data; its last 24 hours and its trend come from the hourly values, so an hour shows its last reading and a trend is fitted through those.
+- Month completeness counts the hours with a reading of each value the protocol expects, from the first of the month to the core day, as the reader reads them: a visitor counts released values only, and learns nothing of what waits.
+- Every device the classroom has, removed ones aside, is listed with its tiles and cards from its newest reading the reader may see, and with no data when there is none, so the page keeps its layout. A visitor to a classroom that does not show its data publicly sees its devices this way.
 - A parameter page offers to compare with every other classroom that shows its data and whose released values include the parameter, as anonymous reads them, each answer kept for a minute.
 
 ### Sharing and release

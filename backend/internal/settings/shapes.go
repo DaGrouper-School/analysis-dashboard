@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/jsoncheck"
 )
@@ -106,4 +107,98 @@ func (v Privacy) check() []string {
 		return []string{fmt.Sprintf("minorCoordinateDecimals: %d is not from 0 to %d", d, MaxDecimals)}
 	}
 	return nil
+}
+
+// NowTiles is now_tiles: the values "What's happening now?" shows on a
+// station page, in order. The front end's NowTileConfig, one per tile.
+type NowTiles struct {
+	Tiles []NowTile `json:"tiles"`
+}
+
+// NowTile is one tile: the first of its values with data is shown.
+type NowTile struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+	// Icon is a registry icon name.
+	Icon string `json:"icon"`
+	// ParameterIDs are the candidates, best first.
+	ParameterIDs []string    `json:"parameterIds"`
+	Caption      *NowCaption `json:"caption,omitempty"`
+	// ZeroText is shown in place of the caption when the value is zero,
+	// such as "No rain today".
+	ZeroText string `json:"zeroText,omitempty"`
+	// Core takes the value from the classroom's core readings, so the
+	// tile matches the core strip.
+	Core *NowCore `json:"core,omitempty"`
+}
+
+// NowCaption is the line under a tile's value: Text with {value}, the
+// first of ParameterIDs with data, or its compass point when Format is
+// compass.
+type NowCaption struct {
+	ParameterIDs []string `json:"parameterIds"`
+	Text         string   `json:"text"`
+	Format       string   `json:"format,omitempty"`
+}
+
+// NowCore is a tile taken from the core readings: Value is rainToday or
+// airTemperature, and its caption's value rainLast7Days.
+type NowCore struct {
+	Value   string          `json:"value"`
+	Caption *NowCoreCaption `json:"caption,omitempty"`
+}
+
+// NowCoreCaption is a core tile's caption.
+type NowCoreCaption struct {
+	Value string `json:"value"`
+	Text  string `json:"text"`
+}
+
+func (n NowTiles) check() []string {
+	var problems []string
+	seen := map[string]bool{}
+	for i, t := range n.Tiles {
+		at := fmt.Sprintf("tiles[%d]", i)
+		if seen[t.ID] {
+			problems = append(problems, at+".id: used by another tile")
+		}
+		seen[t.ID] = true
+		if len(t.ParameterIDs) == 0 {
+			problems = append(problems, at+".parameterIds: name at least one value")
+		}
+		problems = append(problems, t.Caption.check(at+".caption")...)
+		problems = append(problems, t.Core.check(at+".core")...)
+	}
+	return problems
+}
+
+func (c *NowCaption) check(at string) []string {
+	if c == nil {
+		return nil
+	}
+	var problems []string
+	if len(c.ParameterIDs) == 0 {
+		problems = append(problems, at+".parameterIds: name at least one value")
+	}
+	if !strings.Contains(c.Text, "{value}") {
+		problems = append(problems, at+".text: holds {value}")
+	}
+	if c.Format != "" && c.Format != "compass" {
+		problems = append(problems, at+".format: compass, or none")
+	}
+	return problems
+}
+
+func (c *NowCore) check(at string) []string {
+	if c == nil {
+		return nil
+	}
+	var problems []string
+	if c.Value != "rainToday" && c.Value != "airTemperature" {
+		problems = append(problems, at+".value: rainToday or airTemperature")
+	}
+	if c.Caption != nil && (c.Caption.Value != "rainLast7Days" || !strings.Contains(c.Caption.Text, "{value}")) {
+		problems = append(problems, at+".caption: rainLast7Days, with {value} in its text")
+	}
+	return problems
 }

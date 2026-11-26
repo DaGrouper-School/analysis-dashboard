@@ -29,6 +29,10 @@ func TestCheck(t *testing.T) {
 			[]string{"rainDaily: empty", "airTemperature[0]: \"Air Temp\" is not an ID", `rainReference: "x" is not one of rainDaily`, "rainTolerance: -1 is below zero"}},
 		{settings.KeyDefaultTerms, `{"licence": " ", "licenceUrl": "http://x", "attribution": "{school}", "restrictions": [""], "coordinateDecimals": 5}`,
 			[]string{`licenceUrl: "http://x" is not an https URL`, "coordinateDecimals: 5 is not from 0 to 4", "{school} is not filled in", "licence: blank", "restrictions[0]: blank"}},
+		{settings.KeyNowTiles, `{"tiles": [{"id": "a", "label": "A", "icon": "sun", "parameterIds": [], "caption": {"parameterIds": ["uv"], "text": "UV", "format": "dial"}},
+			{"id": "a", "label": "B", "icon": "sun", "parameterIds": ["uv"], "core": {"value": "uv"}}]}`,
+			[]string{"tiles[0].parameterIds: name at least one value", "tiles[0].caption.text: holds {value}", "tiles[0].caption.format: compass, or none",
+				"tiles[1].id: used by another tile", "tiles[1].core.value: rainToday or airTemperature"}},
 	} {
 		_, err := settings.Check(c.key, []byte(c.raw))
 		var invalid *jsoncheck.Invalid
@@ -71,11 +75,11 @@ func TestPutAndSeed(t *testing.T) {
 		return strings.TrimSpace(b.String())
 	}
 	seeded, err := settings.SeedSettings(ctx, pool, now)
-	if err != nil || outcomes(seeded) != "core_parameters=added default_terms=added privacy=added future_observations=added" {
+	if err != nil || outcomes(seeded) != "core_parameters=added default_terms=added privacy=added future_observations=added now_tiles=added" {
 		t.Fatalf("the seed: %s, %v", outcomes(seeded), err)
 	}
 	seeded, err = settings.SeedSettings(ctx, pool, now.Add(time.Hour))
-	if err != nil || outcomes(seeded) != "core_parameters=unchanged default_terms=unchanged privacy=unchanged future_observations=unchanged" {
+	if err != nil || outcomes(seeded) != "core_parameters=unchanged default_terms=unchanged privacy=unchanged future_observations=unchanged now_tiles=unchanged" {
 		t.Fatalf("the seed again: %s, %v", outcomes(seeded), err)
 	}
 
@@ -104,7 +108,7 @@ func TestPutAndSeed(t *testing.T) {
 	}
 
 	log, err := settings.Changes(ctx, pool, 10)
-	if err != nil || len(log) != 5 {
+	if err != nil || len(log) != 6 {
 		t.Fatalf("the log: %+v, %v", log, err)
 	}
 	if l := log[0]; l.Actor.Name != "Amara Okafor" || l.Actor.UserID == nil || *l.Actor.UserID != admin || l.Subject != settings.KeyPrivacy || l.Summary != "Changed privacy" {

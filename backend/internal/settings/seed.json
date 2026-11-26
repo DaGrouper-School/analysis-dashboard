@@ -17,5 +17,17 @@
 	},
 	"future_observations": {
 		"action": "flag"
+	},
+	"now_tiles": {
+		"tiles": [
+			{"id": "temperature", "label": "Temperature", "icon": "thermometer", "parameterIds": ["air_temperature"],
+				"caption": {"parameterIds": ["feels_like"], "text": "Feels like {value}"}},
+			{"id": "wind", "label": "Wind", "icon": "wind", "parameterIds": ["wind_avg"],
+				"caption": {"parameterIds": ["wind_direction"], "text": "From the {value}", "format": "compass"}},
+			{"id": "uv", "label": "UV index", "icon": "sun", "parameterIds": ["uv"],
+				"caption": {"parameterIds": ["solar_radiation"], "text": "Solar radiation {value}"}},
+			{"id": "pressure", "label": "Pressure", "icon": "waves", "parameterIds": ["sea_level_pressure", "station_pressure"],
+				"caption": {"parameterIds": ["pressure_trend"], "text": "Trend: {value}"}}
+		]
 	}
 }

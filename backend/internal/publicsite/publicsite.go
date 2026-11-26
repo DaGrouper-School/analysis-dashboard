@@ -68,6 +68,7 @@ func New(q db.Querier, reg Registry, sam *samaccess.Access, sessions *accounts.S
 func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	mux.Handle("GET "+prefix+"/public/home", httpx.Handler(m.home))
 	mux.Handle("GET "+prefix+"/public/content", httpx.Handler(m.content))
+	mux.Handle("GET "+prefix+"/public/classrooms/{classroomId}", m.sessions.OptionalUser(httpx.Handler(m.station)))
 	mux.Handle("GET "+prefix+"/public/classrooms/{classroomId}/parameters/{parameterId}", m.sessions.OptionalUser(httpx.Handler(m.parameter)))
 }
 
@@ -190,6 +191,17 @@ func coarsen(p labs.Point, decimals int) *labs.Point {
 // values, whatever SAM still lets anonymous read before the revocation
 // reaches it.
 func (m *Module) publicClassroom(ctx context.Context, c classrooms.Classroom, params settings.CoreParameters) (Classroom, error) {
+	out, err := m.shell(ctx, c)
+	if err != nil || !c.Sharing.ShowPublic || c.SpaceID == nil {
+		return out, err
+	}
+	out.Core = m.core(ctx, c, params)
+	return out, nil
+}
+
+// shell is c as a visitor sees it, with no values: its name, host, place
+// and themes.
+func (m *Module) shell(ctx context.Context, c classrooms.Classroom) (Classroom, error) {
 	out := Classroom{ID: c.ID, Name: c.Name, StageID: c.StageID, RegionID: c.RegionID, Themes: []string{}, Core: views.NoCore()}
 	// The host is named only once it has signed the host agreement.
 	if c.Profile.HostAgreementSigned {
@@ -210,10 +222,6 @@ func (m *Module) publicClassroom(ctx context.Context, c classrooms.Classroom, pa
 	for _, l := range list {
 		out.Themes = append(out.Themes, l.SiteProfile.ResearchQuestions...)
 	}
-	if !c.Sharing.ShowPublic || c.SpaceID == nil {
-		return out, nil
-	}
-	out.Core = m.core(ctx, c, params)
 	return out, nil
 }
 
