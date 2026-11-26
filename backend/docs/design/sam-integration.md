@@ -104,7 +104,7 @@ The kinds:
 | Area | Kinds |
 |---|---|
 | Accounts | user (principal, `minor`, `consent`), admins group, admin membership |
-| Registry | this tenant's registry domains, parameters and device types |
+| Registry | this tenant's registry domains, parameters, device types and templates |
 | Classrooms | classroom (space, groups, grants), membership, attribute assertion |
 | Labs | lab (space and site), device |
 | Sharing and release | sharing (public grants), data policy, release |

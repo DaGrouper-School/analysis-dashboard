@@ -75,6 +75,16 @@ Release a change once what refused it is fixed, for example once the person has 
 
 **Changes that take access away come first.** A held change after which SAM should allow less, such as a guardian's withdrawal or a member's removal, is logged at error level as `outbox change held that takes access away`, and `dgs outbox held` lists it first, with `YES` under `TAKES ACCESS AWAY`. Until it is delivered SAM still allows what this service has taken away. Nobody reaches SAM except through this service, which checks its own record first, but resolve these before the rest.
 
+### Registry entries SAM refuses
+
+Domains, values, device types and templates platform admins add are this tenant's own SAM entries, sent through the outbox as `registry:<kind>:<id>`, such as `registry:parameter:dgs:soil_ec`. The admin page shows an entry as soon as it is made, so until SAM has it, devices cannot yet send it. SAM refuses an entry with:
+
+- `invalid_request`: SAM's own rules on the definition, such as a name over 200 characters;
+- `mapping_conflict`: keys, fields or derivations that name the entry could not use it as changed;
+- `parameter_in_use` or `device_type_in_use`: readings are stored, so a unit, kind or key's mapping is fixed.
+
+The admin who made the change is in the registry's change log. Have them put the entry back as SAM holds it, or add a new value, then release the entity. An entry waiting on another, such as a device type on its values, is retried, never held, until that one reaches SAM.
+
 ## After a database restore
 
 A database restored from a backup has forgotten what happened after the backup was taken, but SAM has not. Users who signed up after the backup are gone from this database, yet SAM still holds their principals under their participant IDs. At start-up the restore guard moves the participant ID sequence past every ID SAM knows, and logs `participant ID guard moved the sequence`. New users then get IDs SAM has never seen.

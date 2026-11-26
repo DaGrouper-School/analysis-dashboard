@@ -39,13 +39,19 @@ type ParameterOverlay struct {
 	// Explanation is how a measured or entered value is taken; nil for the
 	// wording of its source.
 	Explanation *string `json:"explanation"`
-	// Domain is the domain it is shown under, instead of SAM's.
+	// Domain is the domain it is shown under, instead of SAM's; "" for
+	// none.
 	Domain *string `json:"domain"`
 	// Unit is the unit as shown, instead of SAM's symbol.
 	Unit   *string  `json:"unit"`
 	Source string   `json:"source"`
 	Noise  *float64 `json:"noise"`
 	Chart  *string  `json:"chart"`
+	// Method and Inputs are how an admin says the value is calculated,
+	// with the formula in Explanation; a nil Method for what SAM and the
+	// source say.
+	Method *string  `json:"method"`
+	Inputs []string `json:"inputs"`
 }
 
 // DeviceTypeOverlay is a device type's presentation, and the values shown
@@ -94,13 +100,16 @@ func LoadOverlay(ctx context.Context, q db.Querier) (Overlay, error) {
 }
 
 const (
-	parameterColumns  = `id, label, definition, plain, explanation, domain, unit, source, noise, chart`
+	parameterColumns  = `id, label, definition, plain, explanation, domain, unit, source, noise, chart, method, inputs`
 	deviceTypeColumns = `id, label, description, color, icon, tiles, cards`
 	templateColumns   = `id, label, description, domain, device_type`
 )
 
 func scanParameter(r pgx.Row) (p ParameterOverlay, err error) {
-	return p, r.Scan(&p.ID, &p.Label, &p.Definition, &p.Plain, &p.Explanation, &p.Domain, &p.Unit, &p.Source, &p.Noise, &p.Chart)
+	err = r.Scan(&p.ID, &p.Label, &p.Definition, &p.Plain, &p.Explanation, &p.Domain, &p.Unit, &p.Source, &p.Noise, &p.Chart,
+		&p.Method, &p.Inputs)
+	p.Inputs = nonNil(p.Inputs)
+	return p, err
 }
 
 func scanDeviceType(r pgx.Row) (t DeviceTypeOverlay, err error) {

@@ -122,3 +122,16 @@ func (c *Cache) Refresh() {
 	c.stale = true
 	c.failedAt = time.Time{}
 }
+
+// Copy is the copy held, however old, without reading SAM; only when
+// there is none yet is SAM read. Admins' changes are made against it, so
+// they never wait on SAM.
+func (c *Cache) Copy(ctx context.Context) (*SAM, error) {
+	c.mu.Lock()
+	s := c.copy
+	c.mu.Unlock()
+	if s != nil {
+		return s, nil
+	}
+	return c.Get(ctx)
+}
