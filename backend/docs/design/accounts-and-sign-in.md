@@ -122,7 +122,7 @@ Codes, invitations, guardian links and host-application links are sent through `
 
 - the demo Google accounts, from `demo_accounts`, signed in by their subject instead of a Google token (`demoGoogleAccounts` returns none otherwise);
 - the phone code returned in the response instead of texted;
-- link tokens (invitation, guardian consent, host application) returned to the client as `devToken`, which is otherwise null.
+- link tokens (invitation, guardian consent, host application) returned to the client in their `token` field, which is otherwise empty.
 
 Staging gets demo-like data from seeded accounts that sign in normally.
 

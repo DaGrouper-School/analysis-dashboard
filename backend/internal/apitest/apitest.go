@@ -41,6 +41,8 @@ var Gaps = []contract.Gap{
 		Why: "the front end reads 401 as signed out, but the route lists no errors"},
 	{Operation: "auth.signInWithGoogle", Status: http.StatusConflict,
 		Why: "a Google sign-in whose email belongs to another account"},
+	{Operation: "classrooms.create", Status: http.StatusNotFound,
+		Why: "an applicationId naming no host application, which the mock refuses with not_found"},
 }
 
 // Audience is the audience of the user tokens this service signs for SAM.

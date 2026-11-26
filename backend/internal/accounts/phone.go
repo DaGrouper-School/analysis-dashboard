@@ -151,6 +151,21 @@ func (m *Module) Limit(ctx context.Context, msg, key string, max int) error {
 	return m.take(ctx, msg, limit{key: key, max: max})
 }
 
+// Limits takes one use of each key's hourly limit, its value, or of none
+// when one is reached, answering rate_limited with msg and when to try
+// again.
+func (m *Module) Limits(ctx context.Context, msg string, keys map[string]int) error {
+	list := make([]limit, 0, len(keys))
+	for k, max := range keys {
+		list = append(list, limit{key: k, max: max})
+	}
+	return m.take(ctx, msg, list...)
+}
+
+// ClientAddress is the request's client address as the limits key it: the
+// trusted proxy's header when one is configured, IPv6 by its /64.
+func (m *Module) ClientAddress(r *http.Request) string { return clientAddress(r, m.cfg.ClientIPHeader) }
+
 // errLimited ends the limits' transaction when one is reached, so none is
 // taken.
 var errLimited = errors.New("a limit is reached")

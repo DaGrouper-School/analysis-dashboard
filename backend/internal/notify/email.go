@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/mail"
+	"strings"
 	"sync"
 )
 
@@ -49,4 +51,11 @@ func (r *EmailRecorder) Sent() []Mail {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return append([]Mail(nil), r.sent...)
+}
+
+// ValidAddress reports whether s is a plain email address with a dot in
+// its domain, as the front end's isValidEmail checks.
+func ValidAddress(s string) bool {
+	a, err := mail.ParseAddress(s)
+	return err == nil && a.Address == s && strings.Contains(s[strings.LastIndex(s, "@"):], ".")
 }

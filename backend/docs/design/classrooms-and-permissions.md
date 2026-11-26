@@ -72,7 +72,7 @@ tenant root space ─── admins group: device:register, device:maintain, data
   - The grants that hand others theirs carry no rules, because SAM lets a person add members to a group only if their delegating chain carries no rule the group's grants lack.
 - Sharing settings that change a role's rights, such as whether facilitators manage devices or release, re-issue that group's grant.
 - **Platform admins** are one group at the tenant root. It holds `device:register` and `device:maintain`, so admins set up any classroom's devices as themselves, and `dataset:set_policy`, so they set a classroom's terms before it has a head. It holds no read grant and never `dataset:publish`: an admin who needs a classroom's unreleased data is invited as a member.
-- **Creating classrooms.** Platform admins create classrooms, directly or by accepting a host application, naming the head by email, who is invited as its head. Each gets a code such as `DGC-HG2W5K`, which never changes and is shown only to admins, heads and facilitators.
+- **Creating classrooms.** Platform admins create classrooms, directly or from an accepted host application, naming the head by email, who is invited as its head. Each gets a code such as `DGC-HG2W5K`, which never changes and is shown only to admins, heads and facilitators.
 - SAM gives spaces and groups no name, so each classroom records its space's ID and each role group's ID once SAM confirms them.
 
 ### Membership
@@ -129,10 +129,12 @@ A participant under 18 is a minor. Consent is `pending` until a guardian answers
 
 ### Host applications
 
-- Anyone may apply to host a Global Classroom, without signing in. The readiness questions are the host questions platform admins keep ([Platform configuration](registry-and-content.md#platform-configuration)).
-- The application is checked with the same rules as the front end's `validateHostApplication`, and only the answers to the configured questions are kept.
-- The applicant gets a status link by email, whose token is stored as its hash.
-- Platform admins list applications, newest first, and accept or decline a submitted one. Accepting creates the classroom.
+- Anyone may apply to host a Global Classroom, without signing in. The readiness questions are the host questions platform admins keep, leaving out retired ones ([Platform configuration](registry-and-content.md#platform-configuration)).
+- The application is checked with the same rules as the front end's `validateHostApplication`. Only the answers to the questions asked are kept, each referring to its question's row, which is retired rather than deleted, so earlier answers keep their question. The email is kept lower-cased and the phone in E.164.
+- Applying is limited each hour: five per client address, three per contact email, so no one is sent status links they did not ask for, and a hundred overall.
+- The applicant gets a status link by email, whose token is stored as its hash. It shows the application and its decision.
+- Platform admins list applications, newest first, and accept or decline a submitted one, once.
+- A platform admin then creates the classroom from an accepted application, naming it, with the contact as the head by default. An application gets one classroom, recorded on it in the same transaction; one not yet accepted, or declined, gets none.
 
 ## Alternatives considered
 
