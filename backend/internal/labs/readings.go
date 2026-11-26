@@ -100,10 +100,15 @@ func CheckReading(in ReadingInput) map[string]string {
 	if len(in.Values) == 0 {
 		f["values"] = "A reading needs at least one value."
 	}
-	if p := in.Location; p != nil && (math.IsNaN(p.Lat) || math.IsNaN(p.Lng) || p.Lat < -90 || p.Lat > 90 || p.Lng < -180 || p.Lng > 180) {
+	if p := in.Location; p != nil && !validPoint(*p) {
 		f["location"] = "Enter a valid latitude and longitude, or leave both blank."
 	}
 	return f
+}
+
+// validPoint reports whether p is a position on Earth.
+func validPoint(p Point) bool {
+	return !math.IsNaN(p.Lat) && !math.IsNaN(p.Lng) && p.Lat >= -90 && p.Lat <= 90 && p.Lng >= -180 && p.Lng <= 180
 }
 
 // CheckFuture reports why a record dated at is refused, received now
@@ -179,7 +184,7 @@ func (m *Module) uploadReadings(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	out, err := m.relay(r.Context(), d, u, list)
+	out, err := m.relay(r.Context(), d, u, list, FormUpload)
 	if err != nil {
 		return err
 	}
@@ -300,7 +305,7 @@ func (m *Module) prepareOne(ctx context.Context, d Device, base Reading, rd Read
 // and records the user as vouching for, and keeps a relayed record of each
 // SAM took. Readings SAM rejected are left out and
 // logged; when it stored none, the upload is refused.
-func (m *Module) relay(ctx context.Context, d Device, u accounts.User, list []prepared) ([]Reading, error) {
+func (m *Module) relay(ctx context.Context, d Device, u accounts.User, list []prepared, form string) ([]Reading, error) {
 	as, err := m.sam.User(samaccess.Person{ParticipantID: u.ParticipantID, Registered: u.Principal != nil})
 	if err != nil {
 		return nil, samaccess.Translate(ctx, err)
@@ -327,7 +332,7 @@ func (m *Module) relay(ctx context.Context, d Device, u accounts.User, list []pr
 		a := list[i].answer
 		// To the microsecond, as the database keeps it.
 		a.ID, a.ReceivedAt = *res.ReadingID, got.ReceivedAt.Round(time.Microsecond)
-		if err := keepRelayed(ctx, m.db, a, FormUpload, &u.ID, credit); err != nil {
+		if err := keepRelayed(ctx, m.db, a, form, &u.ID, credit); err != nil {
 			return nil, err
 		}
 		out = append(out, a)
