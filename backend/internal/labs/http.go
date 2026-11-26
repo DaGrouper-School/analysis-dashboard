@@ -27,10 +27,12 @@ type Module struct {
 }
 
 // Registry is what the module reads of the registry the front end reads:
-// a device type, and a reading's values under a type's keys.
+// a device type, a reading's values under a type's keys, and a manual
+// entry checked against its template.
 type Registry interface {
 	DeviceType(ctx context.Context, id string) (*registry.DeviceType, error)
 	KeyValues(ctx context.Context, typeID string, values map[string]any) (map[string]any, map[string]string, error)
+	CheckEntry(ctx context.Context, templateID string, values map[string]any) (registry.Entry, map[string]string, error)
 }
 
 // New builds the module. Readings are relayed to SAM through sam, as the
@@ -54,6 +56,8 @@ func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	h("POST "+prefix+"/devices/{deviceId}/readings", m.uploadReadings)
 	h("GET "+prefix+"/devices/{deviceId}/readings", m.deviceReadings)
 	h("GET "+prefix+"/me/conditions", m.currentConditions)
+	h("GET "+prefix+"/me/observation-targets", m.observationTargets)
+	h("POST "+prefix+"/labs/{labId}/observations", m.submitObservation)
 }
 
 const (

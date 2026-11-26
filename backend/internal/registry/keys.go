@@ -44,19 +44,12 @@ func (s *SAM) keyValues(typeID string, values map[string]any) (map[string]any, m
 			problems["values."+param] = fmt.Sprintf("A %s does not measure %s.", t.Name, s.nameOf(param))
 			continue
 		}
-		n, isNumber := v.(float64)
-		from, to := s.unitOf(param), key.Unit
-		if !isNumber || from == to || from == "" || to == "" {
-			out[key.Key] = v
+		converted, ok := convert(units, v, s.unitOf(param), key.Unit)
+		if !ok {
+			problems["values."+param] = fmt.Sprintf("%s cannot be sent in %s.", s.nameOf(param), key.Unit)
 			continue
 		}
-		f, okF := units[from]
-		k, okK := units[to]
-		if !okF || !okK || f.Dimension != k.Dimension || k.Scale == 0 {
-			problems["values."+param] = fmt.Sprintf("%s cannot be sent in %s.", s.nameOf(param), to)
-			continue
-		}
-		out[key.Key] = (n*f.Scale + f.Offset - k.Offset) / k.Scale
+		out[key.Key] = converted
 	}
 	return out, problems
 }

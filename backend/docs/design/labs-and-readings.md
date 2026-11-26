@@ -69,8 +69,11 @@ This service keeps one row per relayed record in `relayed_records`: the form it 
 
 ### Manual observations
 
-- `observationTargets` lists the labs the person may record in, with their devices.
-- `submitObservation` takes a template's fields. The template's checks run again here, then the record goes to SAM: under the device for a device reading, under the lab for a field observation.
+- `observationTargets` lists the labs the person may record in, as a member who can record there, with their devices.
+- `submitObservation` takes a template's fields, by parameter in each parameter's own unit. The template's checks run again here, as the front end's `checkObservation` does (`registry.Module.CheckEntry`): required fields, numbers, plausible ranges, listed answers, and nothing outside the template.
+- **The device.** A template for a device type needs one of the lab's live devices of that type; a field observation names none.
+- **To SAM.** An entry through one of SAM's templates goes to SAM's template submissions in the lab's space, its values under the template's field names in each field's unit, with the device for a device reading; SAM's problems by field come back by parameter. An entry through a device type's plain template, which SAM does not hold, is sent as an unsigned reading of the device, as uploads are.
+- **Retries.** An entry's ID is a UUID v5 of the person, the form, the lab, the device and the time, so a resent entry stores nothing twice. Each is kept in `relayed_records` as an observation.
 - Templates are SAM registry entries, presented through the overlay, plus a plain one for each device type without one ([Registry and content](registry-and-content.md#observation-templates)).
 
 ### Offline sync

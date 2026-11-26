@@ -47,6 +47,8 @@ var Gaps = []contract.Gap{
 		Why: "asking past the hourly limits, since each request sends a link to whoever is named"},
 	{Operation: "labs.uploadReadings", Status: http.StatusConflict,
 		Why: "a device SAM does not hold yet, still being set up"},
+	{Operation: "labs.submitObservation", Status: http.StatusConflict,
+		Why: "a lab or device SAM does not hold yet, still being set up"},
 }
 
 // Audience is the audience of the user tokens this service signs for SAM.

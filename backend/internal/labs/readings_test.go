@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings"
 )
@@ -71,5 +73,19 @@ func TestRoundAndSeq(t *testing.T) {
 	at := time.Date(2026, 11, 26, 9, 0, 0, 123e6, time.UTC)
 	if Seq(at) != at.UnixMilli() || Seq(at) != Seq(at.In(time.FixedZone("EAT", 3*3600))) {
 		t.Error("a reading's sequence number is its time in milliseconds")
+	}
+}
+
+func TestEntryID(t *testing.T) {
+	t.Parallel()
+	u, lab := uuid.New(), uuid.New()
+	at := time.Date(2026, 11, 26, 9, 0, 0, 0, time.UTC)
+	a := EntryID(u, "rain_gauge_reading", lab, nil, at)
+	if a != EntryID(u, "rain_gauge_reading", lab, nil, at.In(time.FixedZone("EAT", 3*3600))) {
+		t.Error("the same entry has another ID")
+	}
+	d := uuid.New()
+	if a == EntryID(u, "rain_gauge_reading", lab, &d, at) || a == EntryID(uuid.New(), "rain_gauge_reading", lab, nil, at) || a == EntryID(u, "rain_gauge_reading", lab, nil, at.Add(time.Second)) {
+		t.Error("another entry has the same ID")
 	}
 }
