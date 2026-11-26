@@ -46,8 +46,11 @@ The mock computes every view in the browser from its own copy of every reading, 
 
 ### Current conditions and device readings
 
-- `currentConditions` gives the latest reading per device, only for classrooms the user is a member of. Nobody sees conditions from other classrooms' devices, platform admins included.
-- `deviceReadings` gives one device's readings, newest first, 100 by default, for anyone who can view its classroom, as SAM lets them read.
+- Both are read from SAM as the viewer, after their membership here allows it, since SAM reflects a removal only once the outbox delivers it.
+- `currentConditions` gives the latest reading per device, only for classrooms the user is a member of. Nobody sees conditions from other classrooms' devices, platform admins included. It reads SAM's latest values (`GET /v1/observations:latest`) for each classroom's devices and keeps, for each device, the values of its newest reading.
+- `deviceReadings` gives one device's readings, newest first, 100 by default and 1,000 at most, for anyone who can view its classroom, as SAM lets them read, from SAM's readings list (`GET /v1/observations:readings`), a page at a time. A removed device keeps its history.
+- **Values** come back keyed by parameter in each parameter's own unit, as SAM stores them and the front end shows them. A position SAM took from the lab's site (`location_from_site`) is returned as the lab's, with `locationSource: 'lab'`.
+- **Who recorded it** comes from `relayed_records`: the recorder's participant ID, the time this service received it, and the name of whoever asked for credit, never a minor's.
 
 ### Alert levels
 

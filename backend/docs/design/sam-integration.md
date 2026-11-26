@@ -153,7 +153,7 @@ A user it cannot compare is logged and tried again on the next pass. It reads us
 
 ### Reads
 
-SAM offers four authorised reads: list, latest, aggregate and summary. This service calls them as the viewer, or as anonymous for a visitor, and builds the front end's view models from the answer ([Dashboards and public site](dashboards-and-public-site.md)). SAM's own read rules (licences, location, identity) therefore apply to every page.
+SAM offers five authorised reads: the observations list, the readings list, latest values, aggregates and summaries. This service calls them as the viewer, or as anonymous for a visitor, and builds the front end's view models from the answer ([Dashboards and public site](dashboards-and-public-site.md)). SAM's own read rules (licences, location, identity) therefore apply to every page.
 
 ### Translating SAM's errors
 
