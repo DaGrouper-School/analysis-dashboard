@@ -19,6 +19,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/labs"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/logx"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/notify"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/places"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/registry"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
@@ -52,6 +53,11 @@ type Deps struct {
 	Accounts accounts.Config
 	// Places is how places are looked up.
 	Places places.Config
+	// Email sends email; nil writes it to the log.
+	Email notify.Email
+	// InvitationTTL is how long an invitation to a classroom stays open;
+	// zero for the default.
+	InvitationTTL time.Duration
 }
 
 // Module is a group of endpoints. Each module registers its own routes
@@ -82,10 +88,19 @@ func New(d Deps) *App {
 		a.accounts = accounts.New(d.DB, d.SAM, d.Now, d.Accounts)
 		a.registry = registry.New(d.DB, d.SAM.Service(), d.SAM.Tenant().RootSpaceID, d.Now, a.accounts.Sessions())
 		a.modules = append(a.modules, a.accounts, places.New(d.Places, a.accounts.Sessions(), a.accounts), a.registry,
-			classrooms.New(d.DB, a.accounts.Sessions(), d.Now, d.SAM.Tenant().RootSpaceID), hosting.New(d.DB, a.accounts.Sessions(), d.Now),
+			classrooms.New(d.DB, a.accounts.Sessions(), d.Now, d.SAM.Tenant().RootSpaceID, classrooms.Config{
+				Email: d.Email, InvitationTTL: d.InvitationTTL, FrontEnd: frontEnd(d.AllowedOrigins), ShowTokens: d.Accounts.Demo}), hosting.New(d.DB, a.accounts.Sessions(), d.Now),
 			settings.NewModule(d.DB, a.accounts.Sessions(), d.Now), labs.New(d.DB, a.accounts.Sessions(), d.Now))
 	}
 	return a
+}
+
+// frontEnd is the front end's origin, the first allowed.
+func frontEnd(origins []string) string {
+	if len(origins) == 0 {
+		return ""
+	}
+	return origins[0]
 }
 
 // What modules declare to the background work, beside their routes.

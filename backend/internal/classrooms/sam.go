@@ -14,9 +14,15 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 )
 
-// OutboxKinds is the classroom kind, sent as this service.
+// OutboxKinds are the classroom kind, sent as this service, and the
+// membership kinds, sent as the person whose decision a change carries
+// out or as this service.
 func (m *Module) OutboxKinds() []samaccess.Kind {
-	return []samaccess.Kind{{Name: Kind, Apply: m.applyClassroom}}
+	return []samaccess.Kind{
+		{Name: Kind, Apply: m.applyClassroom},
+		{Name: MemberKind, ByPerson: true, Apply: m.applyMember},
+		{Name: MemberServiceKind, Apply: m.applyMember},
+	}
 }
 
 // applyClassroom brings a classroom in SAM to its desired state: a space

@@ -14,6 +14,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/jsoncheck"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/notify"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings"
 )
 
@@ -26,12 +27,35 @@ type Module struct {
 	now      func() time.Time
 	// root is the tenant's root space, under which classrooms are created.
 	root uuid.UUID
+	cfg  Config
+}
+
+// Config is how invitations are sent.
+type Config struct {
+	// Email sends them; nil writes them to the log.
+	Email notify.Email
+	// InvitationTTL is how long one stays open.
+	InvitationTTL time.Duration
+	// FrontEnd is the front end's origin, which links point to.
+	FrontEnd string
+	// ShowTokens returns invitations' tokens to the client, in demo mode
+	// only; otherwise they reach only the invitee, by email.
+	ShowTokens bool
 }
 
 // New builds the module. Classrooms are created in SAM under root.
-func New(q db.Querier, sessions *accounts.Sessions, now func() time.Time, root uuid.UUID) *Module {
-	return &Module{db: q, sessions: sessions, now: now, root: root}
+func New(q db.Querier, sessions *accounts.Sessions, now func() time.Time, root uuid.UUID, cfg Config) *Module {
+	if cfg.Email == nil {
+		cfg.Email = notify.LogEmail{}
+	}
+	if cfg.InvitationTTL <= 0 {
+		cfg.InvitationTTL = DefaultInvitationTTL
+	}
+	return &Module{db: q, sessions: sessions, now: now, root: root, cfg: cfg}
 }
+
+// DefaultInvitationTTL is how long an invitation stays open by default.
+const DefaultInvitationTTL = 14 * 24 * time.Hour
 
 // Routes serves the classroom operations of the front end's contract, and
 // the admin operations on classrooms, stages, regions and the consent
@@ -48,6 +72,14 @@ func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	mux.Handle("GET "+prefix+"/classrooms/{classroomId}", m.sessions.RequireUser(httpx.Handler(m.get)))
 	mux.Handle("PATCH "+prefix+"/classrooms/{classroomId}", m.sessions.RequireUser(httpx.Handler(m.update)))
 	mux.Handle("PATCH "+prefix+"/admin/classrooms/{classroomId}", config(m.configure))
+	user := func(h httpx.Handler) http.Handler { return m.sessions.RequireUser(h) }
+	mux.Handle("POST "+prefix+"/classrooms/{classroomId}/invitations", user(m.invite))
+	mux.Handle("DELETE "+prefix+"/invitations/{invitationId}", user(m.revokeInvitation))
+	mux.Handle("PATCH "+prefix+"/classrooms/{classroomId}/members/{userId}", user(m.setMemberRole))
+	mux.Handle("DELETE "+prefix+"/classrooms/{classroomId}/members/{userId}", user(m.removeMember))
+	mux.Handle("GET "+prefix+"/invitations/by-token/{token}", httpx.Handler(m.getInvitation))
+	mux.Handle("GET "+prefix+"/me/invitations", user(m.listMyInvitations))
+	mux.Handle("POST "+prefix+"/invitations/by-token/{token}/accept", user(m.acceptInvitation))
 	mux.Handle("GET "+prefix+"/admin/stages", config(m.listStages))
 	mux.Handle("PUT "+prefix+"/admin/stages/{stageId}", config(m.putList(PutStage, "stageId", m.listStages)))
 	mux.Handle("DELETE "+prefix+"/admin/stages/{stageId}", config(m.deleteFrom(DeleteStage, "stageId", "That stage no longer exists.",

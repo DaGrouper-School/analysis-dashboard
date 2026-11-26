@@ -64,6 +64,8 @@ type Config struct {
 	Accounts accounts.Config
 	// Places is how places are looked up.
 	Places places.Config
+	// InvitationTTL is how long an invitation to a classroom stays open.
+	InvitationTTL time.Duration
 	// SMTP is the server email is sent through. Required outside
 	// development and test; there, without one, email goes to the log.
 	SMTP notify.SMTPConfig
@@ -134,6 +136,9 @@ func Load() (Config, error) {
 	if err := c.signIn(); err != nil {
 		errs = append(errs, err)
 	}
+	if err := c.invitations(); err != nil {
+		errs = append(errs, err)
+	}
 	c.Places = places.Config{APIKey: os.Getenv("DGS_PLACES_API_KEY")}
 	if c.Places.APIKey == "" && !c.Local() {
 		errs = append(errs, fmt.Errorf("DGS_PLACES_API_KEY must be set in %s: the Google Places key address lookup uses; "+
@@ -165,7 +170,27 @@ var headerName = regexp.MustCompile(`^[A-Za-z0-9-]+$`)
 const (
 	defaultPublicURL = "http://localhost:8090"
 	minSessionTTL    = time.Hour
+	minInvitationTTL = time.Hour
 )
+
+// DefaultInvitationTTL keeps an invitation open for two weeks: long enough
+// for a school to pass it on, short enough that a forgotten link dies.
+const DefaultInvitationTTL = 14 * 24 * time.Hour
+
+// invitations reads DGS_INVITATION_TTL.
+func (c *Config) invitations() error {
+	c.InvitationTTL = DefaultInvitationTTL
+	v := os.Getenv("DGS_INVITATION_TTL")
+	if v == "" {
+		return nil
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil || d < minInvitationTTL {
+		return fmt.Errorf("DGS_INVITATION_TTL must be a duration of at least %s, such as 336h, not %q", minInvitationTTL, v)
+	}
+	c.InvitationTTL = d
+	return nil
+}
 
 // signIn reads DGS_PUBLIC_URL, DGS_GOOGLE_CLIENT_ID, DGS_SESSION_TTL and
 // DGS_DEMO. Outside development and test the service is reached over HTTPS,

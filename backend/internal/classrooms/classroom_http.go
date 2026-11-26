@@ -57,7 +57,7 @@ type MemberView struct {
 type Detail struct {
 	Classroom   Summary           `json:"classroom"`
 	Members     []MemberView      `json:"members"`
-	Invitations []any             `json:"invitations"`
+	Invitations []InvitationView  `json:"invitations"`
 	Permissions roles.Permissions `json:"permissions"`
 	Sharing     *SharingView      `json:"sharing"`
 }
@@ -107,6 +107,13 @@ func (m *Module) create(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	// The head joins by accepting an invitation sent as this service.
+	list, err := Invite(r.Context(), m.db, m.now(), m.cfg.InvitationTTL, c, []string{*c.HeadEmail}, roles.Head,
+		Inviter{UserID: &u.ID, Name: u.FullName, Service: true})
+	if err != nil {
+		return err
+	}
+	m.send(r.Context(), c, list)
 	httpx.WriteJSON(w, http.StatusOK, summary(c, u, "", 0))
 	return nil
 }
@@ -154,7 +161,16 @@ func (m *Module) get(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	u, _ := accounts.CurrentUser(r.Context())
-	out := Detail{Classroom: summary(c, u, role, len(members)), Members: []MemberView{}, Invitations: []any{}, Permissions: can}
+	out := Detail{Classroom: summary(c, u, role, len(members)), Members: []MemberView{}, Invitations: []InvitationView{}, Permissions: can}
+	if len(can.Invite) > 0 {
+		pending, err := PendingIn(r.Context(), m.db, m.now(), c.ID)
+		if err != nil {
+			return err
+		}
+		for _, inv := range pending {
+			out.Invitations = append(out.Invitations, m.view(inv))
+		}
+	}
 	for _, mem := range members {
 		v := MemberView{UserID: mem.UserID.String(), FullName: mem.FullName, Role: mem.Role, JoinedAt: mem.JoinedAt}
 		if can.SeeEmails {

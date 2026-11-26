@@ -11,7 +11,7 @@ import (
 func setEnv(t *testing.T, kv map[string]string) {
 	t.Helper()
 	for _, k := range []string{"DGS_ENV", "DGS_LISTEN", "DGS_ALLOWED_ORIGINS", "DGS_LOG_FORMAT", "DGS_LOG_LEVEL",
-		"DGS_DB_MAX_CONNS", "DGS_DB_STATEMENT_TIMEOUT", "DGS_SAM_AUDIENCE", "DGS_SIGNING_KEYS_FILE", "DGS_RECONCILE_INTERVAL", "DGS_SESSION_TTL", "DGS_DEMO", "DGS_SMS_SENDS_PER_HOUR", "DGS_CLIENT_IP_HEADER", "DGS_PLACES_API_KEY",
+		"DGS_DB_MAX_CONNS", "DGS_DB_STATEMENT_TIMEOUT", "DGS_SAM_AUDIENCE", "DGS_SIGNING_KEYS_FILE", "DGS_RECONCILE_INTERVAL", "DGS_SESSION_TTL", "DGS_INVITATION_TTL", "DGS_DEMO", "DGS_SMS_SENDS_PER_HOUR", "DGS_CLIENT_IP_HEADER", "DGS_PLACES_API_KEY",
 		"DGS_SMTP_HOST", "DGS_SMTP_PORT", "DGS_SMTP_SECURITY", "DGS_SMTP_USERNAME", "DGS_SMTP_PASSWORD", "DGS_SMTP_FROM"} {
 		t.Setenv(k, "")
 	}
@@ -89,6 +89,7 @@ func TestLoadRefuses(t *testing.T) {
 		{"no Google client in production", map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example",
 			"DGS_GOOGLE_CLIENT_ID": ""}, "DGS_GOOGLE_CLIENT_ID"},
 		{"a short session", map[string]string{"DGS_ENV": "test", "DGS_SESSION_TTL": "10m"}, "DGS_SESSION_TTL"},
+		{"a short invitation", map[string]string{"DGS_ENV": "test", "DGS_INVITATION_TTL": "10m"}, "DGS_INVITATION_TTL"},
 		{"demo in staging", map[string]string{"DGS_ENV": "staging", "DGS_ALLOWED_ORIGINS": "https://a.example", "DGS_DEMO": "true"}, "DGS_DEMO"},
 		{"demo in production", map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example", "DGS_DEMO": "true"}, "DGS_DEMO"},
 		{"demo half on", map[string]string{"DGS_ENV": "test", "DGS_DEMO": "yes"}, "DGS_DEMO"},
@@ -154,7 +155,8 @@ func TestLoadSignIn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.PublicURL != defaultPublicURL || c.Accounts.SecureCookies || !c.Accounts.Demo || c.Accounts.SessionTTL != accounts.DefaultSessionTTL {
+	if c.PublicURL != defaultPublicURL || c.Accounts.SecureCookies || !c.Accounts.Demo || c.Accounts.SessionTTL != accounts.DefaultSessionTTL ||
+		c.InvitationTTL != DefaultInvitationTTL {
 		t.Fatalf("sign-in in development: %s %+v", c.PublicURL, c.Accounts)
 	}
 	if c.Accounts.SMSSendsPerHour != accounts.DefaultSendsPerHour || c.Accounts.ClientIPHeader != "" {

@@ -120,8 +120,8 @@ type Listed struct {
 func List(ctx context.Context, q db.Querier, user uuid.UUID, admin bool) ([]Listed, error) {
 	rows, err := q.Query(ctx, `
 		SELECT `+prefixed("c.", classroomColumns)+`, coalesce(m.role, ''),
-			(SELECT count(*) FROM classroom_members WHERE classroom_id = c.id)
-		FROM classrooms c LEFT JOIN classroom_members m ON m.classroom_id = c.id AND m.user_id = $1
+			(SELECT count(*) FROM classroom_members WHERE classroom_id = c.id AND NOT removed)
+		FROM classrooms c LEFT JOIN classroom_members m ON m.classroom_id = c.id AND m.user_id = $1 AND NOT m.removed
 		WHERE $2 OR m.user_id IS NOT NULL ORDER BY c.created_at DESC, c.id`, user, admin)
 	if err != nil {
 		return nil, err
@@ -172,7 +172,7 @@ type Member struct {
 func Members(ctx context.Context, q db.Querier, classroom uuid.UUID) ([]Member, error) {
 	rows, err := q.Query(ctx, `
 		SELECT m.user_id, coalesce(u.full_name, ''), u.email, m.role, m.joined_at
-		FROM classroom_members m JOIN users u ON u.id = m.user_id WHERE m.classroom_id = $1
+		FROM classroom_members m JOIN users u ON u.id = m.user_id WHERE m.classroom_id = $1 AND NOT m.removed
 		ORDER BY array_position(ARRAY['institution_head', 'facilitator', 'community_scientist', 'researcher'], m.role), u.full_name, m.user_id`, classroom)
 	if err != nil {
 		return nil, err
@@ -185,7 +185,7 @@ func Members(ctx context.Context, q db.Querier, classroom uuid.UUID) ([]Member, 
 // RoleOf is user's role in a classroom, "" for none.
 func RoleOf(ctx context.Context, q db.Querier, classroom, user uuid.UUID) (roles.Role, error) {
 	var role roles.Role
-	err := q.QueryRow(ctx, `SELECT role FROM classroom_members WHERE classroom_id = $1 AND user_id = $2`, classroom, user).Scan(&role)
+	err := q.QueryRow(ctx, `SELECT role FROM classroom_members WHERE classroom_id = $1 AND user_id = $2 AND NOT removed`, classroom, user).Scan(&role)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", nil
 	}

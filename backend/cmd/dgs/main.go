@@ -142,8 +142,12 @@ func serveAll(ctx context.Context, cfg config.Config, pool *pgxpool.Pool) error 
 	// There is no SMS provider yet: codes go to the log in development and
 	// test, and nowhere elsewhere.
 	cfg.Accounts.SMS = notify.SMSFor(cfg.Local())
+	email, err := notify.EmailFor(cfg.Local(), cfg.SMTP)
+	if err != nil {
+		return err
+	}
 	app := server.New(server.Deps{DB: pool, SAM: sam, AllowedOrigins: cfg.AllowedOrigins, Now: time.Now, Accounts: cfg.Accounts,
-		Places: cfg.Places})
+		Places: cfg.Places, Email: email, InvitationTTL: cfg.InvitationTTL})
 	worker, err := samaccess.NewWorker(pool, sam, app.OutboxKinds(), app.Actors(), time.Now)
 	if err != nil {
 		return err
