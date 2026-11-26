@@ -49,6 +49,8 @@ var Gaps = []contract.Gap{
 		Why: "a device SAM does not hold yet, still being set up"},
 	{Operation: "labs.submitObservation", Status: http.StatusConflict,
 		Why: "a lab or device SAM does not hold yet, still being set up"},
+	{Operation: "exports.rawValues", Status: http.StatusNotFound,
+		Why: "a classroom the user is not a member of, which the mock refuses with not_found"},
 }
 
 // Audience is the audience of the user tokens this service signs for SAM.

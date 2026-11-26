@@ -71,8 +71,12 @@ for each parameter of a device, the first layer with rules is in force:
 
 ### The raw table
 
-- Filters and the total come from SAM's summary; rows from SAM's list, paged by offset, up to 500 per page.
-- SAM sorts parameter, source and site by their IDs, not by the labels shown. A sort by those columns groups rows but does not order them alphabetically.
+- `rawValues` is read from SAM as the member, once their membership here allows it; a platform admin who is not a member, like anyone else outside the classroom, gets 404.
+- Rows come from SAM's observation list (`GET /v1/observations`), paged by offset, up to 500 per page, read 200 at a time. SAM takes an offset of at most 10,000 rows, so a page past it is refused on `page`.
+- The total and the filter options come from SAM's summary (`GET /v1/observations:summary`). The options narrow in order, as the front end's mock does: the sites holding values, the sources of the site picked, the parameters of the source picked, and the days the other filters match, whatever days are asked.
+- **Sorts.** Time sorts by `observed_at`, newest first by default; parameter by `parameter_id`, source by `device_id` and site by `space_id`, ascending by default. SAM sorts parameter, source and site by their IDs, not by the labels shown, so a sort by those columns groups rows but does not order them alphabetically.
+- **Filters.** A site is its lab's space; a source is a device's SAM ID, or `field` for field observations; the `from` and `to` days become SAM's `from` and the day after `to`, since SAM's range excludes its end.
+- **Rows** name their source and site, a position SAM took from the site as the lab's, rounded as the classroom's terms say, and the recorder's participant ID from `relayed_records`. A removed device's values stay.
 
 ### Member views of station and parameter pages
 
