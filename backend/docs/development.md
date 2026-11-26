@@ -106,6 +106,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/settings` | The platform's settings, their checks and seed, the configuration change log, and seeding a list |
 | `internal/classrooms` | The classrooms module. So far, the stages and regions and their seed |
 | `internal/hosting` | The hosting module. So far, the host application's questions and their seed |
+| `internal/roles` | The permission grid, as the front end's, and the grants each classroom's role groups and the platform admins' group hold in SAM |
 | `internal/registry` | The registry module: SAM's registry read as this service and cached, the overlay that presents it, their merge, admins' changes with this tenant's own entries sent through the outbox, and the default alert levels |
 | `internal/jsoncheck` | Strict decoding and checks of configuration, reporting every problem at once |
 | `internal/samaccess` | Calls SAM as this service, as a person through a user token or as anonymous; the signing keys and the key set; SAM's errors translated; the outbox, its worker and the reconciler |
