@@ -18,7 +18,7 @@ import (
 // The store's queries on classrooms and classroom_members.
 
 const classroomColumns = `id, code, name, institution_name, setup, stage_id, region_id, sharing, terms, profile, head_email, created_at,
-	space_id, heads_group, facilitators_group, scientists_group, researchers_group`
+	space_id, heads_group, facilitators_group, scientists_group, researchers_group, released_through, sam_policy_version`
 
 // groupColumns are the role groups' columns, by role.
 var groupColumns = map[roles.Role]string{
@@ -33,7 +33,7 @@ func scanClassroom(r pgx.Row) (Classroom, error) {
 	var sharing, terms, profile []byte
 	groups := make([]*uuid.UUID, len(roles.All))
 	if err := r.Scan(&c.ID, &c.Code, &c.Name, &c.InstitutionName, &c.Setup, &c.StageID, &c.RegionID, &sharing, &terms, &profile,
-		&c.HeadEmail, &c.CreatedAt, &c.SpaceID, &groups[0], &groups[1], &groups[2], &groups[3]); err != nil {
+		&c.HeadEmail, &c.CreatedAt, &c.SpaceID, &groups[0], &groups[1], &groups[2], &groups[3], &c.ReleasedThrough, &c.SAMPolicyVersion); err != nil {
 		return c, err
 	}
 	c.Groups = map[roles.Role]uuid.UUID{}
@@ -133,7 +133,8 @@ func List(ctx context.Context, q db.Querier, user uuid.UUID, admin bool) ([]List
 		var sharing, terms, profile []byte
 		groups := make([]*uuid.UUID, len(roles.All))
 		if err := rows.Scan(&l.ID, &l.Code, &l.Name, &l.InstitutionName, &l.Setup, &l.StageID, &l.RegionID, &sharing, &terms, &profile,
-			&l.HeadEmail, &l.CreatedAt, &l.SpaceID, &groups[0], &groups[1], &groups[2], &groups[3], &l.Role, &l.Members); err != nil {
+			&l.HeadEmail, &l.CreatedAt, &l.SpaceID, &groups[0], &groups[1], &groups[2], &groups[3], &l.ReleasedThrough, &l.SAMPolicyVersion,
+			&l.Role, &l.Members); err != nil {
 			return nil, err
 		}
 		l.Groups = map[roles.Role]uuid.UUID{}

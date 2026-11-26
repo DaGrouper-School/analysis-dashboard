@@ -107,6 +107,17 @@ Release a change once what refused it is fixed, for example once the person has 
 
 **Changes that take access away come first.** A held change after which SAM should allow less, such as a guardian's withdrawal or a member's removal, is logged at error level as `outbox change held that takes access away`, and `dgs outbox held` lists it first, with `YES` under `TAKES ACCESS AWAY`. Until it is delivered SAM still allows what this service has taken away. Nobody reaches SAM except through this service, which checks its own record first, but resolve these before the rest.
 
+### Releases and data terms SAM refuses
+
+A release is `release:<classroom id>`, a publish sent as the person releasing, and a classroom's terms are `policy:<classroom id>`, sent as the person who changed them. Each waits, never held, until SAM holds the person's rights. SAM refuses one, and it is held, when the person may no longer do it, for example a facilitator releasing after the head took release back. The cutoff here has already moved, so visitors' pages read as released what SAM has not published yet: have the head release through a later time, which queues a new publish covering it, or release the held one once the person has the right again.
+
+```sh
+dgs outbox held                          # lists release:… and policy:… with the error
+dgs outbox release release:<classroom id> # publish it again
+```
+
+A publish names its release in its idempotency key, so sending it again publishes nothing twice.
+
 ### Registry entries SAM refuses
 
 Domains, values, device types and templates platform admins add are this tenant's own SAM entries, sent through the outbox as `registry:<kind>:<id>`, such as `registry:parameter:dgs:soil_ec`. The admin page shows an entry as soon as it is made, so until SAM has it, devices cannot yet send it. SAM refuses an entry with:

@@ -9,18 +9,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/apitest"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/registry"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings"
 )
 
-// admin is a signed-in platform admin, with the registry's seed loaded.
+// admin is a signed-in platform admin, made one as an operator does, so
+// SAM holds them as one once the outbox delivers it; with the registry's
+// seed loaded.
 func admin(t *testing.T, e *apitest.Env) *profile {
 	t.Helper()
 	if _, err := registry.SeedOverlay(context.Background(), e.Pool, time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	p := signedIn(t, e, amara)
-	if _, err := e.Pool.Exec(context.Background(), `UPDATE users SET platform_admin = true WHERE id = $1`, p.id); err != nil {
+	if _, _, err := accounts.SetAdmin(context.Background(), e.Pool, time.Now(), settings.Operator, p.id, true); err != nil {
 		t.Fatal(err)
 	}
 	return p

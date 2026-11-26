@@ -24,6 +24,15 @@ const (
 	ReleasersHeadAndFacils = "head_and_facilitators"
 )
 
+// How a classroom's data is reviewed before it is public.
+const (
+	ReviewManual = "manual"
+	ReviewAuto   = "auto"
+)
+
+// MaxAutoReleaseDays is the longest automatic review.
+const MaxAutoReleaseDays = 30
+
 // Sharing is the front end's ClassroomSharing: the settings a head
 // chooses.
 type Sharing struct {

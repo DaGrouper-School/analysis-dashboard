@@ -21,12 +21,15 @@ func (m *Module) OutboxKinds() []samaccess.Kind {
 		{Name: Kind, Apply: m.applyClassroom},
 		{Name: MemberKind, ByPerson: true, Apply: m.applyMember},
 		{Name: MemberServiceKind, Apply: m.applyMember},
+		{Name: PolicyKind, ByPerson: true, Apply: m.applyPolicy},
+		{Name: ReleaseKind, ByPerson: true, Apply: m.applyRelease},
 	}
 }
 
 // applyClassroom brings a classroom in SAM to its desired state: a space
-// under the tenant's root, its four role groups homed there, and each
-// group's grants from the role templates. Each step is recorded here once
+// under the tenant's root, its four role groups homed there, each group's
+// grants from the role templates, replaced when its sharing changes them,
+// and the public's grants while it shows its data. Each step is recorded here once
 // SAM confirms it, and has its own idempotency key, so a retry resumes
 // where an attempt stopped.
 func (m *Module) applyClassroom(ctx context.Context, a samaccess.Attempt) error {
@@ -71,5 +74,9 @@ func (m *Module) applyClassroom(ctx context.Context, a samaccess.Attempt) error 
 			return err
 		}
 	}
-	return nil
+	if m.cfg.SAM == nil {
+		return nil
+	}
+	// The public's grants, as this service, which holds dataset:publish.
+	return roles.Reconcile(ctx, a, m.cfg.SAM.Tenant().AnonymousID, *c.SpaceID, roles.PublicGrants(want.Sharing, want.Decimals), "public", roles.PublicLabel)
 }

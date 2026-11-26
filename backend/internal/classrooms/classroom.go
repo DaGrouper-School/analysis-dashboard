@@ -42,6 +42,12 @@ type Classroom struct {
 	SpaceID         *uuid.UUID
 	// Groups are the role groups SAM has confirmed, by role.
 	Groups map[roles.Role]uuid.UUID
+	// ReleasedThrough is the release cutoff set by hand: records observed
+	// up to it are published. Nil while none are.
+	ReleasedThrough *time.Time
+	// SAMPolicyVersion is the version of the space's data policy SAM
+	// holds, once it confirms one.
+	SAMPolicyVersion *int
 }
 
 // Profile is the front end's ClassroomProfile: what a classroom says about
@@ -195,8 +201,16 @@ func Create(ctx context.Context, q db.Querier, now time.Time, by uuid.UUID, in C
 		if err != nil {
 			return err
 		}
-		_, err = samaccess.Enqueue(ctx, tx, now, samaccess.Change{Entity: entity(c.ID), Kind: Kind, Payload: desired{Sharing: c.Sharing}})
-		return err
+		if _, err := samaccess.Enqueue(ctx, tx, now, samaccess.Change{Entity: entity(c.ID), Kind: Kind,
+			Payload: desired{Sharing: c.Sharing, Decimals: c.Terms.CoordinateDecimals}}); err != nil {
+			return err
+		}
+		// The terms reach SAM as the space's data policy, set as the
+		// platform admin who created it until the classroom has a head.
+		if by == uuid.Nil {
+			return nil
+		}
+		return queuePolicy(ctx, tx, now, c.ID, by)
 	})
 	return c, err
 }
@@ -205,6 +219,9 @@ func Create(ctx context.Context, q db.Querier, now time.Time, by uuid.UUID, in C
 // groups, and the grants they hold under its sharing settings.
 type desired struct {
 	Sharing roles.Sharing `json:"sharing"`
+	// Decimals are the classroom's coordinate decimals, which the public
+	// grants' grid follows.
+	Decimals *int `json:"decimals,omitempty"`
 }
 
 // defaultTerms are the platform's default data terms, with the attribution

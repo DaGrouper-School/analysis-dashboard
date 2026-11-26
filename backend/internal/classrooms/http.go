@@ -15,6 +15,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/jsoncheck"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/notify"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings"
 )
 
@@ -41,6 +42,9 @@ type Config struct {
 	// ShowTokens returns invitations' tokens to the client, in demo mode
 	// only; otherwise they reach only the invitee, by email.
 	ShowTokens bool
+	// SAM is how the reconciler reads SAM, and where the public's
+	// principal comes from; nil leaves the public grants alone.
+	SAM *samaccess.Access
 }
 
 // New builds the module. Classrooms are created in SAM under root.
@@ -71,6 +75,7 @@ func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	mux.Handle("POST "+prefix+"/classrooms", m.sessions.RequireUser(httpx.Handler(m.create)))
 	mux.Handle("GET "+prefix+"/classrooms/{classroomId}", m.sessions.RequireUser(httpx.Handler(m.get)))
 	mux.Handle("PATCH "+prefix+"/classrooms/{classroomId}", m.sessions.RequireUser(httpx.Handler(m.update)))
+	mux.Handle("PUT "+prefix+"/classrooms/{classroomId}/sharing", m.sessions.RequireUser(httpx.Handler(m.updateSharing)))
 	mux.Handle("PATCH "+prefix+"/admin/classrooms/{classroomId}", config(m.configure))
 	user := func(h httpx.Handler) http.Handler { return m.sessions.RequireUser(h) }
 	mux.Handle("POST "+prefix+"/classrooms/{classroomId}/invitations", user(m.invite))
