@@ -62,7 +62,11 @@ func deliver(t *testing.T, e *apitest.Env, prefix string) {
 		if waiting == 0 {
 			return
 		}
-		e.Clock.Add(time.Minute)
+		// Due again at once, without moving the clock, whose tokens SAM
+		// would see as issued in the future.
+		if _, err := e.Pool.Exec(context.Background(), `UPDATE sam_outbox SET next_attempt_at = $1 WHERE state = 'pending'`, e.Clock.Now()); err != nil {
+			t.Fatal(err)
+		}
 	}
 	rows, _ := e.Pool.Query(context.Background(), `SELECT entity, state, coalesce(last_error, '') FROM sam_outbox WHERE state IN ('pending', 'held') AND starts_with(entity, $1)`, prefix)
 	for rows.Next() {

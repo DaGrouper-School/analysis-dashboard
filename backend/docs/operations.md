@@ -52,6 +52,18 @@ dgs classroom configure DGC-HG2W5K classroom.json
 
 The file holds any of `stageId`, `regionId` (`null` clears it) and `profile`. A field left out stays as it is, and each profile field replaces only its own value: `areaCode`, `language`, `description`, `ecosystems`, `hostAgreementSigned`, `projects`, `sessions`, `custodianRole`, and `institution` with `history`, `hub` and `website`. A stage or region must already exist. A file that breaks a rule is refused with every problem named, and nothing changes.
 
+## Platform admins
+
+Platform admins are named by an operator, never from the dashboard. The person signs in once, then:
+
+```sh
+dgs admins                                 # who is an admin, and whether SAM holds them as one yet
+dgs admins add amina@dagrouper.example     # by their Google email, or their account ID
+dgs admins remove amina@dagrouper.example
+```
+
+Removing takes effect here at once: they lose the admin page and every admin action on their next request. SAM follows through the outbox, and until it does, `dgs outbox held` lists a change that cannot reach SAM. Each change is logged in `configuration_changes` as the operator's. A person who signed in only with their phone is named by their account ID.
+
 ## Places
 
 `DGS_PLACES_API_KEY` is a Google Places key with the Places API enabled. Restrict it to that API and to the service's outbound addresses: it is sent to Google from the server only, in a request header. Each signed-in person may look up 300 places an hour; autocomplete asks as they type, so this covers filling in a few addresses and stops a script.

@@ -18,13 +18,13 @@ import (
 
 const userColumns = `users.id, participant_id, sam_principal_id, minor, consent, sam_minor, sam_consent,
 	auth_provider, full_name, email, email_verified, phone, phone_verified, avatar_url, role, platform_admin,
-	address, onboarding_completed, public_profile, users.created_at, updated_at`
+	address, onboarding_completed, public_profile, users.created_at, updated_at, sam_admin`
 
 func scanUser(row pgx.Row) (User, error) {
 	var u User
 	err := row.Scan(&u.ID, &u.ParticipantID, &u.Principal, &u.Minor, &u.Consent, &u.samMinor, &u.samConsent,
 		&u.AuthProvider, &u.FullName, &u.Email, &u.EmailVerified, &u.Phone, &u.PhoneVerified, &u.AvatarURL, &u.Role,
-		&u.PlatformAdmin, &u.Address, &u.OnboardingCompleted, &u.PublicProfile, &u.CreatedAt, &u.UpdatedAt)
+		&u.PlatformAdmin, &u.Address, &u.OnboardingCompleted, &u.PublicProfile, &u.CreatedAt, &u.UpdatedAt, &u.SAMAdmin)
 	return u, err
 }
 
@@ -121,7 +121,7 @@ func liveSession(ctx context.Context, q db.Querier, hash []byte, now time.Time) 
 	u := &s.user
 	err := row.Scan(&u.ID, &u.ParticipantID, &u.Principal, &u.Minor, &u.Consent, &u.samMinor, &u.samConsent,
 		&u.AuthProvider, &u.FullName, &u.Email, &u.EmailVerified, &u.Phone, &u.PhoneVerified, &u.AvatarURL, &u.Role,
-		&u.PlatformAdmin, &u.Address, &u.OnboardingCompleted, &u.PublicProfile, &u.CreatedAt, &u.UpdatedAt,
+		&u.PlatformAdmin, &u.Address, &u.OnboardingCompleted, &u.PublicProfile, &u.CreatedAt, &u.UpdatedAt, &u.SAMAdmin,
 		&s.extendedAt, &s.expiresAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return session{}, false, nil

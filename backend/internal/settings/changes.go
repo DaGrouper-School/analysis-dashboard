@@ -27,12 +27,13 @@ var (
 
 // What a change is to.
 const (
-	KindSetting      = "setting"
-	KindStage        = "stage"
-	KindRegion       = "region"
-	KindHostQuestion = "host_question"
-	KindConsentText  = "consent_text"
-	KindClassroom    = "classroom"
+	KindSetting       = "setting"
+	KindStage         = "stage"
+	KindRegion        = "region"
+	KindHostQuestion  = "host_question"
+	KindConsentText   = "consent_text"
+	KindClassroom     = "classroom"
+	KindPlatformAdmin = "platform_admin"
 )
 
 // Change is one change to the platform's configuration.

@@ -12,6 +12,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/classrooms"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/hosting"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings/settingsapi"
 )
 
 // TestConfigurationAdmin: only platform admins keep the stages, regions,
@@ -32,7 +33,7 @@ func TestConfigurationAdmin(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The seed logged 13 changes; these 50 put them on a second page.
-	for i := range settings.ChangesPage {
+	for i := range settingsapi.ChangesPage {
 		if err := settings.Record(ctx, e.Pool, now, settings.Operator, settings.Change{Kind: settings.KindStage, Subject: "pilot",
 			Summary: "Changed stage pilot " + strconv.Itoa(i)}); err != nil {
 			t.Fatal(err)
@@ -100,7 +101,7 @@ func TestConfigurationAdmin(t *testing.T) {
 		t.Errorf("a question added: %d %+v", status, questions)
 	}
 
-	var setting settings.SettingView
+	var setting settingsapi.SettingView
 	if status, no := do("PUT", "/settings/privacy", map[string]any{"minorCoordinateDecimals": 9}, nil); status != 400 || no.Fields["minorCoordinateDecimals"] == "" {
 		t.Errorf("a bad setting: %d %+v", status, no)
 	}
@@ -111,17 +112,17 @@ func TestConfigurationAdmin(t *testing.T) {
 		string(setting.Value) != `{"minorCoordinateDecimals":1}` {
 		t.Errorf("a setting: %d %+v", status, setting)
 	}
-	var all []settings.SettingView
+	var all []settingsapi.SettingView
 	if status, _ := do("GET", "/settings", nil, &all); status != 200 || len(all) != 3 || all[2].Key != "privacy" || all[0].Seeded != true {
 		t.Errorf("the settings: %d %+v", status, all)
 	}
 
-	var page settings.ChangesView
+	var page settingsapi.ChangesView
 	if status, _ := do("GET", "/configuration-changes", nil, &page); status != 200 || page.Items[0].Summary != "Changed privacy" ||
-		page.Items[0].ByName != "Amara Okafor" || page.Next == nil || len(page.Items) != settings.ChangesPage {
+		page.Items[0].ByName != "Amara Okafor" || page.Next == nil || len(page.Items) != settingsapi.ChangesPage {
 		t.Fatalf("the newest changes: %d %+v", status, page)
 	}
-	var older settings.ChangesView
+	var older settingsapi.ChangesView
 	if status, _ := do("GET", "/configuration-changes?before="+*page.Next, nil, &older); status != 200 || older.Next != nil ||
 		len(older.Items) != 19 || older.Items[18].Subject != "core_parameters" || older.Items[0].ID != strconv.Itoa(mustAtoi(t, *page.Next)-1) {
 		t.Errorf("the page before: %d %+v", status, older)

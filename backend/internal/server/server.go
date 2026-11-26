@@ -23,7 +23,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/places"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/registry"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
-	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings/settingsapi"
 )
 
 // Prefix is where the API is served: the front end calls /api on its own
@@ -90,7 +90,7 @@ func New(d Deps) *App {
 		a.modules = append(a.modules, a.accounts, places.New(d.Places, a.accounts.Sessions(), a.accounts), a.registry,
 			classrooms.New(d.DB, a.accounts.Sessions(), d.Now, d.SAM.Tenant().RootSpaceID, classrooms.Config{
 				Email: d.Email, InvitationTTL: d.InvitationTTL, FrontEnd: frontEnd(d.AllowedOrigins), ShowTokens: d.Accounts.Demo}), hosting.New(d.DB, a.accounts.Sessions(), d.Now),
-			settings.NewModule(d.DB, a.accounts.Sessions(), d.Now), labs.New(d.DB, a.accounts.Sessions(), d.Now))
+			settingsapi.New(d.DB, a.accounts.Sessions(), d.Now), labs.New(d.DB, a.accounts.Sessions(), d.Now))
 	}
 	return a
 }
