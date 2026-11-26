@@ -509,8 +509,97 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ConsentTextChanged'
+  /public/home:
+    get:
+      operationId: publicSite.home
+      x-change: changed
+      x-waits-for: The site's words kept in the front end, with only the stages and regions from the backend
+      tags:
+      - Public site
+      summary: Home
+      description: 'The home page: the stages and regions, and every classroom with its stage and core readings, read
+        from SAM as a visitor. A classroom that does not show its data publicly is listed with no values. Visitors read
+        released data only, so a core reading is released, or not released while nothing is. Access: public, no session
+        needed.'
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicHomePage'
+  /public/content:
+    get:
+      operationId: publicSite.content
+      x-change: changed
+      x-waits-for: The site's words kept in the front end, with only the stages and regions from the backend
+      tags:
+      - Public site
+      summary: Content
+      description: 'The stages and regions, in display order; the site''s words are the front end''s. Access: public,
+        no session needed.'
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSiteContent'
 components:
   schemas:
+    PublicSiteContent:
+      type: object
+      description: The site content the backend keeps, from platform configuration.
+      properties:
+        stages:
+          type: array
+          items:
+            $ref: openapi.yaml#/components/schemas/ClassroomStage
+        regions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              label:
+                type: string
+            required:
+            - id
+            - label
+            additionalProperties: false
+      required:
+      - stages
+      - regions
+      additionalProperties: false
+    PublicHomePage:
+      type: object
+      description: The front end's PublicHome, with the site content the backend keeps.
+      properties:
+        content:
+          $ref: '#/components/schemas/PublicSiteContent'
+        classrooms:
+          type: array
+          items:
+            $ref: openapi.yaml#/components/schemas/PublicClassroom
+        units:
+          type: object
+          properties:
+            rain:
+              type: string
+            temperature:
+              type: string
+          required:
+          - rain
+          - temperature
+          additionalProperties: false
+      required:
+      - content
+      - classrooms
+      - units
+      additionalProperties: false
     ConsentLinkRequest:
       type: object
       description: The front end's ConsentRequest, with the current consent text filled in and its version.

@@ -22,6 +22,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/logx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/notify"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/places"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/publicsite"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/registry"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/settings/settingsapi"
@@ -94,7 +95,8 @@ func New(d Deps) *App {
 				Email: d.Email, FrontEnd: frontEnd(d.AllowedOrigins), ShowTokens: d.Accounts.Demo, Limits: a.accounts}),
 			settingsapi.New(d.DB, a.accounts.Sessions(), d.Now),
 			consent.New(d.DB, a.accounts.Sessions(), d.Now, consent.Config{Email: d.Email, SMS: d.Accounts.SMS, FrontEnd: frontEnd(d.AllowedOrigins),
-				ShowTokens: d.Accounts.Demo, Limits: a.accounts}), labs.New(d.DB, a.accounts.Sessions(), d.Now, a.registry, d.SAM))
+				ShowTokens: d.Accounts.Demo, Limits: a.accounts}), labs.New(d.DB, a.accounts.Sessions(), d.Now, a.registry, d.SAM),
+			publicsite.New(d.DB, a.registry, d.SAM, d.Now))
 	}
 	return a
 }
