@@ -346,11 +346,13 @@ func readRaw(ctx context.Context, as *client.Client, space uuid.UUID, ids []stri
 // inReview reports whether values of ids observed after the cutoff wait
 // for release, as a member reads them.
 func inReview(ctx context.Context, as *client.Client, space uuid.UUID, ids []string, cutoff *time.Time) (bool, error) {
-	q := client.ObservationQuery{SpaceID: space, ParameterIDs: ids, Publication: "unpublished"}
+	// From the start of time with no cutoff, so SAM can answer from its
+	// rollups.
+	after := time.Unix(0, 0)
 	if cutoff != nil {
-		after := cutoff.Add(time.Microsecond)
-		q.From = &after
+		after = cutoff.Add(time.Microsecond)
 	}
+	q := client.ObservationQuery{SpaceID: space, ParameterIDs: ids, Publication: "unpublished", From: &after}
 	sum, err := as.Summarise(ctx, q)
 	if err != nil {
 		return false, samaccess.Translate(ctx, err)
@@ -402,7 +404,8 @@ func (m *Module) released(ctx context.Context, space uuid.UUID, ids []string) (b
 	if ok && m.now().Sub(hit.at) < CacheFor {
 		return hit.has, nil
 	}
-	sum, err := m.sam.Anonymous().Summarise(ctx, client.ObservationQuery{SpaceID: space, ParameterIDs: ids})
+	epoch := time.Unix(0, 0)
+	sum, err := m.sam.Anonymous().Summarise(ctx, client.ObservationQuery{SpaceID: space, ParameterIDs: ids, From: &epoch})
 	switch {
 	case notReadable(err):
 		sum.Count = 0

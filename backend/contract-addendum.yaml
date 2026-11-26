@@ -509,6 +509,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ConsentTextChanged'
+  /public/classrooms/{classroomId}:
+    get:
+      operationId: publicSite.station
+      x-change: changed
+      x-waits-for: The site's words kept in the front end, with only the stages and regions from the backend
+      tags:
+      - Public site
+      summary: Station
+      description: 'A classroom''s station overview, from SAM''s latest values and its daily and hourly aggregates, read as
+        the member when the caller is one, so its members also get values still in review and the last sync of any device;
+        anyone else reads released values only, and sees a classroom that does not show its data publicly with no values.
+        Access: public, no session needed.'
+      security: []
+      parameters:
+      - name: classroomId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicStationWithContent'
+        '404':
+          $ref: openapi.yaml#/components/responses/NotFound
   /public/classrooms/{classroomId}/parameters/{parameterId}:
     get:
       operationId: publicSite.parameter
@@ -606,6 +634,54 @@ components:
       required:
       - stages
       - regions
+      additionalProperties: false
+    PublicStationWithContent:
+      type: object
+      description: The front end's PublicStation, with the site content the backend keeps.
+      properties:
+        content:
+          $ref: '#/components/schemas/PublicSiteContent'
+        classroom:
+          $ref: openapi.yaml#/components/schemas/PublicStation/properties/classroom
+        units:
+          $ref: openapi.yaml#/components/schemas/PublicStation/properties/units
+        parameters:
+          $ref: openapi.yaml#/components/schemas/PublicStation/properties/parameters
+        domains:
+          $ref: openapi.yaml#/components/schemas/PublicStation/properties/domains
+        core:
+          $ref: openapi.yaml#/components/schemas/PublicStation/properties/core
+        completeness:
+          $ref: openapi.yaml#/components/schemas/PublicStation/properties/completeness
+        siteCodes:
+          $ref: openapi.yaml#/components/schemas/PublicStation/properties/siteCodes
+        can:
+          $ref: openapi.yaml#/components/schemas/PublicStation/properties/can
+        shared:
+          $ref: openapi.yaml#/components/schemas/PublicStation/properties/shared
+        places:
+          $ref: openapi.yaml#/components/schemas/PublicStation/properties/places
+        now:
+          $ref: openapi.yaml#/components/schemas/PublicStation/properties/now
+        devices:
+          $ref: openapi.yaml#/components/schemas/PublicStation/properties/devices
+        institution:
+          $ref: openapi.yaml#/components/schemas/PublicStation/properties/institution
+      required:
+      - content
+      - classroom
+      - units
+      - parameters
+      - domains
+      - core
+      - completeness
+      - siteCodes
+      - can
+      - shared
+      - places
+      - now
+      - devices
+      - institution
       additionalProperties: false
     PublicParameterPageWithContent:
       type: object
@@ -901,6 +977,7 @@ components:
           - default_terms
           - privacy
           - future_observations
+          - now_tiles
         value:
           description: The setting's value, or null before the seed sets it.
         seeded:

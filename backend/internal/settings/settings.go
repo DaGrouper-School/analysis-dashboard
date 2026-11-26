@@ -25,6 +25,7 @@ const (
 	KeyDefaultTerms   = "default_terms"
 	KeyPrivacy        = "privacy"
 	KeyFuture         = "future_observations"
+	KeyNowTiles       = "now_tiles"
 )
 
 // Key is a setting's key and what its value holds.
@@ -45,6 +46,7 @@ var keys = []setting{
 	{Key{KeyDefaultTerms, "the data terms a new classroom starts with"}, checkAs[DataTerms]},
 	{Key{KeyPrivacy, "the decimals a minor's positions are rounded to"}, checkAs[Privacy]},
 	{Key{KeyFuture, "whether observations dated in the future are flagged and stored, or refused"}, checkAs[Future]},
+	{Key{KeyNowTiles, "the values \"What's happening now?\" shows on a station page, in order, with their captions"}, checkAs[NowTiles]},
 }
 
 // Keys are the settings' keys, in a fixed order.

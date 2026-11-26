@@ -104,7 +104,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/accounts` | Accounts and their participant IDs; registering each account's SAM principal through the outbox; the restore guard |
 | `internal/notify` | Delivers messages: the SMS and email interfaces, the SMTP provider, the log providers for development and test, and a recorder of texts for tests |
 | `internal/places` | The places module: address autocomplete and lookup through a provider, and the calling codes |
-| `internal/publicsite` | The public site: the home page and its content, and the parameter pages, read from SAM as its anonymous principal or as a member, the sharing settings deciding first |
+| `internal/publicsite` | The public site: the home page and its content, and the station and parameter pages, read from SAM as its anonymous principal or as a member, the sharing settings deciding first |
 | `internal/settings` | The platform's settings, their checks and seed, the configuration change log, and seeding a list |
 | `internal/settings/settingsapi` | The settings' and the change log's admin endpoints |
 | `internal/classrooms` | The classrooms module: classrooms, kept here and created in SAM, their members, and what platform admins keep of them: the stages and regions and their seed, and the guardian consent text's versions |
@@ -243,7 +243,7 @@ The configuration platform admins keep ([Platform configuration](design/registry
 | Stages and regions | `stages`, `regions`: a row each, in display order | `internal/classrooms` |
 | Host questions | `host_questions`: a row each, in order; a retired one has `retired_at` | `internal/hosting` |
 | The consent text | `consent_texts`: a row per version and language, never changed; the latest version is current | `internal/classrooms` |
-| Settings | `platform_settings`: one value per key, `core_parameters`, `default_terms`, `privacy`, `future_observations` | `internal/settings` |
+| Settings | `platform_settings`: one value per key, `core_parameters`, `default_terms`, `privacy`, `future_observations`, `now_tiles` | `internal/settings` |
 | The change log | `configuration_changes`: who changed what, newest first | `internal/settings` |
 
 - **Checks.** `settings.Check` decodes a setting strictly into its Go shape, the same as the front end's, with `internal/jsoncheck`: no unknown or missing field, no `null` where a value is required, no blank text, then the key's own rules, such as decimals from 0 to 4 or a rain reference that is one of the daily rain values. Every problem is reported at once, with where it is. A value is stored as it re-encodes from its shape, so the same value always stores the same way.
