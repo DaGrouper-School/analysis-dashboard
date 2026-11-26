@@ -64,8 +64,10 @@ for each parameter of a device, the first layer with rules is in force:
 ```
 
 - The first change in a layer copies the levels below it for that parameter, so editing one level never drops the others. `resetAlerts` drops a layer's rules for a parameter, back to the next layer down.
-- An alert is evaluated against the latest reading when it is read. Nothing is stored or sent, so alerts follow edits at once.
-- Rules live in `alert_rules` with who changed them last; defaults in `alert_defaults` ([Registry and content](registry-and-content.md#alert-defaults)).
+- An alert is evaluated against the latest reading when it is read: `currentConditions` carries, for each device, one alert per parameter its newest reading trips, the most severe of the enabled levels, stating the value against the level and whose level it is. Nothing is stored or sent, so alerts follow edits at once.
+- Rules are kept in the parameter's own unit, the unit SAM stores values in, so values are compared as SAM returns them.
+- A rule stays on its parameter; deleting a device's or type's rule leaves the next layer for that parameter once none is left, and a platform default is never deleted, only turned off.
+- Rules live in `alert_rules` with who changed them last; defaults in `alert_defaults` ([Registry and content](registry-and-content.md#alert-defaults)). Layering, the copy on first change and the wording follow the front end's `alerts.ts`, whose tests the service's own repeat.
 
 ### The raw table
 

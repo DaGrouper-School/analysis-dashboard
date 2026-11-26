@@ -84,6 +84,14 @@ func (v *View) checkAlert(in AlertRuleInput) map[string]string {
 	return f
 }
 
+// CheckAlert reports what is wrong with an alert level, by field, as the
+// front end checks it.
+func (v *View) CheckAlert(in AlertRuleInput) map[string]string { return v.checkAlert(in) }
+
+// FormatValue is a value as the front end writes it: whole from 100, to one
+// decimal below, with its unit.
+func FormatValue(v float64, unit string) string { return formatValue(v, unit) }
+
 // formatValue is a value as the front end writes it: whole from 100, to
 // one decimal below, with its unit.
 func formatValue(v float64, unit string) string {
