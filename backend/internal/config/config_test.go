@@ -12,7 +12,8 @@ func setEnv(t *testing.T, kv map[string]string) {
 	t.Helper()
 	for _, k := range []string{"DGS_ENV", "DGS_LISTEN", "DGS_ALLOWED_ORIGINS", "DGS_LOG_FORMAT", "DGS_LOG_LEVEL",
 		"DGS_DB_MAX_CONNS", "DGS_DB_STATEMENT_TIMEOUT", "DGS_SAM_AUDIENCE", "DGS_SIGNING_KEYS_FILE", "DGS_RECONCILE_INTERVAL", "DGS_SESSION_TTL", "DGS_INVITATION_TTL", "DGS_DEMO", "DGS_SMS_SENDS_PER_HOUR", "DGS_CLIENT_IP_HEADER", "DGS_PLACES_API_KEY",
-		"DGS_SMTP_HOST", "DGS_SMTP_PORT", "DGS_SMTP_SECURITY", "DGS_SMTP_USERNAME", "DGS_SMTP_PASSWORD", "DGS_SMTP_FROM"} {
+		"DGS_SMTP_HOST", "DGS_SMTP_PORT", "DGS_SMTP_SECURITY", "DGS_SMTP_USERNAME", "DGS_SMTP_PASSWORD", "DGS_SMTP_FROM",
+		"DGS_MEDIA_BUCKET", "DGS_MEDIA_REGION"} {
 		t.Setenv(k, "")
 	}
 	// Every case has a database, SAM and signing keys unless it says otherwise.
@@ -26,6 +27,9 @@ func setEnv(t *testing.T, kv map[string]string) {
 	t.Setenv("DGS_PLACES_API_KEY", "places-key")
 	t.Setenv("DGS_SMTP_HOST", "smtp.example")
 	t.Setenv("DGS_SMTP_FROM", "DaGrouper School <no-reply@dgs.example>")
+	t.Setenv("DGS_MEDIA_URL", "https://s3.example")
+	t.Setenv("DGS_MEDIA_ACCESS_KEY", "media-key")
+	t.Setenv("DGS_MEDIA_SECRET_KEY", "media-secret")
 	for k, v := range kv {
 		t.Setenv(k, v)
 	}
@@ -43,6 +47,16 @@ func TestLoad(t *testing.T) {
 	}
 	if strings.Join(c.AllowedOrigins, " ") != "https://a.example https://b.example" {
 		t.Fatalf("origins: %v", c.AllowedOrigins)
+	}
+	if c.Media == nil || c.Media.Endpoint != "https://s3.example" || c.Media.Bucket != "dgs-media" || c.Media.AccessKey != "media-key" {
+		t.Fatalf("the media store: %+v", c.Media)
+	}
+}
+
+func TestMediaInMemoryInDevelopment(t *testing.T) {
+	setEnv(t, map[string]string{"DGS_ENV": "development", "DGS_MEDIA_URL": ""})
+	if c, err := Load(); err != nil || c.Media != nil {
+		t.Fatalf("development without a store: %+v, %v", c.Media, err)
 	}
 }
 
@@ -104,6 +118,12 @@ func TestLoadRefuses(t *testing.T) {
 		{"SMTP in the clear in staging", map[string]string{"DGS_ENV": "staging", "DGS_ALLOWED_ORIGINS": "https://a.example",
 			"DGS_SMTP_SECURITY": "none"}, "DGS_SMTP_SECURITY"},
 		{"unknown SMTP security", map[string]string{"DGS_ENV": "test", "DGS_SMTP_SECURITY": "ssl"}, "DGS_SMTP_SECURITY"},
+		{"no media store in production", map[string]string{"DGS_ENV": "production", "DGS_ALLOWED_ORIGINS": "https://a.example",
+			"DGS_MEDIA_URL": ""}, "DGS_MEDIA_URL"},
+		{"a media store in the clear in staging", map[string]string{"DGS_ENV": "staging", "DGS_ALLOWED_ORIGINS": "https://a.example",
+			"DGS_MEDIA_URL": "http://s3.example"}, "DGS_MEDIA_URL"},
+		{"not a media store", map[string]string{"DGS_ENV": "test", "DGS_MEDIA_URL": "s3.example/bucket"}, "DGS_MEDIA_URL"},
+		{"a media store without its key", map[string]string{"DGS_ENV": "test", "DGS_MEDIA_SECRET_KEY": ""}, "DGS_MEDIA_SECRET_KEY"},
 		{"a bad SMTP port", map[string]string{"DGS_ENV": "test", "DGS_SMTP_PORT": "70000"}, "DGS_SMTP_PORT"},
 		{"an SMTP user without a password", map[string]string{"DGS_ENV": "test", "DGS_SMTP_USERNAME": "dgs"}, "DGS_SMTP_PASSWORD"},
 		{"no sender", map[string]string{"DGS_ENV": "test", "DGS_SMTP_FROM": ""}, "DGS_SMTP_FROM"},

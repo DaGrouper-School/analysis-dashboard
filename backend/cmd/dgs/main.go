@@ -61,6 +61,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/config"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/logx"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/media"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/notify"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/server"
@@ -153,8 +154,12 @@ func serveAll(ctx context.Context, cfg config.Config, pool *pgxpool.Pool) error 
 	if err != nil {
 		return err
 	}
+	files, err := mediaStore(ctx, cfg)
+	if err != nil {
+		return err
+	}
 	app := server.New(server.Deps{DB: pool, SAM: sam, AllowedOrigins: cfg.AllowedOrigins, Now: time.Now, Accounts: cfg.Accounts,
-		Places: cfg.Places, Email: email, InvitationTTL: cfg.InvitationTTL})
+		Places: cfg.Places, Email: email, InvitationTTL: cfg.InvitationTTL, Media: files, PublicURL: cfg.PublicURL})
 	worker, err := samaccess.NewWorker(pool, sam, app.OutboxKinds(), app.Actors(), time.Now)
 	if err != nil {
 		return err
@@ -354,4 +359,14 @@ func serve(ctx context.Context, ln net.Listener, h http.Handler) error {
 	shutdown, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 	return srv.Shutdown(shutdown)
+}
+
+// mediaStore is the store photos are kept in: the configured S3-compatible
+// store, or memory in development and test without one.
+func mediaStore(ctx context.Context, cfg config.Config) (media.Store, error) {
+	if cfg.Media == nil {
+		slog.WarnContext(ctx, "no media store is set (DGS_MEDIA_URL): photos are kept in memory until the service stops")
+		return media.NewMemory(), nil
+	}
+	return media.NewS3(ctx, *cfg.Media)
 }

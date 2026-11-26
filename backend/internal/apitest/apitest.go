@@ -20,6 +20,7 @@ import (
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/contract"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/media"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/notify"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/places"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/samaccess"
@@ -90,6 +91,8 @@ type Env struct {
 	// SMS keeps the texts the service sends, and Email its emails.
 	SMS   *notify.SMSRecorder
 	Email *notify.EmailRecorder
+	// Media holds the files the service stores, across restarts.
+	Media *media.Memory
 	// Access is how this service calls SAM, and App the service, as last
 	// started.
 	Access *samaccess.Access
@@ -135,7 +138,7 @@ func NewWith(t testing.TB, o Options) *Env {
 	url := "http://" + srv.Listener.Addr().String()
 	sam := testenv.Options{Issuer: url, KeySetURL: url + "/api" + samaccess.KeySetPath, Audience: Audience}
 	e := &Env{URL: url, Pool: testutil.DB(t), SAM: testenv.Start(t, sam), Google: newFakeGoogle(t), Clock: &Clock{now: time.Now()},
-		SMS: &notify.SMSRecorder{}, Email: &notify.EmailRecorder{},
+		SMS: &notify.SMSRecorder{}, Email: &notify.EmailRecorder{}, Media: media.NewMemory(),
 		t: t, opts: o,
 		check: func(h http.Handler) http.Handler {
 			return c.Checked(h, func(err error) { t.Errorf("contract: %v", err) }, Outside...)
@@ -161,7 +164,7 @@ func (e *Env) Restart(keys *samaccess.Keys) {
 	e.App = server.New(server.Deps{DB: e.Pool, SAM: access, AllowedOrigins: []string{FrontEnd}, Now: e.Clock.Now,
 		Accounts: accounts.Config{GoogleClientID: e.Google.ClientID, GoogleKeysURL: e.Google.KeysURL, Demo: e.opts.Demo,
 			SMS: e.SMS, SMSSendsPerHour: e.opts.SendsPerHour, ClientIPHeader: ClientHeader},
-		Places: e.opts.Places, Email: e.Email})
+		Places: e.opts.Places, Email: e.Email, Media: e.Media, PublicURL: e.URL})
 	h := e.check(e.App.Handler())
 	e.handler.Store(&h)
 }

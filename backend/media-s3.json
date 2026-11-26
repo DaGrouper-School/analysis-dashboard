@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "dgs",
+      "credentials": [{"accessKey": "dgs-dev", "secretKey": "dgs-dev-secret"}],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

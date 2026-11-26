@@ -24,7 +24,7 @@ export DGS_SAM_URL DGS_SAM_TENANT_FILE DGS_SAM_ISSUER
 # Building SAM's image reads its private module.
 COMPOSE_BUILD = SAM_READ_TOKEN="$${SAM_READ_TOKEN:-$$(gh auth token)}" docker compose
 
-.PHONY: help build run migrate test test-short lint tidy-check vulncheck db-up up down
+.PHONY: help build run migrate test test-short test-media lint tidy-check vulncheck db-up up down
 
 help: ## list the tasks
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -54,6 +54,10 @@ else
 	docker compose --profile test up -d --wait test-db
 	DGS_TEST_DATABASE_URL='$(TEST_DB)' go test -race ./...
 endif
+
+test-media: ## test the S3 media store against the compose test-media service
+	docker compose --profile test up -d --wait test-media
+	DGS_TEST_MEDIA_URL=http://127.0.0.1:58333 go test -race -run TestS3 ./internal/media
 
 test-short: ## run the tests that need no database or SAM
 	go test -race -short ./...
