@@ -178,7 +178,7 @@ Calls to SAM time out after fifteen seconds. `/healthz` does not ask SAM: this s
 
 ### The outbox
 
-A change SAM must reflect is never sent from a handler. The service function that makes it writes the entity's whole desired state to the outbox, in the same transaction, and the worker sends it ([The outbox](design/sam-integration.md#the-outbox)).
+A change SAM must reflect is never sent from a handler. The one exception is a relayed submission, a reading or observation a person records: it is sent from the handler, as the person, and the answer returned ([Labs and readings](design/labs-and-readings.md#relaying-readings)). The service function that makes it writes the entity's whole desired state to the outbox, in the same transaction, and the worker sends it ([The outbox](design/sam-integration.md#the-outbox)).
 
 - **Enqueueing.** `samaccess.Enqueue(ctx, tx, now, Change{Entity, Kind, Payload, Actor})`. `Entity` names what the change is about, such as `user:<user id>`, and never a participant ID or a row ID a restored database could give out again. `Actor` is the account the change is sent as, or nil for this service. `TakesAccessAway` marks a change after which SAM should allow less than before, such as consent withdrawn or a member removed: until it is delivered SAM is more permissive than this service, so held, it is logged at error level and `dgs outbox held` lists it first.
 - **Kinds.** A module whose changes reach SAM declares its kinds with `OutboxKinds() []samaccess.Kind`: a name, whether it is sent as a person (`ByPerson`), and `Apply(ctx, Attempt)`, which sends the desired state through `Attempt.SAM`, the client acting as the change's actor.
@@ -241,7 +241,7 @@ The configuration platform admins keep ([Platform configuration](design/registry
 | Stages and regions | `stages`, `regions`: a row each, in display order | `internal/classrooms` |
 | Host questions | `host_questions`: a row each, in order; a retired one has `retired_at` | `internal/hosting` |
 | The consent text | `consent_texts`: a row per version and language, never changed; the latest version is current | `internal/classrooms` |
-| Settings | `platform_settings`: one value per key, `core_parameters`, `default_terms`, `privacy` | `internal/settings` |
+| Settings | `platform_settings`: one value per key, `core_parameters`, `default_terms`, `privacy`, `future_observations` | `internal/settings` |
 | The change log | `configuration_changes`: who changed what, newest first | `internal/settings` |
 
 - **Checks.** `settings.Check` decodes a setting strictly into its Go shape, the same as the front end's, with `internal/jsoncheck`: no unknown or missing field, no `null` where a value is required, no blank text, then the key's own rules, such as decimals from 0 to 4 or a rain reference that is one of the daily rain values. Every problem is reported at once, with where it is. A value is stored as it re-encodes from its shape, so the same value always stores the same way.
@@ -350,6 +350,7 @@ Each table is read and written only by the package that owns it ([Data ownership
 | `invitations` | `internal/classrooms` | |
 | `labs` | `internal/labs` | |
 | `devices` | `internal/labs` | |
+| `relayed_records` | `internal/labs` | |
 | `registry_domains` | `internal/registry` | |
 | `registry_parameters` | `internal/registry` | |
 | `registry_device_types` | `internal/registry` | |

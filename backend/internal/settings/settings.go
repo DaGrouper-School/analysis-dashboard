@@ -24,6 +24,7 @@ const (
 	KeyCoreParameters = "core_parameters"
 	KeyDefaultTerms   = "default_terms"
 	KeyPrivacy        = "privacy"
+	KeyFuture         = "future_observations"
 )
 
 // Key is a setting's key and what its value holds.
@@ -43,6 +44,7 @@ var keys = []setting{
 	{Key{KeyCoreParameters, "which registry values feed the shared core readings, the rain reference and tolerance"}, checkAs[CoreParameters]},
 	{Key{KeyDefaultTerms, "the data terms a new classroom starts with"}, checkAs[DataTerms]},
 	{Key{KeyPrivacy, "the decimals a minor's positions are rounded to"}, checkAs[Privacy]},
+	{Key{KeyFuture, "whether observations dated in the future are flagged and stored, or refused"}, checkAs[Future]},
 }
 
 // Keys are the settings' keys, in a fixed order.

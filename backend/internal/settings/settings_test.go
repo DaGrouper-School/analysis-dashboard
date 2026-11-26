@@ -71,11 +71,11 @@ func TestPutAndSeed(t *testing.T) {
 		return strings.TrimSpace(b.String())
 	}
 	seeded, err := settings.SeedSettings(ctx, pool, now)
-	if err != nil || outcomes(seeded) != "core_parameters=added default_terms=added privacy=added" {
+	if err != nil || outcomes(seeded) != "core_parameters=added default_terms=added privacy=added future_observations=added" {
 		t.Fatalf("the seed: %s, %v", outcomes(seeded), err)
 	}
 	seeded, err = settings.SeedSettings(ctx, pool, now.Add(time.Hour))
-	if err != nil || outcomes(seeded) != "core_parameters=unchanged default_terms=unchanged privacy=unchanged" {
+	if err != nil || outcomes(seeded) != "core_parameters=unchanged default_terms=unchanged privacy=unchanged future_observations=unchanged" {
 		t.Fatalf("the seed again: %s, %v", outcomes(seeded), err)
 	}
 
@@ -104,7 +104,7 @@ func TestPutAndSeed(t *testing.T) {
 	}
 
 	log, err := settings.Changes(ctx, pool, 10)
-	if err != nil || len(log) != 4 {
+	if err != nil || len(log) != 5 {
 		t.Fatalf("the log: %+v, %v", log, err)
 	}
 	if l := log[0]; l.Actor.Name != "Amara Okafor" || l.Actor.UserID == nil || *l.Actor.UserID != admin || l.Subject != settings.KeyPrivacy || l.Summary != "Changed privacy" {

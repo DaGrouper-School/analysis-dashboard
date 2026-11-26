@@ -108,7 +108,7 @@ Templates are SAM registry entries, presented through the overlay. `listObservat
 | Stages | Rows in `stages`: ID, label, description, colour, position | Classrooms | Classroom profiles, the directory and the map. A classroom's `stageId` refers to one |
 | Regions | Rows in `regions`: ID, label, position | Classrooms | The directory. A classroom's `regionId` refers to one |
 | Host questions | Rows in `host_questions`: ID, label, help, kind, required, position, when retired | Hosting | The host application. An application's answers refer to them |
-| Settings | One checked value per key in `platform_settings`: `core_parameters`, `default_terms`, `privacy` | `internal/settings` | Station pages and the network map; classroom creation; readings from minors |
+| Settings | One checked value per key in `platform_settings`: `core_parameters`, `default_terms`, `privacy`, `future_observations` | `internal/settings` | Station pages and the network map; classroom creation; readings from minors |
 | Each classroom | `stageId`, `regionId`, and profile fields such as `hostAgreementSigned`, projects and sessions | Classrooms | Its profile |
 | Consent text | Published versions in `consent_texts`, one row per version and language, never changed | Classrooms | The printed consent sheet and the guardian's link page |
 

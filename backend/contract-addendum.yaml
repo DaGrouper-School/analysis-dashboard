@@ -733,6 +733,7 @@ components:
           - core_parameters
           - default_terms
           - privacy
+          - future_observations
         value:
           description: The setting's value, or null before the seed sets it.
         seeded:
