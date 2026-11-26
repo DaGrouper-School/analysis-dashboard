@@ -142,9 +142,11 @@ A classroom's sharing settings:
 
 ### CSV export
 
-- `rawCsv` pages through the same SAM list as the raw table, as the member, up to 100,000 rows, a thousand at a time.
-- This service adds what SAM does not know: labels, device, site, classroom and participant link, in the front end's columns.
-- Every row carries the classroom's licence, attribution and restrictions.
+- `rawCsv` reads SAM's export (`GET /v1/observations:export`) as the member, with the raw table's filters, under the member's `export:create` grant, which `export_to` limits to this service. It reads JSON lines and completes them 500 at a time.
+- This service adds what SAM does not know: labels, device, site, classroom and participant link, in the front end's columns, then `licences`, those the reader's grants attach. The participant link is the contributor page on the front end that asked.
+- Every row carries the licence, attribution and restrictions of the data policy SAM puts on it; until the classroom's terms reach SAM, the classroom's own.
+- A removed device's released readings stay in it, as in the raw table.
+- The whole file goes in the answer, `{filename, content, rows}`, so an export holds at most 100,000 values; a larger one is refused, to be narrowed. Rows are written through `RowWriter`, so a streamed download can replace the body without changing how rows are made.
 
 ### Photos
 

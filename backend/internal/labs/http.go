@@ -61,6 +61,7 @@ func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	h("POST "+prefix+"/labs/{labId}/observations", m.submitObservation)
 	h("POST "+prefix+"/observations/batch", m.syncObservations)
 	h("POST "+prefix+"/exports/raw", m.rawValues)
+	h("POST "+prefix+"/exports/raw.csv", m.rawCSV)
 	h("GET "+prefix+"/classrooms/{classroomId}/release", m.releaseReview)
 	h("POST "+prefix+"/classrooms/{classroomId}/release", m.releaseData)
 	h("GET "+prefix+"/devices/{deviceId}/alerts", m.listDeviceAlerts)
