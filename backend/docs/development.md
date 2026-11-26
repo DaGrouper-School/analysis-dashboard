@@ -351,6 +351,7 @@ Each table is read and written only by the package that owns it ([Data ownership
 | `labs` | `internal/labs` | |
 | `devices` | `internal/labs` | |
 | `relayed_records` | `internal/labs` | |
+| `synced_records` | `internal/labs` | |
 | `registry_domains` | `internal/registry` | |
 | `registry_parameters` | `internal/registry` | |
 | `registry_device_types` | `internal/registry` | |

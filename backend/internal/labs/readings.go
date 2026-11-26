@@ -184,7 +184,7 @@ func (m *Module) uploadReadings(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	out, err := m.relay(r.Context(), d, u, list, FormUpload)
+	out, _, err := m.relay(r.Context(), d, u, list, FormUpload, nil)
 	if err != nil {
 		return err
 	}
@@ -305,25 +305,28 @@ func (m *Module) prepareOne(ctx context.Context, d Device, base Reading, rd Read
 // and records the user as vouching for, and keeps a relayed record of each
 // SAM took. Readings SAM rejected are left out and
 // logged; when it stored none, the upload is refused.
-func (m *Module) relay(ctx context.Context, d Device, u accounts.User, list []prepared, form string) ([]Reading, error) {
+func (m *Module) relay(ctx context.Context, d Device, u accounts.User, list []prepared, form string, sentAt *time.Time) ([]Reading, []bool, error) {
 	as, err := m.sam.User(samaccess.Person{ParticipantID: u.ParticipantID, Registered: u.Principal != nil})
 	if err != nil {
-		return nil, samaccess.Translate(ctx, err)
+		return nil, nil, samaccess.Translate(ctx, err)
 	}
-	now := m.now()
-	in := client.ReadingsRelay{SentAt: &now, Readings: make([]client.IncomingReading, len(list))}
+	if sentAt == nil {
+		now := m.now()
+		sentAt = &now
+	}
+	in := client.ReadingsRelay{SentAt: sentAt, Readings: make([]client.IncomingReading, len(list))}
 	for i, p := range list {
 		in.Readings[i] = client.IncomingReading{Unsigned: p.relay}
 	}
 	got, err := as.RelayReadings(ctx, *d.SAMDeviceID, in)
 	if err != nil {
-		return nil, samaccess.Translate(ctx, err)
+		return nil, nil, samaccess.Translate(ctx, err)
 	}
 	var credit *uuid.UUID
 	if list[0].answer.CreditedTo != nil {
 		credit = &u.ID
 	}
-	out := []Reading{}
+	out, held := []Reading{}, []bool{}
 	for i, res := range got.Readings {
 		if i >= len(list) || res.ReadingID == nil || res.Status != readingAccepted {
 			slog.InfoContext(ctx, "SAM did not store a reading", "device", d.ID, "status", res.Status, "code", res.Code, "problems", res.Problems)
@@ -333,14 +336,14 @@ func (m *Module) relay(ctx context.Context, d Device, u accounts.User, list []pr
 		// To the microsecond, as the database keeps it.
 		a.ID, a.ReceivedAt = *res.ReadingID, got.ReceivedAt.Round(time.Microsecond)
 		if err := keepRelayed(ctx, m.db, a, form, &u.ID, credit); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		out = append(out, a)
+		out, held = append(out, a), append(held, allDuplicate(res.Values))
 	}
 	if len(out) == 0 {
-		return nil, httpx.New(httpx.CodeInvalidInput, msgNotStored)
+		return nil, nil, httpx.New(httpx.CodeInvalidInput, msgNotStored)
 	}
-	return out, nil
+	return out, held, nil
 }
 
 // keepRelayed records a relayed record once; a resent one keeps its first

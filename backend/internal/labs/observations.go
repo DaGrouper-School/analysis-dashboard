@@ -139,7 +139,7 @@ func (m *Module) submitObservation(w http.ResponseWriter, r *http.Request) error
 	if err := httpx.Decode(r, &in); err != nil {
 		return err
 	}
-	o, err := m.Record(r.Context(), l, u, in.ObservationInput, in.Credit, FormObservation)
+	o, _, err := m.Record(r.Context(), l, u, in.ObservationInput, in.Credit, FormObservation, RecordOptions{})
 	if err != nil {
 		return err
 	}
@@ -224,41 +224,64 @@ func (m *Module) entryDevice(ctx context.Context, l Lab, deviceType, id *string)
 	return &d, "", err
 }
 
+// RecordOptions are how an entry reaches SAM beyond the form: the ID it
+// takes there, nil for one made from the entry itself, and the sender's
+// clock when it was sent, nil for this service's.
+type RecordOptions struct {
+	ID     *uuid.UUID
+	SentAt *time.Time
+}
+
 // Record checks a manual entry made in lab l by u and relays it to SAM as
 // them: an entry through a device type's plain template as an unsigned
 // reading of the device, any other through SAM's template, under its
 // device or in the lab's space. It is kept as a relayed record of form.
-func (m *Module) Record(ctx context.Context, l Lab, u accounts.User, in ObservationInput, credit bool, form string) (Observation, error) {
+// It reports whether SAM held the entry already.
+func (m *Module) Record(ctx context.Context, l Lab, u accounts.User, in ObservationInput, credit bool, form string, opts RecordOptions) (Observation, bool, error) {
 	c, err := m.check(ctx, l, in)
 	if err != nil {
-		return Observation{}, err
+		return Observation{}, false, err
 	}
 	if l.SpaceID == nil {
-		return Observation{}, httpx.New(httpx.CodeConflict, msgLabNotReady)
+		return Observation{}, false, httpx.New(httpx.CodeConflict, msgLabNotReady)
 	}
 	if c.device != nil && c.device.SAMDeviceID == nil {
-		return Observation{}, httpx.New(httpx.CodeConflict, msgNotReady)
+		return Observation{}, false, httpx.New(httpx.CodeConflict, msgNotReady)
 	}
 	if c.entry.Plain {
 		list, err := m.prepare(ctx, *c.device, l, u, []ReadingInput{{ObservedAt: in.ObservedAt, Values: in.Values, Location: in.Location}}, credit)
 		if err != nil {
-			return Observation{}, err
+			return Observation{}, false, err
 		}
-		got, err := m.relay(ctx, *c.device, u, list, form)
+		got, held, err := m.relay(ctx, *c.device, u, list, form, opts.SentAt)
 		if err != nil {
-			return Observation{}, err
+			return Observation{}, false, err
 		}
-		return observation(got[0], in.TemplateID, &c.device.ID), nil
+		return observation(got[0], in.TemplateID, &c.device.ID), held[0], nil
 	}
-	return m.submitEntry(ctx, l, u, in, c, credit, form)
+	return m.submitEntry(ctx, l, u, in, c, credit, form, opts)
 }
 
-func (m *Module) submitEntry(ctx context.Context, l Lab, u accounts.User, in ObservationInput, c checked, credit bool, form string) (Observation, error) {
+// allDuplicate reports whether SAM held every value already.
+func allDuplicate(values []client.ValueResult) bool {
+	for _, v := range values {
+		if v.Status != valueDuplicate {
+			return false
+		}
+	}
+	return len(values) > 0
+}
+
+// valueDuplicate is SAM's status of a value it already held.
+const valueDuplicate = "duplicate"
+
+func (m *Module) submitEntry(ctx context.Context, l Lab, u accounts.User, in ObservationInput, c checked, credit bool, form string,
+	opts RecordOptions) (Observation, bool, error) {
 	decimals := -1
 	if u.Minor != nil && *u.Minor {
 		var err error
 		if decimals, err = MinorDecimals(ctx, m.db, u.ID); err != nil {
-			return Observation{}, err
+			return Observation{}, false, err
 		}
 	}
 	var devID, samDevice *uuid.UUID
@@ -266,7 +289,11 @@ func (m *Module) submitEntry(ctx context.Context, l Lab, u accounts.User, in Obs
 		devID, samDevice = &c.device.ID, c.device.SAMDeviceID
 	}
 	pid := u.ParticipantID
-	rd := Reading{ID: EntryID(u.ID, in.TemplateID, l.ID, devID, c.at), LabID: l.ID, ClassroomID: l.ClassroomID, ObservedAt: c.at.UTC(),
+	id := EntryID(u.ID, in.TemplateID, l.ID, devID, c.at)
+	if opts.ID != nil {
+		id = *opts.ID
+	}
+	rd := Reading{ID: id, LabID: l.ID, ClassroomID: l.ClassroomID, ObservedAt: c.at.UTC(),
 		Values: in.Values, Location: l.Location, LocationSource: FromLab, RecordedByParticipantID: &pid}
 	if credit && (u.Minor == nil || !*u.Minor) {
 		rd.CreditedTo = &u.FullName
@@ -282,15 +309,19 @@ func (m *Module) submitEntry(ctx context.Context, l Lab, u accounts.User, in Obs
 	}
 	as, err := m.viewer(u)
 	if err != nil {
-		return Observation{}, samaccess.Translate(ctx, err)
+		return Observation{}, false, samaccess.Translate(ctx, err)
 	}
-	now := m.now()
-	got, err := as.SubmitEntries(ctx, client.EntriesRequest{SpaceID: *l.SpaceID, SentAt: &now, Entries: []client.TemplateEntry{entry}})
+	sent := opts.SentAt
+	if sent == nil {
+		now := m.now()
+		sent = &now
+	}
+	got, err := as.SubmitEntries(ctx, client.EntriesRequest{SpaceID: *l.SpaceID, SentAt: sent, Entries: []client.TemplateEntry{entry}})
 	if err != nil {
-		return Observation{}, samaccess.Translate(ctx, err)
+		return Observation{}, false, samaccess.Translate(ctx, err)
 	}
 	if len(got.Entries) != 1 || got.Entries[0].Status != readingAccepted {
-		return Observation{}, entryRefused(ctx, got, c.entry)
+		return Observation{}, false, entryRefused(ctx, got, c.entry)
 	}
 	rd.ReceivedAt = got.ReceivedAt.Round(time.Microsecond)
 	var creditUser *uuid.UUID
@@ -298,9 +329,9 @@ func (m *Module) submitEntry(ctx context.Context, l Lab, u accounts.User, in Obs
 		creditUser = &u.ID
 	}
 	if err := keepRelayed(ctx, m.db, rd, form, &u.ID, creditUser); err != nil {
-		return Observation{}, err
+		return Observation{}, false, err
 	}
-	return observation(rd, in.TemplateID, devID), nil
+	return observation(rd, in.TemplateID, devID), allDuplicate(got.Entries[0].Values), nil
 }
 
 // entryRefused is SAM's refusal of an entry, its problems by field named

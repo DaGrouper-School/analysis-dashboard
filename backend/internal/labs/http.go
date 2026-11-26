@@ -58,6 +58,7 @@ func (m *Module) Routes(mux *http.ServeMux, prefix string) {
 	h("GET "+prefix+"/me/conditions", m.currentConditions)
 	h("GET "+prefix+"/me/observation-targets", m.observationTargets)
 	h("POST "+prefix+"/labs/{labId}/observations", m.submitObservation)
+	h("POST "+prefix+"/observations/batch", m.syncObservations)
 }
 
 const (
