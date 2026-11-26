@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 )
 
 // LogEmail is the email provider for development and test: it writes each
@@ -27,4 +28,25 @@ func EmailFor(local bool, cfg SMTPConfig) (Email, error) {
 		return LogEmail{}, nil
 	}
 	return nil, fmt.Errorf("sending email: %w", ErrNoProvider)
+}
+
+// EmailRecorder keeps the emails it is asked to send, for tests.
+type EmailRecorder struct {
+	mu   sync.Mutex
+	sent []Mail
+}
+
+// Send keeps the email.
+func (r *EmailRecorder) Send(_ context.Context, m Mail) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.sent = append(r.sent, m)
+	return nil
+}
+
+// Sent are the emails kept, oldest first.
+func (r *EmailRecorder) Sent() []Mail {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]Mail(nil), r.sent...)
 }

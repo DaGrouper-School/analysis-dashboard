@@ -77,6 +77,7 @@ Configuration comes from the environment (`internal/config`). Every problem is r
 | `DGS_PUBLIC_URL` | `http://localhost:8090` in development and test; required elsewhere | The URL the service is reached at. The session cookie is `Secure` when it is `https`, which outside development and test it must be |
 | `DGS_GOOGLE_CLIENT_ID` | none; required outside development and test | The Google OAuth client ID, the audience of the ID tokens sign-in accepts. Without it Google sign-in is refused |
 | `DGS_SESSION_TTL` | `720h` (30 days) | How long an unused session lasts, a Go duration of at least `1h` |
+| `DGS_INVITATION_TTL` | `336h` (14 days) | How long an invitation to a classroom stays open, a Go duration of at least `1h` |
 | `DGS_DEMO` | `false` | `true` signs in the demo accounts by subject. Start-up is refused with it on outside development and test |
 | `DGS_SMS_SENDS_PER_HOUR` | `200` | The most phone codes sent per hour overall, a whole number from 1, set from the expected sign-up rate ([Operations](operations.md#phone-codes)) |
 | `DGS_CLIENT_IP_HEADER` | none | The header a trusted proxy puts the client's address in, such as `X-Forwarded-For`; the last address in it is the client's. Without it, the connection's address is |
@@ -266,6 +267,13 @@ The registry the front end reads ([Reading the registry](design/registry-and-con
 - **Who sees one.** `roles.PermissionsFor` decides, from the viewer's membership in `classroom_members`, the admin flag and the sharing settings. A classroom someone may not see answers `404`.
 - **Configuring.** `classrooms.Configure` sets a classroom's stage, region and profile fields from `PATCH /api/admin/classrooms/{classroomId}` (in the contract's addendum) or `dgs classroom configure CODE FILE`. A field left out stays as it is, each value is checked strictly first, and the change is logged in `configuration_changes`. A stage or region a classroom is at is not deleted.
 
+### Invitations and members
+
+- **Invitations** are emailed, one per address, with a link to the front end's `/invite/<token>`. Only the token's hash is kept; the token reaches the client only in demo mode. One stays open for `DGS_INVITATION_TTL`. Inviting an address again replaces its pending invitation. A new classroom's head is invited as this service.
+- **Membership** is a row in `classroom_members` and a group in SAM. A change is sent as the person whose decision it carries out (kind `membership`), or as this service for a platform admin with no role in the classroom (kind `membership_by_service`). The applier takes the member out of the group SAM holds them in, if it is not their role's, then puts them in their role's, recording `sam_role` after each step, so they are never in two. A change sent as a member waits until that member's own membership has reached SAM.
+- **At once here.** Removal, and a role change that narrows a member's role, take effect here before SAM has them: a member who left keeps their row, marked `removed`, until SAM confirms, and every read skips it. Both are queued as taking access away.
+- **An invitation follows its inviter.** A role change revokes their pending invitations to roles the new role does not hand on, and leaving revokes all of them. One whose inviter's account is gone answers `404`.
+
 ### Labs
 
 - **Labs** are added and changed by whoever manages the classroom's devices, and seen by whoever sees the classroom. Each is numbered in its classroom from 1.
@@ -331,6 +339,7 @@ Each table is read and written only by the package that owns it ([Data ownership
 | `consent_texts` | `internal/classrooms` | |
 | `classrooms` | `internal/classrooms` | |
 | `classroom_members` | `internal/classrooms` | |
+| `invitations` | `internal/classrooms` | |
 | `labs` | `internal/labs` | |
 | `registry_domains` | `internal/registry` | |
 | `registry_parameters` | `internal/registry` | |

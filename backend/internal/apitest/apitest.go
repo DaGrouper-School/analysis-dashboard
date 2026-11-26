@@ -75,8 +75,9 @@ type Env struct {
 	Google *FakeGoogle
 	// Clock is the service's clock, which a test moves.
 	Clock *Clock
-	// SMS keeps the texts the service sends.
-	SMS *notify.SMSRecorder
+	// SMS keeps the texts the service sends, and Email its emails.
+	SMS   *notify.SMSRecorder
+	Email *notify.EmailRecorder
 	// Access is how this service calls SAM, and App the service, as last
 	// started.
 	Access *samaccess.Access
@@ -122,8 +123,8 @@ func NewWith(t testing.TB, o Options) *Env {
 	url := "http://" + srv.Listener.Addr().String()
 	sam := testenv.Options{Issuer: url, KeySetURL: url + "/api" + samaccess.KeySetPath, Audience: Audience}
 	e := &Env{URL: url, Pool: testutil.DB(t), SAM: testenv.Start(t, sam), Google: newFakeGoogle(t), Clock: &Clock{now: time.Now()},
-		SMS: &notify.SMSRecorder{},
-		t:   t, opts: o,
+		SMS: &notify.SMSRecorder{}, Email: &notify.EmailRecorder{},
+		t: t, opts: o,
 		check: func(h http.Handler) http.Handler {
 			return c.Checked(h, func(err error) { t.Errorf("contract: %v", err) }, Outside...)
 		}}
@@ -148,7 +149,7 @@ func (e *Env) Restart(keys *samaccess.Keys) {
 	e.App = server.New(server.Deps{DB: e.Pool, SAM: access, AllowedOrigins: []string{FrontEnd}, Now: e.Clock.Now,
 		Accounts: accounts.Config{GoogleClientID: e.Google.ClientID, GoogleKeysURL: e.Google.KeysURL, Demo: e.opts.Demo,
 			SMS: e.SMS, SMSSendsPerHour: e.opts.SendsPerHour, ClientIPHeader: ClientHeader},
-		Places: e.opts.Places})
+		Places: e.opts.Places, Email: e.Email})
 	h := e.check(e.App.Handler())
 	e.handler.Store(&h)
 }

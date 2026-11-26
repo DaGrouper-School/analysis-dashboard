@@ -90,12 +90,15 @@ A change is sent to SAM as the person whose decision it carries out, or not at a
 
 - Taking someone out of their old role needs the same rights as putting them in the new one.
 - Making a head is a platform admin's task.
+- A member may leave, but a head; a facilitator may remove the community scientists they may invite. Each is sent as themselves: SAM lets a person remove a member only with the rights adding them would need.
+- Accepting an invitation to a role below the one a member holds keeps their role.
 - A row sent as a head waits until that head's own membership has reached SAM.
 - The applier records each step SAM confirms: removal from the old group, then addition to the new one ([SAM integration](sam-integration.md#the-reconciler)).
 
 ### Invitations
 
-- `invite` sends one email per address, with a link carrying a random token. Only the token's hash is stored.
+- `invite` sends one email per address, with a link carrying a random token. Only the token's hash is stored. Inviting an address again replaces its pending invitation, like a resend.
+- A new classroom invites the head its platform admin named, as this service.
 - An invitation expires after `DGS_INVITATION_TTL`, 14 days by default. An expired one shows as expired and cannot be accepted.
 - Accepting needs the token, a signed-in user, and that user's email matching the invitation.
 - **An invitation follows its inviter.** When the inviter's role changes, their pending invitations to roles their new role does not hand on are revoked; when they leave, all of them are. Acceptance is sent as the inviter. If the inviter is gone, or does not hold a role that hands the invitation's role on, the invitation answers 404. It is never sent as this service instead, except for an invitation from a platform admin, whose changes go as this service.
