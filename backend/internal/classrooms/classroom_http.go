@@ -1,6 +1,7 @@
 package classrooms
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/accounts"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/jsoncheck"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/roles"
@@ -117,20 +119,27 @@ func (m *Module) visible(r *http.Request) (Classroom, roles.Role, roles.Permissi
 	if err != nil {
 		return Classroom{}, "", roles.Permissions{}, httpx.NotFound(msgNoClassroom)
 	}
-	c, err := Get(r.Context(), m.db, id)
+	c, role, can, err := Visible(r.Context(), m.db, id, u)
 	if errors.Is(err, ErrNoClassroom) {
-		return c, "", roles.Permissions{}, httpx.NotFound(msgNoClassroom)
+		return c, "", can, httpx.NotFound(msgNoClassroom)
 	}
+	return c, role, can, err
+}
+
+// Visible is the classroom with id as u sees it, with their role there and
+// their permissions, or ErrNoClassroom for one they may not see.
+func Visible(ctx context.Context, q db.Querier, id uuid.UUID, u accounts.User) (Classroom, roles.Role, roles.Permissions, error) {
+	c, err := Get(ctx, q, id)
 	if err != nil {
 		return c, "", roles.Permissions{}, err
 	}
-	role, err := RoleOf(r.Context(), m.db, c.ID, u.ID)
+	role, err := RoleOf(ctx, q, c.ID, u.ID)
 	if err != nil {
 		return c, "", roles.Permissions{}, err
 	}
 	can := roles.PermissionsFor(&roles.Viewer{PlatformAdmin: u.PlatformAdmin}, role, c.Sharing)
 	if !can.View {
-		return c, "", can, httpx.NotFound(msgNoClassroom)
+		return c, "", can, ErrNoClassroom
 	}
 	return c, role, can, nil
 }
