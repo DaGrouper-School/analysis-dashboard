@@ -136,3 +136,17 @@ func (m *Module) calculation(w http.ResponseWriter, r *http.Request) error {
 	httpx.WriteJSON(w, http.StatusOK, out)
 	return nil
 }
+
+// DeviceType is the device type with id in the registry as the front end
+// reads it, or nil.
+func (m *Module) DeviceType(ctx context.Context, id string) (*DeviceType, error) {
+	v, err := m.View(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return v.deviceType(id), nil
+}
+
+// DeviceTypeEntity is the outbox entity of this tenant's own device type
+// id: what reaches SAM before a device of the type can.
+func DeviceTypeEntity(id string) string { return entity(OwnDeviceType, id) }

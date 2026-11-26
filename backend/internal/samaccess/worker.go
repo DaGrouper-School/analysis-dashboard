@@ -52,6 +52,8 @@ type Attempt struct {
 	Entity  string
 	Version int64
 	Payload json.RawMessage
+	// Actor is the person the change is sent as, or nil for this service.
+	Actor *uuid.UUID
 	// SAM calls SAM as the change's actor.
 	SAM *client.Client
 	// Replayed is whether SAM still replays the answers to this change's
@@ -217,7 +219,7 @@ func (w *Worker) attempt(ctx context.Context, r row) error {
 	} else {
 		replayed = now.Sub(*r.firstSentAt) < ReplayWindow
 	}
-	return kind.Apply(ctx, Attempt{Entity: r.entity, Version: r.version, Payload: r.payload, SAM: sam, Replayed: replayed})
+	return kind.Apply(ctx, Attempt{Entity: r.entity, Version: r.version, Payload: r.payload, Actor: r.actor, SAM: sam, Replayed: replayed})
 }
 
 // actor is the client the change is sent through: as this service, or as

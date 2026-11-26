@@ -46,9 +46,11 @@ Data can arrive by three routes, and all of them end in SAM's validation, flags 
 ### Devices
 
 - A device is a SAM device principal in its lab's space, registered and removed as the person who did it. SAM checks that they hold `device:register` or `device:maintain` ([Classrooms and permissions](classrooms-and-permissions.md#classrooms-in-sam)).
-- Devices are registered with `unsigned_readings: flag`, since the kits have no keys: SAM stores their readings and flags them.
-- The display name and hardware identifier stay here. The identifier is unique among a classroom's live devices.
-- A registration SAM refuses is retried for a while, because the person's group membership may still be on its way. After that the row is held.
+- A device is registered with its registry type, its identifier as SAM's `identifier`, no key and `policy: flag`, since the kits have no keys: SAM stores their readings and flags them.
+- The type must be one the registry shows. A device read by hand has no serial, so it gets the next `MAN-0001` identifier of its classroom. Other identifiers are upper-cased.
+- The display name and hardware identifier stay here. The identifier is unique among a classroom's live devices, and its SAM source ID, `CODE:IDENTIFIER`, shows to those who see the classroom's code.
+- A registration waits until SAM holds the lab's space, this tenant's own device type if it is one, and the person's rights: their membership of the classroom in the role they hold here, or of the platform admins' group. It is never sent for SAM to refuse.
+- Removing a device takes effect here at once. Its retirement reaches SAM through the outbox, as the person who removed it, naming the version SAM holds; SAM keeps its readings. A device SAM never had needs nothing there.
 - A platform admin with no role in a classroom can register its devices but cannot record or read its readings.
 
 ### Relaying readings
@@ -96,12 +98,12 @@ The front end keeps observations made offline on the device and sends them as on
 | A SAM outage fails uploads | The client retries; offline sync is built for it |
 | Unsigned readings | Flagged by SAM; signed readings come with device keys |
 | Each page view is a SAM call | Bounded windows, and SAM's aggregates at scale ([Dashboards and public site](dashboards-and-public-site.md#reads-from-sam)) |
-| A registration waits on a membership still on its way | Retried for a while, then held |
+| A registration waits on a membership still on its way | It waits in the outbox until SAM holds the membership |
 
 ## Testing approach
 
 - **Unit:** unit conversion both ways, the minor's rounding, the clock-offset flag, the UUID v5 derivation, the consent refusal messages.
-- **Integration:** every reading of a multi-reading upload is stored; a retried batch stores once and returns duplicates; a minor without consent is refused here and by SAM; a lab still being set up answers 409; a device's key and policy round-trip.
+- **Integration:** every reading of a multi-reading upload is stored; a retried batch stores once and returns duplicates; a minor without consent is refused here and by SAM; a lab still being set up answers 409; a head's device is in SAM in the lab's space with its type, identifier and `policy: flag`, registered by the head once SAM holds their membership, and a platform admin's by the admin; a removed device is retired in SAM.
 
 ## Open questions
 
