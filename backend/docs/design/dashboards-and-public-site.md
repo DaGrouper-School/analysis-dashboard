@@ -139,7 +139,10 @@ A classroom's sharing settings:
 ### Contributors and credit
 
 - A released record is linked to a person only through the credit they asked for (`relayed_records.credit_user_id`), never through who recorded it.
-- A minor is never listed or given a page, whatever their settings.
+- Which credited values are released is asked of SAM, as a visitor, filtered by the credited readings (`reading_id`, a hundred a read), never worked out here by comparing times with the cutoff: a value sent after a release, observed before it, waits for the next one and is never shown early.
+- A classroom profile lists each person credited on a value the public may read, named when they turned on their public profile and by participant ID otherwise, named ones first. A classroom that does not show its data publicly lists none, and drops out of its contributors' pages at once.
+- A contributor page holds how many credited values the public may read, the twenty newest of them, and the classrooms they are in.
+- A minor is never listed or given a page, whatever their settings, and nor is someone not yet known to be an adult.
 - A contributor page exists only for a non-minor with a public profile. Every other participant ID answers 404, the same as an unknown one, so pages cannot be found by counting.
 - No email is public: the profile on a contributor page has `email: null`.
 

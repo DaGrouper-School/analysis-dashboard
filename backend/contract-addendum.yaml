@@ -570,6 +570,62 @@ paths:
                 $ref: '#/components/schemas/PublicParameterPageWithContent'
         '404':
           $ref: openapi.yaml#/components/responses/NotFound
+  /public/classrooms/{classroomId}/profile:
+    get:
+      operationId: publicSite.profile
+      x-change: changed
+      x-waits-for: The site's words kept in the front end, with only the stages and regions from the backend
+      tags:
+      - Public site
+      summary: Profile
+      description: 'A classroom''s public profile: who they are, what they study, their kit, and the contributors credited
+        on its released values, read from SAM as a visitor and matched by reading. Only those who asked for credit are
+        listed, never a minor, each named only with a public profile. Kit serial numbers, the custodian''s role and the
+        institution before its host agreement are for members of the classroom only. Access: public, no session needed.'
+      security: []
+      parameters:
+      - name: classroomId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicClassroomProfileWithContent'
+        '404':
+          $ref: openapi.yaml#/components/responses/NotFound
+  /public/contributors/{participantId}:
+    get:
+      operationId: publicSite.contributor
+      x-change: changed
+      x-waits-for: Contributor pages for public profiles only, and the site's words kept in the front end
+      tags:
+      - Public site
+      summary: Contributor
+      description: 'A contributor''s page by participant ID: the released values they took credit for, in the classrooms
+        that show their data, read from SAM as a visitor and matched by reading. Only a person who turned on their public
+        profile, and is not a minor, has a page; any other participant ID answers 404, as an unknown one does, so IDs
+        cannot be counted through. Their email is never shown. Access: public, no session needed.'
+      security: []
+      parameters:
+      - name: participantId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicContributorWithContent'
+        '404':
+          $ref: openapi.yaml#/components/responses/NotFound
   /public/home:
     get:
       operationId: publicSite.home
@@ -634,6 +690,69 @@ components:
       required:
       - stages
       - regions
+      additionalProperties: false
+    PublicClassroomProfileWithContent:
+      type: object
+      description: The front end's PublicClassroomProfile, with the site content the backend keeps.
+      properties:
+        content:
+          $ref: '#/components/schemas/PublicSiteContent'
+        classroom:
+          $ref: openapi.yaml#/components/schemas/PublicClassroomProfile/properties/classroom
+        profile:
+          $ref: openapi.yaml#/components/schemas/PublicClassroomProfile/properties/profile
+        projects:
+          $ref: openapi.yaml#/components/schemas/PublicClassroomProfile/properties/projects
+        kit:
+          $ref: openapi.yaml#/components/schemas/PublicClassroomProfile/properties/kit
+        custodianRole:
+          $ref: openapi.yaml#/components/schemas/PublicClassroomProfile/properties/custodianRole
+        sessions:
+          $ref: openapi.yaml#/components/schemas/PublicClassroomProfile/properties/sessions
+        contributors:
+          $ref: openapi.yaml#/components/schemas/PublicClassroomProfile/properties/contributors
+        member:
+          $ref: openapi.yaml#/components/schemas/PublicClassroomProfile/properties/member
+        canManage:
+          $ref: openapi.yaml#/components/schemas/PublicClassroomProfile/properties/canManage
+        institution:
+          $ref: openapi.yaml#/components/schemas/PublicClassroomProfile/properties/institution
+      required:
+      - content
+      - classroom
+      - profile
+      - projects
+      - kit
+      - custodianRole
+      - sessions
+      - contributors
+      - member
+      - canManage
+      - institution
+      additionalProperties: false
+    PublicContributorWithContent:
+      type: object
+      description: The front end's PublicContributor, with the site content the backend keeps.
+      properties:
+        content:
+          $ref: '#/components/schemas/PublicSiteContent'
+        participantId:
+          $ref: openapi.yaml#/components/schemas/PublicContributor/properties/participantId
+        profile:
+          $ref: openapi.yaml#/components/schemas/PublicContributor/properties/profile
+        classrooms:
+          $ref: openapi.yaml#/components/schemas/PublicContributor/properties/classrooms
+        total:
+          $ref: openapi.yaml#/components/schemas/PublicContributor/properties/total
+        recent:
+          $ref: openapi.yaml#/components/schemas/PublicContributor/properties/recent
+      required:
+      - content
+      - participantId
+      - profile
+      - classrooms
+      - total
+      - recent
       additionalProperties: false
     PublicStationWithContent:
       type: object
