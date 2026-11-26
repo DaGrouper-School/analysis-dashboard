@@ -17,6 +17,7 @@ import (
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/db"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/hosting"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/httpx"
+	"github.com/dagrouper-school/analysis-dashboard/backend/internal/labs"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/logx"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/places"
 	"github.com/dagrouper-school/analysis-dashboard/backend/internal/registry"
@@ -82,7 +83,7 @@ func New(d Deps) *App {
 		a.registry = registry.New(d.DB, d.SAM.Service(), d.SAM.Tenant().RootSpaceID, d.Now, a.accounts.Sessions())
 		a.modules = append(a.modules, a.accounts, places.New(d.Places, a.accounts.Sessions(), a.accounts), a.registry,
 			classrooms.New(d.DB, a.accounts.Sessions(), d.Now, d.SAM.Tenant().RootSpaceID), hosting.New(d.DB, a.accounts.Sessions(), d.Now),
-			settings.NewModule(d.DB, a.accounts.Sessions(), d.Now))
+			settings.NewModule(d.DB, a.accounts.Sessions(), d.Now), labs.New(d.DB, a.accounts.Sessions(), d.Now))
 	}
 	return a
 }

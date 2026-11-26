@@ -38,7 +38,8 @@ Data can arrive by three routes, and all of them end in SAM's validation, flags 
 
 ### Labs
 
-- A lab is a SAM space under its classroom's space, with a SAM site at the lab. The site's code is the classroom's code and the lab's number in it, such as `ADD-01`, and its geometry is the lab's point.
+- A lab is a SAM space under its classroom's space, with a SAM site at the lab. The site's code is the classroom's code and the lab's number in it, such as `DGC-HG2W5K-01`, and its geometry is the lab's point. Classroom and lab spaces carry no footprint, so SAM never refuses a lab's site as outside one.
+- This service keeps the site's version, so a change of the lab's location replaces the site SAM holds.
 - The lab's name, place name, site questionnaire and the classroom's notes on each value stay here.
 - A lab follows the classroom's structure, so this service creates and moves its space and site through the outbox, as it does the classroom's space.
 

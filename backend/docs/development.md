@@ -107,6 +107,7 @@ Every variable the service reads is listed here. The tests also read `DGS_TEST_D
 | `internal/classrooms` | The classrooms module: classrooms, kept here and created in SAM, their members, and what platform admins keep of them: the stages and regions and their seed, and the guardian consent text's versions |
 | `internal/hosting` | The hosting module. So far, the host application's questions and their seed |
 | `internal/roles` | The permission grid, as the front end's, and the grants each classroom's role groups and the platform admins' group hold in SAM |
+| `internal/labs` | The labs module: labs, kept here and created in SAM as a space under the classroom's with a site at the lab |
 | `internal/registry` | The registry module: SAM's registry read as this service and cached, the overlay that presents it, their merge, admins' changes with this tenant's own entries sent through the outbox, and the default alert levels |
 | `internal/jsoncheck` | Strict decoding and checks of configuration, reporting every problem at once |
 | `internal/samaccess` | Calls SAM as this service, as a person through a user token or as anonymous; the signing keys and the key set; SAM's errors translated; the outbox, its worker and the reconciler |
@@ -265,6 +266,11 @@ The registry the front end reads ([Reading the registry](design/registry-and-con
 - **Who sees one.** `roles.PermissionsFor` decides, from the viewer's membership in `classroom_members`, the admin flag and the sharing settings. A classroom someone may not see answers `404`.
 - **Configuring.** `classrooms.Configure` sets a classroom's stage, region and profile fields from `PATCH /api/admin/classrooms/{classroomId}` (in the contract's addendum) or `dgs classroom configure CODE FILE`. A field left out stays as it is, each value is checked strictly first, and the change is logged in `configuration_changes`. A stage or region a classroom is at is not deleted.
 
+### Labs
+
+- **Labs** are added and changed by whoever manages the classroom's devices, and seen by whoever sees the classroom. Each is numbered in its classroom from 1.
+- **In SAM.** The outbox kind `lab` creates the lab's space under its classroom's, waiting until SAM has that, and puts a site whose code is the classroom's code and the lab's number, such as `DGC-HG2W5K-01`, at the lab's point. The space's ID and the site's version are recorded once SAM confirms them. A change of location sends the site again, replacing the version SAM holds.
+
 ### Accounts in SAM
 
 - **Participant IDs** come from the `participant_ids` sequence, in order, and are never reused. An account's ID is its SAM principal's subject, as a decimal string.
@@ -325,6 +331,7 @@ Each table is read and written only by the package that owns it ([Data ownership
 | `consent_texts` | `internal/classrooms` | |
 | `classrooms` | `internal/classrooms` | |
 | `classroom_members` | `internal/classrooms` | |
+| `labs` | `internal/labs` | |
 | `registry_domains` | `internal/registry` | |
 | `registry_parameters` | `internal/registry` | |
 | `registry_device_types` | `internal/registry` | |
